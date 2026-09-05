@@ -2,16 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Sparkles,
-  CreditCard,
-  Camera,
-  FileText,
-  ScanLine,
   Phone,
   Clock,
   MapPin,
-  LogIn,
   Search,
   Plus,
   Minus,
@@ -19,7 +15,6 @@ import {
   Send,
   CheckCircle2,
   ExternalLink,
-  ShieldCheck,
   Zap,
   ShoppingBag,
   Boxes,
@@ -27,12 +22,11 @@ import {
   MessageCircle,
   X,
   Share2,
-  Star,
-  ChevronDown,
 } from "lucide-react";
 import confetti from "canvas-confetti";
-import { supabase } from "@/lib/supabase/client";
-import { formatCurrency } from "@/lib/utils";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
+import { formatCurrency, safeOpenUrl } from "@/lib/utils";
+import { useToast } from "@/components/toast-provider";
 import { ThemeToggle } from "@/components/theme-provider";
 import { INITIAL_PRODUCTS, type InventoryItem } from "@/lib/inventory";
 
@@ -48,6 +42,7 @@ interface CartItem {
 }
 
 export default function StorefrontPage() {
+  const { toast } = useToast();
   const [products, setProducts] = useState<InventoryItem[]>(INITIAL_PRODUCTS);
   const [selectedCategory, setSelectedCategory] = useState("الكل");
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,14 +69,16 @@ export default function StorefrontPage() {
           }
         }
 
-        const { data, error } = await supabase
-          .from("inventory")
-          .select("*")
-          .order("id", { ascending: true });
+        if (isSupabaseConfigured) {
+          const { data, error } = await supabase
+            .from("inventory")
+            .select("*")
+            .order("id", { ascending: true });
 
-        if (!error && data && data.length > 0) {
-          setProducts(data);
-          localStorage.setItem("copycat_inventory_v1_2", JSON.stringify(data));
+          if (!error && data && data.length > 0) {
+            setProducts(data);
+            localStorage.setItem("copycat_inventory_v1_2", JSON.stringify(data));
+          }
         }
       } catch {
         console.log("Storefront using local product catalog");
@@ -96,14 +93,29 @@ export default function StorefrontPage() {
     return ["الكل", ...Array.from(new Set(products.map((p) => p.category)))];
   }, [products]);
 
-  // Filtered Products
+  // Filtered Products (Strictly hide incomplete items from customer storefront)
   const filteredProducts = useMemo(() => {
     return products.filter((item) => {
+      // 1. Data completion check: must have name, valid positive price, and category
+      const isComplete =
+        Boolean(item.name && item.name.trim().length > 0) &&
+        Boolean(item.category && item.category.trim().length > 0) &&
+        item.price !== undefined &&
+        item.price !== null &&
+        !isNaN(Number(item.price)) &&
+        Number(item.price) > 0;
+
+      if (!isComplete) return false;
+
+      // 2. Search query match
       const matchSearch =
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.notes && item.notes.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      // 3. Category match
       const matchCat = selectedCategory === "الكل" || item.category === selectedCategory;
+
       return matchSearch && matchCat;
     });
   }, [products, searchQuery, selectedCategory]);
@@ -119,6 +131,7 @@ export default function StorefrontPage() {
       }
       return [...prev, { product, quantity: 1 }];
     });
+    toast.success("أضيف للسلة", `تمت إضافة "${product.name}" بنجاح.`);
   };
 
   const updateQuantity = (productId: number, delta: number) => {
@@ -181,9 +194,13 @@ export default function StorefrontPage() {
     const encoded = encodeURIComponent(message);
     const waUrl = `https://wa.me/${WHATSAPP_INTERNATIONAL}?text=${encoded}`;
 
-    window.open(waUrl, "_blank");
+    const opened = safeOpenUrl(waUrl);
+    if (!opened) {
+      window.location.href = waUrl;
+    }
 
     setOrderSent(true);
+    toast.success("تم إرسال الطلب", "جاري فتح تطبيق واتساب لتأكيد الطلب مع المكتبة.");
     setTimeout(() => {
       setOrderSent(false);
       setIsCartOpen(false);
@@ -193,7 +210,7 @@ export default function StorefrontPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-blue-600 selection:text-white transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100 light:bg-slate-50 light:text-slate-900">
       {/* Top Notification Bar */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-600 text-white text-xs py-2 px-4 text-center font-bold flex items-center justify-center gap-3 shadow-md">
+      <div className="bg-linear-to-r from-blue-700 via-indigo-700 to-cyan-600 text-white text-xs py-2 px-4 text-center font-bold flex items-center justify-center gap-3 shadow-md">
         <span className="inline-flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 animate-spin" />
           <span>خصم خاص وتجهيز فوري لكروت الرقم القومي والشهادات وطباعة الأبحاث!</span>
@@ -214,7 +231,14 @@ export default function StorefrontPage() {
           {/* Brand Logo */}
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center p-1 shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform border border-slate-700/50">
-              <img src="/logo.jpg" alt="كوبي كات - Copy Cat" className="w-full h-full object-contain" />
+              <Image
+                src="/logo.jpg"
+                alt="كوبي كات - Copy Cat"
+                width={48}
+                height={48}
+                priority
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
@@ -270,11 +294,18 @@ export default function StorefrontPage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden py-14 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto w-full text-center">
         {/* Glow ambient background */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-blue-600/20 via-cyan-500/10 to-indigo-600/20 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-linear-to-tr from-blue-600/20 via-cyan-500/10 to-indigo-600/20 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow" />
 
         {/* Hero Logo Banner */}
         <div className="w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-6 rounded-3xl overflow-hidden bg-white shadow-2xl shadow-blue-500/20 p-2 border border-slate-700/50 hover:scale-105 transition-transform flex items-center justify-center">
-          <img src="/logo.jpg" alt="Copy Cat Logo" className="w-full h-full object-contain" />
+          <Image
+            src="/logo.jpg"
+            alt="Copy Cat Logo"
+            width={112}
+            height={112}
+            priority
+            className="w-full h-full object-contain"
+          />
         </div>
 
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black mb-6">
@@ -485,7 +516,7 @@ export default function StorefrontPage() {
 
       {/* Location & Map & Hours Section */}
       <section className="py-16 px-4 sm:px-6 max-w-7xl mx-auto w-full">
-        <div className="relative overflow-hidden bg-gradient-to-tr from-slate-900 via-slate-900 to-blue-950 border border-slate-800 rounded-3xl p-6 sm:p-12 shadow-2xl">
+        <div className="relative overflow-hidden bg-linear-to-tr from-slate-900 via-slate-900 to-blue-950 border border-slate-800 rounded-3xl p-6 sm:p-12 shadow-2xl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             {/* Store Information */}
             <div className="space-y-6 text-right">
@@ -576,7 +607,7 @@ export default function StorefrontPage() {
 
             {/* Visual Location Preview Card */}
             <div className="bg-slate-950/80 border border-slate-800 rounded-3xl p-6 relative shadow-xl text-center space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-rose-500 to-amber-500 mx-auto flex items-center justify-center text-white shadow-xl shadow-rose-500/20">
+              <div className="w-16 h-16 rounded-2xl bg-linear-to-tr from-rose-500 to-amber-500 mx-auto flex items-center justify-center text-white shadow-xl shadow-rose-500/20">
                 <MapPin className="w-8 h-8" />
               </div>
               <h4 className="text-lg font-black text-white">خريطة وموقع كوبي كات</h4>
@@ -807,7 +838,13 @@ export default function StorefrontPage() {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white flex items-center justify-center p-1 shadow-lg border border-slate-700/50 shrink-0">
-                <img src="/logo.jpg" alt="Copy Cat Logo" className="w-full h-full object-contain" />
+                <Image
+                  src="/logo.jpg"
+                  alt="Copy Cat Logo"
+                  width={48}
+                  height={48}
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
                 <span className="font-extrabold text-white text-base block">كوبي كات (Copy Cat)</span>

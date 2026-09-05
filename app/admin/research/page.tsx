@@ -16,16 +16,18 @@ import {
   User,
   GraduationCap,
   School,
-  Calendar,
 } from "lucide-react";
 import { generateResearchDocx, ResearchCoverInfo } from "@/lib/docx/research-docx";
+import { useToast } from "@/components/toast-provider";
+import { getFriendlyErrorMessage } from "@/lib/utils";
 
 export default function ResearchPage() {
+  const { toast } = useToast();
   const [topic, setTopic] = useState("");
   const [targetPages, setTargetPages] = useState(5);
-  const [includeIntro, setIncludeIntro] = useState(true);
+  const includeIntro = true;
   const [includeIndex, setIncludeIndex] = useState(true);
-  const [includeConclusion, setIncludeConclusion] = useState(true);
+  const includeConclusion = true;
   const [includeRefs, setIncludeRefs] = useState(true);
 
   // Cover Information State (Item #13)
@@ -44,6 +46,14 @@ export default function ResearchPage() {
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim()) return;
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      toast.warning(
+        "أنت غير متصل بالإنترنت",
+        "توليد محتوى جديد بالذكاء الاصطناعي يتطلب اتصالاً بالإنترنت. يرجى الاتصال بالشبكة للمتابعة."
+      );
+      return;
+    }
 
     setIsLoading(true);
     setGeneratedText(null);
@@ -69,9 +79,12 @@ export default function ResearchPage() {
 
       setGeneratedText(data.content);
       setActiveProvider(data.provider || "Gemini Flash");
+      toast.success("تم توليد البحث بنجاح", `تم إنشاء مسودة بحث متكاملة عن "${topic}".`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي";
-      alert(message);
+      toast.error(
+        "تعذر توليد محتوى البحث",
+        getFriendlyErrorMessage(err, "حدث خطأ أثناء الاتصال بخدمة الذكاء الاصطناعي.")
+      );
     } finally {
       setIsLoading(false);
     }
@@ -98,9 +111,16 @@ export default function ResearchPage() {
         coverInfo,
         targetPages,
       });
+      toast.success(
+        "تم تنزيل ملف الوورد بنجاح",
+        `تم حفظ البحث "${topic}" بتنسيق Word A4 منسق وجاهز للطباعة فوراً.`
+      );
     } catch (err) {
       console.error(err);
-      alert("تعذر توليد ملف الوورد");
+      toast.error(
+        "تعذر توليد ملف الوورد",
+        getFriendlyErrorMessage(err, "يرجى المحاولة مرة أخرى.")
+      );
     } finally {
       setIsExportingDocx(false);
     }
@@ -110,6 +130,7 @@ export default function ResearchPage() {
     if (!generatedText) return;
     navigator.clipboard.writeText(generatedText);
     setCopied(true);
+    toast.info("تم نسخ النص", "تم نسخ محتوى البحث كاملاً إلى الحافظة.");
     setTimeout(() => setCopied(false), 2000);
   };
 

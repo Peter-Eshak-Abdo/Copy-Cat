@@ -15,19 +15,34 @@ import {
   ChevronRight,
   ChevronLeft,
   Send,
-  MessageSquareWarning,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
-import { formatCurrency } from "@/lib/utils";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
+import { formatCurrency, safeOpenUrl } from "@/lib/utils";
+import { useToast } from "@/components/toast-provider";
 import { type InventoryItem, INITIAL_PRODUCTS } from "@/lib/inventory";
 
 const ENGINEER_PHONE_INTL = "201206385464";
 const ENGINEER_PHONE_LOCAL = "01206385464";
 
+export function isItemIncomplete(item: InventoryItem): boolean {
+  return (
+    !item.name ||
+    !item.name.trim() ||
+    item.price === undefined ||
+    item.price === null ||
+    isNaN(Number(item.price)) ||
+    Number(item.price) <= 0 ||
+    !item.category ||
+    !item.category.trim()
+  );
+}
+
 export default function InventoryPage() {
+  const { toast } = useToast();
   const [items, setItems] = useState<InventoryItem[]>(INITIAL_PRODUCTS);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("الكل");
+  const [completionFilter, setCompletionFilter] = useState<"all" | "complete" | "incomplete">("all");
   const [isAddingModal, setIsAddingModal] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
@@ -36,7 +51,7 @@ export default function InventoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(30);
 
-  // Form State
+  // Form State (Stock count removed as per requirement #3)
   const [name, setName] = useState("");
   const [category, setCategory] = useState("أدوات كتابة ورسم");
   const [isCustomCategory, setIsCustomCategory] = useState(false);
@@ -44,7 +59,6 @@ export default function InventoryPage() {
   const [price, setPrice] = useState<number | "">("");
   const [wholesalePrice, setWholesalePrice] = useState<number | "">("");
   const [wholesaleMinQty, setWholesaleMinQty] = useState<number | "">("");
-  const [stockCount, setStockCount] = useState<number | "">("");
   const [notes, setNotes] = useState("");
 
   // Load from Supabase with localStorage backup
@@ -64,15 +78,17 @@ export default function InventoryPage() {
           }
         }
 
-        // 2. Fetch from Supabase
-        const { data, error } = await supabase
-          .from("inventory")
-          .select("*")
-          .order("id", { ascending: true });
+        // 2. Fetch from Supabase only if configured
+        if (isSupabaseConfigured) {
+          const { data, error } = await supabase
+            .from("inventory")
+            .select("*")
+            .order("id", { ascending: true });
 
-        if (!error && data && data.length > 0) {
-          setItems(data);
-          localStorage.setItem("copycat_inventory_v1_2", JSON.stringify(data));
+          if (!error && data && data.length > 0) {
+            setItems(data);
+            localStorage.setItem("copycat_inventory_v1_2", JSON.stringify(data));
+          }
         }
       } catch {
         console.log("Using local cache for inventory data");
@@ -83,6 +99,7 @@ export default function InventoryPage() {
 
   const showNotification = (msg: string) => {
     setStatusNotice(msg);
+    toast.success(msg);
     setTimeout(() => setStatusNotice(null), 3500);
   };
 
@@ -98,10 +115,20 @@ export default function InventoryPage() {
     return ["الكل", ...existingCategories];
   }, [existingCategories]);
 
+  const incompleteCount = useMemo(() => {
+    return items.filter(isItemIncomplete).length;
+  }, [items]);
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || price === "") return;
+    if (!name.trim()) {
+      toast.error("بيانات غير مكتملة", "يرجى إدخال اسم الصنف أولاً.");
+      return;
+    }
+    if (price === "" || Number(price) < 0) {
+      toast.error("سعر غير صالح", "يرجى إدخال سعر بيع صحيح.");
+      return;
+    }
 
     const finalCategory = isCustomCategory && customCategory.trim()
       ? customCategory.trim()
@@ -116,7 +143,7 @@ export default function InventoryPage() {
       price: Number(price),
       wholesale_price: wholesalePrice !== "" ? Number(wholesalePrice) : undefined,
       wholesale_min_qty: wholesaleMinQty !== "" ? Number(wholesaleMinQty) : undefined,
-      stock_count: Number(stockCount) || 0,
+      stock_count: 999,
       notes: notes.trim(),
     };
 
@@ -130,34 +157,12 @@ export default function InventoryPage() {
     resetForm();
     showNotification("تم إضافة الصنف بنجاح!");
 
-    try {
-      const { data, error } = await supabase
-        .from("inventory")
-        .insert([
-          {
-            name: newItem.name,
-            category: newItem.category,
-            price: newItem.price,
-            wholesale_price: newItem.wholesale_price,
-            wholesale_min_qty: newItem.wholesale_min_qty,
-            stock_count: newItem.stock_count,
-            notes: newItem.notes,
-          },
-        ])
-        .select()
-        .single();
-
-      if (!error && data) {
-        setItems((prev) => {
-          const synced = prev.map((it) => (it.id === tempId ? (data as InventoryItem) : it));
-          try {
-            localStorage.setItem("copycat_inventory_v1_2", JSON.stringify(synced));
-          } catch {}
-          return synced;
-        });
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from("inventory").insert([newItem]);
+      } catch (err) {
+        console.warn("Supabase sync note:", err);
       }
-    } catch (err) {
-      console.warn("Supabase sync note:", err);
     }
   };
 
@@ -176,7 +181,6 @@ export default function InventoryPage() {
     setPrice(item.price);
     setWholesalePrice(item.wholesale_price !== undefined ? item.wholesale_price : "");
     setWholesaleMinQty(item.wholesale_min_qty !== undefined ? item.wholesale_min_qty : "");
-    setStockCount(item.stock_count);
     setNotes(item.notes || "");
   };
 
@@ -195,7 +199,7 @@ export default function InventoryPage() {
       price: Number(price),
       wholesale_price: wholesalePrice !== "" ? Number(wholesalePrice) : undefined,
       wholesale_min_qty: wholesaleMinQty !== "" ? Number(wholesaleMinQty) : undefined,
-      stock_count: Number(stockCount) || 0,
+      stock_count: editingItem.stock_count || 999,
       notes: notes.trim(),
     };
 
@@ -209,21 +213,23 @@ export default function InventoryPage() {
     resetForm();
     showNotification("تم تحديث بيانات الصنف بنجاح!");
 
-    try {
-      await supabase
-        .from("inventory")
-        .update({
-          name: updatedItem.name,
-          category: updatedItem.category,
-          price: updatedItem.price,
-          wholesale_price: updatedItem.wholesale_price,
-          wholesale_min_qty: updatedItem.wholesale_min_qty,
-          stock_count: updatedItem.stock_count,
-          notes: updatedItem.notes,
-        })
-        .eq("id", editingItem.id);
-    } catch (err) {
-      console.warn("Supabase sync note:", err);
+    if (isSupabaseConfigured) {
+      try {
+        await supabase
+          .from("inventory")
+          .update({
+            name: updatedItem.name,
+            category: updatedItem.category,
+            price: updatedItem.price,
+            wholesale_price: updatedItem.wholesale_price,
+            wholesale_min_qty: updatedItem.wholesale_min_qty,
+            stock_count: updatedItem.stock_count,
+            notes: updatedItem.notes,
+          })
+          .eq("id", editingItem.id);
+      } catch (err) {
+        console.warn("Supabase sync note:", err);
+      }
     }
   };
 
@@ -236,10 +242,12 @@ export default function InventoryPage() {
     } catch {}
     showNotification("تم حذف الصنف.");
 
-    try {
-      await supabase.from("inventory").delete().eq("id", id);
-    } catch (err) {
-      console.warn("Supabase sync note:", err);
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from("inventory").delete().eq("id", id);
+      } catch (err) {
+        console.warn("Supabase sync note:", err);
+      }
     }
   };
 
@@ -251,21 +259,28 @@ export default function InventoryPage() {
     setPrice("");
     setWholesalePrice("");
     setWholesaleMinQty("");
-    setStockCount("");
     setNotes("");
   };
 
-  // Notify Engineer via WhatsApp
+  // Notify Engineer via WhatsApp for replenishment
   const handleNotifyEngineer = (item: InventoryItem) => {
-    const statusText = item.stock_count <= 0 ? "نفد بالكامل من المخزن" : `قارب على النفاد (الكمية المتبقية: ${item.stock_count})`;
-    const textMsg = `تنبيه مخزون من مكتبة كوبي كات:\nالمهندس المحترم، صنف "${item.name}" ${statusText}.\nيرجى تجهيز وشراء كمية جديدة للمخزن.`;
+    const textMsg = `طلب توريد من مكتبة كوبي كات:\nالمهندس المحترم، نرجو توريد صنف "${item.name}" (سعر البيع الحالي: ${item.price} ج.م).\nشكراً لتعاونكم الدائم.`;
     const url = `https://wa.me/${ENGINEER_PHONE_INTL}?text=${encodeURIComponent(textMsg)}`;
-    window.open(url, "_blank");
+    const opened = safeOpenUrl(url);
+    if (!opened) {
+      toast.info(
+        "تم إنشاء رابط الواتساب",
+        "يرجى السماح بالنوافذ المنبثقة إذا لم يفتح المتصفح تطبيق واتساب تلقائياً."
+      );
+    }
   };
 
-  // Calculations & Filtering
+  // Calculations & Filtering with incomplete data handling
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
+      if (completionFilter === "complete" && isItemIncomplete(item)) return false;
+      if (completionFilter === "incomplete" && !isItemIncomplete(item)) return false;
+
       const matchesSearch =
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -273,7 +288,7 @@ export default function InventoryPage() {
       const matchesCategory = selectedCategory === "الكل" || item.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [items, searchQuery, selectedCategory]);
+  }, [items, searchQuery, selectedCategory, completionFilter]);
 
   const totalPages = Math.ceil(filteredItems.length / pageSize) || 1;
   const paginatedItems = useMemo(() => {
@@ -316,14 +331,14 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Stats Cards: Note: Estimated total value card removed as per requirement #5 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
             <Package className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs text-slate-400 font-bold block">إجمالي الأصناف بالمخزن</span>
+            <span className="text-xs text-slate-400 font-bold block">إجمالي أصناف الكتالوج</span>
             <span className="text-2xl font-black text-white">{totalItemsCount} صنف</span>
           </div>
         </div>
@@ -337,61 +352,138 @@ export default function InventoryPage() {
             <span className="text-2xl font-black text-purple-400">{existingCategories.length} قسم</span>
           </div>
         </div>
+
+        <div
+          onClick={() => setCompletionFilter(completionFilter === "incomplete" ? "all" : "incomplete")}
+          className={`border rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition ${
+            incompleteCount > 0
+              ? "bg-amber-950/30 border-amber-500/40 hover:bg-amber-950/50"
+              : "bg-slate-900 border-slate-800"
+          }`}
+        >
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+            incompleteCount > 0
+              ? "bg-amber-500/20 border border-amber-500/30 text-amber-400"
+              : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+          }`}>
+            {incompleteCount > 0 ? <AlertTriangle className="w-6 h-6 animate-pulse" /> : <CheckCircle2 className="w-6 h-6" />}
+          </div>
+          <div>
+            <span className="text-xs text-slate-400 font-bold block">أصناف ناقصة البيانات</span>
+            <div className="flex items-center gap-2">
+              <span className={`text-2xl font-black ${incompleteCount > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+                {incompleteCount} صنف
+              </span>
+              {incompleteCount > 0 && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  مخفية عن الزبائن
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <Search className="w-4 h-4 text-slate-500 absolute right-3 top-3.5" />
-          <input
-            type="text"
-            placeholder="بحث بالاسم أو التصنيف أو الملاحظات..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-9 pl-4 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
-          />
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="relative w-full md:w-96">
+            <Search className="w-4 h-4 text-slate-500 absolute right-3 top-3.5" />
+            <input
+              type="text"
+              placeholder="بحث بالاسم أو التصنيف أو الملاحظات..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-9 pl-4 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            {/* Category Dropdown Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-bold whitespace-nowrap">التصنيف:</span>
+              <select
+                value={selectedCategory}
+                onChange={(e) => {
+                  setSelectedCategory(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:border-blue-500 focus:outline-none cursor-pointer"
+              >
+                {categoriesFilter.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Page size selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-bold whitespace-nowrap">عرض:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:border-blue-500 focus:outline-none cursor-pointer"
+              >
+                <option value={20}>20 صنف</option>
+                <option value={30}>30 صنف</option>
+                <option value={50}>50 صنف</option>
+                <option value={100}>100 صنف</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          {/* Category Dropdown Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 font-bold whitespace-nowrap">التصنيف:</span>
-            <select
-              value={selectedCategory}
-              onChange={(e) => {
-                setSelectedCategory(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:border-blue-500 focus:outline-none cursor-pointer"
-            >
-              {categoriesFilter.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Page size selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 font-bold whitespace-nowrap">عرض:</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:border-blue-500 focus:outline-none cursor-pointer"
-            >
-              <option value={20}>20 صنف</option>
-              <option value={30}>30 صنف</option>
-              <option value={50}>50 صنف</option>
-              <option value={100}>100 صنف</option>
-            </select>
-          </div>
+        {/* Completion Status Tabs (Requirement #4) */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/80">
+          <span className="text-xs font-bold text-slate-400 ml-1">حالة العرض للزبون:</span>
+          <button
+            onClick={() => {
+              setCompletionFilter("all");
+              setCurrentPage(1);
+            }}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+              completionFilter === "all"
+                ? "bg-blue-600 text-white shadow"
+                : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
+            }`}
+          >
+            جميع الأصناف ({items.length})
+          </button>
+          <button
+            onClick={() => {
+              setCompletionFilter("complete");
+              setCurrentPage(1);
+            }}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+              completionFilter === "complete"
+                ? "bg-emerald-600 text-white shadow"
+                : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
+            }`}
+          >
+            المكتملة المعروضة للزبائن ({items.length - incompleteCount})
+          </button>
+          <button
+            onClick={() => {
+              setCompletionFilter("incomplete");
+              setCurrentPage(1);
+            }}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              completionFilter === "incomplete"
+                ? "bg-amber-500 text-slate-950 font-black shadow"
+                : "bg-slate-950 text-amber-400 hover:bg-amber-950/40 border border-amber-500/30"
+            }`}
+          >
+            <AlertTriangle className="w-3 h-3" />
+            <span>ناقصة البيانات ({incompleteCount})</span>
+          </button>
         </div>
       </div>
 
@@ -423,7 +515,7 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Products Table */}
+      {/* Products Table (Stock count column removed as per requirement #3, incomplete items highlighted as per requirement #4) */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-right text-sm">
@@ -433,81 +525,91 @@ export default function InventoryPage() {
                 <th className="p-3.5">التصنيف</th>
                 <th className="p-3.5">سعر البيع للزبون</th>
                 <th className="p-3.5">سعر الجملة والشرط</th>
-                <th className="p-3.5">الكمية بالمخزن</th>
                 <th className="p-3.5">تفاصيل وملاحظات</th>
-                <th className="p-3.5 text-center">الإجراءات وتنبيه المهندس</th>
+                <th className="p-3.5 text-center">الإجراءات والطلب</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 text-slate-300">
-              {paginatedItems.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-800/40 transition">
-                  <td className="p-3.5 font-bold text-white">{item.name}</td>
-                  <td className="p-3.5">
-                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-blue-300 border border-slate-700 whitespace-nowrap">
-                      {item.category}
-                    </span>
-                  </td>
-                  <td className="p-3.5 font-black text-emerald-400 whitespace-nowrap">
-                    {formatCurrency(item.price)}
-                  </td>
-                  <td className="p-3.5 text-xs whitespace-nowrap">
-                    {item.wholesale_price ? (
-                      <span className="font-bold text-cyan-400">
-                        {formatCurrency(item.wholesale_price)}
-                        {item.wholesale_min_qty ? ` (من ${item.wholesale_min_qty} قطع)` : ""}
+              {paginatedItems.map((item) => {
+                const incomplete = isItemIncomplete(item);
+                return (
+                  <tr
+                    key={item.id}
+                    className={`transition ${
+                      incomplete
+                        ? "bg-amber-950/20 hover:bg-amber-950/35 border-r-4 border-amber-500"
+                        : "hover:bg-slate-800/40"
+                    }`}
+                  >
+                    <td className="p-3.5 font-bold text-white">
+                      <div className="flex flex-col gap-1">
+                        <span>{item.name || "— بدون اسم —"}</span>
+                        {incomplete && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 w-fit">
+                            <AlertTriangle className="w-3 h-3 text-amber-400" />
+                            بيانات غير مكتملة (مخفي عن الزبون حتى التعديل)
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3.5">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-blue-300 border border-slate-700 whitespace-nowrap">
+                        {item.category || "غير محدد"}
                       </span>
-                    ) : (
-                      <span className="text-slate-500">—</span>
-                    )}
-                  </td>
-                  <td className="p-3.5">
-                    <span
-                      className={`font-black px-2 py-0.5 rounded-lg text-xs ${
-                        item.stock_count <= 0
-                          ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                          : item.stock_count < 15
-                          ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                          : "bg-slate-800 text-slate-300"
-                      }`}
-                    >
-                      {item.stock_count}
-                    </span>
-                  </td>
-                  <td className="p-3.5 text-xs text-slate-400 max-w-xs truncate">{item.notes || "—"}</td>
-                  <td className="p-3.5 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
-                      {/* Notify Engineer Button via WhatsApp */}
-                      <button
-                        onClick={() => handleNotifyEngineer(item)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-400 border border-emerald-800/50 transition cursor-pointer"
-                        title={`إشعار البشمهندس بنفاد أو قرب انتهاء الصنف (${ENGINEER_PHONE_LOCAL})`}
-                      >
-                        <MessageSquareWarning className="w-3.5 h-3.5" />
-                        <span>إشعار نفاد</span>
-                      </button>
+                    </td>
+                    <td className="p-3.5 font-black whitespace-nowrap">
+                      {item.price && item.price > 0 ? (
+                        <span className="text-emerald-400">{formatCurrency(item.price)}</span>
+                      ) : (
+                        <span className="text-amber-400 text-xs font-bold">⚠️ يلزم تحديد السعر</span>
+                      )}
+                    </td>
+                    <td className="p-3.5 text-xs whitespace-nowrap">
+                      {item.wholesale_price ? (
+                        <span className="font-bold text-cyan-400">
+                          {formatCurrency(item.wholesale_price)}
+                          {item.wholesale_min_qty ? ` (من ${item.wholesale_min_qty} قطع)` : ""}
+                        </span>
+                      ) : (
+                        <span className="text-slate-500">—</span>
+                      )}
+                    </td>
+                    <td className="p-3.5 text-xs text-slate-400 max-w-xs truncate">{item.notes || "—"}</td>
+                    <td className="p-3.5 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        {/* Supply order via WhatsApp */}
+                        <button
+                          onClick={() => handleNotifyEngineer(item)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-400 border border-emerald-800/50 transition cursor-pointer"
+                          title={`طلب توريد من البشمهندس (${ENGINEER_PHONE_LOCAL})`}
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>طلب توريد</span>
+                        </button>
 
-                      <button
-                        onClick={() => handleEditItem(item)}
-                        className="p-1.5 text-blue-400 hover:text-blue-300 rounded-lg hover:bg-blue-950/40 transition cursor-pointer"
-                        title="تعديل بيانات الصنف"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-950/40 transition cursor-pointer"
-                        title="حذف من المخزن"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        <button
+                          onClick={() => handleEditItem(item)}
+                          className="p-1.5 text-blue-400 hover:text-blue-300 rounded-lg hover:bg-blue-950/40 transition cursor-pointer"
+                          title="تعديل بيانات الصنف"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteItem(item.id)}
+                          className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-950/40 transition cursor-pointer"
+                          title="حذف الصنف"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {filteredItems.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500 text-sm">
-                    لا توجد أصناف تطابق نتائج البحث الحالية
+                  <td colSpan={6} className="p-8 text-center text-slate-500 text-sm">
+                    لا توجد أصناف تطابق معايير الفلترة الحالية
                   </td>
                 </tr>
               )}
@@ -615,29 +717,17 @@ export default function InventoryPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-slate-400 block mb-1">سعر البيع العادي (ج.م):</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    required
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : "")}
-                    placeholder="0.00"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-400 block mb-1">الكمية المتوفرة:</label>
-                  <input
-                    type="number"
-                    value={stockCount}
-                    onChange={(e) => setStockCount(e.target.value ? Number(e.target.value) : "")}
-                    placeholder="0"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-bold text-slate-400 block mb-1">سعر البيع العادي (ج.م):</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  required
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : "")}
+                  placeholder="0.00"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                />
               </div>
 
               {/* Wholesale fields */}
@@ -757,27 +847,16 @@ export default function InventoryPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-slate-400 block mb-1">سعر البيع العادي (ج.م):</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    required
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : "")}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-400 block mb-1">الكمية المتوفرة:</label>
-                  <input
-                    type="number"
-                    value={stockCount}
-                    onChange={(e) => setStockCount(e.target.value ? Number(e.target.value) : "")}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-bold text-slate-400 block mb-1">سعر البيع العادي (ج.م):</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  required
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : "")}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                />
               </div>
 
               {/* Wholesale fields */}

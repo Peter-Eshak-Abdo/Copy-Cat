@@ -10,7 +10,6 @@ import {
   TableRow,
   TableCell,
   WidthType,
-  BorderStyle,
 } from "docx";
 import { saveAs } from "file-saver";
 

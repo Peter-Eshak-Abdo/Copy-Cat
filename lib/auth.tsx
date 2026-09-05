@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export interface UserSession {
   email: string;
@@ -36,50 +36,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {}
     return null;
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(isSupabaseConfigured);
   const router = useRouter();
 
   useEffect(() => {
-    // Check Supabase auth state if available
-    try {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user?.email) {
-          const userObj: UserSession = {
-            email: session.user.email,
-            role: session.user.email === MASTER_EMAIL ? "admin" : "staff",
-            name: session.user.user_metadata?.full_name || session.user.email.split("@")[0],
-          };
-          setUser(userObj);
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(userObj));
-          } catch {}
-        }
-      });
-
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session?.user?.email) {
-          const userObj: UserSession = {
-            email: session.user.email,
-            role: session.user.email === MASTER_EMAIL ? "admin" : "staff",
-            name: session.user.user_metadata?.full_name || session.user.email.split("@")[0],
-          };
-          setUser(userObj);
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(userObj));
-          } catch {}
-        }
-      });
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    } catch {
-      // Supabase offline/not configured
-    } finally {
-      setLoading(false);
+    if (!isSupabaseConfigured) {
+      return;
     }
+
+    let isMounted = true;
+
+    // Check Supabase auth state if available
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (!isMounted) return;
+        if (session?.user?.email) {
+          const userObj: UserSession = {
+            email: session.user.email,
+            role: session.user.email === MASTER_EMAIL ? "admin" : "staff",
+            name: session.user.user_metadata?.full_name || session.user.email.split("@")[0],
+          };
+          setUser(userObj);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(userObj));
+          } catch {}
+        }
+      })
+      .catch(() => {
+        // Supabase offline/not configured
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.email) {
+        const userObj: UserSession = {
+          email: session.user.email,
+          role: session.user.email === MASTER_EMAIL ? "admin" : "staff",
+          name: session.user.user_metadata?.full_name || session.user.email.split("@")[0],
+        };
+        setUser(userObj);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(userObj));
+        } catch {}
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (
@@ -115,34 +127,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Verification 2: Supabase Auth
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: cleanPass,
-      });
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: cleanPass,
+        });
 
-      if (!error && data?.user?.email) {
-        const staffUser: UserSession = {
-          email: data.user.email,
-          role: data.user.email === MASTER_EMAIL ? "admin" : "staff",
-          name: data.user.user_metadata?.full_name || data.user.email.split("@")[0],
-        };
-        setUser(staffUser);
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(staffUser));
-          document.cookie = `copycat_auth=staff; path=/; max-age=86400; SameSite=Lax`;
-        } catch {}
-        return { success: true };
-      }
+        if (!error && data?.user?.email) {
+          const staffUser: UserSession = {
+            email: data.user.email,
+            role: data.user.email === MASTER_EMAIL ? "admin" : "staff",
+            name: data.user.user_metadata?.full_name || data.user.email.split("@")[0],
+          };
+          setUser(staffUser);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(staffUser));
+            document.cookie = `copycat_auth=staff; path=/; max-age=86400; SameSite=Lax`;
+          } catch {}
+          return { success: true };
+        }
 
-      if (error) {
-        return {
-          success: false,
-          error: "بيانات الدخول غير صحيحة، يرجى التأكد من البريد وكلمة المرور.",
-        };
+        if (error) {
+          return {
+            success: false,
+            error: "بيانات الدخول غير صحيحة، يرجى التأكد من البريد وكلمة المرور.",
+          };
+        }
+      } catch (err: unknown) {
+        console.warn("Supabase auth error:", err);
       }
-    } catch (err: unknown) {
-      console.warn("Supabase auth error:", err);
     }
 
     return {
@@ -166,7 +180,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "فشل تسجيل الدخول بجوجل";
-      alert(`تنبيه: ${msg}. تأكد من تفعيل موفر Google في لوحة تحكم Supabase.`);
+      console.warn("Google OAuth Note:", msg);
+      throw new Error(`تعذر تسجيل الدخول بجوجل: ${msg}. يرجى التحقق من إعدادات Supabase.`);
     }
   };
 

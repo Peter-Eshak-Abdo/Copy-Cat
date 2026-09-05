@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { LogIn, Lock, Mail, AlertCircle, ArrowRight, ShieldCheck, KeyRound } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { ThemeToggle } from "@/components/theme-provider";
+import { getFriendlyErrorMessage } from "@/lib/utils";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -76,8 +77,8 @@ export default function LoginPage() {
     try {
       setGoogleLoading(true);
       await loginWithGoogle();
-    } catch {
-      setErrorMsg("فشل الاتصال بخدمة جوجل للمصادقة.");
+    } catch (err: unknown) {
+      setErrorMsg(getFriendlyErrorMessage(err, "فشل الاتصال بخدمة جوجل للمصادقة."));
     } finally {
       setGoogleLoading(false);
     }

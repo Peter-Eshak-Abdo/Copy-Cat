@@ -1,31 +1,32 @@
 "use client";
 
 import { useState, useRef } from "react";
+import NextImage from "next/image";
 import {
   Upload,
   Camera,
   FileDown,
   Trash2,
-  Sparkles,
   Loader2,
-  CheckCircle2,
-  Sliders,
-  Type,
-  Layers,
+  Scissors,
 } from "lucide-react";
 import { generatePassportPhotosDocx, PhotoPerson } from "@/lib/docx/passport-docx";
+import { useToast } from "@/components/toast-provider";
+import { getFriendlyErrorMessage } from "@/lib/utils";
 
 export default function PassportPhotosPage() {
+  const { toast } = useToast();
   const [persons, setPersons] = useState<PhotoPerson[]>([]);
   const [isProcessingBg, setIsProcessingBg] = useState(false);
   const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  // Default without name as requested in requirement #6
   const [globalIncludeName, setGlobalIncludeName] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  const processFiles = async (fileList: File[]) => {
+    if (!fileList || fileList.length === 0) return;
 
     setIsProcessingBg(true);
     setStatusMessage("جاري تشغيل محرك الذكاء الاصطناعي لعزل وتبييض الخلفية...");
@@ -34,14 +35,14 @@ export default function PassportPhotosPage() {
       // Dynamically import @imgly/background-removal on client side
       const { removeBackground } = await import("@imgly/background-removal");
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setStatusMessage(`جاري عزل وتبييض خلفية الصورة (${i + 1} من ${files.length})...`);
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        setStatusMessage(`جاري عزل وتبييض خلفية الصورة (${i + 1} من ${fileList.length})...`);
 
         // Process directly in the browser using WASM
         const blob = await removeBackground(file);
 
-        // Frame to 4x5.2 ratio with white background and 1.5pt solid black border
+        // Frame to 4x5.2 ratio with white background, shoulder width containment, and 1.5pt solid black border
         const framedDataUrl = await createStudioFramedPhoto(blob);
 
         setPersons((prev) => [
@@ -54,11 +55,19 @@ export default function PassportPhotosPage() {
           },
         ]);
       }
+      toast.success(
+        "تم عزل وتجهيز الصور بنجاح",
+        `تمت معالجة وتأطير ${fileList.length} صورة شخصية بنجاح.`
+      );
     } catch (err) {
       console.error("AI Background Removal Error:", err);
+      toast.info(
+        "تنبيه معالجة الخلفية",
+        "تعذر العزل التلقائي بالذكاء الاصطناعي، تم استخدام الصورة الأصلية مع تطبيق التأطير المعتمد (4x6)."
+      );
       // Fallback: Frame without AI if WASM fails
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
         const framedDataUrl = await createStudioFramedPhoto(file);
         setPersons((prev) => [
           ...prev,
@@ -77,9 +86,43 @@ export default function PassportPhotosPage() {
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await processFiles(Array.from(files));
+  };
+
+  // Drag & Drop Handlers (Requirement #5)
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      const validImages = Array.from(e.dataTransfer.files).filter((file) =>
+        file.type.startsWith("image/")
+      );
+      if (validImages.length > 0) {
+        await processFiles(validImages);
+      }
+    }
+  };
+
   /**
    * Frames the photo to exact 4.0cm x 5.2cm proportion (400x520px),
-   * applies a pure white background, centers the face/shoulders without stretching,
+   * applies a pure white background, ensures shoulders are comfortably contained inside frame (Requirement #8),
    * and draws a 1.5pt solid black border around the photo.
    */
   const createStudioFramedPhoto = (imgBlob: Blob): Promise<string> => {
@@ -103,17 +146,21 @@ export default function PassportPhotosPage() {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, targetW, targetH);
 
-        // 2. Center crop/fit (neck to shoulders without stretching or modifying features)
-        const scale = Math.max(targetW / img.width, targetH / img.height);
+        // 2. Center crop/fit: accommodate shoulders width inside targetW (Requirement #8)
+        // Ensure shoulder width has ~7% margin on sides so shoulders don't get cut off
+        const widthScale = (targetW * 0.88) / img.width;
+        const heightScale = (targetH * 0.92) / img.height;
+        const scale = Math.min(widthScale, heightScale);
+
         const drawW = img.width * scale;
         const drawH = img.height * scale;
         const offsetX = (targetW - drawW) / 2;
-        // Bias slightly downwards to include neck & top of shoulders nicely
-        const offsetY = Math.min(0, (targetH - drawH) * 0.35);
+        // Position shoulders sitting at the bottom of the frame
+        const offsetY = targetH - drawH;
 
         ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
 
-        // 3. Draw 1.5pt solid black border around photo (as requested in #10)
+        // 3. Draw 1.5pt solid black border around photo
         ctx.strokeStyle = "#000000";
         ctx.lineWidth = 3; // ~1.5pt rendered crisp at 400x520
         ctx.strokeRect(1.5, 1.5, targetW - 3, targetH - 3);
@@ -142,9 +189,16 @@ export default function PassportPhotosPage() {
     setIsGeneratingDocx(true);
     try {
       await generatePassportPhotosDocx(persons, layoutCount);
+      toast.success(
+        "تم تصدير ملف الوورد بنجاح",
+        `تم إنشاء ملف وورد جاهز للطباعة لـ ${persons.length} شخص بتنسيق (${layoutCount} صور لكل شخص).`
+      );
     } catch (err) {
       console.error("Docx generation error:", err);
-      alert("تعذر توليد ملف الوورد");
+      toast.error(
+        "تعذر توليد ملف الوورد",
+        getFriendlyErrorMessage(err, "يرجى التحقق من الصور والمحاولة مرة أخرى.")
+      );
     } finally {
       setIsGeneratingDocx(false);
     }
@@ -162,41 +216,23 @@ export default function PassportPhotosPage() {
             تجهيز وطباعة الصور الشخصية 4×6 (4 صور A6 أو 9 صور A5)
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl">
-            عزل الخلفية وتبييضها بنقاء تام، قص متناسق من تحت الرقبة للأكتاف بمقاس (4 × 5.2 سم) مع إطار أسود 1.5،
-            وإمكانية طباعة اسم الشخص أسفل الصور بخط 12 عريض، مع الحفاظ الصارم على ملامح الوجه ولون البشرة 100%!
+            عزل الخلفية وتبييضها بنقاء تام، احتواء متناسق للأكتاف بمقاس (4 × 5.2 سم) مع إطار أسود 1.5،
+            وهامش قص أبيض بمقدار 1 سم أسفل الصور لسهولة القص بالمقص، وبدون اسم تلقائياً للتقديمات الرسمية!
           </p>
         </div>
 
         {persons.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              onClick={() => setPersons([])}
-              className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-red-950/40 text-red-400 hover:bg-red-900/50 border border-red-900/50 transition cursor-pointer"
-            >
-              مسح الكل
-            </button>
-            <button
-              onClick={() => handleExportDocx(4)}
-              disabled={isGeneratingDocx}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition disabled:opacity-50 cursor-pointer"
-            >
-              <FileDown className="w-4 h-4 text-emerald-400" />
-              <span>تصدير 4 صور (A6)</span>
-            </button>
-            <button
-              onClick={() => handleExportDocx(9)}
-              disabled={isGeneratingDocx}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition disabled:opacity-50 cursor-pointer"
-            >
-              <FileDown className="w-4 h-4" />
-              <span>{isGeneratingDocx ? "جاري التجهيز..." : "تصدير 9 صور (A5)"}</span>
-            </button>
-          </div>
+          <button
+            onClick={() => setPersons([])}
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-red-950/40 text-red-400 hover:bg-red-900/50 border border-red-900/50 transition cursor-pointer self-start md:self-auto"
+          >
+            مسح الكل
+          </button>
         )}
       </div>
 
-      {/* Global Option Bar */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+      {/* Global Option Bar (Default without name as per Requirement #6) */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
@@ -210,26 +246,33 @@ export default function PassportPhotosPage() {
           />
           <div>
             <span className="text-xs font-bold text-white block">
-              طباعة اسم الشخص تحت الصور (خط مقاس 12 عريض Bold)
+              طباعة اسم الشخص أسفل الصور (افتراضياً: بدون اسم)
             </span>
             <span className="text-[11px] text-slate-400">
-              خيار مخصص لتقديمات المدارس والجامعات والوظائف التي تشترط وجود الاسم
+              فعّل هذا الخيار فقط في حال اشترطت المدرسة أو الجامعة أو جهة العمل كتابة الاسم
             </span>
           </div>
         </label>
 
         <div className="text-xs text-slate-400 flex items-center gap-2">
-          <span>المقاس المعتمد:</span>
+          <span>المواصفات:</span>
           <span className="text-emerald-400 font-bold bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
-            4.0 سم عرض × 5.2 سم طول (إطار أسود 1.5)
+            4.0 سم عرض × 5.2 سم طول • مسافة قص بيضاء 1 سم
           </span>
         </div>
       </div>
 
-      {/* Upload Box */}
+      {/* Upload Box with Drag & Drop (Requirement #5) */}
       <div
         onClick={() => fileInputRef.current?.click()}
-        className="border-2 border-dashed border-slate-800 hover:border-emerald-500/60 bg-slate-900/50 hover:bg-slate-900 transition-all rounded-3xl p-8 sm:p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-3 group"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`border-2 border-dashed transition-all rounded-3xl p-8 sm:p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-3 group ${
+          isDragging
+            ? "border-emerald-400 bg-emerald-950/20 scale-[1.01] shadow-2xl shadow-emerald-500/10"
+            : "border-slate-800 hover:border-emerald-500/60 bg-slate-900/50 hover:bg-slate-900"
+        }`}
       >
         <input
           ref={fileInputRef}
@@ -239,15 +282,21 @@ export default function PassportPhotosPage() {
           onChange={handleFileUpload}
           className="hidden"
         />
-        <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+        <div
+          className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform ${
+            isDragging
+              ? "scale-125 bg-emerald-500 text-slate-950"
+              : "bg-emerald-500/10 text-emerald-400 group-hover:scale-110"
+          }`}
+        >
           <Upload className="w-8 h-8" />
         </div>
         <div>
           <span className="text-base font-bold text-white block">
-            اضغط هنا لرفع الصور الشخصية أو سحبها مباشرة
+            {isDragging ? "أفلت الصور هنا الآن!" : "اضغط هنا لرفع الصور الشخصية أو اسحبها وأفلتها مباشرة (Drag & Drop)"}
           </span>
           <span className="text-xs text-slate-500 mt-1 block">
-            يدعم صور السكنر أو الموبايل — سيتم عزل الخلفية وضبط مقاس 4×6 والإطار الأسود فورياً
+            يدعم صور السكنر أو الموبايل — عزل فوري للخلفية وضبط مقاس 4×6 واحتواء الأكتاف بدون قصها
           </span>
         </div>
       </div>
@@ -260,13 +309,71 @@ export default function PassportPhotosPage() {
         </div>
       )}
 
+      {/* Prominent Download Banner (Requirement #6) */}
+      {persons.length > 0 && (
+        <div className="bg-linear-to-r from-emerald-950/60 via-slate-900 to-emerald-950/60 border-2 border-emerald-500/40 rounded-3xl p-6 shadow-2xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-500/20 pb-3">
+            <div>
+              <span className="text-xs font-black text-emerald-400 uppercase tracking-wider block mb-1">
+                جاهز للطباعة الفورية الآن
+              </span>
+              <h2 className="text-xl font-black text-white">
+                تنزيل ملف الوورد الجاهز للطباعة (اختر المقاس المطلوب)
+              </h2>
+            </div>
+            <div className="text-xs text-slate-300 flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+              <Scissors className="w-4 h-4 text-emerald-400" />
+              <span>مُدرج بهامش أبيض 1 سم لسهولة القص الفوري</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            {/* Download A6 Button (4 photos) */}
+            <button
+              onClick={() => handleExportDocx(4)}
+              disabled={isGeneratingDocx}
+              className="group flex items-center justify-between p-4 rounded-2xl bg-slate-950 hover:bg-slate-800 border-2 border-slate-700 hover:border-emerald-500 transition-all cursor-pointer shadow-lg disabled:opacity-50"
+            >
+              <div className="flex items-center gap-3 text-right">
+                <div className="w-12 h-12 rounded-xl bg-slate-800 group-hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black text-lg">
+                  4×
+                </div>
+                <div>
+                  <span className="font-black text-white text-sm block">تنزيل ملف الوورد (4 صور مقاس A6)</span>
+                  <span className="text-xs text-slate-400 block mt-0.5">مقاس الورقة 10.5 × 14.8 سم (ورق فوتو A6 كوداك)</span>
+                </div>
+              </div>
+              <FileDown className="w-6 h-6 text-emerald-400 group-hover:scale-125 transition-transform" />
+            </button>
+
+            {/* Download A5 Button (9 photos) */}
+            <button
+              onClick={() => handleExportDocx(9)}
+              disabled={isGeneratingDocx}
+              className="group flex items-center justify-between p-4 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white transition-all cursor-pointer shadow-xl shadow-emerald-600/30 disabled:opacity-50"
+            >
+              <div className="flex items-center gap-3 text-right">
+                <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center font-black text-lg">
+                  9×
+                </div>
+                <div>
+                  <span className="font-black text-white text-sm block">تنزيل ملف الوورد (9 صور مقاس A5)</span>
+                  <span className="text-xs text-emerald-100 block mt-0.5">مقاس الورقة 14.8 × 21.0 سم (العرض الأوفر للعملاء)</span>
+                </div>
+              </div>
+              <FileDown className="w-6 h-6 text-white group-hover:scale-125 transition-transform" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Persons Gallery */}
       {persons.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center justify-between text-xs text-slate-400 px-1">
             <span>تم تجهيز {persons.length} شخصية بمقاس الاستوديو 4×6</span>
             <span className="text-emerald-400 font-bold">
-              جاهزة للتصدير المباشر لورق A6 (4 صور) أو ورق A5 (9 صور)
+              مع مسافة بيضاء 1 سم أسفل كل صورة لقص مريح وسريع
             </span>
           </div>
 
@@ -283,18 +390,21 @@ export default function PassportPhotosPage() {
                     </span>
                     <button
                       onClick={() => removePerson(person.id)}
-                      className="p-1 text-red-400 hover:text-red-300"
+                      className="p-1 text-red-400 hover:text-red-300 transition cursor-pointer"
                       title="حذف"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
 
-                  {/* Photo with simulated 1.5pt black border & 4x5.2 ratio */}
+                  {/* Photo with simulated 1.5pt black border & 4x5.2 ratio & 1cm bottom white margin */}
                   <div className="aspect-[4/5.2] bg-white rounded-xl overflow-hidden mb-3 border-2 border-slate-950 flex items-center justify-center p-1 shadow-md">
-                    <img
+                    <NextImage
                       src={person.imageDataUrl}
                       alt={person.name}
+                      width={160}
+                      height={208}
+                      unoptimized
                       className="w-full h-full object-contain"
                     />
                   </div>
@@ -310,22 +420,22 @@ export default function PassportPhotosPage() {
                           onChange={() => togglePersonName(person.id)}
                           className="w-3.5 h-3.5 accent-emerald-500 rounded cursor-pointer"
                         />
-                        <span>طباعة تحت الصورة</span>
+                        <span>طباعة الاسم</span>
                       </label>
                     </div>
                     <input
                       type="text"
                       value={person.name}
                       onChange={(e) => updatePersonName(person.id, e.target.value)}
-                      placeholder="اكتب اسم الشخص..."
+                      placeholder="اسم اختياري..."
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="pt-3 mt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
-                  <span>مقاس الاستوديو 4×6</span>
-                  <span className="text-emerald-400 font-bold">خلفية بيضاء 100%</span>
+                  <span>الأكتاف مضبوطة بنقاء</span>
+                  <span className="text-emerald-400 font-bold">4.0 × 5.2 سم</span>
                 </div>
               </div>
             ))}

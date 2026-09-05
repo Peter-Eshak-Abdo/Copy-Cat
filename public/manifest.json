@@ -1,0 +1,28 @@
+{
+  "name": "مكتبة كوبي كات | Copy Cat",
+  "short_name": "كوبي كات",
+  "description": "مكتبة كوبي كات - خدمات الطباعة وتصوير المستندات والبطاقات والصور الشخصية والمستلزمات المكتبية",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "utilities", "productivity"]
+}

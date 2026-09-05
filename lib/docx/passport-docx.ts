@@ -6,6 +6,11 @@ import {
   ImageRun,
   convertMillimetersToTwip,
   TextRun,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  BorderStyle,
 } from "docx";
 import { saveAs } from "file-saver";
 
@@ -49,54 +54,88 @@ export async function generatePassportPhotosDocx(
   const imgWidth = 151;
   const imgHeight = 196;
 
+  // ~1cm white margin under photo = 567 twips
+  const bottomCuttingMarginTwips = 567; // 10mm = 1cm
+  const horizontalCellMarginTwips = 220; // ~4mm between photos
+
+  const noBorders = {
+    top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+    bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+    left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+    right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+  };
+
   const sections = persons.map((person) => {
     const imgBytes = base64ToUint8Array(person.imageDataUrl);
-    const paragraphs: Paragraph[] = [];
-
-    let currentRowImages: ImageRun[] = [];
+    const tableRows: TableRow[] = [];
+    let currentRowCells: TableCell[] = [];
 
     for (let c = 0; c < loopCount; c++) {
-      currentRowImages.push(
-        new ImageRun({
-          data: imgBytes,
-          transformation: {
-            width: imgWidth,
-            height: imgHeight,
+      const cellChildren: Paragraph[] = [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 40, after: 40 },
+          children: [
+            new ImageRun({
+              data: imgBytes,
+              transformation: {
+                width: imgWidth,
+                height: imgHeight,
+              },
+              type: "jpg",
+            }),
+          ],
+        }),
+      ];
+
+      // Optional name under photo
+      if (person.includeName && person.name && person.name.trim()) {
+        cellChildren.push(
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 20, after: 40 },
+            children: [
+              new TextRun({
+                text: person.name.trim(),
+                font: "Arial",
+                size: 24, // 12pt
+                bold: true,
+                rightToLeft: true,
+              }),
+            ],
+          })
+        );
+      }
+
+      currentRowCells.push(
+        new TableCell({
+          borders: noBorders,
+          margins: {
+            top: 60,
+            bottom: bottomCuttingMarginTwips, // 1cm white gap at the bottom for easy cutting
+            left: horizontalCellMarginTwips,
+            right: horizontalCellMarginTwips,
           },
-          type: "jpg",
+          children: cellChildren,
         })
       );
 
       if ((c + 1) % itemsPerRow === 0 || c === loopCount - 1) {
-        paragraphs.push(
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            spacing: { before: 80, after: 40 },
-            children: currentRowImages,
+        tableRows.push(
+          new TableRow({
+            children: currentRowCells,
           })
         );
-        currentRowImages = [];
-
-        // Optional Name under row if requested (Font size 12 bold, rightToLeft)
-        if (person.includeName && person.name && person.name.trim()) {
-          paragraphs.push(
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              spacing: { before: 20, after: 80 },
-              children: [
-                new TextRun({
-                  text: person.name.trim(),
-                  font: "Arial",
-                  size: 24, // 12pt (docx uses half-points)
-                  bold: true,
-                  rightToLeft: true,
-                }),
-              ],
-            })
-          );
-        }
+        currentRowCells = [];
       }
     }
+
+    const table = new Table({
+      alignment: AlignmentType.CENTER,
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: noBorders,
+      rows: tableRows,
+    });
 
     return {
       properties: {
@@ -106,14 +145,14 @@ export async function generatePassportPhotosDocx(
             height: convertMillimetersToTwip(pageHeightMm),
           },
           margin: {
-            top: convertMillimetersToTwip(6),
-            bottom: convertMillimetersToTwip(6),
+            top: convertMillimetersToTwip(5),
+            bottom: convertMillimetersToTwip(5),
             left: convertMillimetersToTwip(5),
             right: convertMillimetersToTwip(5),
           },
         },
       },
-      children: paragraphs,
+      children: [table],
     };
   });
 

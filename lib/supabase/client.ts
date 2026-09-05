@@ -1,17 +1,25 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-
-const supabaseAnonKey =
+const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const rawKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  "placeholder-key";
+  "";
+
+export const isSupabaseConfigured = Boolean(
+  rawUrl &&
+  rawUrl.startsWith("https://") &&
+  !rawUrl.includes("placeholder.supabase.co") &&
+  rawKey &&
+  !rawKey.includes("placeholder")
+);
+
+const supabaseUrl = isSupabaseConfigured ? rawUrl : "https://placeholder.supabase.co";
+const supabaseAnonKey = isSupabaseConfigured ? rawKey : "placeholder-key";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true,
-    autoRefreshToken: true,
+    persistSession: isSupabaseConfigured,
+    autoRefreshToken: isSupabaseConfigured,
   },
 });
-
