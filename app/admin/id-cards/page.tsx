@@ -9,91 +9,228 @@ import {
   Sparkles,
   ArrowRight,
   Layers,
+  Crop,
+  Sun,
+  Sliders,
+  CheckCircle2,
+  ArrowUpDown,
+  Zap,
 } from "lucide-react";
 import { generateIdCardsDocx } from "@/lib/docx/id-cards-docx";
+import { processImageOnCanvas } from "@/lib/canvas-filters";
 
-interface CardItem {
+interface CardSide {
   id: string;
-  dataUrl: string;
+  name: string;
+  originalSrc: string;
+  processedSrc: string;
   rotation: number;
+  brightness: number;
+  contrast: number;
+  sharpness: number;
+  sideType: "front" | "back";
+}
+
+interface CardPair {
+  pairId: string;
+  cardName: string;
+  front: CardSide | null;
+  back: CardSide | null;
 }
 
 export default function IdCardsPage() {
-  const [cards, setCards] = useState<CardItem[]>([]);
+  const [pairs, setPairs] = useState<CardPair[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [globalSharpness, setGlobalSharpness] = useState(50);
+  const [globalBrightness, setGlobalBrightness] = useState(110);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setCards((prev) => [
-            ...prev,
-            {
-              id: Math.random().toString(36).substring(2, 9),
-              dataUrl: event.target!.result as string,
-              rotation: 0,
-            },
-          ]);
+  const processSideImage = (
+    src: string,
+    b = globalBrightness,
+    c = 115,
+    sh = globalSharpness,
+    rot = 0
+  ): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = src;
+      img.onload = () => {
+        // Handle rotation if needed
+        const workingImg = img;
+        if (rot !== 0) {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            if (rot === 90 || rot === 270) {
+              canvas.width = img.height;
+              canvas.height = img.width;
+            } else {
+              canvas.width = img.width;
+              canvas.height = img.height;
+            }
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate((rot * Math.PI) / 180);
+            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+            const rotatedImg = new Image();
+            rotatedImg.src = canvas.toDataURL("image/jpeg", 0.95);
+            rotatedImg.onload = () => {
+              const res = processImageOnCanvas(rotatedImg, {
+                brightness: b,
+                contrast: c,
+                sharpness: sh,
+                camScannerMode: false,
+              });
+              resolve(res);
+            };
+            return;
+          }
         }
+
+        const res = processImageOnCanvas(workingImg, {
+          brightness: b,
+          contrast: c,
+          sharpness: sh,
+          camScannerMode: false,
+        });
+        resolve(res);
       };
-      reader.readAsDataURL(file);
     });
   };
 
-  const rotateCard = (id: string) => {
-    setCards((prev) =>
-      prev.map((card) => {
-        if (card.id !== id) return card;
-        const newRotation = (card.rotation + 90) % 360;
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-        // Apply rotation permanently on a temporary canvas so the Word generator gets the right orientation
-        const img = new Image();
-        img.src = card.dataUrl;
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
-          if (!ctx) return;
+    const fileList = Array.from(files);
+    const loadedSides: CardSide[] = [];
 
-          if (newRotation === 90 || newRotation === 270) {
-            canvas.width = img.height;
-            canvas.height = img.width;
-          } else {
-            canvas.width = img.width;
-            canvas.height = img.height;
-          }
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      const originalSrc = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target?.result as string);
+        reader.readAsDataURL(file);
+      });
 
-          ctx.translate(canvas.width / 2, canvas.height / 2);
-          ctx.rotate((newRotation * Math.PI) / 180);
-          ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      const processedSrc = await processSideImage(originalSrc);
 
-          const rotatedDataUrl = canvas.toDataURL("image/jpeg", 0.95);
-          setCards((current) =>
-            current.map((c) =>
-              c.id === id ? { ...c, dataUrl: rotatedDataUrl, rotation: 0 } : c
-            )
+      loadedSides.push({
+        id: Math.random().toString(36).substring(2, 9),
+        name: file.name,
+        originalSrc,
+        processedSrc,
+        rotation: 0,
+        brightness: globalBrightness,
+        contrast: 115,
+        sharpness: globalSharpness,
+        sideType: i % 2 === 0 ? "front" : "back",
+      });
+    }
+
+    // Pair up consecutively
+    const newPairs: CardPair[] = [];
+    for (let i = 0; i < loadedSides.length; i += 2) {
+      const pairIndex = Math.floor(i / 2) + 1;
+      newPairs.push({
+        pairId: Math.random().toString(36).substring(2, 9),
+        cardName: `بطاقة رقم ${pairs.length + pairIndex}`,
+        front: loadedSides[i] || null,
+        back: loadedSides[i + 1] || null,
+      });
+    }
+
+    setPairs((prev) => [...prev, ...newPairs]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const rotateSide = async (pairId: string, side: "front" | "back") => {
+    setPairs((prev) =>
+      prev.map((p) => {
+        if (p.pairId !== pairId) return p;
+        const target = p[side];
+        if (!target) return p;
+
+        const newRotation = (target.rotation + 90) % 360;
+
+        // Apply immediately
+        processSideImage(
+          target.originalSrc,
+          target.brightness,
+          target.contrast,
+          target.sharpness,
+          newRotation
+        ).then((newSrc) => {
+          setPairs((curr) =>
+            curr.map((item) => {
+              if (item.pairId !== pairId) return item;
+              return {
+                ...item,
+                [side]: { ...target, rotation: newRotation, processedSrc: newSrc },
+              };
+            })
           );
-        };
+        });
 
-        return card;
+        return p;
       })
     );
   };
 
-  const removeCard = (id: string) => {
-    setCards((prev) => prev.filter((c) => c.id !== id));
+  const swapFrontAndBack = (pairId: string) => {
+    setPairs((prev) =>
+      prev.map((p) => {
+        if (p.pairId !== pairId) return p;
+        return {
+          ...p,
+          front: p.back ? { ...p.back, sideType: "front" } : null,
+          back: p.front ? { ...p.front, sideType: "back" } : null,
+        };
+      })
+    );
+  };
+
+  const removePair = (pairId: string) => {
+    setPairs((prev) => prev.filter((p) => p.pairId !== pairId));
+  };
+
+  const applyGlobalEnhancement = async (sh: number, b: number) => {
+    setGlobalSharpness(sh);
+    setGlobalBrightness(b);
+
+    const updated = await Promise.all(
+      pairs.map(async (p) => {
+        let newFront = p.front;
+        let newBack = p.back;
+
+        if (p.front) {
+          const frontSrc = await processSideImage(p.front.originalSrc, b, 115, sh, p.front.rotation);
+          newFront = { ...p.front, processedSrc: frontSrc, sharpness: sh, brightness: b };
+        }
+        if (p.back) {
+          const backSrc = await processSideImage(p.back.originalSrc, b, 115, sh, p.back.rotation);
+          newBack = { ...p.back, processedSrc: backSrc, sharpness: sh, brightness: b };
+        }
+
+        return { ...p, front: newFront, back: newBack };
+      })
+    );
+
+    setPairs(updated);
   };
 
   const handleExportWord = async () => {
-    if (cards.length === 0) return;
+    if (pairs.length === 0) return;
     setIsGenerating(true);
     try {
-      const imagesBase64 = cards.map((c) => c.dataUrl);
-      await generateIdCardsDocx(imagesBase64, "ID_Cards_A5_Print.docx");
+      const imagesInOrder: string[] = [];
+
+      pairs.forEach((p) => {
+        if (p.front) imagesInOrder.push(p.front.processedSrc);
+        if (p.back) imagesInOrder.push(p.back.processedSrc);
+      });
+
+      await generateIdCardsDocx(imagesInOrder, "CopyCat_ID_Cards_A5.docx");
     } catch (err) {
       console.error("Error generating docx:", err);
       alert("حدث خطأ أثناء إنشاء ملف الوورد");
@@ -102,107 +239,221 @@ export default function IdCardsPage() {
     }
   };
 
+  const totalFacesCount = pairs.reduce((acc, p) => acc + (p.front ? 1 : 0) + (p.back ? 1 : 0), 0);
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-2xl border border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold mb-2">
-            <Layers className="w-3.5 h-3.5" /> طباعة البطاقات والشهادات (A5)
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-2">
+            <Layers className="w-3.5 h-3.5" /> مصنع بطاقات الرقم القومي A5 (وش وضهر 9 سم)
           </div>
-          <h1 className="text-2xl font-bold text-white">مصنع البطاقات والمستندات الذكي</h1>
-          <p className="text-slate-400 text-sm mt-1">
-            ارفع صور وش وضهر البطاقات الشخصية، قم بتدويرها أو ترتيبها، ثم صدّرها لملف Word مقاس A5
-            جاهز للطباعة الفورية.
+          <h1 className="text-2xl font-black text-white">
+            تجهيز وطباعة بطاقات الرقم القومي الفورية A5
+          </h1>
+          <p className="text-slate-400 text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl">
+            ارفع حتى 10 بطاقات معاً (20 صورة وش وضهر). الأداة تطابق الوجه والظهر تلقائياً، تضبط عرض البطاقة بدقة 9 سم،
+            تزيد الحدة (Sharpness) بنسبة 50% أو 100% لإزالة البكسلة، وتصدر ملف وورد مقاس A5 جاهز للطباعة مباشرة بـ Ctrl + P!
           </p>
         </div>
 
-        {cards.length > 0 && (
+        {pairs.length > 0 && (
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setCards([])}
-              className="px-4 py-2.5 rounded-xl text-sm font-medium bg-red-950/40 text-red-400 hover:bg-red-900/50 border border-red-900/50 transition"
+              onClick={() => setPairs([])}
+              className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-red-950/40 text-red-400 hover:bg-red-900/50 border border-red-900/50 transition cursor-pointer"
             >
               مسح الكل
             </button>
             <button
               onClick={handleExportWord}
               disabled={isGenerating}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 transition disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-black bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 transition disabled:opacity-50 cursor-pointer"
             >
               <FileDown className="w-4 h-4" />
-              <span>{isGenerating ? "جاري التوليد..." : "تحميل ملف Word (A5)"}</span>
+              <span>{isGenerating ? "جاري تجهيز الوورد..." : "تصدير وورد A5 فوري (Ctrl + P)"}</span>
             </button>
           </div>
         )}
       </div>
 
-      {/* Upload Zone */}
+      {/* Global Presets */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center gap-3">
+        <span className="text-xs font-bold text-slate-400 ml-2">تحسين تلقائي لكافة البطاقات:</span>
+        <button
+          onClick={() => applyGlobalEnhancement(50, 110)}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+            globalSharpness === 50 && globalBrightness === 110
+              ? "bg-blue-600 text-white shadow-md font-black"
+              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <span>تفتيح خفيف + حدة 50% (الموصى به)</span>
+        </button>
+
+        <button
+          onClick={() => applyGlobalEnhancement(100, 115)}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+            globalSharpness === 100
+              ? "bg-cyan-600 text-white shadow-md font-black"
+              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+          }`}
+        >
+          <Zap className="w-3.5 h-3.5 text-yellow-300" />
+          <span>أعلى حدة 100% (للصور المبكسلة والبعيدة)</span>
+        </button>
+
+        <button
+          onClick={() => applyGlobalEnhancement(0, 100)}
+          className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800/60 text-slate-400 hover:bg-slate-800 hover:text-white transition cursor-pointer mr-auto"
+        >
+          إعادة ضبط للأصل
+        </button>
+      </div>
+
+      {/* Upload Box */}
       <div
         onClick={() => fileInputRef.current?.click()}
-        className="border-2 border-dashed border-slate-700 hover:border-blue-500 bg-slate-900/50 hover:bg-slate-900 rounded-2xl p-10 text-center cursor-pointer transition flex flex-col items-center justify-center gap-3 group"
+        className="border-2 border-dashed border-slate-800 hover:border-blue-500/60 bg-slate-900/50 hover:bg-slate-900 transition-all rounded-3xl p-8 sm:p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-3 group"
       >
-        <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-          <Upload className="w-7 h-7" />
-        </div>
-        <div>
-          <p className="text-base font-bold text-slate-200">
-            اضغط هنا لاختيار صور البطاقات (وش وضهر) أو اسحبها هنا
-          </p>
-          <p className="text-xs text-slate-500 mt-1">يدعم JPG, PNG, WEBP - مقاس الورقة A5 مضبوط تلقائياً</p>
-        </div>
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
           multiple
+          accept="image/*"
           onChange={handleFileUpload}
           className="hidden"
         />
+        <div className="w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+          <Upload className="w-8 h-8" />
+        </div>
+        <div>
+          <span className="text-base font-bold text-white block">
+            اضغط هنا لرفع صور البطاقات من الواتساب (وش وضهر حتى 20 صورة دفعة واحدة)
+          </span>
+          <span className="text-xs text-slate-500 mt-1 block">
+            سيتم تجميع كل صورتين تلقائياً كبطاقة واحدة [وش في صفحة + ضهر في صفحة A5 مستقلة بعرض 9 سم]
+          </span>
+        </div>
       </div>
 
-      {/* Cards List */}
-      {cards.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-200">
-              الصور المرفوعة ({cards.length}) - مرتبة لكل وجه صفحة A5 مستقلة
-            </h2>
+      {/* Pairs Showcase */}
+      {pairs.length > 0 && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+            <span>
+              تم تجميع <strong className="text-white font-bold">{pairs.length} بطاقات</strong> (إجمالي {totalFacesCount} وجه وظفر جاهز للطباعة)
+            </span>
+            <span className="text-blue-400 font-semibold">
+              مقاس الصورة في الوورد: 9.0 سم بالضبط متوافقة مع الطباعة المباشرة Ctrl + P
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {cards.map((card, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {pairs.map((pair, index) => (
               <div
-                key={card.id}
-                className="relative bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3 group shadow-md"
+                key={pair.pairId}
+                className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-xl relative"
               >
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span className="font-semibold bg-slate-800 px-2.5 py-1 rounded-md">
-                    وجه #{index + 1}
-                  </span>
-                  <button
-                    onClick={() => removeCard(card.id)}
-                    className="text-red-400 hover:text-red-300 p-1"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                {/* Pair Header */}
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs font-black flex items-center justify-center">
+                      {index + 1}
+                    </span>
+                    <span className="font-extrabold text-white text-sm">{pair.cardName}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => swapFrontAndBack(pair.pairId)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 transition cursor-pointer"
+                      title="تبديل الوجه والظهر إذا كانت الصور معكوسة"
+                    >
+                      <ArrowUpDown className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>تبديل وش / ضهر</span>
+                    </button>
+
+                    <button
+                      onClick={() => removePair(pair.pairId)}
+                      className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-950/40 transition cursor-pointer"
+                      title="حذف هذه البطاقة"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="h-44 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center p-2">
-                  <img
-                    src={card.dataUrl}
-                    alt={`Card ${index + 1}`}
-                    className="max-h-full max-w-full object-contain"
-                  />
+                {/* Faces Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Front Side */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-blue-400 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-blue-400" />
+                        <span>الوش (صفحة 1)</span>
+                      </span>
+                      {pair.front && (
+                        <button
+                          onClick={() => rotateSide(pair.pairId, "front")}
+                          className="p-1 text-slate-400 hover:text-white rounded-lg bg-slate-800 transition cursor-pointer"
+                          title="تدوير 90°"
+                        >
+                          <RotateCw className="w-3 h-3 text-blue-400" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="aspect-[8.6/5.4] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center p-2 relative">
+                      {pair.front ? (
+                        <img
+                          src={pair.front.processedSrc}
+                          alt="Front face"
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-xs text-slate-600">غير متوفر</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Back Side */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span>الضهر (صفحة 2)</span>
+                      </span>
+                      {pair.back && (
+                        <button
+                          onClick={() => rotateSide(pair.pairId, "back")}
+                          className="p-1 text-slate-400 hover:text-white rounded-lg bg-slate-800 transition cursor-pointer"
+                          title="تدوير 90°"
+                        >
+                          <RotateCw className="w-3 h-3 text-emerald-400" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="aspect-[8.6/5.4] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center p-2 relative">
+                      {pair.back ? (
+                        <img
+                          src={pair.back.processedSrc}
+                          alt="Back face"
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-xs text-slate-600">غير متوفر</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <button
-                  onClick={() => rotateCard(card.id)}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition"
-                >
-                  <RotateCw className="w-3.5 h-3.5 text-blue-400" />
-                  <span>تدوير 90°</span>
-                </button>
+                <div className="text-[11px] text-slate-500 text-center bg-slate-950/40 py-1.5 rounded-xl border border-slate-800/40">
+                  عرض الصورة في الطباعة: 9.0 سم • مقاس الورقة: A5 • فاصل صفحات تلقائي
+                </div>
               </div>
             ))}
           </div>

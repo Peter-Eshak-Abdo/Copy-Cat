@@ -32,9 +32,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*.local
+# env files (strictly ignored to prevent secret leaks to GitHub)
 .env
+.env.*
+.env*.local
+.nev*
 !.env.example
 
 # vercel
@@ -46,3 +48,6 @@ next-env.d.ts
 
 # legacy python folder
 legacy-python/
+
+*.md
+*.sql

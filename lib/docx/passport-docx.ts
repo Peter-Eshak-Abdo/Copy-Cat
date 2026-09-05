@@ -23,7 +23,8 @@ function base64ToUint8Array(base64: string): Uint8Array {
 export interface PhotoPerson {
   id: string;
   name: string;
-  imageDataUrl: string; // Base64 or ObjectURL converted to base64
+  imageDataUrl: string; // Base64 with white bg & 1.5pt black border
+  includeName?: boolean;
 }
 
 export async function generatePassportPhotosDocx(
@@ -34,42 +35,23 @@ export async function generatePassportPhotosDocx(
   if (!persons || persons.length === 0) return;
 
   const defaultFilename =
-    filename || (layoutCount === 9 ? "Photos_Layout_A5.docx" : "Photos_Layout_A6.docx");
+    filename || (layoutCount === 9 ? "CopyCat_Photos_9x_A5.docx" : "CopyCat_Photos_4x_A6.docx");
 
-  // A6: 105mm x 148mm (4 photos: 2x2)
-  // A5: 148mm x 210mm (9 photos: 3x3)
+  // A6: 105mm x 148mm (4 photos: 2 columns x 2 rows)
+  // A5: 148mm x 210mm (9 photos: 3 columns x 3 rows)
   const isA5 = layoutCount === 9;
   const pageWidthMm = isA5 ? 148 : 105;
   const pageHeightMm = isA5 ? 210 : 148;
   const loopCount = layoutCount;
   const itemsPerRow = isA5 ? 3 : 2;
 
-  // 4x5.2 cm = ~151 x 196 px
-  const imgWidth = 150;
-  const imgHeight = 195;
+  // 4.0 cm width x 5.2 cm height in points (40mm / 25.4 * 96 = ~151px, 52mm / 25.4 * 96 = ~196px)
+  const imgWidth = 151;
+  const imgHeight = 196;
 
   const sections = persons.map((person) => {
     const imgBytes = base64ToUint8Array(person.imageDataUrl);
     const paragraphs: Paragraph[] = [];
-
-    // Optional Person Name header
-    if (person.name && person.name.trim()) {
-      paragraphs.push(
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 100 },
-          children: [
-            new TextRun({
-              text: person.name.trim(),
-              font: "Arial",
-              size: 20,
-              bold: true,
-              rightToLeft: true,
-            }),
-          ],
-        })
-      );
-    }
 
     let currentRowImages: ImageRun[] = [];
 
@@ -89,11 +71,30 @@ export async function generatePassportPhotosDocx(
         paragraphs.push(
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 80, after: 80 },
+            spacing: { before: 80, after: 40 },
             children: currentRowImages,
           })
         );
         currentRowImages = [];
+
+        // Optional Name under row if requested (Font size 12 bold, rightToLeft)
+        if (person.includeName && person.name && person.name.trim()) {
+          paragraphs.push(
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 20, after: 80 },
+              children: [
+                new TextRun({
+                  text: person.name.trim(),
+                  font: "Arial",
+                  size: 24, // 12pt (docx uses half-points)
+                  bold: true,
+                  rightToLeft: true,
+                }),
+              ],
+            })
+          );
+        }
       }
     }
 
@@ -105,10 +106,10 @@ export async function generatePassportPhotosDocx(
             height: convertMillimetersToTwip(pageHeightMm),
           },
           margin: {
-            top: convertMillimetersToTwip(5),
-            bottom: convertMillimetersToTwip(4),
-            left: convertMillimetersToTwip(4),
-            right: convertMillimetersToTwip(4),
+            top: convertMillimetersToTwip(6),
+            bottom: convertMillimetersToTwip(6),
+            left: convertMillimetersToTwip(5),
+            right: convertMillimetersToTwip(5),
           },
         },
       },

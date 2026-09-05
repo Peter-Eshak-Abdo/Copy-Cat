@@ -1,21 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Simple in-memory rate limiter
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const MAX_REQUESTS_PER_MINUTE = 12;
+
 export async function POST(req: NextRequest) {
   try {
-    const { topic, includeIntro = true, includeConclusion = true, includeRefs = true } =
-      await req.json();
+    // 1. Cyber Security: Rate Limiting by IP or forwarded header
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      "anonymous";
+    const now = Date.now();
+    const clientLimit = rateLimitMap.get(ip);
 
-    if (!topic || !topic.trim()) {
-      return NextResponse.json({ error: "من فضلك أدخل عنوان البحث" }, { status: 400 });
+    if (clientLimit && now < clientLimit.resetTime) {
+      if (clientLimit.count >= MAX_REQUESTS_PER_MINUTE) {
+        return NextResponse.json(
+          { error: "تم تجاوز الحد الأقصى للطلبات مؤقتاً. يرجى الانتظار دقيقة قبل المحاولة مجدداً." },
+          { status: 429 }
+        );
+      }
+      clientLimit.count += 1;
+    } else {
+      rateLimitMap.set(ip, { count: 1, resetTime: now + 60000 });
     }
 
-    const prompt = `اكتب بحثاً أكاديمياً تفصيلياً وشاملاً جداً وموسعاً باللغة العربية حول موضوع: (${topic.trim()}).
-يجب أن يكون البحث طويلاً ومليئاً بالمعلومات العميقة والشرح المفصل لكل عنصر، ومقسماً إلى الأقسام التالية بنسق أكاديمي متكامل:
-${includeIntro ? "- مقدمة تمهيدية شاملة وموسعة توضح أهمية المبحث وأهدافه وفلسفته." : ""}
-- صلب الموضوع: مقسم إلى عدة مباحث وفروع تفصيلية عميقة تغطي كافة جوانب وتطبيقات ${topic.trim()} بشكل أكاديمي متكامل وبأقصى تفصيل ممكن وبدون أي اختصار.
-${includeConclusion ? "- خاتمة نهائية تلخص أدق نتائج الدراسة والتوصيات المستقاة." : ""}
-${includeRefs ? "- قائمة مصادر ومراجع حقيقية وموثوقة (كتب ومجلات علمية معاصرة)." : ""}
-ملاحظة هامة: ابدأ بنص البحث مباشرة دون أي مقدمات ترحيبية أو ردود جانبية من الذكاء الاصطناعي، واجعل العناوين واضحة وجلية الملامح.`;
+    // 2. Parse and Validate Payload
+    const body = await req.json().catch(() => ({}));
+    const {
+      topic,
+      targetPages = 5,
+      includeIntro = true,
+      includeConclusion = true,
+      includeRefs = true,
+    } = body;
+
+    if (!topic || typeof topic !== "string" || !topic.trim()) {
+      return NextResponse.json({ error: "من فضلك أدخل عنوان البحث المطلوب" }, { status: 400 });
+    }
+
+    // Input sanitization: Trim and restrict maximum length
+    const sanitizedTopic = topic.trim().slice(0, 300);
+
+    const prompt = `أنت باحث وأستاذ أكاديمي متخصص. اكتب بحثاً دراسياً وأكاديمياً شاملاً ومفصلاً جداً باللغة العربية حول: (${sanitizedTopic}).
+المطلوب أن يكون البحث مكافئاً لحجم (${targetPages}) صفحات وورد مطبوعة، ويتميز بأسلوب بشري طبيعي ورصين، بعيداً تماماً عن الصياغات الآلية أو عبارات الذكاء الاصطناعي النمطية.
+
+يرجى كتابة البحث في فقرات غنية بالمعلومات والتحليلات المقسمة إلى المباحث التالية:
+${includeIntro ? "- مقدمة تمهيدية وافية وموسعة: تسلط الضوء على الأهمية البالغة لموضوع البحث وأبعاده العامة وخلفيته وتأثيره." : ""}
+- المبحث الأول: الإطار المفاهيمي والنشأة والأبعاد التاريخية لموضوع (${sanitizedTopic}) بتفصيل دقيق وشامل.
+- المبحث الثاني: العناصر الأساسية والركائز والأدوات والآليات العملية المرتبطة بالموضوع بعمق تحليلي واقعي.
+- المبحث الثالث: التطبيقات العملية، والأثر الملموس، وأبرز التحديات والحلول المعاصرة.
+- المبحث الرابع: الرؤى والتحليلات المستقبلية والدروس المستفادة.
+${includeConclusion ? "- خاتمة البحث: تلخيص وافٍ لأهم النتائج المستخلصة والتوصيات العملية المقترحة." : ""}
+${includeRefs ? "- قائمة المصادر والمراجع المعتمدة: تضم موسوعات، دوريات، ومراجع علمية عربية معاصرة." : ""}
+
+قواعد حاسمة:
+1. ابدأ بنص البحث فوراً دون أي تحيات أو تعليقات جانبية من الذكاء الاصطناعي.
+2. اجعل العناوين الرئيسية تبدأ بكلمات واضحة مثل: (مقدمة البحث، المبحث الأول: ...، المبحث الثاني: ...، خاتمة البحث، المصادر والمراجع).
+3. اكتب فقرات سردية متماسكة ومفصلة لكي تملأ الصفحات بالشكل الأكاديمي المطلوب.`;
+
 
     let contentText: string | null = null;
     let usedProvider = "";
@@ -184,7 +228,8 @@ ${includeRefs ? "- قائمة مصادر ومراجع حقيقية وموثوق�
       content: contentText,
       provider: usedProvider,
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || "حدث خطأ غير متوقع" }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "حدث خطأ غير متوقع";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

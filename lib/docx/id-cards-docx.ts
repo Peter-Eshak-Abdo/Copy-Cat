@@ -20,10 +20,19 @@ function base64ToUint8Array(base64: string): Uint8Array {
   return bytes;
 }
 
-export async function generateIdCardsDocx(imagesBase64: string[], filename = "Smart_CamScanner_A5.docx") {
+/**
+ * Generates an A5 Word document with exact 9.0cm card width,
+ * perfectly centered horizontally and vertically for instant Ctrl + P printing.
+ */
+export async function generateIdCardsDocx(imagesBase64: string[], filename = "CopyCat_ID_Cards_A5.docx") {
   if (!imagesBase64 || imagesBase64.length === 0) return;
 
   const children: Paragraph[] = [];
+
+  // 9.0 cm width in points (9.0 / 2.54 * 96 = ~340px)
+  // Height proportional for standard Egyptian national ID (5.4 / 8.6 * 340 = ~214px)
+  const cardWidthPx = 340;
+  const cardHeightPx = 214;
 
   imagesBase64.forEach((imgBase64, index) => {
     if (index > 0) {
@@ -35,14 +44,14 @@ export async function generateIdCardsDocx(imagesBase64: string[], filename = "Sm
     const paragraph = new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: {
-        before: 4.5 * 567, // ~4.5 cm in twips (1cm ~ 567 twips)
+        before: 4.5 * 567, // ~4.5 cm in twips to center vertically on A5 height (21cm)
       },
       children: [
         new ImageRun({
           data: imgBytes,
           transformation: {
-            width: 325, // 8.6 cm equivalent
-            height: 205, // proportion standard card height (~5.4cm)
+            width: cardWidthPx,
+            height: cardHeightPx,
           },
           type: "jpg",
         }),
@@ -58,12 +67,12 @@ export async function generateIdCardsDocx(imagesBase64: string[], filename = "Sm
         properties: {
           page: {
             size: {
-              width: convertMillimetersToTwip(148), // A5 Width
-              height: convertMillimetersToTwip(210), // A5 Height
+              width: convertMillimetersToTwip(148), // A5 Width (148 mm)
+              height: convertMillimetersToTwip(210), // A5 Height (210 mm)
             },
             margin: {
-              top: convertMillimetersToTwip(15),
-              bottom: convertMillimetersToTwip(15),
+              top: convertMillimetersToTwip(12),
+              bottom: convertMillimetersToTwip(12),
               left: convertMillimetersToTwip(10),
               right: convertMillimetersToTwip(10),
             },

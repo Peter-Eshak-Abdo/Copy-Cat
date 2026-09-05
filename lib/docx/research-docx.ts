@@ -6,53 +6,162 @@ import {
   convertMillimetersToTwip,
   TextRun,
   PageBreak,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  BorderStyle,
 } from "docx";
 import { saveAs } from "file-saver";
+
+export interface ResearchCoverInfo {
+  studentName?: string;
+  teacherName?: string;
+  gradeOrClass?: string;
+  schoolOrUniversity?: string;
+  academicYear?: string;
+}
 
 export interface ResearchDocxOptions {
   topic: string;
   rawText: string;
   includeIndex?: boolean;
+  includeReferences?: boolean;
+  coverInfo?: ResearchCoverInfo;
+  targetPages?: number;
 }
 
 export async function generateResearchDocx(options: ResearchDocxOptions) {
-  const { topic, rawText, includeIndex = true } = options;
+  const {
+    topic,
+    rawText,
+    includeIndex = true,
+    includeReferences = true,
+    coverInfo = {},
+  } = options;
 
-  // Clean raw AI text from markdown headers & bold stars
+  // Clean raw AI text from markdown stars & headers
   const cleanText = rawText.replace(/[*#]/g, "");
-  const lines = cleanText.split("\n");
+  const rawLines = cleanText.split("\n").map((l) => l.trim()).filter(Boolean);
 
-  const children: Paragraph[] = [];
+  const children: (Paragraph | Table)[] = [];
 
-  // 1. Cover Page Title
+  // =========================================================================
+  // 1. Cover Page (صفحة الغلاف الرسمية)
+  // =========================================================================
+  // Top school / institution header
+  if (coverInfo.schoolOrUniversity) {
+    children.push(
+      new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        spacing: { before: 200, after: 100 },
+        children: [
+          new TextRun({
+            text: coverInfo.schoolOrUniversity,
+            font: "Arial",
+            size: 32, // 16pt
+            bold: true,
+            rightToLeft: true,
+          }),
+        ],
+      })
+    );
+  }
+
+  // Large Centered Title (26pt bold)
   children.push(
     new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 2000, after: 800 },
+      spacing: { before: 1800, after: 800 },
       children: [
         new TextRun({
-          text: `بحث علمي متكامل وموسع حول:\n\n${topic}`,
+          text: `بحث دراسي متكامل عن:\n`,
           font: "Arial",
-          size: 40,
+          size: 36, // 18pt
           bold: true,
           rightToLeft: true,
+        }),
+        new TextRun({
+          text: topic,
+          font: "Arial",
+          size: 52, // 26pt bold
+          bold: true,
+          rightToLeft: true,
+          color: "1E3A8A",
         }),
       ],
     })
   );
 
-  // 2. Index Page
+  // Metadata Box (Student, Teacher, Grade, School)
+  const metaRuns: TextRun[] = [];
+  if (coverInfo.studentName) {
+    metaRuns.push(
+      new TextRun({
+        text: `إعداد الطالب / الباحث: ${coverInfo.studentName}\n`,
+        font: "Arial",
+        size: 36, // 18pt
+        bold: true,
+        rightToLeft: true,
+      })
+    );
+  }
+  if (coverInfo.teacherName) {
+    metaRuns.push(
+      new TextRun({
+        text: `إشراف الأستاذ / المشرف: ${coverInfo.teacherName}\n`,
+        font: "Arial",
+        size: 36,
+        bold: true,
+        rightToLeft: true,
+      })
+    );
+  }
+  if (coverInfo.gradeOrClass) {
+    metaRuns.push(
+      new TextRun({
+        text: `الصف / الفرقة الدراسية: ${coverInfo.gradeOrClass}\n`,
+        font: "Arial",
+        size: 36,
+        rightToLeft: true,
+      })
+    );
+  }
+  if (coverInfo.academicYear) {
+    metaRuns.push(
+      new TextRun({
+        text: `العام الدراسي: ${coverInfo.academicYear}\n`,
+        font: "Arial",
+        size: 32,
+        rightToLeft: true,
+      })
+    );
+  }
+
+  children.push(
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 1600, after: 400 },
+      children: metaRuns,
+    })
+  );
+
+  // Page Break after Cover Page
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+
+  // =========================================================================
+  // 2. Table of Contents / Index (صفحة الفهرس في جدول منظم)
+  // =========================================================================
   if (includeIndex) {
-    children.push(new Paragraph({ children: [new PageBreak()] }));
     children.push(
       new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        spacing: { before: 400, after: 400 },
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 300, after: 400 },
         children: [
           new TextRun({
-            text: "فهرس وتبويب المحتويات",
+            text: "فهرس وتبويب محتويات البحث",
             font: "Arial",
-            size: 32,
+            size: 44, // 22pt bold
             bold: true,
             rightToLeft: true,
           }),
@@ -60,25 +169,225 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
       })
     );
 
-    const indexItems = [
-      "• مقدمة البحث الأكاديمية .................................................. صفحة 3",
-      "• المبحث الأول: الإطار المفاهيمي والنظري .............................. صفحة 4",
-      "• المبحث الثاني: الأبعاد والتحليلات التطبيقية ........................... صفحة 6",
-      "• المبحث الثالث: التحديات والآفاق المستقبلية .......................... صفحة 8",
-      "• الخاتمة والنتائج والتوصيات المترتبة .................................... صفحة 10",
-      "• قائمة المصادر والمراجع العلمية ........................................... صفحة 11",
+    const indexData = [
+      { title: "مقدمة البحث التمهيدية", page: "3" },
+      { title: "المبحث الأول: الإطار المفاهيمي والنشأة", page: "4" },
+      { title: "المبحث الثاني: العناصر والأبعاد الرئيسية", page: "5" },
+      { title: "المبحث الثالث: التطبيقات والأثر العلمي والعملي", page: "7" },
+      { title: "المبحث الرابع: الرؤى والتحليلات المعاصرة", page: "8" },
+      { title: "خاتمة البحث وخلاصة النتائج والتوصيات", page: "9" },
+      { title: "قائمة المصادر والمراجع المعتمدة", page: "10" },
     ];
 
-    indexItems.forEach((item) => {
+    const tableRows = [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 75, type: WidthType.PERCENTAGE },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({
+                    text: "عنوان المبحث أو الفصل",
+                    font: "Arial",
+                    size: 36, // 18pt bold
+                    bold: true,
+                    rightToLeft: true,
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: 25, type: WidthType.PERCENTAGE },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({
+                    text: "رقم الصفحة",
+                    font: "Arial",
+                    size: 36,
+                    bold: true,
+                    rightToLeft: true,
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+      ...indexData.map(
+        (item) =>
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 75, type: WidthType.PERCENTAGE },
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.RIGHT,
+                    children: [
+                      new TextRun({
+                        text: item.title,
+                        font: "Arial",
+                        size: 32, // 16pt
+                        rightToLeft: true,
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+              new TableCell({
+                width: { size: 25, type: WidthType.PERCENTAGE },
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    children: [
+                      new TextRun({
+                        text: item.page,
+                        font: "Arial",
+                        size: 32,
+                        bold: true,
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+            ],
+          })
+      ),
+    ];
+
+    children.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: tableRows,
+      })
+    );
+
+    // Page break after Index
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+  }
+
+  // =========================================================================
+  // 3. Body Content (المقدمة، المباحث، الخاتمة)
+  // Font sizes: Main Headings = 22pt (44), Subheadings = 20pt (40), Body = 18pt (36)
+  // =========================================================================
+  const mainHeadingKeywords = ["المبحث", "مقدمة", "خاتمة", "الفصل", "تمهيد", "المصادر والمراجع"];
+  const subHeadingKeywords = ["أولاً", "ثانياً", "ثالثاً", "رابعاً", "خامساً", "المطلب", "الفرع"];
+
+  let isInsideIntro = false;
+
+  rawLines.forEach((line) => {
+    const isMainHeading = mainHeadingKeywords.some((kw) => line.includes(kw));
+    const isSubHeading = !isMainHeading && subHeadingKeywords.some((kw) => line.startsWith(kw));
+
+    if (line.includes("مقدمة")) {
+      isInsideIntro = true;
+    } else if (isMainHeading && !line.includes("مقدمة")) {
+      // Add page break before each major chapter/heading so editing one section never shifts other pages!
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+      isInsideIntro = false;
+    }
+
+    if (isMainHeading) {
       children.push(
         new Paragraph({
           alignment: AlignmentType.RIGHT,
-          spacing: { before: 100, after: 100 },
+          spacing: { before: 400, after: 250 },
           children: [
             new TextRun({
-              text: item,
+              text: line,
               font: "Arial",
-              size: 24,
+              size: 44, // 22pt
+              bold: true,
+              rightToLeft: true,
+              color: "1E3A8A",
+            }),
+          ],
+        })
+      );
+    } else if (isSubHeading) {
+      children.push(
+        new Paragraph({
+          alignment: AlignmentType.RIGHT,
+          spacing: { before: 300, after: 180 },
+          children: [
+            new TextRun({
+              text: line,
+              font: "Arial",
+              size: 40, // 20pt
+              bold: true,
+              rightToLeft: true,
+            }),
+          ],
+        })
+      );
+    } else {
+      // Body Text: 18pt font (36 in half-points)
+      // Expanded line spacing for Intro to fill the page as requested in #13
+      children.push(
+        new Paragraph({
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: {
+            before: 120,
+            after: 160,
+            line: isInsideIntro ? 460 : 360, // 1.5 - 2.0 line spacing
+          },
+          children: [
+            new TextRun({
+              text: `    ${line}`,
+              font: "Arial",
+              size: 36, // 18pt
+              rightToLeft: true,
+            }),
+          ],
+        })
+      );
+    }
+  });
+
+  // =========================================================================
+  // 4. References Page (المراجع والمصادر المعتمدة)
+  // =========================================================================
+  if (includeReferences) {
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+
+    children.push(
+      new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        spacing: { before: 300, after: 300 },
+        children: [
+          new TextRun({
+            text: "قائمة المصادر والمراجع المعتمدة",
+            font: "Arial",
+            size: 44, // 22pt bold
+            bold: true,
+            rightToLeft: true,
+            color: "1E3A8A",
+          }),
+        ],
+      })
+    );
+
+    const defaultRefs = [
+      `1. الموسوعة العربية الحرة (ويكيبيديا) - قسم الدراسات والأبحاث التخصصية حول (${topic}).`,
+      `2. منصة "موضوع" وموسوعة "سطور" العلمية والتعليمية المعتمدة.`,
+      `3. الدوريات والمجلات الأكاديمية الصادرة عن الجامعات والمراكز البحثية العربية.`,
+      `4. مجموعة من الكتب والمراجع التخصصية المحكمة في مجالات الفكر والبحث العلمي.`,
+    ];
+
+    defaultRefs.forEach((ref) => {
+      children.push(
+        new Paragraph({
+          alignment: AlignmentType.RIGHT,
+          spacing: { before: 120, after: 160, line: 360 },
+          children: [
+            new TextRun({
+              text: ref,
+              font: "Arial",
+              size: 36, // 18pt
               rightToLeft: true,
             }),
           ],
@@ -87,55 +396,23 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
     });
   }
 
-  // 3. Body Content
-  children.push(new Paragraph({ children: [new PageBreak()] }));
-
-  const headingKeywords = [
-    "المبحث",
-    "مقدمة",
-    "خاتمة",
-    "المصادر",
-    "تمهيد",
-    "أولاً",
-    "ثانياً",
-    "ثالثاً",
-    "رابعاً",
-    "الفصل",
-  ];
-
-  lines.forEach((line) => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-
-    const isHeading = headingKeywords.some((kw) => trimmed.includes(kw));
-
-    children.push(
-      new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        spacing: { before: isHeading ? 300 : 120, after: isHeading ? 180 : 120 },
-        children: [
-          new TextRun({
-            text: trimmed,
-            font: "Arial",
-            size: isHeading ? 30 : 24,
-            bold: isHeading,
-            rightToLeft: true,
-          }),
-        ],
-      })
-    );
-  });
-
+  // =========================================================================
+  // Document Structure: A4 with Narrow Margins (12.7 mm = 0.5 inch)
+  // =========================================================================
   const doc = new Document({
     sections: [
       {
         properties: {
           page: {
+            size: {
+              width: convertMillimetersToTwip(210), // A4 Width
+              height: convertMillimetersToTwip(297), // A4 Height
+            },
             margin: {
-              top: convertMillimetersToTwip(25),
-              bottom: convertMillimetersToTwip(25),
-              left: convertMillimetersToTwip(25),
-              right: convertMillimetersToTwip(25),
+              top: convertMillimetersToTwip(12.7), // Narrow Margins (0.5 in)
+              bottom: convertMillimetersToTwip(12.7),
+              left: convertMillimetersToTwip(12.7),
+              right: convertMillimetersToTwip(12.7),
             },
           },
         },
@@ -145,6 +422,6 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
   });
 
   const blob = await Packer.toBlob(doc);
-  const safeFilename = `Research_${topic.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, "_").slice(0, 20)}.docx`;
-  saveAs(blob, safeFilename);
+  const safeTopic = topic.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, "_").slice(0, 25);
+  saveAs(blob, `CopyCat_Research_${safeTopic}.docx`);
 }
