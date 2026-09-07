@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+@variant light (&:where(.light, .light *));
+@variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #020617;
   --foreground: #f8fafc;
@@ -14,7 +17,7 @@ html.light,
   --foreground: #0f172a;
   --card-bg: #ffffff;
   --card-border: #e2e8f0;
-  --muted-text: #64748b;
+  --muted-text: #475569;
 }
 
 html.light body {
@@ -32,6 +35,96 @@ body {
   text-rendering: optimizeSpeed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* -------------------------------------------------------------
+   COMPREHENSIVE LIGHT MODE PALETTE OVERRIDES
+   Ensures seamless, elegant contrast on every page & component
+------------------------------------------------------------- */
+html.light {
+  /* Slate 950 / 900 Backgrounds become clean white / light slate */
+  & .bg-slate-950 {
+    background-color: #f8fafc !important;
+  }
+  & .bg-slate-950\/60,
+  & .bg-slate-950\/80,
+  & .bg-slate-950\/90 {
+    background-color: rgba(241, 245, 249, 0.95) !important;
+  }
+  & .bg-slate-900 {
+    background-color: #ffffff !important;
+  }
+  & .bg-slate-900\/95,
+  & .bg-slate-900\/90,
+  & .bg-slate-900\/80,
+  & .bg-slate-900\/70,
+  & .bg-slate-900\/50,
+  & .bg-slate-900\/40 {
+    background-color: rgba(255, 255, 255, 0.96) !important;
+  }
+  & .bg-slate-800,
+  & .bg-slate-800\/80,
+  & .bg-slate-800\/60,
+  & .bg-slate-800\/40 {
+    background-color: #f1f5f9 !important;
+  }
+
+  /* Borders become subtle light slate */
+  & .border-slate-800,
+  & .border-slate-800\/80,
+  & .border-slate-800\/50,
+  & .border-slate-700,
+  & .border-slate-700\/50 {
+    border-color: #e2e8f0 !important;
+  }
+
+  /* Text colors: dark slate for readable, high-contrast typography */
+  & .text-white {
+    color: #0f172a !important;
+  }
+  & .text-slate-100 {
+    color: #1e293b !important;
+  }
+  & .text-slate-200 {
+    color: #334155 !important;
+  }
+  & .text-slate-300 {
+    color: #475569 !important;
+  }
+  & .text-slate-400 {
+    color: #64748b !important;
+  }
+
+  /* Keep intentional white text on primary/action colored buttons */
+  & .bg-blue-600 .text-white,
+  & .bg-emerald-600 .text-white,
+  & .bg-purple-600 .text-white,
+  & .bg-red-600 .text-white,
+  & button.bg-blue-600,
+  & button.bg-emerald-600,
+  & a.bg-blue-600,
+  & a.bg-emerald-600 {
+    color: #ffffff !important;
+  }
+
+  /* Form controls in light mode */
+  & input,
+  & select,
+  & textarea {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+  & input::placeholder,
+  & textarea::placeholder {
+    color: #94a3b8 !important;
+  }
+
+  /* Soft shadows for elevated cards in light mode */
+  & .shadow-xl,
+  & .shadow-2xl {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+  }
 }
 
 /* Hardware performance boost for weak devices & low-end GPUs */

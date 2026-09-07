@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import Image from "next/image";
 import {
   Boxes,
   Plus,
@@ -15,11 +16,16 @@ import {
   ChevronRight,
   ChevronLeft,
   Send,
+  Upload,
+  Image as ImageIcon,
+  Loader2,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
-import { formatCurrency, safeOpenUrl } from "@/lib/utils";
+import { formatCurrency, safeOpenUrl, compressImageToWebP } from "@/lib/utils";
 import { useToast } from "@/components/toast-provider";
-import { type InventoryItem, INITIAL_PRODUCTS } from "@/lib/inventory";
+import { type InventoryItem, INITIAL_PRODUCTS, sanitizeItem } from "@/lib/inventory";
 
 const ENGINEER_PHONE_INTL = "201206385464";
 const ENGINEER_PHONE_LOCAL = "01206385464";
@@ -60,22 +66,137 @@ export default function InventoryPage() {
   const [wholesalePrice, setWholesalePrice] = useState<number | "">("");
   const [wholesaleMinQty, setWholesaleMinQty] = useState<number | "">("");
   const [notes, setNotes] = useState("");
+  const [image, setImage] = useState("");
+  const [images, setImages] = useState<string[]>([]);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-  // Load from Supabase with localStorage backup
+  // AI Product Images Assistant State
+  const [isAiSearchingImages, setIsAiSearchingImages] = useState(false);
+  const [aiDiscoveredImages, setAiDiscoveredImages] = useState<string[]>([]);
+  const [showAiPrompt, setShowAiPrompt] = useState(false);
+  const [aiDetectedName, setAiDetectedName] = useState("");
+
+  const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingImage(true);
+    try {
+      const compressed = await compressImageToWebP(file, 800, 0.82);
+      setImage(compressed);
+      setShowAiPrompt(true);
+      toast.success(
+        "تم تجهيز وضغط الصورة الرئيسية",
+        "تم حفظها بصيغة WebP خفيفة. هل ترغب بأن يبحث الـ AI عن 3 صور إضافية للمعرض؟"
+      );
+    } catch {
+      toast.error("خطأ", "تعذر قراءة ملف الصورة.");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleGalleryImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setIsUploadingImage(true);
+    try {
+      const compressedList = await Promise.all(
+        files.map((file) => compressImageToWebP(file, 800, 0.82))
+      );
+      setImages((prev) => [...prev, ...compressedList]);
+      toast.success("تم إضافة الصور للمعرض", `تمت إضافة ${compressedList.length} صور إضافية بنجاح.`);
+    } catch {
+      toast.error("خطأ", "تعذر معالجة بعض الصور.");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  // AI Product Image Search Action
+  const handleAiImageSearch = async (providedImage?: string) => {
+    const targetImage = providedImage || (image.startsWith("data:") ? image : undefined);
+    const targetName = name.trim();
+    if (!targetName && !targetImage) {
+      toast.error("بيانات ناقصة", "يرجى كتابة اسم الصنف أو رفع صورة بالهاتف أولاً ليبحث الذكاء الاصطناعي عنها.");
+      return;
+    }
+
+    setIsAiSearchingImages(true);
+    setShowAiPrompt(false);
+    try {
+      const res = await fetch("/api/ai/product-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: targetName,
+          category: isCustomCategory ? customCategory : category,
+          notes,
+          imageBase64: targetImage,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.allImages?.length > 0) {
+        setAiDiscoveredImages(data.allImages);
+        if (data.productName && (!name.trim() || name === "صنف جديد")) {
+          setName(data.productName);
+          setAiDetectedName(data.productName);
+        }
+        toast.success(
+          "تم العثور على صور بالذكاء الاصطناعي!",
+          `تم جلب ${data.allImages.length} صور واضحة جاهزة للاستخدام والمعرض.`
+        );
+      } else {
+        toast.info("تنبيه", "لم تتوفر صور إضافية مطابقة، يمكنك تجربة كلمات بحث أخرى.");
+      }
+    } catch {
+      toast.error("خطأ", "تعذر الاتصال بخدمة البحث الذكي عن الصور.");
+    } finally {
+      setIsAiSearchingImages(false);
+    }
+  };
+
+  const applyAiImagesAll = () => {
+    if (aiDiscoveredImages.length === 0) return;
+    if (!image) {
+      setImage(aiDiscoveredImages[0]);
+    }
+    const rest = image ? aiDiscoveredImages : aiDiscoveredImages.slice(1);
+    setImages((prev) => {
+      const combined = [...prev];
+      for (const imgUrl of rest) {
+        if (!combined.includes(imgUrl) && combined.length < 6) {
+          combined.push(imgUrl);
+        }
+      }
+      return combined;
+    });
+    setAiDiscoveredImages([]);
+    toast.success("تم تطبيق الصور بنجاح!", "تم تعيين الصورة وتغذية المعرض بالصور الإضافية.");
+  };
+
+  // Load from Supabase with localStorage backup & auto image hydration
   useEffect(() => {
     async function loadData() {
       try {
-        // 1. Check localStorage first
-        const saved = localStorage.getItem("copycat_inventory_v1_2") || localStorage.getItem("copycat_inventory");
+        const hasV6 = localStorage.getItem("copycat_inventory_v6_smart_avatar");
+        const saved = hasV6 ? localStorage.getItem("copycat_inventory_v6_smart_avatar") : null;
+
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length >= INITIAL_PRODUCTS.length) {
-            setItems(parsed);
+            const sanitizedList = parsed.map((it: InventoryItem) => sanitizeItem(it));
+            setItems(sanitizedList);
+            localStorage.setItem("copycat_inventory_v6_smart_avatar", JSON.stringify(sanitizedList));
           } else {
-            // Upgrade old cache
-            setItems(INITIAL_PRODUCTS);
-            localStorage.setItem("copycat_inventory_v1_2", JSON.stringify(INITIAL_PRODUCTS));
+            const sanitizedInit = INITIAL_PRODUCTS.map(sanitizeItem);
+            setItems(sanitizedInit);
+            localStorage.setItem("copycat_inventory_v6_smart_avatar", JSON.stringify(sanitizedInit));
           }
+        } else {
+          // Fresh bump ensures high-fidelity word-matched stickers, folscap and avatar fallbacks
+          const sanitizedInit = INITIAL_PRODUCTS.map(sanitizeItem);
+          setItems(sanitizedInit);
+          localStorage.setItem("copycat_inventory_v6_smart_avatar", JSON.stringify(sanitizedInit));
         }
 
         // 2. Fetch from Supabase only if configured
@@ -86,8 +207,9 @@ export default function InventoryPage() {
             .order("id", { ascending: true });
 
           if (!error && data && data.length > 0) {
-            setItems(data);
-            localStorage.setItem("copycat_inventory_v1_2", JSON.stringify(data));
+            const hydrated = data.map((it: InventoryItem) => sanitizeItem(it));
+            setItems(hydrated);
+            localStorage.setItem("copycat_inventory_v4_realistic", JSON.stringify(hydrated));
           }
         }
       } catch {
@@ -145,12 +267,14 @@ export default function InventoryPage() {
       wholesale_min_qty: wholesaleMinQty !== "" ? Number(wholesaleMinQty) : undefined,
       stock_count: 999,
       notes: notes.trim(),
+      image: image.trim() || undefined,
+      images: images.length > 0 ? images : undefined,
     };
 
     const updated = [newItem, ...items];
     setItems(updated);
     try {
-      localStorage.setItem("copycat_inventory_v1_2", JSON.stringify(updated));
+      localStorage.setItem("copycat_inventory_v2_img", JSON.stringify(updated));
     } catch {}
 
     setIsAddingModal(false);
@@ -182,6 +306,11 @@ export default function InventoryPage() {
     setWholesalePrice(item.wholesale_price !== undefined ? item.wholesale_price : "");
     setWholesaleMinQty(item.wholesale_min_qty !== undefined ? item.wholesale_min_qty : "");
     setNotes(item.notes || "");
+    setImage(item.image || "");
+    setImages(item.images || []);
+    setAiDiscoveredImages([]);
+    setShowAiPrompt(false);
+    setAiDetectedName("");
   };
 
   const handleUpdateItem = async (e: React.FormEvent) => {
@@ -201,12 +330,14 @@ export default function InventoryPage() {
       wholesale_min_qty: wholesaleMinQty !== "" ? Number(wholesaleMinQty) : undefined,
       stock_count: editingItem.stock_count || 999,
       notes: notes.trim(),
+      image: image.trim() || undefined,
+      images: images.length > 0 ? images : undefined,
     };
 
     const updatedList = items.map((it) => (it.id === editingItem.id ? updatedItem : it));
     setItems(updatedList);
     try {
-      localStorage.setItem("copycat_inventory_v1_2", JSON.stringify(updatedList));
+      localStorage.setItem("copycat_inventory_v2_img", JSON.stringify(updatedList));
     } catch {}
 
     setEditingItem(null);
@@ -238,7 +369,7 @@ export default function InventoryPage() {
     const updated = items.filter((item) => item.id !== id);
     setItems(updated);
     try {
-      localStorage.setItem("copycat_inventory_v1_2", JSON.stringify(updated));
+      localStorage.setItem("copycat_inventory_v2_img", JSON.stringify(updated));
     } catch {}
     showNotification("تم حذف الصنف.");
 
@@ -260,6 +391,11 @@ export default function InventoryPage() {
     setWholesalePrice("");
     setWholesaleMinQty("");
     setNotes("");
+    setImage("");
+    setImages([]);
+    setAiDiscoveredImages([]);
+    setShowAiPrompt(false);
+    setAiDetectedName("");
   };
 
   // Notify Engineer via WhatsApp for replenishment
@@ -404,8 +540,12 @@ export default function InventoryPage() {
           <div className="flex items-center gap-3 w-full md:w-auto">
             {/* Category Dropdown Filter */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 font-bold whitespace-nowrap">التصنيف:</span>
+              <label htmlFor="inventory-category-filter" className="text-xs text-slate-400 font-bold whitespace-nowrap">
+                التصنيف:
+              </label>
               <select
+                id="inventory-category-filter"
+                aria-label="تصفية المنتجات حسب التصنيف"
                 value={selectedCategory}
                 onChange={(e) => {
                   setSelectedCategory(e.target.value);
@@ -423,8 +563,12 @@ export default function InventoryPage() {
 
             {/* Page size selector */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 font-bold whitespace-nowrap">عرض:</span>
+              <label htmlFor="inventory-page-size" className="text-xs text-slate-400 font-bold whitespace-nowrap">
+                عرض:
+              </label>
               <select
+                id="inventory-page-size"
+                aria-label="عدد الأصناف المعروضة في الصفحة"
                 value={pageSize}
                 onChange={(e) => {
                   setPageSize(Number(e.target.value));
@@ -542,14 +686,35 @@ export default function InventoryPage() {
                     }`}
                   >
                     <td className="p-3.5 font-bold text-white">
-                      <div className="flex flex-col gap-1">
-                        <span>{item.name || "— بدون اسم —"}</span>
-                        {incomplete && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 w-fit">
-                            <AlertTriangle className="w-3 h-3 text-amber-400" />
-                            بيانات غير مكتملة (مخفي عن الزبون حتى التعديل)
-                          </span>
-                        )}
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 shrink-0 overflow-hidden flex items-center justify-center">
+                          {item.image ? (
+                            <Image
+                              src={item.image}
+                              alt={item.name}
+                              fill
+                              unoptimized
+                              sizes="40px"
+                              className="object-cover"
+                              onError={(e) => {
+                                const target = e.currentTarget as HTMLImageElement;
+                                target.src =
+                                  "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=800&q=80";
+                              }}
+                            />
+                          ) : (
+                            <Package className="w-5 h-5 text-slate-600" />
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span>{item.name || "— بدون اسم —"}</span>
+                          {incomplete && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 w-fit">
+                              <AlertTriangle className="w-3 h-3 text-amber-400" />
+                              بيانات غير مكتملة (مخفي عن الزبون حتى التعديل)
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="p-3.5">
@@ -684,8 +849,12 @@ export default function InventoryPage() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-400 block mb-1">التصنيف (اختر من القائمة لمنع الأخطاء):</label>
+                <label htmlFor="add-item-category-select" className="text-xs font-bold text-slate-400 block mb-1">
+                  التصنيف (اختر من القائمة لمنع الأخطاء):
+                </label>
                 <select
+                  id="add-item-category-select"
+                  aria-label="تحديد تصنيف الصنف"
                   value={isCustomCategory ? "__NEW__" : category}
                   onChange={(e) => {
                     if (e.target.value === "__NEW__") {
@@ -766,6 +935,212 @@ export default function InventoryPage() {
                 />
               </div>
 
+              {/* Product Images Management (Point 8 in edits2.0.md) */}
+              <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-blue-400" />
+                    <span>صور المنتج (الرئيسية والمعرض)</span>
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    ضغط WebP مجاني 100%
+                  </span>
+                </div>
+
+                {/* AI Image Assistant Banner & Discovered Results */}
+                <div className="bg-gradient-to-r from-blue-950/70 via-indigo-950/60 to-purple-950/70 border border-blue-500/30 rounded-2xl p-3 space-y-2.5 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />
+                      <span className="text-xs font-bold text-blue-200">
+                        مساعد الـ AI لجلب صور المنتج والمعرض
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAiImageSearch()}
+                      disabled={isAiSearchingImages}
+                      className="text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow transition cursor-pointer disabled:opacity-50"
+                    >
+                      {isAiSearchingImages ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>جاري البحث بالـ AI...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-3.5 h-3.5" />
+                          <span>بحث ذكي عن صور</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    اكتب اسم الصنف أو التقط له صورة بالهاتف؛ وسيقوم الـ AI بالتعرف عليه وجلب 3 صور إضافية عالية الجودة للمعرض بنقرة واحدة!
+                  </p>
+
+                  {/* Prompt when phone photo uploaded */}
+                  {showAiPrompt && (
+                    <div className="bg-blue-900/60 border border-blue-400/40 rounded-xl p-2.5 flex items-center justify-between gap-2">
+                      <p className="text-xs text-blue-200 font-medium">
+                        📸 تم رفع صورة للمنتج! هل ترغب بأن يبحث الـ AI عن 3 صور إضافية للمعرض؟
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleAiImageSearch(image)}
+                        disabled={isAiSearchingImages}
+                        className="shrink-0 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg transition cursor-pointer"
+                      >
+                        نعم، ابحث الآن
+                      </button>
+                    </div>
+                  )}
+
+                  {/* AI Discovered Images Gallery */}
+                  {aiDiscoveredImages.length > 0 && (
+                    <div className="pt-1.5 space-y-2 border-t border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>الصور التي عثر عليها الـ AI ({aiDiscoveredImages.length}):</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={applyAiImagesAll}
+                          className="text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg shadow cursor-pointer transition"
+                        >
+                          ✓ تطبيق الكل (+3 صور للمعرض)
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {aiDiscoveredImages.map((imgUrl, aIdx) => (
+                          <div key={aIdx} className="relative group rounded-xl overflow-hidden border border-blue-500/40 bg-slate-900 aspect-square">
+                            <Image
+                              src={imgUrl}
+                              alt={`AI Suggestion ${aIdx + 1}`}
+                              fill
+                              unoptimized
+                              sizes="80px"
+                              className="object-cover"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).src =
+                                  "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=800&q=80";
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-1 p-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setImage(imgUrl);
+                                  toast.success("تم تعيين الصورة كرئيسية");
+                                }}
+                                className="text-[10px] font-bold bg-blue-600 hover:bg-blue-500 text-white px-2 py-0.5 rounded w-full text-center cursor-pointer"
+                              >
+                                رئيسية
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setImages((prev) => [...prev, imgUrl]);
+                                  toast.success("تمت الإضافة للمعرض");
+                                }}
+                                className="text-[10px] font-bold bg-slate-700 hover:bg-slate-600 text-white px-2 py-0.5 rounded w-full text-center cursor-pointer"
+                              >
+                                + للمعرض
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Main Image */}
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">الصورة الرئيسية للكارت:</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleMainImageUpload}
+                      className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer"
+                    />
+                    {image && (
+                      <div className="relative w-9 h-9 rounded-lg overflow-hidden border border-slate-700 shrink-0">
+                        <Image
+                          src={image}
+                          alt="Preview"
+                          fill
+                          unoptimized
+                          sizes="36px"
+                          className="object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src =
+                              "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=800&q=80";
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setImage("")}
+                          className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 hover:opacity-100 transition"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={image}
+                    onChange={(e) => setImage(e.target.value)}
+                    placeholder="أو ضع رابط مباشر للصورة (URL)..."
+                    className="w-full mt-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-300 focus:outline-none"
+                  />
+                </div>
+
+                {/* Gallery Images */}
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">صور إضافية لمعرض التفاصيل (Gallery):</label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleGalleryImagesUpload}
+                    className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 file:cursor-pointer"
+                  />
+
+                  {images.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {images.map((imgUrl, gIdx) => (
+                        <div key={gIdx} className="relative w-12 h-12 rounded-lg overflow-hidden border border-slate-800 group">
+                          <Image
+                            src={imgUrl}
+                            alt={`Gallery ${gIdx + 1}`}
+                            fill
+                            unoptimized
+                            sizes="48px"
+                            className="object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src =
+                                "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=800&q=80";
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setImages((prev) => prev.filter((_, i) => i !== gIdx))}
+                            className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
@@ -814,8 +1189,12 @@ export default function InventoryPage() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-400 block mb-1">التصنيف:</label>
+                <label htmlFor="edit-item-category-select" className="text-xs font-bold text-slate-400 block mb-1">
+                  التصنيف:
+                </label>
                 <select
+                  id="edit-item-category-select"
+                  aria-label="تحديد تصنيف الصنف"
                   value={isCustomCategory ? "__NEW__" : category}
                   onChange={(e) => {
                     if (e.target.value === "__NEW__") {
@@ -892,6 +1271,212 @@ export default function InventoryPage() {
                   onChange={(e) => setNotes(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
                 />
+              </div>
+
+              {/* Product Images Management in Edit Modal */}
+              <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-blue-400" />
+                    <span>صور المنتج (الرئيسية والمعرض)</span>
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    ضغط WebP مجاني 100%
+                  </span>
+                </div>
+
+                {/* AI Image Assistant Banner & Discovered Results */}
+                <div className="bg-gradient-to-r from-blue-950/70 via-indigo-950/60 to-purple-950/70 border border-blue-500/30 rounded-2xl p-3 space-y-2.5 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />
+                      <span className="text-xs font-bold text-blue-200">
+                        مساعد الـ AI لجلب صور المنتج والمعرض
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAiImageSearch()}
+                      disabled={isAiSearchingImages}
+                      className="text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow transition cursor-pointer disabled:opacity-50"
+                    >
+                      {isAiSearchingImages ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>جاري البحث بالـ AI...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-3.5 h-3.5" />
+                          <span>بحث ذكي عن صور</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    اكتب اسم الصنف أو التقط له صورة بالهاتف؛ وسيقوم الـ AI بالتعرف عليه وجلب 3 صور إضافية عالية الجودة للمعرض بنقرة واحدة!
+                  </p>
+
+                  {/* Prompt when phone photo uploaded */}
+                  {showAiPrompt && (
+                    <div className="bg-blue-900/60 border border-blue-400/40 rounded-xl p-2.5 flex items-center justify-between gap-2">
+                      <p className="text-xs text-blue-200 font-medium">
+                        📸 تم رفع صورة للمنتج! هل ترغب بأن يبحث الـ AI عن 3 صور إضافية للمعرض؟
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleAiImageSearch(image)}
+                        disabled={isAiSearchingImages}
+                        className="shrink-0 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg transition cursor-pointer"
+                      >
+                        نعم، ابحث الآن
+                      </button>
+                    </div>
+                  )}
+
+                  {/* AI Discovered Images Gallery */}
+                  {aiDiscoveredImages.length > 0 && (
+                    <div className="pt-1.5 space-y-2 border-t border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>الصور التي عثر عليها الـ AI ({aiDiscoveredImages.length}):</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={applyAiImagesAll}
+                          className="text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg shadow cursor-pointer transition"
+                        >
+                          ✓ تطبيق الكل (+3 صور للمعرض)
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {aiDiscoveredImages.map((imgUrl, aIdx) => (
+                          <div key={aIdx} className="relative group rounded-xl overflow-hidden border border-blue-500/40 bg-slate-900 aspect-square">
+                            <Image
+                              src={imgUrl}
+                              alt={`AI Suggestion ${aIdx + 1}`}
+                              fill
+                              unoptimized
+                              sizes="80px"
+                              className="object-cover"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).src =
+                                  "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=800&q=80";
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-1 p-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setImage(imgUrl);
+                                  toast.success("تم تعيين الصورة كرئيسية");
+                                }}
+                                className="text-[10px] font-bold bg-blue-600 hover:bg-blue-500 text-white px-2 py-0.5 rounded w-full text-center cursor-pointer"
+                              >
+                                رئيسية
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setImages((prev) => [...prev, imgUrl]);
+                                  toast.success("تمت الإضافة للمعرض");
+                                }}
+                                className="text-[10px] font-bold bg-slate-700 hover:bg-slate-600 text-white px-2 py-0.5 rounded w-full text-center cursor-pointer"
+                              >
+                                + للمعرض
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Main Image */}
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">الصورة الرئيسية للكارت:</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleMainImageUpload}
+                      className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer"
+                    />
+                    {image && (
+                      <div className="relative w-9 h-9 rounded-lg overflow-hidden border border-slate-700 shrink-0">
+                        <Image
+                          src={image}
+                          alt="Preview"
+                          fill
+                          unoptimized
+                          sizes="36px"
+                          className="object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src =
+                              "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=800&q=80";
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setImage("")}
+                          className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 hover:opacity-100 transition"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={image}
+                    onChange={(e) => setImage(e.target.value)}
+                    placeholder="أو ضع رابط مباشر للصورة (URL)..."
+                    className="w-full mt-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-300 focus:outline-none"
+                  />
+                </div>
+
+                {/* Gallery Images */}
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">صور إضافية لمعرض التفاصيل (Gallery):</label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleGalleryImagesUpload}
+                    className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 file:cursor-pointer"
+                  />
+
+                  {images.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {images.map((imgUrl, gIdx) => (
+                        <div key={gIdx} className="relative w-12 h-12 rounded-lg overflow-hidden border border-slate-800 group">
+                          <Image
+                            src={imgUrl}
+                            alt={`Gallery ${gIdx + 1}`}
+                            fill
+                            unoptimized
+                            sizes="48px"
+                            className="object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src =
+                                "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=800&q=80";
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setImages((prev) => prev.filter((_, i) => i !== gIdx))}
+                            className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex gap-3 pt-2">

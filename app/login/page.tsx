@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { LogIn, Lock, Mail, AlertCircle, ArrowRight, ShieldCheck, KeyRound } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -112,9 +113,16 @@ export default function LoginPage() {
         {/* Glow accent */}
         <div className="absolute top-0 right-1/2 translate-x-1/2 w-48 h-2 bg-gradient-to-r from-blue-500 via-cyan-400 to-indigo-500 rounded-full blur-sm" />
 
-        <div className="text-center space-y-2 mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 mx-auto flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-blue-600/30 border border-blue-400/30">
-            CC
+        <div className="text-center space-y-3 mb-6">
+          <div className="w-20 h-20 rounded-2xl bg-white mx-auto flex items-center justify-center p-2 shadow-xl shadow-blue-500/20 border border-slate-700/50 hover:scale-105 transition-transform">
+            <Image
+              src="/logo.jpg"
+              alt="كوبي كات - Copy Cat"
+              width={72}
+              height={72}
+              priority
+              className="w-full h-full object-contain"
+            />
           </div>
           <h1 className="text-2xl font-black text-white">تسجيل دخول المسؤول والموظفين</h1>
           <p className="text-xs text-slate-400">

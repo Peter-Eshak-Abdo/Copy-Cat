@@ -1,7 +1,8 @@
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://copycat-center.vercel.app";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://copycat-center.vercel.app";
+
   return [
     {
       url: `${baseUrl}/`,
@@ -12,8 +13,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: `${baseUrl}/login`,
       lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.3,
+      changeFrequency: "weekly",
+      priority: 0.5,
     },
   ];
 }

@@ -16,9 +16,12 @@ import {
   ChevronDown,
   X,
   RotateCcw,
+  Scissors,
+  ShieldCheck,
+  Maximize2,
 } from "lucide-react";
 import { generateIdCardsDocx } from "@/lib/docx/id-cards-docx";
-import { processImageOnCanvas } from "@/lib/canvas-filters";
+import { processImageOnCanvas, CropRect } from "@/lib/canvas-filters";
 import { useToast } from "@/components/toast-provider";
 import { readFileAsDataURL, getFriendlyErrorMessage } from "@/lib/utils";
 
@@ -32,6 +35,7 @@ interface CardSide {
   contrast: number;
   sharpness: number;
   sideType: "front" | "back";
+  crop?: CropRect;
 }
 
 interface CardPair {
@@ -45,8 +49,8 @@ export default function IdCardsPage() {
   const { toast } = useToast();
   const [pairs, setPairs] = useState<CardPair[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [globalSharpness, setGlobalSharpness] = useState(60);
-  const [globalBrightness, setGlobalBrightness] = useState(115);
+  const [globalSharpness, setGlobalSharpness] = useState(50);
+  const [globalBrightness, setGlobalBrightness] = useState(118);
   const [isDragging, setIsDragging] = useState(false);
 
   // Modal for fine-angle rotation
@@ -57,14 +61,30 @@ export default function IdCardsPage() {
   } | null>(null);
   const [fineAngle, setFineAngle] = useState(0);
 
+  // Modal for interactive card cropping (Point 4 in edits2.0.md)
+  const [cropTarget, setCropTarget] = useState<{
+    pairId: string;
+    side: "front" | "back";
+    cardSide: CardSide;
+  } | null>(null);
+
+  const [cropRect, setCropRect] = useState<CropRect>({
+    x: 0.05,
+    y: 0.05,
+    width: 0.9,
+    height: 0.9,
+  });
+  const [cropRatioLocked, setCropRatioLocked] = useState<boolean>(true);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processSideImage = (
     src: string,
     b = globalBrightness,
-    c = 120,
+    c = 105,
     sh = globalSharpness,
-    rot = 0
+    rot = 0,
+    crop?: CropRect
   ): Promise<string> => {
     return new Promise((resolve) => {
       const img = new Image();
@@ -75,7 +95,8 @@ export default function IdCardsPage() {
           contrast: c,
           sharpness: sh,
           fineAngle: rot,
-          camScannerMode: false,
+          preserveColors: true, // 100% Color-Safe HSL lightening
+          crop,
         });
         resolve(res);
       };
@@ -106,7 +127,7 @@ export default function IdCardsPage() {
           processedSrc,
           rotation: 0,
           brightness: globalBrightness,
-          contrast: 120,
+          contrast: 105,
           sharpness: globalSharpness,
           sideType: i % 2 === 0 ? "front" : "back",
         });
@@ -119,23 +140,28 @@ export default function IdCardsPage() {
     // Pair up consecutively
     const newPairs: CardPair[] = [];
     for (let i = 0; i < loadedSides.length; i += 2) {
+      const front = loadedSides[i] || null;
+      const back = loadedSides[i + 1] || null;
       const pairIndex = Math.floor(i / 2) + 1;
+
       newPairs.push({
         pairId: Math.random().toString(36).substring(2, 9),
         cardName: `بطاقة رقم ${pairs.length + pairIndex}`,
-        front: loadedSides[i] || null,
-        back: loadedSides[i + 1] || null,
+        front,
+        back,
       });
     }
 
+    setPairs((prev) => [...prev, ...newPairs]);
+
     if (newPairs.length > 0) {
-      setPairs((prev) => [...prev, ...newPairs]);
       toast.success(
-        `تمت إضافة ${loadedSides.length} وجه (${newPairs.length} بطاقة) بنجاح`,
-        invalidCount > 0 ? `تم استبعاد ${invalidCount} ملف غير صالح.` : undefined
+        "تم استيراد صور البطاقات وتفتيحها بنجاح",
+        `تمت إضافة ${loadedSides.length} وجه (${newPairs.length} بطاقة) مع حفظ الألوان الطبيعية ونقاء الأرقام.`
       );
-    } else if (invalidCount > 0) {
-      toast.error("تعذر تحميل الملفات", "يرجى التأكد من اختيار صور صالحة (JPG أو PNG).");
+    }
+    if (invalidCount > 0) {
+      toast.warning("تنبيه", `تم تخطي ${invalidCount} ملفات غير صالحة.`);
     }
 
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -147,7 +173,7 @@ export default function IdCardsPage() {
     await processFiles(Array.from(files));
   };
 
-  // Drag & Drop Handlers (Requirement #5)
+  // Drag & drop
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -166,39 +192,39 @@ export default function IdCardsPage() {
     setIsDragging(false);
 
     if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-      const validFiles = Array.from(e.dataTransfer.files).filter((file) =>
+      const validImages = Array.from(e.dataTransfer.files).filter((file) =>
         file.type.startsWith("image/")
       );
-      if (validFiles.length > 0) {
-        await processFiles(validFiles);
+      if (validImages.length > 0) {
+        await processFiles(validImages);
       }
     }
   };
 
-  // Reorder Cards Up/Down (Requirement #14)
-  const movePairUp = (index: number) => {
-    if (index <= 0) return;
-    setPairs((prev) => {
-      const copy = [...prev];
-      const temp = copy[index - 1];
-      copy[index - 1] = copy[index];
-      copy[index] = temp;
-      return copy;
-    });
+  // Reordering pairs
+  const movePair = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= pairs.length) return;
+
+    const newPairs = [...pairs];
+    const temp = newPairs[index];
+    newPairs[index] = newPairs[targetIndex];
+    newPairs[targetIndex] = temp;
+    setPairs(newPairs);
   };
 
-  const movePairDown = (index: number) => {
-    setPairs((prev) => {
-      if (index >= prev.length - 1) return prev;
-      const copy = [...prev];
-      const temp = copy[index + 1];
-      copy[index + 1] = copy[index];
-      copy[index] = temp;
-      return copy;
-    });
+  const removePair = (pairId: string) => {
+    setPairs((prev) => prev.filter((p) => p.pairId !== pairId));
   };
 
-  const swapFrontAndBack = (pairId: string) => {
+  const updateCardName = (pairId: string, name: string) => {
+    setPairs((prev) =>
+      prev.map((p) => (p.pairId === pairId ? { ...p, cardName: name } : p))
+    );
+  };
+
+  // Swap front and back of a pair
+  const swapPairSides = (pairId: string) => {
     setPairs((prev) =>
       prev.map((p) => {
         if (p.pairId !== pairId) return p;
@@ -211,30 +237,27 @@ export default function IdCardsPage() {
     );
   };
 
-  const removePair = (pairId: string) => {
-    setPairs((prev) => prev.filter((p) => p.pairId !== pairId));
-  };
-
-  // Individual Per-Side Custom Adjustments (Requirement #14)
+  // Adjust brightness/contrast per side
   const adjustSideValue = async (
     pairId: string,
     side: "front" | "back",
     bDelta: number,
-    shDelta: number
+    cDelta: number
   ) => {
     const pair = pairs.find((p) => p.pairId === pairId);
     const target = pair ? pair[side] : null;
     if (!target) return;
 
-    const newB = Math.max(60, Math.min(170, target.brightness + bDelta));
-    const newSh = Math.max(0, Math.min(100, target.sharpness + shDelta));
+    const newB = Math.max(50, Math.min(180, target.brightness + bDelta));
+    const newC = Math.max(80, Math.min(160, target.contrast + cDelta));
 
     const newSrc = await processSideImage(
       target.originalSrc,
       newB,
-      target.contrast,
-      newSh,
-      target.rotation
+      newC,
+      target.sharpness,
+      target.rotation,
+      target.crop
     );
 
     setPairs((curr) =>
@@ -245,7 +268,7 @@ export default function IdCardsPage() {
           [side]: {
             ...target,
             brightness: newB,
-            sharpness: newSh,
+            contrast: newC,
             processedSrc: newSrc,
           },
         };
@@ -272,6 +295,7 @@ export default function IdCardsPage() {
             contrast: 100,
             sharpness: 0,
             rotation: 0,
+            crop: undefined,
             processedSrc: newSrc,
           },
         };
@@ -279,7 +303,7 @@ export default function IdCardsPage() {
     );
   };
 
-  // Global Presets (Requirement #14: مخصصة ومعممة في نفس الوقت)
+  // Global Presets with color-preservation
   const applyGlobalEnhancement = async (sh: number, b: number) => {
     setGlobalSharpness(sh);
     setGlobalBrightness(b);
@@ -290,11 +314,25 @@ export default function IdCardsPage() {
         let newBack = p.back;
 
         if (p.front) {
-          const frontSrc = await processSideImage(p.front.originalSrc, b, 120, sh, p.front.rotation);
+          const frontSrc = await processSideImage(
+            p.front.originalSrc,
+            b,
+            105,
+            sh,
+            p.front.rotation,
+            p.front.crop
+          );
           newFront = { ...p.front, processedSrc: frontSrc, sharpness: sh, brightness: b };
         }
         if (p.back) {
-          const backSrc = await processSideImage(p.back.originalSrc, b, 120, sh, p.back.rotation);
+          const backSrc = await processSideImage(
+            p.back.originalSrc,
+            b,
+            105,
+            sh,
+            p.back.rotation,
+            p.back.crop
+          );
           newBack = { ...p.back, processedSrc: backSrc, sharpness: sh, brightness: b };
         }
 
@@ -303,6 +341,7 @@ export default function IdCardsPage() {
     );
 
     setPairs(updated);
+    toast.success("تم تطبيق التفتيح العام", "تم حفظ نقاء الألوان وسواد الأرقام في كافة البطاقات.");
   };
 
   // Apply fine rotation from modal
@@ -315,7 +354,8 @@ export default function IdCardsPage() {
       cardSide.brightness,
       cardSide.contrast,
       cardSide.sharpness,
-      fineAngle
+      fineAngle,
+      cardSide.crop
     );
 
     setPairs((curr) =>
@@ -329,6 +369,34 @@ export default function IdCardsPage() {
     );
 
     setEditingTarget(null);
+  };
+
+  // Apply crop from crop modal (Requirement #4)
+  const handleApplyCrop = async () => {
+    if (!cropTarget) return;
+    const { pairId, side, cardSide } = cropTarget;
+
+    const newSrc = await processSideImage(
+      cardSide.originalSrc,
+      cardSide.brightness,
+      cardSide.contrast,
+      cardSide.sharpness,
+      cardSide.rotation,
+      cropRect
+    );
+
+    setPairs((curr) =>
+      curr.map((item) => {
+        if (item.pairId !== pairId) return item;
+        return {
+          ...item,
+          [side]: { ...cardSide, crop: cropRect, processedSrc: newSrc },
+        };
+      })
+    );
+
+    setCropTarget(null);
+    toast.success("تم قص البطاقة بنجاح", "تم قص حواف البطاقة بدقة وحفظ ألوانها الأصلية بدون بهتان.");
   };
 
   const handleExportWord = async () => {
@@ -358,7 +426,10 @@ export default function IdCardsPage() {
     }
   };
 
-  const totalFacesCount = pairs.reduce((acc, p) => acc + (p.front ? 1 : 0) + (p.back ? 1 : 0), 0);
+  const totalFacesCount = pairs.reduce(
+    (acc, curr) => acc + (curr.front ? 1 : 0) + (curr.back ? 1 : 0),
+    0
+  );
 
   return (
     <div className="space-y-6">
@@ -369,70 +440,83 @@ export default function IdCardsPage() {
             <Layers className="w-3.5 h-3.5" /> مصنع بطاقات الرقم القومي A5 (وش وضهر 9 سم)
           </div>
           <h1 className="text-2xl font-black text-white">
-            تجهيز وطباعة بطاقات الرقم القومي الفورية A5
+            تجهيز وقص وطباعة بطاقات الرقم القومي الفورية A5
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl">
-            تفتيح متطور وذكي يحافظ على وضوح وسواد الأرقام بدون بهتان أو تشويش، تدوير دقيق لضبط ميلان البطاقة بالدرجة،
-            إمكانية نقل وترتيب البطاقات، وتحكم مخصص لكل وجه (تفتيح الوش وتغميق الضهر حسب الحاجة) أو تعميم التعديلات على الكل!
+            أداة قص دقيقة لحواف البطاقات، وتفتيح لوني متطور (HSL) يحافظ على الألوان الطبيعية وسواد الأرقام بدون بهتان أو تشويش، مع تدوير دقيق وتصدير مقاس A5 حقيقي للتسليف والطباعة الفورية!
           </p>
         </div>
 
-        {pairs.length > 0 && (
-          <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
+          {pairs.length > 0 && (
             <button
               onClick={() => setPairs([])}
-              className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-red-950/40 text-red-400 hover:bg-red-900/50 border border-red-900/50 transition cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-red-950/40 text-red-400 hover:bg-red-900/50 border border-red-900/50 transition cursor-pointer"
             >
               مسح الكل
             </button>
-            <button
-              onClick={handleExportWord}
-              disabled={isGenerating}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-black bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 transition disabled:opacity-50 cursor-pointer"
-            >
-              <FileDown className="w-4 h-4" />
-              <span>{isGenerating ? "جاري تجهيز الوورد..." : "تصدير وورد A5 فوري (Ctrl + P)"}</span>
-            </button>
+          )}
+
+          <button
+            onClick={handleExportWord}
+            disabled={pairs.length === 0 || isGenerating}
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-sm shadow-xl shadow-blue-600/30 transition disabled:opacity-50 cursor-pointer"
+          >
+            <FileDown className="w-4 h-4" />
+            <span>{isGenerating ? "جاري إنشاء ملف الوورد..." : "تصدير الوورد A5"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Global Presets with Color-Preservation Badge (Point 4 in edits2.0.md) */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-300">نظام التفتيح اللوني وحفظ الألوان:</span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold">
+              <ShieldCheck className="w-3.5 h-3.5" /> حفظ الألوان الطبيعية 100%
+            </span>
           </div>
-        )}
+          <span className="text-xs text-slate-500">
+            العرض المعتمد لكل بطاقة: 9.0 سم (مقاس التسليف القياسي)
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => applyGlobalEnhancement(50, 118)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              globalBrightness === 118
+                ? "bg-blue-600 text-white shadow-md font-black"
+                : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>تفتيح متوازن مع حفظ الألوان (الموصى به للبطاقات)</span>
+          </button>
+
+          <button
+            onClick={() => applyGlobalEnhancement(70, 132)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              globalBrightness === 132
+                ? "bg-cyan-600 text-white shadow-md font-black"
+                : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-yellow-300" />
+            <span>تفتيح فائق للبطاقات المظلمة جداً</span>
+          </button>
+
+          <button
+            onClick={() => applyGlobalEnhancement(0, 100)}
+            className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800/60 text-slate-400 hover:bg-slate-800 hover:text-white transition cursor-pointer mr-auto"
+          >
+            إعادة ضبط للأصل
+          </button>
+        </div>
       </div>
 
-      {/* Global Presets (Requirement #14: تعديلات معممة) */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center gap-3">
-        <span className="text-xs font-bold text-slate-400 ml-2">تحسين وتفتيح عام لكافة البطاقات:</span>
-        <button
-          onClick={() => applyGlobalEnhancement(60, 115)}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-            globalSharpness === 60 && globalBrightness === 115
-              ? "bg-blue-600 text-white shadow-md font-black"
-              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>تفتيح ذكي ناصع + حدة 60% (الموصى به)</span>
-        </button>
-
-        <button
-          onClick={() => applyGlobalEnhancement(100, 125)}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-            globalSharpness === 100
-              ? "bg-cyan-600 text-white shadow-md font-black"
-              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-          }`}
-        >
-          <Zap className="w-3.5 h-3.5 text-yellow-300" />
-          <span>أعلى حدة وتفتيح قوي (للبطاقات الغامقة والمبكسلة)</span>
-        </button>
-
-        <button
-          onClick={() => applyGlobalEnhancement(0, 100)}
-          className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800/60 text-slate-400 hover:bg-slate-800 hover:text-white transition cursor-pointer mr-auto"
-        >
-          إعادة ضبط للأصل
-        </button>
-      </div>
-
-      {/* Upload Box with Drag & Drop (Requirement #5) */}
+      {/* Upload Box with Drag & Drop */}
       <div
         onClick={() => fileInputRef.current?.click()}
         onDragOver={handleDragOver}
@@ -452,85 +536,86 @@ export default function IdCardsPage() {
           onChange={handleFileUpload}
           className="hidden"
         />
-        <div
-          className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform ${
-            isDragging
-              ? "scale-125 bg-blue-500 text-slate-950"
-              : "bg-blue-500/10 text-blue-400 group-hover:scale-110"
-          }`}
-        >
+
+        <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
           <Upload className="w-8 h-8" />
         </div>
+
         <div>
-          <span className="text-base font-bold text-white block">
+          <h3 className="text-base sm:text-lg font-bold text-white mb-1">
             {isDragging ? "أفلت صور البطاقات هنا الآن!" : "اضغط هنا لرفع صور البطاقات أو اسحبها وأفلتها مباشرة (Drag & Drop)"}
-          </span>
-          <span className="text-xs text-slate-500 mt-1 block">
-            سيتم تجميع كل صورتين تلقائياً [وش في صفحة + ضهر في صفحة A5 مستقلة بعرض 9 سم بدقة]
-          </span>
+          </h3>
+          <p className="text-slate-400 text-xs sm:text-sm">
+            يمكنك رفع الوش والضهر معاً، وسيقوم النظام بتجميع كل وجهين متتاليين في بطاقة واحدة تلقائياً
+          </p>
         </div>
       </div>
 
-      {/* Pairs Showcase */}
+      {/* Pairs Container */}
       {pairs.length > 0 && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div className="flex items-center justify-between text-xs text-slate-400 px-1">
             <span>
               تم تجميع <strong className="text-white font-bold">{pairs.length} بطاقات</strong> (إجمالي {totalFacesCount} وجه وظفر جاهز للطباعة)
             </span>
-            <span className="text-blue-400 font-semibold">
-              مقاس الصورة في الوورد: 9.0 سم بالضبط متوافقة مع الطباعة المباشرة Ctrl + P
+            <span className="text-blue-400 font-bold">
+              الوجه الأول = وش البطاقة • الوجه الثاني = ضهر البطاقة
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
             {pairs.map((pair, index) => (
               <div
                 key={pair.pairId}
-                className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-xl relative"
+                className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4 transition-all"
               >
-                {/* Pair Header with Reorder buttons (Requirement #14: نقل الصور) */}
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                {/* Pair Top Header */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
                   <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs font-black flex items-center justify-center">
+                    <span className="w-7 h-7 rounded-xl bg-blue-600/20 text-blue-400 font-black text-xs flex items-center justify-center border border-blue-500/30">
                       {index + 1}
                     </span>
-                    <span className="font-extrabold text-white text-sm">{pair.cardName}</span>
+                    <input
+                      type="text"
+                      value={pair.cardName}
+                      onChange={(e) => updateCardName(pair.pairId, e.target.value)}
+                      className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1 text-xs font-bold text-white focus:border-blue-500 focus:outline-none w-48"
+                    />
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    {/* Move Up / Down Buttons */}
-                    <div className="flex items-center bg-slate-950 rounded-xl border border-slate-800 p-0.5">
-                      <button
-                        onClick={() => movePairUp(index)}
-                        disabled={index === 0}
-                        className="p-1 text-slate-400 hover:text-white disabled:opacity-30 transition cursor-pointer"
-                        title="نقل البطاقة لأعلى"
-                      >
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => movePairDown(index)}
-                        disabled={index === pairs.length - 1}
-                        className="p-1 text-slate-400 hover:text-white disabled:opacity-30 transition cursor-pointer"
-                        title="نقل البطاقة لأسفل"
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
+                    {/* Reorder Buttons */}
                     <button
-                      onClick={() => swapFrontAndBack(pair.pairId)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 transition cursor-pointer"
-                      title="تبديل الوجه والظهر"
+                      onClick={() => movePair(index, "up")}
+                      disabled={index === 0}
+                      className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition disabled:opacity-30 cursor-pointer"
+                      title="نقل البطاقة لأعلى"
                     >
-                      <ArrowUpDown className="w-3 h-3 text-cyan-400" />
-                      <span>تبديل وش/ضهر</span>
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => movePair(index, "down")}
+                      disabled={index === pairs.length - 1}
+                      className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition disabled:opacity-30 cursor-pointer"
+                      title="نقل البطاقة لأسفل"
+                    >
+                      <ChevronDown className="w-4 h-4" />
                     </button>
 
+                    {/* Swap Front / Back */}
+                    <button
+                      onClick={() => swapPairSides(pair.pairId)}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-blue-600 transition text-xs font-bold flex items-center gap-1 cursor-pointer"
+                      title="تبديل الوش مكان الضهر"
+                    >
+                      <ArrowUpDown className="w-3.5 h-3.5" />
+                      <span>تبديل الوش والضهر</span>
+                    </button>
+
+                    {/* Delete Pair */}
                     <button
                       onClick={() => removePair(pair.pairId)}
-                      className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-950/40 transition cursor-pointer"
+                      className="p-1.5 rounded-lg bg-red-950/40 text-red-400 hover:bg-red-900/50 hover:text-red-300 transition cursor-pointer"
                       title="حذف هذه البطاقة"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -538,8 +623,8 @@ export default function IdCardsPage() {
                   </div>
                 </div>
 
-                {/* Faces Grid with Individual Custom Controls (Requirement #14) */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Two Sides Grid (Front & Back) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Front Side */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
@@ -549,21 +634,41 @@ export default function IdCardsPage() {
                       </span>
 
                       {pair.front && (
-                        <button
-                          onClick={() => {
-                            setEditingTarget({
-                              pairId: pair.pairId,
-                              side: "front",
-                              cardSide: pair.front!,
-                            });
-                            setFineAngle(pair.front?.rotation || 0);
-                          }}
-                          className="px-2 py-0.5 text-[11px] text-blue-400 hover:text-white rounded-lg bg-slate-800 hover:bg-blue-600 transition flex items-center gap-1 cursor-pointer font-bold"
-                          title="تدوير وضبط بزوايا دقيقة"
-                        >
-                          <RotateCw className="w-3 h-3" />
-                          <span>تدوير دقيق</span>
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          {/* Crop Button (Point 4 in edits2.0.md) */}
+                          <button
+                            onClick={() => {
+                              setCropTarget({
+                                pairId: pair.pairId,
+                                side: "front",
+                                cardSide: pair.front!,
+                              });
+                              setCropRect(pair.front?.crop || { x: 0.05, y: 0.05, width: 0.9, height: 0.9 });
+                            }}
+                            className="px-2.5 py-1 text-[11px] text-amber-400 hover:text-white rounded-lg bg-slate-800 hover:bg-amber-600 transition flex items-center gap-1 cursor-pointer font-bold"
+                            title="قص وتحديد أطراف البطاقة"
+                          >
+                            <Scissors className="w-3 h-3" />
+                            <span>قص البطاقة</span>
+                          </button>
+
+                          {/* Fine Rotation Button */}
+                          <button
+                            onClick={() => {
+                              setEditingTarget({
+                                pairId: pair.pairId,
+                                side: "front",
+                                cardSide: pair.front!,
+                              });
+                              setFineAngle(pair.front?.rotation || 0);
+                            }}
+                            className="px-2 py-1 text-[11px] text-blue-400 hover:text-white rounded-lg bg-slate-800 hover:bg-blue-600 transition flex items-center gap-1 cursor-pointer font-bold"
+                            title="تدوير وضبط بزوايا دقيقة"
+                          >
+                            <RotateCw className="w-3 h-3" />
+                            <span>تدوير</span>
+                          </button>
+                        </div>
                       )}
                     </div>
 
@@ -582,20 +687,20 @@ export default function IdCardsPage() {
                       )}
                     </div>
 
-                    {/* Per-Side Controls (Requirement #14: مخصصة لكل وجه) */}
+                    {/* Per-Side Controls */}
                     {pair.front && (
                       <div className="flex items-center justify-between bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 text-[11px]">
                         <span className="text-slate-400 font-bold mr-1">تعديل الوش:</span>
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => adjustSideValue(pair.pairId, "front", 15, 10)}
+                            onClick={() => adjustSideValue(pair.pairId, "front", 12, 5)}
                             className="px-2 py-0.5 rounded bg-slate-800 hover:bg-blue-600 text-slate-200 hover:text-white transition cursor-pointer font-bold"
                             title="تفتيح هذا الوجه"
                           >
                             تفتيح +
                           </button>
                           <button
-                            onClick={() => adjustSideValue(pair.pairId, "front", -15, 0)}
+                            onClick={() => adjustSideValue(pair.pairId, "front", -12, -5)}
                             className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer font-bold"
                             title="تغميق هذا الوجه"
                           >
@@ -622,21 +727,41 @@ export default function IdCardsPage() {
                       </span>
 
                       {pair.back && (
-                        <button
-                          onClick={() => {
-                            setEditingTarget({
-                              pairId: pair.pairId,
-                              side: "back",
-                              cardSide: pair.back!,
-                            });
-                            setFineAngle(pair.back?.rotation || 0);
-                          }}
-                          className="px-2 py-0.5 text-[11px] text-emerald-400 hover:text-white rounded-lg bg-slate-800 hover:bg-emerald-600 transition flex items-center gap-1 cursor-pointer font-bold"
-                          title="تدوير وضبط بزوايا دقيقة"
-                        >
-                          <RotateCw className="w-3 h-3" />
-                          <span>تدوير دقيق</span>
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          {/* Crop Button (Point 4 in edits2.0.md) */}
+                          <button
+                            onClick={() => {
+                              setCropTarget({
+                                pairId: pair.pairId,
+                                side: "back",
+                                cardSide: pair.back!,
+                              });
+                              setCropRect(pair.back?.crop || { x: 0.05, y: 0.05, width: 0.9, height: 0.9 });
+                            }}
+                            className="px-2.5 py-1 text-[11px] text-amber-400 hover:text-white rounded-lg bg-slate-800 hover:bg-amber-600 transition flex items-center gap-1 cursor-pointer font-bold"
+                            title="قص وتحديد أطراف البطاقة"
+                          >
+                            <Scissors className="w-3 h-3" />
+                            <span>قص البطاقة</span>
+                          </button>
+
+                          {/* Fine Rotation Button */}
+                          <button
+                            onClick={() => {
+                              setEditingTarget({
+                                pairId: pair.pairId,
+                                side: "back",
+                                cardSide: pair.back!,
+                              });
+                              setFineAngle(pair.back?.rotation || 0);
+                            }}
+                            className="px-2 py-1 text-[11px] text-emerald-400 hover:text-white rounded-lg bg-slate-800 hover:bg-emerald-600 transition flex items-center gap-1 cursor-pointer font-bold"
+                            title="تدوير وضبط بزوايا دقيقة"
+                          >
+                            <RotateCw className="w-3 h-3" />
+                            <span>تدوير</span>
+                          </button>
+                        </div>
                       )}
                     </div>
 
@@ -655,22 +780,22 @@ export default function IdCardsPage() {
                       )}
                     </div>
 
-                    {/* Per-Side Controls (Requirement #14: مخصصة لكل وجه) */}
+                    {/* Per-Side Controls */}
                     {pair.back && (
                       <div className="flex items-center justify-between bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 text-[11px]">
                         <span className="text-slate-400 font-bold mr-1">تعديل الضهر:</span>
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => adjustSideValue(pair.pairId, "back", 15, 10)}
+                            onClick={() => adjustSideValue(pair.pairId, "back", 12, 5)}
                             className="px-2 py-0.5 rounded bg-slate-800 hover:bg-emerald-600 text-slate-200 hover:text-white transition cursor-pointer font-bold"
-                            title="تفتيح هذا الظهر"
+                            title="تفتيح هذا الوجه"
                           >
                             تفتيح +
                           </button>
                           <button
-                            onClick={() => adjustSideValue(pair.pairId, "back", -15, 0)}
+                            onClick={() => adjustSideValue(pair.pairId, "back", -12, -5)}
                             className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer font-bold"
-                            title="تغميق هذا الظهر"
+                            title="تغميق هذا الوجه"
                           >
                             تغميق -
                           </button>
@@ -688,7 +813,7 @@ export default function IdCardsPage() {
                 </div>
 
                 <div className="text-[11px] text-slate-500 text-center bg-slate-950/40 py-1.5 rounded-xl border border-slate-800/40">
-                  عرض الصورة في الطباعة: 9.0 سم • مقاس الورقة: A5 • نصوص وأرقام قومية واضحة بدون لغوشة
+                  عرض الصورة في الطباعة: 9.0 سم • مقاس الورقة: A5 • ألوان طبيعية 100% وأرقام قومية واضحة
                 </div>
               </div>
             ))}
@@ -696,7 +821,142 @@ export default function IdCardsPage() {
         </div>
       )}
 
-      {/* Fine-Angle Rotation Modal for ID Card Face (Requirement #14) */}
+      {/* Interactive ID Card Cropper Modal (Point 4 in edits2.0.md) */}
+      {cropTarget && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Scissors className="w-5 h-5 text-amber-400" />
+                <h3 className="text-base font-black text-white">
+                  أداة قص حواف البطاقة ({cropTarget.side === "front" ? "الوش" : "الضهر"})
+                </h3>
+              </div>
+              <button
+                onClick={() => setCropTarget(null)}
+                className="text-slate-400 hover:text-white cursor-pointer p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Visual Crop Preview Container */}
+            <div className="relative aspect-[8.6/5.4] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center p-2">
+              <NextImage
+                src={cropTarget.cardSide.originalSrc}
+                alt="Original for crop"
+                width={480}
+                height={300}
+                unoptimized
+                className="max-w-full max-h-full object-contain"
+              />
+
+              {/* Crop Frame Box Overlay */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: `${cropRect.x * 100}%`,
+                  top: `${cropRect.y * 100}%`,
+                  width: `${cropRect.width * 100}%`,
+                  height: `${cropRect.height * 100}%`,
+                }}
+                className="border-2 border-amber-400 bg-amber-500/15 pointer-events-none rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.65)]"
+              >
+                <span className="absolute top-1 right-2 text-[10px] font-black bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded">
+                  منطقة البطاقة
+                </span>
+              </div>
+            </div>
+
+            {/* Crop Sliders & Ratio Controls */}
+            <div className="space-y-3 bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-300">التحكم في أبعاد وموقع كادر القص:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCropRect({ x: 0.05, y: 0.08, width: 0.9, height: 0.84 });
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-[11px] cursor-pointer"
+                >
+                  إعادة تعيين الكادر
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">الموقع الأفقي (يمين / يسار):</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="0.4"
+                    step="0.01"
+                    value={cropRect.x}
+                    onChange={(e) => setCropRect((prev) => ({ ...prev, x: Number(e.target.value) }))}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">الموقع الرأسي (أعلى / أسفل):</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="0.4"
+                    step="0.01"
+                    value={cropRect.y}
+                    onChange={(e) => setCropRect((prev) => ({ ...prev, y: Number(e.target.value) }))}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">عرض القص (Width):</label>
+                  <input
+                    type="range"
+                    min="0.4"
+                    max="1.0"
+                    step="0.01"
+                    value={cropRect.width}
+                    onChange={(e) => setCropRect((prev) => ({ ...prev, width: Number(e.target.value) }))}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">ارتفاع القص (Height):</label>
+                  <input
+                    type="range"
+                    min="0.4"
+                    max="1.0"
+                    step="0.01"
+                    value={cropRect.height}
+                    onChange={(e) => setCropRect((prev) => ({ ...prev, height: Number(e.target.value) }))}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setCropTarget(null)}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyCrop}
+                className="flex-1 py-2.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 transition cursor-pointer shadow-lg shadow-amber-500/20"
+              >
+                تطبيق وحفظ القص
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fine-Angle Rotation Modal */}
       {editingTarget && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4">

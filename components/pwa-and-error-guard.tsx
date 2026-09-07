@@ -4,15 +4,15 @@ import { useEffect, useState } from "react";
 import { WifiOff, Wifi } from "lucide-react";
 
 export function PwaAndErrorGuard() {
-  const [isOffline, setIsOffline] = useState<boolean>(() => {
-    if (typeof navigator !== "undefined") {
-      return !navigator.onLine;
-    }
-    return false;
-  });
+  const [mounted, setMounted] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   const [showRestored, setShowRestored] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    if (typeof navigator !== "undefined") {
+      setIsOffline(!navigator.onLine);
+    }
 
     const handleOnline = () => {
       setIsOffline(false);
@@ -65,7 +65,7 @@ export function PwaAndErrorGuard() {
   return (
     <>
       {/* Offline Alert Bar */}
-      {isOffline && (
+      {mounted && isOffline && (
         <div
           role="status"
           aria-live="polite"
@@ -83,7 +83,7 @@ export function PwaAndErrorGuard() {
       )}
 
       {/* Online Restored Toast */}
-      {showRestored && (
+      {mounted && showRestored && (
         <div
           role="status"
           aria-live="polite"

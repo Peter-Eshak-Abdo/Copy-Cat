@@ -28,28 +28,25 @@ function applyTheme(t: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "dark";
-    try {
-      const savedTheme = localStorage.getItem("copycat-theme");
-      if (savedTheme === "light" || savedTheme === "dark") {
-        return savedTheme;
-      }
-    } catch {}
-    return "dark";
-  });
+  const [theme, setThemeState] = useState<Theme>("dark");
 
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    try {
+      const savedTheme = localStorage.getItem("copycat-theme") as Theme;
+      if (savedTheme === "light" || savedTheme === "dark") {
+        setThemeState(savedTheme);
+        applyTheme(savedTheme);
+        return;
+      }
+    } catch {}
+    applyTheme("dark");
+  }, []);
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
     try {
       localStorage.setItem("copycat-theme", newTheme);
-    } catch {
-      // ignore
-    }
+    } catch {}
     applyTheme(newTheme);
   };
 
@@ -75,18 +72,32 @@ export function useTheme() {
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
   const { theme, toggleTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div
+        className={`w-9 h-9 rounded-xl border border-slate-800/50 bg-slate-900/50 ${className}`}
+        aria-hidden="true"
+      />
+    );
+  }
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
       title={theme === "dark" ? "التحويل للوضع الفاتح (Light Mode)" : "التحويل للوضع الليلي (Dark Mode)"}
-      className={`relative inline-flex items-center justify-center p-2.5 rounded-xl border transition-all duration-300 ${
+      className={`relative inline-flex items-center justify-center p-2.5 rounded-xl border transition-all duration-300 cursor-pointer ${
         theme === "light"
           ? "bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200 shadow-sm"
           : "bg-slate-800/80 border-slate-700 text-amber-300 hover:bg-slate-700/80 hover:text-amber-200 shadow-sm shadow-blue-500/5"
       } ${className}`}
-      aria-label="تبديل مظهر الموقع"
+      aria-label="تبديل مظهر الموقع بين الفاتح والداكن"
     >
       {theme === "light" ? (
         <Moon className="w-4 h-4 transition-transform duration-300 hover:-rotate-12 text-slate-700" />

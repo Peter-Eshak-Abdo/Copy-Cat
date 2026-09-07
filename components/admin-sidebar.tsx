@@ -102,7 +102,7 @@ export function AdminSidebar() {
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <div className="truncate">
               <span className="text-slate-300 font-bold block truncate">{user.name}</span>
-              <span className="text-slate-500 text-[10px] block truncate">{user.email}</span>
+              <span className="text-slate-400 text-[10px] block truncate">{user.email}</span>
             </div>
           </div>
         )}
@@ -111,7 +111,7 @@ export function AdminSidebar() {
         <nav className="space-y-4 overflow-y-auto max-h-[calc(100vh-250px)] pr-1">
           {navGroups.map((group, gIdx) => (
             <div key={gIdx} className="space-y-1">
-              <div className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 {group.title}
               </div>
               {group.items.map((item) => {

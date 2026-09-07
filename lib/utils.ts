@@ -84,3 +84,45 @@ export function safeOpenUrl(url: string, target = "_blank"): boolean {
     return false;
   }
 }
+
+/**
+ * Compresses an image file to a lightweight WebP Data URL (client-side, 100% free, ~25KB)
+ */
+export function compressImageToWebP(
+  file: File,
+  maxDimension = 800,
+  quality = 0.82
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width;
+      let h = img.height;
+
+      if (w > maxDimension || h > maxDimension) {
+        if (w > h) {
+          h = Math.round((h * maxDimension) / w);
+          w = maxDimension;
+        } else {
+          w = Math.round((w * maxDimension) / h);
+          h = maxDimension;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(img.src);
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/webp", quality));
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+

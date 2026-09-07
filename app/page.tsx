@@ -22,13 +22,15 @@ import {
   MessageCircle,
   X,
   Share2,
+  Package,
+  Image as ImageIcon,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { formatCurrency, safeOpenUrl } from "@/lib/utils";
 import { useToast } from "@/components/toast-provider";
 import { ThemeToggle } from "@/components/theme-provider";
-import { INITIAL_PRODUCTS, type InventoryItem } from "@/lib/inventory";
+import { INITIAL_PRODUCTS, sanitizeItem, type InventoryItem } from "@/lib/inventory";
 
 const WHATSAPP_NUMBER = "01210571251";
 const WHATSAPP_INTERNATIONAL = "201210571251";
@@ -53,20 +55,33 @@ export default function StorefrontPage() {
   const [orderSent, setOrderSent] = useState(false);
   const [visibleCount, setVisibleCount] = useState(24);
 
+  // Product Details Modal State (Point 8 in edits2.0.md)
+  const [selectedProductModal, setSelectedProductModal] = useState<InventoryItem | null>(null);
+  const [activeModalImageIndex, setActiveModalImageIndex] = useState<number>(0);
+
   // Load products from Supabase or localStorage cache
   useEffect(() => {
     async function loadProducts() {
       try {
-        const cached = localStorage.getItem("copycat_inventory_v1_2") || localStorage.getItem("copycat_inventory");
+        const hasV6 = localStorage.getItem("copycat_inventory_v6_smart_avatar");
+        const cached = hasV6 ? localStorage.getItem("copycat_inventory_v6_smart_avatar") : null;
+
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length >= INITIAL_PRODUCTS.length) {
-            setProducts(parsed);
+            const sanitizedList = parsed.map((it: InventoryItem) => sanitizeItem(it));
+            setProducts(sanitizedList);
+            localStorage.setItem("copycat_inventory_v6_smart_avatar", JSON.stringify(sanitizedList));
           } else {
-            // Automatically upgrade outdated cache to the full imported catalog
-            setProducts(INITIAL_PRODUCTS);
-            localStorage.setItem("copycat_inventory_v1_2", JSON.stringify(INITIAL_PRODUCTS));
+            const sanitizedInit = INITIAL_PRODUCTS.map(sanitizeItem);
+            setProducts(sanitizedInit);
+            localStorage.setItem("copycat_inventory_v6_smart_avatar", JSON.stringify(sanitizedInit));
           }
+        } else {
+          // Fresh bump ensures high-fidelity word-matched stickers, folscap and avatar fallbacks
+          const sanitizedInit = INITIAL_PRODUCTS.map(sanitizeItem);
+          setProducts(sanitizedInit);
+          localStorage.setItem("copycat_inventory_v6_smart_avatar", JSON.stringify(sanitizedInit));
         }
 
         if (isSupabaseConfigured) {
@@ -76,12 +91,13 @@ export default function StorefrontPage() {
             .order("id", { ascending: true });
 
           if (!error && data && data.length > 0) {
-            setProducts(data);
-            localStorage.setItem("copycat_inventory_v1_2", JSON.stringify(data));
+            const hydrated = data.map((it: InventoryItem) => sanitizeItem(it));
+            setProducts(hydrated);
+            localStorage.setItem("copycat_inventory_v4_realistic", JSON.stringify(hydrated));
           }
         }
       } catch {
-        console.log("Storefront using local product catalog");
+        console.log("Using initial products for storefront");
       }
     }
     loadProducts();
@@ -427,6 +443,53 @@ export default function StorefrontPage() {
                 className="group bg-slate-900/80 dark:bg-slate-900/80 light:bg-white border border-slate-800 dark:border-slate-800 light:border-slate-200 rounded-3xl p-5 flex flex-col justify-between hover:border-blue-500/60 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10 relative overflow-hidden"
               >
                 <div>
+                  {/* Main Product Image Thumbnail (Point 8 in edits2.0.md) */}
+                  <div
+                    onClick={() => {
+                      setSelectedProductModal(item);
+                      setActiveModalImageIndex(0);
+                    }}
+                    className="cursor-pointer mb-3 relative aspect-[16/10] bg-slate-950/60 dark:bg-slate-950/60 light:bg-slate-100 rounded-2xl overflow-hidden border border-slate-800/80 dark:border-slate-800/80 light:border-slate-200 flex items-center justify-center group/img"
+                  >
+                    {item.image ? (
+                      <Image
+                        src={item.image}
+                        alt={item.name}
+                        fill
+                        unoptimized
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        className="object-cover group-hover/img:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          target.style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-radial from-slate-800/80 via-slate-900 to-slate-950 p-4 text-center select-none group-hover/img:scale-105 transition-transform duration-300">
+                        <div className="w-12 h-12 rounded-2xl bg-white/10 p-1.5 border border-white/10 flex items-center justify-center shadow-lg shadow-black/40 mb-2 relative overflow-hidden backdrop-blur-xs">
+                          <Image
+                            src="/logo.jpg"
+                            alt="كوبي كات"
+                            fill
+                            className="object-contain p-1"
+                          />
+                        </div>
+                        <span className="text-[11px] font-black text-slate-300 line-clamp-1 max-w-[150px]">
+                          {item.name}
+                        </span>
+                        <span className="text-[9px] font-bold text-blue-400 mt-0.5">
+                          {item.category}
+                        </span>
+                      </div>
+                    )}
+                    {item.image && item.images && item.images.length > 1 && (
+                      <span className="absolute bottom-2 left-2 text-[10px] font-bold bg-black/70 text-white px-2 py-0.5 rounded-md backdrop-blur-xs flex items-center gap-1">
+                        <ImageIcon className="w-3 h-3" />
+                        <span>+{item.images.length} صور</span>
+                      </span>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
                       {item.category}
@@ -437,7 +500,13 @@ export default function StorefrontPage() {
                     </span>
                   </div>
 
-                  <h3 className="font-extrabold text-white dark:text-white light:text-slate-900 text-base mb-2 group-hover:text-blue-400 transition-colors line-clamp-2">
+                  <h3
+                    onClick={() => {
+                      setSelectedProductModal(item);
+                      setActiveModalImageIndex(0);
+                    }}
+                    className="font-extrabold text-white dark:text-white light:text-slate-900 text-base mb-2 group-hover:text-blue-400 transition-colors line-clamp-2 cursor-pointer"
+                  >
                     {item.name}
                   </h3>
 
@@ -912,7 +981,7 @@ export default function StorefrontPage() {
 
         <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-right">
           <span>
-            جميع الحقوق محفوظة © كوبي كات للادوات المكتبية والطباعة والتصوير الرقمية {new Date().getFullYear()}
+            جميع الحقوق محفوظة © كوبي كات للادوات المكتبية والطباعة والتصوير 2026
           </span>
           <div className="flex items-center gap-4 text-[11px] text-slate-500">
             <span>سرعة تسليم قياسية</span>
@@ -923,6 +992,156 @@ export default function StorefrontPage() {
           </div>
         </div>
       </footer>
+
+      {/* Interactive Product Details & Gallery Modal (Point 8 in edits2.0.md) */}
+      {selectedProductModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-800 dark:border-slate-800 light:border-slate-200 rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto">
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedProductModal(null)}
+              className="absolute top-4 left-4 p-2 rounded-xl text-slate-400 hover:text-white dark:hover:text-white light:hover:text-slate-900 bg-slate-800/60 dark:bg-slate-800/60 light:bg-slate-100 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header info */}
+            <div>
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 inline-block mb-2">
+                {selectedProductModal.category}
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-white dark:text-white light:text-slate-950">
+                {selectedProductModal.name}
+              </h2>
+            </div>
+
+            {/* Image Gallery */}
+            {(() => {
+              const galleryImages = [
+                selectedProductModal.image,
+                ...(selectedProductModal.images || []),
+              ].filter(Boolean) as string[];
+
+              return (
+                <div className="space-y-3">
+                  {/* Large Active Preview */}
+                  <div className="relative aspect-[16/10] bg-slate-950 dark:bg-slate-950 light:bg-slate-100 rounded-2xl overflow-hidden border border-slate-800 dark:border-slate-800 light:border-slate-200 flex items-center justify-center">
+                    {galleryImages.length > 0 ? (
+                      <Image
+                        src={galleryImages[activeModalImageIndex] || galleryImages[0]}
+                        alt={selectedProductModal.name}
+                        fill
+                        unoptimized
+                        sizes="(max-width: 640px) 100vw, 600px"
+                        className="object-contain"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          target.src =
+                            "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=800&q=80";
+                        }}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-slate-500 gap-2">
+                        <Package className="w-12 h-12 opacity-30" />
+                        <span className="text-xs">لا تتوفر صور إضافية لهذا الصنف</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Thumbnails strip if multiple images */}
+                  {galleryImages.length > 1 && (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                      {galleryImages.map((imgUrl, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setActiveModalImageIndex(idx)}
+                          className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0 transition cursor-pointer ${
+                            activeModalImageIndex === idx
+                              ? "border-blue-500 scale-105 shadow-md shadow-blue-500/20"
+                              : "border-slate-800 dark:border-slate-800 light:border-slate-200 opacity-60 hover:opacity-100"
+                          }`}
+                        >
+                          <Image
+                            src={imgUrl}
+                            alt={`Thumbnail ${idx + 1}`}
+                            fill
+                            unoptimized
+                            sizes="64px"
+                            className="object-cover"
+                            onError={(e) => {
+                              const target = e.currentTarget as HTMLImageElement;
+                              target.src =
+                                "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=800&q=80";
+                            }}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Description / Notes */}
+            {selectedProductModal.notes && (
+              <div className="p-4 rounded-2xl bg-slate-950/80 dark:bg-slate-950/80 light:bg-slate-50 border border-slate-800/80 dark:border-slate-800/80 light:border-slate-200">
+                <span className="text-xs font-bold text-slate-400 block mb-1">المواصفات والتفاصيل:</span>
+                <p className="text-xs sm:text-sm text-slate-200 dark:text-slate-200 light:text-slate-700 leading-relaxed whitespace-pre-line">
+                  {selectedProductModal.notes}
+                </p>
+              </div>
+            )}
+
+            {/* Pricing & Wholesale Section */}
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-950/50 dark:bg-slate-950/50 light:bg-slate-100 border border-slate-800 dark:border-slate-800 light:border-slate-200">
+              <div>
+                <span className="text-[11px] text-slate-400 block font-bold">سعر القطعة:</span>
+                <span className="text-2xl font-black text-emerald-400 dark:text-emerald-400 light:text-emerald-600">
+                  {formatCurrency(selectedProductModal.price)}
+                </span>
+              </div>
+
+              {selectedProductModal.wholesale_price && selectedProductModal.wholesale_price > 0 && (
+                <div className="text-left">
+                  <span className="text-[11px] text-slate-400 block font-bold">
+                    سعر الجملة (بدءاً من {selectedProductModal.wholesale_min_qty || 10} قطع):
+                  </span>
+                  <span className="text-lg font-black text-blue-400 dark:text-blue-400 light:text-blue-600">
+                    {formatCurrency(selectedProductModal.wholesale_price)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+              <a
+                href={`https://wa.me/${WHATSAPP_INTERNATIONAL}?text=${encodeURIComponent(
+                  `مرحباً مكتبة كوبي كات، أود طلب الصنف التالي:\n- ${selectedProductModal.name}\n- السعر: ${selectedProductModal.price} ج.م`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>طلب فوري عبر الواتساب</span>
+              </a>
+
+              <button
+                onClick={() => {
+                  addToCart(selectedProductModal);
+                  setSelectedProductModal(null);
+                }}
+                className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition cursor-pointer"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span>إضافة إلى سلة الطلبات</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

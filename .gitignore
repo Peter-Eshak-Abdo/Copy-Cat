@@ -51,3 +51,5 @@ legacy-python/
 
 *.md
 *.sql
+
+/test/
