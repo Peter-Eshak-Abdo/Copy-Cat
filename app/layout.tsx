@@ -19,7 +19,14 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://copycat-center.vercel.app";
+const getBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "https://copy-cat-kappa.vercel.app";
+};
+
+const baseUrl = getBaseUrl().replace(/\/$/, "");
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
@@ -102,7 +109,9 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: "google-site-verification-copycat",
+    google:
+      process.env.GOOGLE_SITE_VERIFICATION ||
+      "45CwlQo0Fk1QKL796kCc0ZRO2Kd-n9cq2m1JHmzNjnk",
   },
 };
 
