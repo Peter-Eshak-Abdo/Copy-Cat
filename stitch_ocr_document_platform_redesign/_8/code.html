@@ -1,0 +1,560 @@
+<!DOCTYPE html><html class="dark" dir="rtl" lang="ar"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"inverse-primary":"#00687a","inverse-on-surface":"#2c303b","on-error-container":"#ffdad6","on-tertiary-fixed-variant":"#653e00","error":"#ffb4ab","on-tertiary-container":"#563400","error-container":"#93000a","on-primary-fixed-variant":"#004e5c","surface-container-highest":"#313540","secondary-fixed-dim":"#ffb2b7","surface-variant":"#313540","on-tertiary":"#472a00","primary-fixed-dim":"#4cd7f6","tertiary-container":"#e79400","surface-bright":"#353944","on-tertiary-fixed":"#2a1700","surface":"#0f131d","inverse-surface":"#dfe2f1","on-background":"#dfe2f1","tertiary-fixed-dim":"#ffb95f","surface-dim":"#0f131d","primary-container":"#06b6d4","surface-container-lowest":"#0a0e18","primary":"#4cd7f6","surface-tint":"#4cd7f6","surface-container-high":"#262a35","on-surface-variant":"#bcc9cd","tertiary":"#ffb95f","on-surface":"#dfe2f1","secondary-fixed":"#ffdadb","surface-container":"#1c1f2a","secondary-container":"#b50036","on-secondary-fixed-variant":"#92002a","primary-fixed":"#acedff","outline-variant":"#3d494c","on-secondary-container":"#ffc2c4","on-primary-fixed":"#001f26","on-secondary":"#67001b","on-primary":"#003640","secondary":"#ffb2b7","tertiary-fixed":"#ffddb8","on-error":"#690005","background":"#0f131d","on-secondary-fixed":"#40000d","outline":"#869397","surface-container-low":"#171b26","on-primary-container":"#00424f"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-2xl":"3rem","space-3xl":"4rem","space-xs":"0.5rem","space-2xs":"0.25rem","gutter-desktop":"1.5rem","space-md":"1rem","space-sm":"0.75rem","space-lg":"1.5rem","sidebar-width-expanded":"16rem","space-xl":"2rem","gutter-mobile":"0.75rem","sidebar-width-collapsed":"4.5rem"},fontFamily:{"label-tag":["Inter"],"headline-md":["Inter"],"label-code":["JetBrains Mono"],"display-hero-mobile":["Inter"],"body-md":["Inter"],"body-sm":["Inter"],"headline-lg":["Inter"],"display-hero":["Inter"],"headline-lg-mobile":["Inter"],"body-lg":["Inter"],"headline-sm":["Inter"]},fontSize:{"label-tag":["11px",{"lineHeight":"14px","letterSpacing":"0.04em","fontWeight":"700"}],"headline-md":["22px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"label-code":["12px",{"lineHeight":"16px","letterSpacing":"0.02em","fontWeight":"500"}],"display-hero-mobile":["30px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"display-hero":["44px",{"lineHeight":"52px","letterSpacing":"-0.025em","fontWeight":"800"}],"headline-lg-mobile":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-sm":["18px",{"lineHeight":"24px","letterSpacing":"-0.005em","fontWeight":"600"}]}}}};</script></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased min-h-screen selection:bg-primary selection:text-on-primary"><aside class="fixed right-0 top-0 bottom-0 w-sidebar-width-expanded bg-surface-container-lowest z-50 flex flex-col justify-between overflow-y-auto"><div class="p-space-md"><div class="flex items-center gap-space-sm px-space-xs py-space-sm mb-space-md"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary tracking-tight">كوبي كات ERP</span><span class="font-label-code text-label-code text-on-surface-variant">v2.4 Enterprise Hub</span></div></div><nav class="flex flex-col gap-space-md" data-active-classes="bg-primary-container text-on-primary-container font-bold rounded-xl"><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الرئيسية والمخزن</span><a aria-current="page" class="flex items-center gap-space-sm px-space-sm py-space-xs transition-all bg-primary-container text-on-primary-container font-bold rounded-xl" data-path="operations-dashboard" href="#"><span class="material-symbols-outlined text-primary text-xl">dashboard</span><span class="font-body-sm text-body-sm">لوحة العمليات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="inventory-catalog" href="#"><span class="material-symbols-outlined text-xl">inventory_2</span><span class="font-body-sm text-body-sm">المخزن والكتالوج</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">أدوات المطبعة والتصوير</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="print-calculator" href="#"><span class="material-symbols-outlined text-xl">calculate</span><span class="font-body-sm text-body-sm">حاسبة المطبعة والملازم</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="shift-orders" href="#"><span class="material-symbols-outlined text-xl">assignment</span><span class="font-body-sm text-body-sm">مهام وأوردرات الشفت</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="national-id-builder" href="#"><span class="material-symbols-outlined text-xl">badge</span><span class="font-body-sm text-body-sm">مصنع بطاقات الرقم القومي A5</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="portrait-studio" href="#"><span class="material-symbols-outlined text-xl">photo_camera</span><span class="font-body-sm text-body-sm">استوديو الصور 4x6</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="ink-saver-scanner" href="#"><span class="material-symbols-outlined text-xl">document_scanner</span><span class="font-body-sm text-body-sm">ماسح المستندات وتوفير الحبر</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">المستندات والذكاء الاصطناعي</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="advanced-pdf-studio" href="#"><span class="material-symbols-outlined text-xl">picture_as_pdf</span><span class="font-body-sm text-body-sm">استوديو أدوات PDF المتقدمة</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="smart-ocr-hub" href="#"><span class="material-symbols-outlined text-tertiary text-xl">psychology</span><span class="font-body-sm text-body-sm">الماسح الضوئي الذكي (OCR)</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="vocabulary-sheet-generator" href="#"><span class="material-symbols-outlined text-xl">spellcheck</span><span class="font-body-sm text-body-sm">مولد شيتات المفردات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="academic-research-generator" href="#"><span class="material-symbols-outlined text-xl">menu_book</span><span class="font-body-sm text-body-sm">مولد الأبحاث الأكاديمية</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الشبكة والإنتاجية</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="daily-server-links" href="#"><span class="material-symbols-outlined text-xl">dns</span><span class="font-body-sm text-body-sm">مواقع وسيرفرات يومية</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="lan-transfer-hub" href="#"><span class="material-symbols-outlined text-xl">sync_alt</span><span class="font-body-sm text-body-sm">مركز النقل السريع LAN</span></a></div></nav></div><div class="p-space-md bg-surface-container-low/60"><div class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container mb-space-sm"><div class="flex items-center gap-space-xs"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span></span><span class="font-label-code text-label-code text-on-surface-variant">السيرفر نشط</span></div><span class="font-label-tag text-label-tag px-space-xs py-space-2xs rounded-lg bg-surface-container-highest text-primary">99.8%</span></div><div class="flex items-center justify-between pt-space-xs"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-on-surface-variant text-lg">admin_panel_settings</span><span class="font-body-sm text-body-sm text-on-surface font-semibold">مشرف الفرع</span></div><a class="p-space-xs rounded-lg text-error hover:bg-surface-container-high transition-colors" data-path="login" href="#"><span class="material-symbols-outlined text-lg">logout</span></a></div></div></aside><div class="pr-sidebar-width-expanded"><header class="fixed top-0 right-sidebar-width-expanded left-0 h-16 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><img alt="logo.jpg" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VpzC_MDRD3TESDUobuiX8KOyhf9YAC7D76oM-2vUCJPGxHxtmMkXR3GTPKLj0Flc3eduZ8qe4pPhuQe5bIfA-Auf7iwLSrxVotQ91x8igvjXgxxgQMenJrCFx8jdhSLEeCSmJbni47Qw6cxz3PJkzplmCNNC4X21XRIYLOVOgDOKhhh_VLXT22XyFmBc-KaBbNfHIkb4C5yonR-R7b1UNHeH98AduXceN7dLxzXgf9jKxzj0p1llnEpRvuH3k95Tp8VSkifQP_mg"><div class="hidden sm:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-primary"></span><span class="font-label-code text-label-code text-primary">متصل بالخادم السحابي</span></div></div><div class="flex items-center gap-space-sm"><a class="hidden md:flex items-center gap-space-xs px-space-sm py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm transition-all" data-path="public-storefront" href="#"><span class="material-symbols-outlined text-base">storefront</span><span>تبديل للمتجر العام</span></a><button class="p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">dark_mode</span></button><button class="relative p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">notifications</span><span class="absolute top-1 left-1 w-2 h-2 bg-secondary-container rounded-full"></span></button><div class="flex items-center gap-space-xs pl-space-xs"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1UO12gBvuU5lLzzA8LA68aUE6fPaEjN3hhaFLV_103HWeMBpwNH7Y4OLVGnWqTorHT_T_ViOW6zIdaDr2tDRPThaLWkOq_bPkXeuhPWYWx75ElCDr5ivCXxrq2VnwzmXJQ0ianSvzqxnvT97H_hTGnD6ODWqlkMoe14sh47gSUE5F8b8UxP-jA7roIUIYgrkh205MqpdCeP7yjHmBwiA1nYEwz-KKs2BvQuDGpOPny-IlnLzLDmASwddBOD"><div class="hidden xl:flex flex-col text-right"><span class="font-body-sm text-body-sm font-semibold text-on-surface">أحمد المشرف</span><span class="font-label-tag text-label-tag text-on-surface-variant">مدير الوردية</span></div></div></div></header><main class="relative pt-16 min-h-screen bg-background w-full px-gutter-desktop"><div class="flex flex-col w-full pb-space-3xl">
+<!-- Hero Section & Quick Action -->
+<div class="relative overflow-hidden rounded-xl bg-surface-container-low p-space-xl mb-space-xl shadow-xl">
+<div class="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-primary/10 blur-3xl pointer-events-none"></div>
+<div class="absolute left-10 -bottom-20 w-72 h-72 rounded-full bg-tertiary/5 blur-3xl pointer-events-none"></div>
+<div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-space-lg">
+<div class="flex flex-col gap-space-xs max-w-3xl">
+<div class="flex items-center gap-space-xs w-fit px-space-sm py-space-2xs rounded-full bg-primary-container/15 text-primary">
+<span class="material-symbols-outlined text-base">bookmarks</span>
+<span class="font-label-tag text-label-tag font-bold">مركز اختصارات ومواقع العمل السريعة</span>
+</div>
+<h1 class="font-display-hero text-display-hero text-on-surface tracking-tight">دليل وروابط المواقع اليومية</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+          مواقع التقديمات والجامعات، الخدمات الحكومية، أدوات التصميم وعزل الصور، ومواقع المذكرات المحفوظة لسرعة الوصول إليها وتوفير وقت البحث أثناء خدمة الزبائن بالمكتبة.
+        </p>
+</div>
+<div class="flex items-center gap-space-sm self-start md:self-center">
+<button class="group flex items-center gap-space-xs px-space-lg py-space-sm rounded-xl bg-primary hover:bg-primary-container text-on-primary font-body-md text-body-md font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300" id="addPortalBtn" type="button">
+<span class="material-symbols-outlined text-xl transition-transform group-hover:rotate-90">add</span>
+<span>إضافة موقع جديد</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Telemetry Bar & Fast Access Stats -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md mb-space-xl">
+<div class="flex items-center justify-between p-space-md rounded-xl bg-surface-container shadow-md">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">link</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-tag text-label-tag text-on-surface-variant">المواقع المسجلة</span>
+<span class="font-label-code text-headline-sm text-on-surface font-bold" id="statTotal">8 روابط</span>
+</div>
+</div>
+<span class="font-label-code text-label-code text-primary bg-primary/10 px-space-xs py-space-2xs rounded-md">جاهز للطلب</span>
+</div>
+<div class="flex items-center justify-between p-space-md rounded-xl bg-surface-container shadow-md">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">speed</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-tag text-label-tag text-on-surface-variant">متوسط سرعة الاستجابة</span>
+<span class="font-label-code text-headline-sm text-on-surface font-bold">142 ms</span>
+</div>
+</div>
+<span class="font-label-code text-label-code text-tertiary bg-tertiary/10 px-space-xs py-space-2xs rounded-md">LAN مثالي</span>
+</div>
+<div class="flex items-center justify-between p-space-md rounded-xl bg-surface-container shadow-md">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">trending_up</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-tag text-label-tag text-on-surface-variant">النقرات اليومية الشفت</span>
+<span class="font-label-code text-headline-sm text-on-surface font-bold">184 فتحة</span>
+</div>
+</div>
+<span class="font-label-code text-label-code text-secondary bg-secondary-container/20 px-space-xs py-space-2xs rounded-md">+24% اليوم</span>
+</div>
+<div class="flex items-center justify-between p-space-md rounded-xl bg-surface-container shadow-md">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary-fixed">
+<span class="material-symbols-outlined">verified</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-tag text-label-tag text-on-surface-variant">حالة السيرفرات الحكومية</span>
+<span class="font-label-code text-headline-sm text-on-surface font-bold">مستقرة 100%</span>
+</div>
+</div>
+<div class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></div>
+</div>
+</div>
+<!-- Search & Filter Controls -->
+<div class="flex flex-col gap-space-md p-space-md rounded-xl bg-surface-container-low shadow-lg mb-space-lg">
+<div class="flex flex-col md:flex-row items-center justify-between gap-space-md">
+<div class="relative w-full md:w-96">
+<span class="material-symbols-outlined absolute right-space-sm top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pr-10 pl-space-md py-space-xs rounded-xl bg-surface-container-highest text-on-surface placeholder:text-outline text-body-md font-body-md focus:outline-none focus:bg-surface-bright transition-colors" id="portalSearch" placeholder="بحث باسم الموقع أو الوصف..." type="text">
+</div>
+<div class="flex items-center gap-space-xs text-on-surface-variant font-label-code text-label-code">
+<span>عدد النتائج:</span>
+<span class="text-primary font-bold" id="visibleCount">8</span>
+<span>من أصل 8</span>
+</div>
+</div>
+<!-- Category Tabs -->
+<div class="flex items-center gap-space-xs overflow-x-auto pb-space-2xs scrollbar-none" id="categoryFilters">
+<button class="cat-pill active px-space-md py-space-xs rounded-xl bg-primary text-on-primary font-body-sm text-body-sm font-semibold whitespace-nowrap transition-all shadow-md" data-cat="all" type="button">الكل</button>
+<button class="cat-pill px-space-md py-space-xs rounded-xl bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest font-body-sm text-body-sm font-medium whitespace-nowrap transition-all" data-cat="gov" type="button">خدمات حكومية وبطاقات</button>
+<button class="cat-pill px-space-md py-space-xs rounded-xl bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest font-body-sm text-body-sm font-medium whitespace-nowrap transition-all" data-cat="edu" type="button">تقديمات وجامعات ومدارس</button>
+<button class="cat-pill px-space-md py-space-xs rounded-xl bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest font-body-sm text-body-sm font-medium whitespace-nowrap transition-all" data-cat="design" type="button">تصميم ومونتاج وجرافيك</button>
+<button class="cat-pill px-space-md py-space-xs rounded-xl bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest font-body-sm text-body-sm font-medium whitespace-nowrap transition-all" data-cat="study" type="button">كتب ومذكرات وملازم</button>
+<button class="cat-pill px-space-md py-space-xs rounded-xl bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest font-body-sm text-body-sm font-medium whitespace-nowrap transition-all" data-cat="tools" type="button">أدوات وملفات وأوفيس</button>
+</div>
+</div>
+<!-- Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-space-lg" id="cardsGrid">
+<!-- Card 1: بوابة مصر الرقمية -->
+<div class="portal-card group relative flex flex-col justify-between p-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1" data-cat="gov" data-desc="استخراج بطاقات التموين، توثيق، وخدمات الأحوال المدنية" data-title="بوابة مصر الرقمية">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center text-primary group-hover:scale-105 transition-transform shadow-inner">
+<span class="material-symbols-outlined text-2xl">assured_workload</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors">بوابة مصر الرقمية</h3>
+<span class="font-label-tag text-label-tag text-primary bg-primary/10 px-space-xs py-0.5 rounded-full w-fit mt-1">خدمات حكومية وبطاقات</span>
+</div>
+</div>
+<div class="flex items-center gap-space-2xs text-outline opacity-70 group-hover:opacity-100 transition-opacity">
+<button class="p-space-2xs rounded-lg hover:bg-surface-bright hover:text-on-surface transition-colors" title="تعديل الرابط" type="button"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-space-2xs rounded-lg hover:bg-error-container hover:text-error transition-colors" title="حذف" type="button"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          استخراج وتجديد بطاقات التموين، خدمات التوثيق والشهر العقاري، وتحديث بيانات الأحوال المدنية وسداد الفواتير.
+        </p>
+</div>
+<div class="pt-space-md mt-space-md">
+<a class="flex items-center justify-center gap-space-xs w-full py-space-xs px-space-md rounded-xl bg-surface-container-highest hover:bg-primary hover:text-on-primary text-on-surface font-body-sm text-body-sm font-semibold transition-all" href="https://digital.gov.eg" rel="noopener noreferrer" target="_blank">
+<span>فتح الموقع الآن</span>
+<span class="material-symbols-outlined text-base">open_in_new</span>
+</a>
+</div>
+</div>
+<!-- Card 2: موقع التنسيق الإلكتروني -->
+<div class="portal-card group relative flex flex-col justify-between p-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1" data-cat="edu" data-desc="تنسيق الثانوية العامة والدبلومات والشهادات المعادلة والجامعات" data-title="موقع التنسيق الإلكتروني">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center text-tertiary group-hover:scale-105 transition-transform shadow-inner">
+<span class="material-symbols-outlined text-2xl">school</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-tertiary transition-colors">موقع التنسيق الإلكتروني</h3>
+<span class="font-label-tag text-label-tag text-tertiary bg-tertiary/10 px-space-xs py-0.5 rounded-full w-fit mt-1">تقديمات وجامعات ومدارس</span>
+</div>
+</div>
+<div class="flex items-center gap-space-2xs text-outline opacity-70 group-hover:opacity-100 transition-opacity">
+<button class="p-space-2xs rounded-lg hover:bg-surface-bright hover:text-on-surface transition-colors" title="تعديل الرابط" type="button"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-space-2xs rounded-lg hover:bg-error-container hover:text-error transition-colors" title="حذف" type="button"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          تنسيق رغبات الثانوية العامة، الدبلومات الفنية، الشهادات المعادلة الأزهرية والعربية، وتقليل الاغتراب.
+        </p>
+</div>
+<div class="pt-space-md mt-space-md">
+<a class="flex items-center justify-center gap-space-xs w-full py-space-xs px-space-md rounded-xl bg-surface-container-highest hover:bg-tertiary hover:text-on-tertiary text-on-surface font-body-sm text-body-sm font-semibold transition-all" href="https://tansik.digital.gov.eg" rel="noopener noreferrer" target="_blank">
+<span>فتح الموقع الآن</span>
+<span class="material-symbols-outlined text-base">open_in_new</span>
+</a>
+</div>
+</div>
+<!-- Card 3: موقع كانفا (Canva) -->
+<div class="portal-card group relative flex flex-col justify-between p-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1" data-cat="design" data-desc="تصميم السير الذاتية، البوسترات، وبطاقات الدعوة والكروت" data-title="موقع كانفا (Canva)">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center text-primary group-hover:scale-105 transition-transform shadow-inner">
+<span class="material-symbols-outlined text-2xl">palette</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors">موقع كانفا (Canva)</h3>
+<span class="font-label-tag text-label-tag text-primary bg-primary/10 px-space-xs py-0.5 rounded-full w-fit mt-1">تصميم ومونتاج وجرافيك</span>
+</div>
+</div>
+<div class="flex items-center gap-space-2xs text-outline opacity-70 group-hover:opacity-100 transition-opacity">
+<button class="p-space-2xs rounded-lg hover:bg-surface-bright hover:text-on-surface transition-colors" title="تعديل الرابط" type="button"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-space-2xs rounded-lg hover:bg-error-container hover:text-error transition-colors" title="حذف" type="button"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          تصميم السير الذاتية الاحترافية للعملاء، بوسترات الفعاليات، منيو المطاعم، بطاقات الأفراح والدعوات بسرعة فائقة.
+        </p>
+</div>
+<div class="pt-space-md mt-space-md">
+<a class="flex items-center justify-center gap-space-xs w-full py-space-xs px-space-md rounded-xl bg-surface-container-highest hover:bg-primary hover:text-on-primary text-on-surface font-body-sm text-body-sm font-semibold transition-all" href="https://canva.com" rel="noopener noreferrer" target="_blank">
+<span>فتح الموقع الآن</span>
+<span class="material-symbols-outlined text-base">open_in_new</span>
+</a>
+</div>
+</div>
+<!-- Card 4: موقع Remove.bg -->
+<div class="portal-card group relative flex flex-col justify-between p-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1" data-cat="design" data-desc="إزالة خلفية الصور بنقرة واحدة سريعة" data-title="موقع Remove.bg (عزل الخلفيات)">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center text-secondary group-hover:scale-105 transition-transform shadow-inner">
+<span class="material-symbols-outlined text-2xl">auto_fix_high</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-secondary transition-colors">Remove.bg (عزل الخلفيات)</h3>
+<span class="font-label-tag text-label-tag text-secondary bg-secondary-container/20 px-space-xs py-0.5 rounded-full w-fit mt-1">تصميم ومونتاج وجرافيك</span>
+</div>
+</div>
+<div class="flex items-center gap-space-2xs text-outline opacity-70 group-hover:opacity-100 transition-opacity">
+<button class="p-space-2xs rounded-lg hover:bg-surface-bright hover:text-on-surface transition-colors" title="تعديل الرابط" type="button"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-space-2xs rounded-lg hover:bg-error-container hover:text-error transition-colors" title="حذف" type="button"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          إزالة خلفيات الصور الشخصية وكارنيهات التعارف بنقرة واحدة وبدقة فائقة تجهيزاً لطباعة مقاسات 4x6 وجوازات السفر.
+        </p>
+</div>
+<div class="pt-space-md mt-space-md">
+<a class="flex items-center justify-center gap-space-xs w-full py-space-xs px-space-md rounded-xl bg-surface-container-highest hover:bg-secondary hover:text-on-secondary text-on-surface font-body-sm text-body-sm font-semibold transition-all" href="https://remove.bg" rel="noopener noreferrer" target="_blank">
+<span>فتح الموقع الآن</span>
+<span class="material-symbols-outlined text-base">open_in_new</span>
+</a>
+</div>
+</div>
+<!-- Card 5: بوابة الوظائف الحكومية -->
+<div class="portal-card group relative flex flex-col justify-between p-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1" data-cat="gov" data-desc="التقديم على مسابقات المعلمين والوظائف والجهات الحكومية" data-title="بوابة الوظائف الحكومية">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center text-primary-fixed group-hover:scale-105 transition-transform shadow-inner">
+<span class="material-symbols-outlined text-2xl">badge</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary-fixed transition-colors">بوابة الوظائف الحكومية</h3>
+<span class="font-label-tag text-label-tag text-primary-fixed bg-primary-fixed/10 px-space-xs py-0.5 rounded-full w-fit mt-1">خدمات حكومية وبطاقات</span>
+</div>
+</div>
+<div class="flex items-center gap-space-2xs text-outline opacity-70 group-hover:opacity-100 transition-opacity">
+<button class="p-space-2xs rounded-lg hover:bg-surface-bright hover:text-on-surface transition-colors" title="تعديل الرابط" type="button"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-space-2xs rounded-lg hover:bg-error-container hover:text-error transition-colors" title="حذف" type="button"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          التقديم الإلكتروني لمسابقات المعلمين، وظائف هيئة السكة الحديد، البريد المصري، والجهات والوزارات المركزية.
+        </p>
+</div>
+<div class="pt-space-md mt-space-md">
+<a class="flex items-center justify-center gap-space-xs w-full py-space-xs px-space-md rounded-xl bg-surface-container-highest hover:bg-primary-container hover:text-on-primary-container text-on-surface font-body-sm text-body-sm font-semibold transition-all" href="https://jobs.caoa.gov.eg" rel="noopener noreferrer" target="_blank">
+<span>فتح الموقع الآن</span>
+<span class="material-symbols-outlined text-base">open_in_new</span>
+</a>
+</div>
+</div>
+<!-- Card 6: موقع I Love PDF -->
+<div class="portal-card group relative flex flex-col justify-between p-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1" data-cat="tools" data-desc="دمج، ضغط، وتحويل ملفات PDF" data-title="موقع I Love PDF">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center text-secondary group-hover:scale-105 transition-transform shadow-inner">
+<span class="material-symbols-outlined text-2xl">picture_as_pdf</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-secondary transition-colors">موقع I Love PDF</h3>
+<span class="font-label-tag text-label-tag text-secondary bg-secondary-container/20 px-space-xs py-0.5 rounded-full w-fit mt-1">أدوات وملفات وأوفيس</span>
+</div>
+</div>
+<div class="flex items-center gap-space-2xs text-outline opacity-70 group-hover:opacity-100 transition-opacity">
+<button class="p-space-2xs rounded-lg hover:bg-surface-bright hover:text-on-surface transition-colors" title="تعديل الرابط" type="button"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-space-2xs rounded-lg hover:bg-error-container hover:text-error transition-colors" title="حذف" type="button"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          دمج الملازم المقطعة، فصل الصفحات الزائدة، تصغير حجم الكتب للواتساب، وتحويل صيغ Word إلى PDF والعكس.
+        </p>
+</div>
+<div class="pt-space-md mt-space-md">
+<a class="flex items-center justify-center gap-space-xs w-full py-space-xs px-space-md rounded-xl bg-surface-container-highest hover:bg-secondary hover:text-on-secondary text-on-surface font-body-sm text-body-sm font-semibold transition-all" href="https://ilovepdf.com" rel="noopener noreferrer" target="_blank">
+<span>فتح الموقع الآن</span>
+<span class="material-symbols-outlined text-base">open_in_new</span>
+</a>
+</div>
+</div>
+<!-- Card 7: نتائج الامتحانات والشهادات -->
+<div class="portal-card group relative flex flex-col justify-between p-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1" data-cat="edu" data-desc="بوابة وزارة التربية والتعليم للنتائج وأكواد الطلاب" data-title="موقع نتائج الامتحانات والشهادات">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center text-tertiary group-hover:scale-105 transition-transform shadow-inner">
+<span class="material-symbols-outlined text-2xl">workspace_premium</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-tertiary transition-colors">نتائج الامتحانات والشهادات</h3>
+<span class="font-label-tag text-label-tag text-tertiary bg-tertiary/10 px-space-xs py-0.5 rounded-full w-fit mt-1">تقديمات وجامعات ومدارس</span>
+</div>
+</div>
+<div class="flex items-center gap-space-2xs text-outline opacity-70 group-hover:opacity-100 transition-opacity">
+<button class="p-space-2xs rounded-lg hover:bg-surface-bright hover:text-on-surface transition-colors" title="تعديل الرابط" type="button"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-space-2xs rounded-lg hover:bg-error-container hover:text-error transition-colors" title="حذف" type="button"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          الاستعلام عن أرقام جلوس ونتائج الشهادة الإعدادية والثانوية العامة وطباعة بطاقات الترشيح والشهادات المعتمدة.
+        </p>
+</div>
+<div class="pt-space-md mt-space-md">
+<a class="flex items-center justify-center gap-space-xs w-full py-space-xs px-space-md rounded-xl bg-surface-container-highest hover:bg-tertiary hover:text-on-tertiary text-on-surface font-body-sm text-body-sm font-semibold transition-all" href="https://moe.gov.eg" rel="noopener noreferrer" target="_blank">
+<span>فتح الموقع الآن</span>
+<span class="material-symbols-outlined text-base">open_in_new</span>
+</a>
+</div>
+</div>
+<!-- Card 8: موقع TinyPNG لتصغير الصور -->
+<div class="portal-card group relative flex flex-col justify-between p-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1" data-cat="tools" data-desc="ضغط حجم الصور لتقليل استهلاك النت وسرعة التقديم" data-title="موقع وتطبيق تصغير الصور (TinyPNG)">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center text-primary group-hover:scale-105 transition-transform shadow-inner">
+<span class="material-symbols-outlined text-2xl">compress</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors">موقع تصغير الصور (TinyPNG)</h3>
+<span class="font-label-tag text-label-tag text-primary bg-primary/10 px-space-xs py-0.5 rounded-full w-fit mt-1">أدوات وملفات وأوفيس</span>
+</div>
+</div>
+<div class="flex items-center gap-space-2xs text-outline opacity-70 group-hover:opacity-100 transition-opacity">
+<button class="p-space-2xs rounded-lg hover:bg-surface-bright hover:text-on-surface transition-colors" title="تعديل الرابط" type="button"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-space-2xs rounded-lg hover:bg-error-container hover:text-error transition-colors" title="حذف" type="button"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          ضغط حجم صور البطاقات وشهادات التخرج لتناسب شروط المواقع الحكومية والمسابقات دون أدنى تأثير على جودة الطباعة.
+        </p>
+</div>
+<div class="pt-space-md mt-space-md">
+<a class="flex items-center justify-center gap-space-xs w-full py-space-xs px-space-md rounded-xl bg-surface-container-highest hover:bg-primary hover:text-on-primary text-on-surface font-body-sm text-body-sm font-semibold transition-all" href="https://tinypng.com" rel="noopener noreferrer" target="_blank">
+<span>فتح الموقع الآن</span>
+<span class="material-symbols-outlined text-base">open_in_new</span>
+</a>
+</div>
+</div>
+</div>
+<!-- Empty State (Hidden by default) -->
+<div class="hidden flex-col items-center justify-center p-space-2xl text-center rounded-xl bg-surface-container my-space-lg" id="emptyState">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-outline mb-space-md">
+<span class="material-symbols-outlined text-3xl">travel_explore</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-space-xs">لا توجد نتائج مطابقة</h3>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-sm mb-space-md">لم نتمكن من العثور على أي مواقع تطابق بحثك الحالي، جرب كلمات بحث أخرى أو اختر فئة مختلفة.</p>
+<button class="px-space-md py-space-xs rounded-xl bg-primary text-on-primary font-body-sm text-body-sm font-semibold" id="resetFilters" type="button">إعادة تعيين الفلترة</button>
+</div>
+<!-- Modal: Add New Shortcut -->
+<div class="fixed inset-0 bg-surface-container-lowest/80 backdrop-blur-md z-50 flex items-center justify-center p-space-md opacity-0 pointer-events-none transition-opacity duration-200" id="addModal">
+<div class="relative w-full max-w-lg bg-surface-container p-space-xl rounded-xl shadow-2xl flex flex-col gap-space-lg scale-95 transition-transform duration-200" id="modalCard">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-2xl">add_link</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">إضافة موقع عمل جديد</h3>
+</div>
+<button class="p-space-2xs rounded-lg hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface" id="closeModal" type="button">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<form class="flex flex-col gap-space-md" id="newPortalForm">
+<div class="flex flex-col gap-space-2xs">
+<label class="font-body-sm text-body-sm font-medium text-on-surface">اسم الموقع أو الخدمة</label>
+<input class="w-full px-space-md py-space-xs rounded-xl bg-surface-container-highest text-on-surface placeholder:text-outline text-body-md focus:outline-none focus:bg-surface-bright" id="newTitle" placeholder="مثال: موقع الاستعلام عن تكافل وكرامة" required="" type="text">
+</div>
+<div class="flex flex-col gap-space-2xs">
+<label class="font-body-sm text-body-sm font-medium text-on-surface">رابط الموقع (URL)</label>
+<input class="w-full px-space-md py-space-xs rounded-xl bg-surface-container-highest text-on-surface placeholder:text-outline text-body-md focus:outline-none focus:bg-surface-bright" id="newUrl" placeholder="https://example.gov.eg" required="" type="url">
+</div>
+<div class="flex flex-col gap-space-2xs">
+<label class="font-body-sm text-body-sm font-medium text-on-surface">التصنيف</label>
+<select class="w-full px-space-md py-space-xs rounded-xl bg-surface-container-highest text-on-surface text-body-md focus:outline-none focus:bg-surface-bright" id="newCategory">
+<option value="gov">خدمات حكومية وبطاقات</option>
+<option value="edu">تقديمات وجامعات ومدارس</option>
+<option value="design">تصميم ومونتاج وجرافيك</option>
+<option value="study">كتب ومذكرات وملازم</option>
+<option value="tools">أدوات وملفات وأوفيس</option>
+</select>
+</div>
+<div class="flex flex-col gap-space-2xs">
+<label class="font-body-sm text-body-sm font-medium text-on-surface">وصف مختصر</label>
+<textarea class="w-full px-space-md py-space-xs rounded-xl bg-surface-container-highest text-on-surface placeholder:text-outline text-body-md focus:outline-none focus:bg-surface-bright resize-none" id="newDesc" placeholder="وصف للخدمة التي يقدمها الموقع للمكتبة..." rows="2"></textarea>
+</div>
+<div class="flex items-center justify-end gap-space-sm pt-space-xs">
+<button class="px-space-md py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm font-medium transition-colors" id="cancelModal" type="button">إلغاء</button>
+<button class="px-space-lg py-space-xs rounded-xl bg-primary hover:bg-primary-container text-on-primary font-body-sm text-body-sm font-semibold transition-all" type="submit">حفظ الموقع</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    const searchInput = document.getElementById('portalSearch');
+    const categoryFilters = document.getElementById('categoryFilters');
+    const cards = Array.from(document.querySelectorAll('.portal-card'));
+    const visibleCount = document.getElementById('visibleCount');
+    const statTotal = document.getElementById('statTotal');
+    const emptyState = document.getElementById('emptyState');
+    const resetFiltersBtn = document.getElementById('resetFilters');
+
+    let currentCategory = 'all';
+    let searchQuery = '';
+
+    function filterCards() {
+      let visible = 0;
+      cards.forEach(card => {
+        const cat = card.getAttribute('data-cat');
+        const title = (card.getAttribute('data-title') || '').toLowerCase();
+        const desc = (card.getAttribute('data-desc') || '').toLowerCase();
+
+        const matchesCat = (currentCategory === 'all' || cat === currentCategory);
+        const matchesSearch = (!searchQuery || title.includes(searchQuery) || desc.includes(searchQuery));
+
+        if (matchesCat && matchesSearch) {
+          card.classList.remove('hidden');
+          visible++;
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+
+      visibleCount.textContent = visible;
+      if (visible === 0) {
+        emptyState.classList.remove('hidden');
+        emptyState.classList.add('flex');
+      } else {
+        emptyState.classList.add('hidden');
+        emptyState.classList.remove('flex');
+      }
+    }
+
+    // Category button handling
+    categoryFilters.addEventListener('click', (e) => {
+      const btn = e.target.closest('.cat-pill');
+      if (!btn) return;
+      
+      categoryFilters.querySelectorAll('.cat-pill').forEach(b => {
+        b.classList.remove('active', 'bg-primary', 'text-on-primary', 'shadow-md');
+        b.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+      });
+
+      btn.classList.add('active', 'bg-primary', 'text-on-primary', 'shadow-md');
+      btn.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+
+      currentCategory = btn.getAttribute('data-cat');
+      filterCards();
+    });
+
+    // Search query handling
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value.trim().toLowerCase();
+      filterCards();
+    });
+
+    // Reset filters
+    resetFiltersBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      searchQuery = '';
+      currentCategory = 'all';
+
+      categoryFilters.querySelectorAll('.cat-pill').forEach((b, index) => {
+        if (index === 0) {
+          b.classList.add('active', 'bg-primary', 'text-on-primary', 'shadow-md');
+          b.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+        } else {
+          b.classList.remove('active', 'bg-primary', 'text-on-primary', 'shadow-md');
+          b.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+        }
+      });
+
+      filterCards();
+    });
+
+    // Modal behavior
+    const addPortalBtn = document.getElementById('addPortalBtn');
+    const addModal = document.getElementById('addModal');
+    const modalCard = document.getElementById('modalCard');
+    const closeModal = document.getElementById('closeModal');
+    const cancelModal = document.getElementById('cancelModal');
+    const newPortalForm = document.getElementById('newPortalForm');
+
+    function openModal() {
+      addModal.classList.remove('opacity-0', 'pointer-events-none');
+      modalCard.classList.remove('scale-95');
+      modalCard.classList.add('scale-100');
+    }
+
+    function hideModal() {
+      addModal.classList.add('opacity-0', 'pointer-events-none');
+      modalCard.classList.remove('scale-100');
+      modalCard.classList.add('scale-95');
+      newPortalForm.reset();
+    }
+
+    addPortalBtn.addEventListener('click', openModal);
+    closeModal.addEventListener('click', hideModal);
+    cancelModal.addEventListener('click', hideModal);
+
+    addModal.addEventListener('click', (e) => {
+      if (e.target === addModal) hideModal();
+    });
+
+    // Simple append card simulation
+    newPortalForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const title = document.getElementById('newTitle').value;
+      const url = document.getElementById('newUrl').value;
+      const cat = document.getElementById('newCategory').value;
+      const desc = document.getElementById('newDesc').value;
+
+      const catLabels = {
+        gov: 'خدمات حكومية وبطاقات',
+        edu: 'تقديمات وجامعات ومدارس',
+        design: 'تصميم ومونتاج وجرافيك',
+        study: 'كتب ومذكرات وملازم',
+        tools: 'أدوات وملفات وأوفيس'
+      };
+
+      const newCard = document.createElement('div');
+      newCard.className = 'portal-card group relative flex flex-col justify-between p-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1';
+      newCard.setAttribute('data-cat', cat);
+      newCard.setAttribute('data-title', title);
+      newCard.setAttribute('data-desc', desc);
+
+      newCard.innerHTML = `
+        <div class="flex flex-col gap-space-md">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-space-sm">
+              <div class="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center text-primary group-hover:scale-105 transition-transform shadow-inner">
+                <span class="material-symbols-outlined text-2xl">public</span>
+              </div>
+              <div class="flex flex-col">
+                <h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors">${title}</h3>
+                <span class="font-label-tag text-label-tag text-primary bg-primary/10 px-space-xs py-0.5 rounded-full w-fit mt-1">${catLabels[cat]}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-space-2xs text-outline opacity-70 group-hover:opacity-100 transition-opacity">
+              <button type="button" title="تعديل الرابط" class="p-space-2xs rounded-lg hover:bg-surface-bright hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-lg">edit</span></button>
+              <button type="button" title="حذف" class="p-space-2xs rounded-lg hover:bg-error-container hover:text-error transition-colors"><span class="material-symbols-outlined text-lg">delete</span></button>
+            </div>
+          </div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+            ${desc || 'تمت إضافة هذا الموقع حديثاً إلى دليل روابط العمل اليومية.'}
+          </p>
+        </div>
+
+        <div class="pt-space-md mt-space-md">
+          <a href="${url}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-space-xs w-full py-space-xs px-space-md rounded-xl bg-surface-container-highest hover:bg-primary hover:text-on-primary text-on-surface font-body-sm text-body-sm font-semibold transition-all">
+            <span>فتح الموقع الآن</span>
+            <span class="material-symbols-outlined text-base">open_in_new</span>
+          </a>
+        </div>
+      `;
+
+      document.getElementById('cardsGrid').prepend(newCard);
+      cards.unshift(newCard);
+
+      const totalCount = cards.length;
+      statTotal.textContent = totalCount + ' روابط';
+      hideModal();
+      filterCards();
+    });
+  })();
+</script></main></div></body></html>

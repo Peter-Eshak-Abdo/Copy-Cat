@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { AdminClientWrapper } from "./admin-client-wrapper";
 
 export const metadata: Metadata = {
-  title: "لوحة التحكم | Copy Cat",
+  title: "تسجيل الدخول | Copy Cat",
   robots: {
     index: false,
     follow: false,
@@ -18,10 +17,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AdminLayout({
+export default function LoginLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <AdminClientWrapper>{children}</AdminClientWrapper>;
+  return <>{children}</>;
 }

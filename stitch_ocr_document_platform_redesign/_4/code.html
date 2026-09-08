@@ -1,0 +1,674 @@
+<!DOCTYPE html><html class="dark" dir="rtl" lang="ar"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"inverse-primary":"#00687a","inverse-on-surface":"#2c303b","on-error-container":"#ffdad6","on-tertiary-fixed-variant":"#653e00","error":"#ffb4ab","on-tertiary-container":"#563400","error-container":"#93000a","on-primary-fixed-variant":"#004e5c","surface-container-highest":"#313540","secondary-fixed-dim":"#ffb2b7","surface-variant":"#313540","on-tertiary":"#472a00","primary-fixed-dim":"#4cd7f6","tertiary-container":"#e79400","surface-bright":"#353944","on-tertiary-fixed":"#2a1700","surface":"#0f131d","inverse-surface":"#dfe2f1","on-background":"#dfe2f1","tertiary-fixed-dim":"#ffb95f","surface-dim":"#0f131d","primary-container":"#06b6d4","surface-container-lowest":"#0a0e18","primary":"#4cd7f6","surface-tint":"#4cd7f6","surface-container-high":"#262a35","on-surface-variant":"#bcc9cd","tertiary":"#ffb95f","on-surface":"#dfe2f1","secondary-fixed":"#ffdadb","surface-container":"#1c1f2a","secondary-container":"#b50036","on-secondary-fixed-variant":"#92002a","primary-fixed":"#acedff","outline-variant":"#3d494c","on-secondary-container":"#ffc2c4","on-primary-fixed":"#001f26","on-secondary":"#67001b","on-primary":"#003640","secondary":"#ffb2b7","tertiary-fixed":"#ffddb8","on-error":"#690005","background":"#0f131d","on-secondary-fixed":"#40000d","outline":"#869397","surface-container-low":"#171b26","on-primary-container":"#00424f"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-2xl":"3rem","space-3xl":"4rem","space-xs":"0.5rem","space-2xs":"0.25rem","gutter-desktop":"1.5rem","space-md":"1rem","space-sm":"0.75rem","space-lg":"1.5rem","sidebar-width-expanded":"16rem","space-xl":"2rem","gutter-mobile":"0.75rem","sidebar-width-collapsed":"4.5rem"},fontFamily:{"label-tag":["Inter"],"headline-md":["Inter"],"label-code":["JetBrains Mono"],"display-hero-mobile":["Inter"],"body-md":["Inter"],"body-sm":["Inter"],"headline-lg":["Inter"],"display-hero":["Inter"],"headline-lg-mobile":["Inter"],"body-lg":["Inter"],"headline-sm":["Inter"]},fontSize:{"label-tag":["11px",{"lineHeight":"14px","letterSpacing":"0.04em","fontWeight":"700"}],"headline-md":["22px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"label-code":["12px",{"lineHeight":"16px","letterSpacing":"0.02em","fontWeight":"500"}],"display-hero-mobile":["30px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"display-hero":["44px",{"lineHeight":"52px","letterSpacing":"-0.025em","fontWeight":"800"}],"headline-lg-mobile":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-sm":["18px",{"lineHeight":"24px","letterSpacing":"-0.005em","fontWeight":"600"}]}}}};</script></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased min-h-screen selection:bg-primary selection:text-on-primary"><aside class="fixed right-0 top-0 bottom-0 w-sidebar-width-expanded bg-surface-container-lowest z-50 flex flex-col justify-between overflow-y-auto"><div class="p-space-md"><div class="flex items-center gap-space-sm px-space-xs py-space-sm mb-space-md"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary tracking-tight">كوبي كات ERP</span><span class="font-label-code text-label-code text-on-surface-variant">v2.4 Enterprise Hub</span></div></div><nav class="flex flex-col gap-space-md" data-active-classes="bg-primary-container text-on-primary-container font-bold rounded-xl"><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الرئيسية والمخزن</span><a aria-current="page" class="flex items-center gap-space-sm px-space-sm py-space-xs transition-all bg-primary-container text-on-primary-container font-bold rounded-xl" data-path="operations-dashboard" href="#"><span class="material-symbols-outlined text-primary text-xl">dashboard</span><span class="font-body-sm text-body-sm">لوحة العمليات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="inventory-catalog" href="#"><span class="material-symbols-outlined text-xl">inventory_2</span><span class="font-body-sm text-body-sm">المخزن والكتالوج</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">أدوات المطبعة والتصوير</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="print-calculator" href="#"><span class="material-symbols-outlined text-xl">calculate</span><span class="font-body-sm text-body-sm">حاسبة المطبعة والملازم</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="shift-orders" href="#"><span class="material-symbols-outlined text-xl">assignment</span><span class="font-body-sm text-body-sm">مهام وأوردرات الشفت</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="national-id-builder" href="#"><span class="material-symbols-outlined text-xl">badge</span><span class="font-body-sm text-body-sm">مصنع بطاقات الرقم القومي A5</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="portrait-studio" href="#"><span class="material-symbols-outlined text-xl">photo_camera</span><span class="font-body-sm text-body-sm">استوديو الصور 4x6</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="ink-saver-scanner" href="#"><span class="material-symbols-outlined text-xl">document_scanner</span><span class="font-body-sm text-body-sm">ماسح المستندات وتوفير الحبر</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">المستندات والذكاء الاصطناعي</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="advanced-pdf-studio" href="#"><span class="material-symbols-outlined text-xl">picture_as_pdf</span><span class="font-body-sm text-body-sm">استوديو أدوات PDF المتقدمة</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="smart-ocr-hub" href="#"><span class="material-symbols-outlined text-tertiary text-xl">psychology</span><span class="font-body-sm text-body-sm">الماسح الضوئي الذكي (OCR)</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="vocabulary-sheet-generator" href="#"><span class="material-symbols-outlined text-xl">spellcheck</span><span class="font-body-sm text-body-sm">مولد شيتات المفردات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="academic-research-generator" href="#"><span class="material-symbols-outlined text-xl">menu_book</span><span class="font-body-sm text-body-sm">مولد الأبحاث الأكاديمية</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الشبكة والإنتاجية</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="daily-server-links" href="#"><span class="material-symbols-outlined text-xl">dns</span><span class="font-body-sm text-body-sm">مواقع وسيرفرات يومية</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="lan-transfer-hub" href="#"><span class="material-symbols-outlined text-xl">sync_alt</span><span class="font-body-sm text-body-sm">مركز النقل السريع LAN</span></a></div></nav></div><div class="p-space-md bg-surface-container-low/60"><div class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container mb-space-sm"><div class="flex items-center gap-space-xs"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span></span><span class="font-label-code text-label-code text-on-surface-variant">السيرفر نشط</span></div><span class="font-label-tag text-label-tag px-space-xs py-space-2xs rounded-lg bg-surface-container-highest text-primary">99.8%</span></div><div class="flex items-center justify-between pt-space-xs"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-on-surface-variant text-lg">admin_panel_settings</span><span class="font-body-sm text-body-sm text-on-surface font-semibold">مشرف الفرع</span></div><a class="p-space-xs rounded-lg text-error hover:bg-surface-container-high transition-colors" data-path="login" href="#"><span class="material-symbols-outlined text-lg">logout</span></a></div></div></aside><div class="pr-sidebar-width-expanded"><header class="fixed top-0 right-sidebar-width-expanded left-0 h-16 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><img alt="logo.jpg" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VpzC_MDRD3TESDUobuiX8KOyhf9YAC7D76oM-2vUCJPGxHxtmMkXR3GTPKLj0Flc3eduZ8qe4pPhuQe5bIfA-Auf7iwLSrxVotQ91x8igvjXgxxgQMenJrCFx8jdhSLEeCSmJbni47Qw6cxz3PJkzplmCNNC4X21XRIYLOVOgDOKhhh_VLXT22XyFmBc-KaBbNfHIkb4C5yonR-R7b1UNHeH98AduXceN7dLxzXgf9jKxzj0p1llnEpRvuH3k95Tp8VSkifQP_mg"><div class="hidden sm:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-primary"></span><span class="font-label-code text-label-code text-primary">متصل بالخادم السحابي</span></div></div><div class="flex items-center gap-space-sm"><a class="hidden md:flex items-center gap-space-xs px-space-sm py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm transition-all" data-path="public-storefront" href="#"><span class="material-symbols-outlined text-base">storefront</span><span>تبديل للمتجر العام</span></a><button class="p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">dark_mode</span></button><button class="relative p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">notifications</span><span class="absolute top-1 left-1 w-2 h-2 bg-secondary-container rounded-full"></span></button><div class="flex items-center gap-space-xs pl-space-xs"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1UO12gBvuU5lLzzA8LA68aUE6fPaEjN3hhaFLV_103HWeMBpwNH7Y4OLVGnWqTorHT_T_ViOW6zIdaDr2tDRPThaLWkOq_bPkXeuhPWYWx75ElCDr5ivCXxrq2VnwzmXJQ0ianSvzqxnvT97H_hTGnD6ODWqlkMoe14sh47gSUE5F8b8UxP-jA7roIUIYgrkh205MqpdCeP7yjHmBwiA1nYEwz-KKs2BvQuDGpOPny-IlnLzLDmASwddBOD"><div class="hidden xl:flex flex-col text-right"><span class="font-body-sm text-body-sm font-semibold text-on-surface">أحمد المشرف</span><span class="font-label-tag text-label-tag text-on-surface-variant">مدير الوردية</span></div></div></div></header><main class="relative pt-16 min-h-screen bg-background w-full px-gutter-desktop"><div class="flex flex-col w-full pb-space-3xl gap-space-xl">
+<!-- Top Hero Banner -->
+<div class="relative overflow-hidden rounded-xl bg-surface-container p-space-xl shadow-xl">
+<div class="absolute -left-20 -top-20 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="absolute right-1/4 -bottom-16 w-60 h-60 bg-tertiary-container/10 rounded-full blur-2xl pointer-events-none"></div>
+<div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-space-lg">
+<div class="flex flex-col gap-space-xs max-w-3xl">
+<div class="flex items-center gap-space-xs">
+<span class="inline-flex items-center gap-1.5 px-space-sm py-0.5 rounded-full bg-primary/10 text-primary font-label-tag text-label-tag">
+<span class="material-symbols-outlined text-sm">auto_stories</span>
+            أداة الذكاء الاصطناعي للمدارس والملازم
+          </span>
+<span class="inline-flex items-center gap-1 px-space-xs py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-code text-label-code">
+            OCR v3.8 • Word Engine
+          </span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight flex items-center gap-space-sm">
+          مولد شيتات المفردات المدرسية (School Sheets)
+          <span class="material-symbols-outlined text-primary text-3xl">school</span>
+</h1>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+          استخراج فوري لمعاني الكلمات من صور كتب وملازم المدرسين عبر الذكاء الاصطناعي، وتوليد نموذجين امتحانيين متطابقين بصيغ (نموذج أ / نموذج ب) بترتيب عشوائي لمنع الغش مع تصدير Word جاهز للطباعة الفورية.
+        </p>
+</div>
+<div class="flex flex-wrap items-center gap-space-sm self-start md:self-center">
+<button class="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm transition-all shadow-sm" id="quickPresetBtn">
+<span class="material-symbols-outlined text-primary text-lg">history_edu</span>
+          تحميل قالب مدرسة النور
+        </button>
+<button class="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-surface-container-low hover:bg-error-container/20 text-error font-body-sm text-body-sm transition-all" id="resetAllBtn">
+<span class="material-symbols-outlined text-lg">restart_alt</span>
+          تفريغ الحقول
+        </button>
+</div>
+</div>
+</div>
+<!-- Main 3-Column Studio Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+<!-- COLUMN 1: Image Upload & Exam Header Setup (Span 4) -->
+<div class="lg:col-span-4 flex flex-col gap-space-lg">
+<!-- Upload Card -->
+<div class="bg-surface-container rounded-xl p-space-lg shadow-md flex flex-col gap-space-md">
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-xl">upload_file</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">صورة درس المفردات</span>
+</div>
+<span class="font-label-tag text-label-tag text-primary-fixed-dim bg-primary/10 px-2 py-0.5 rounded-md">OCR تلقائي</span>
+</div>
+<!-- Dropzone -->
+<div class="group relative rounded-xl bg-surface-container-lowest hover:bg-surface-container-low p-space-lg transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-space-sm min-h-[170px]" id="dropZone">
+<div class="w-12 h-12 rounded-full bg-surface-container-high group-hover:bg-primary group-hover:text-on-primary text-primary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-2xl">cloud_upload</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="font-body-md text-body-md text-on-surface font-medium group-hover:text-primary transition-colors">
+              التقط صورة للكلمات أو اسحب الملف هنا
+            </span>
+<span class="font-label-code text-label-code text-on-surface-variant">
+              يدعم JPG, PNG, PDF (الحد الأقصى 25MB)
+            </span>
+</div>
+<input accept="image/*" class="hidden" id="fileInput" type="file">
+</div>
+<!-- Visual Image Scan Preview (Sample loaded) -->
+<div class="relative rounded-xl overflow-hidden bg-surface-container-lowest p-space-xs flex items-center gap-space-sm">
+<img class="w-16 h-16 rounded-lg object-cover flex-shrink-0" data-alt="Close up photograph of an Arabic primary school textbook page showing vocabulary tables with meanings highlighted under soft warm desk lamp light in high clarity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGVE7IwqbMq1LGP4s9l6XIBi5suxcFmXgKLyZBbAtiSynOQ67Xit2MR-wonx6nz-exaQSC1EBWRLVHuYX6AFhk_73RGC6cutyf3OA5nB-46nMcp-PgDh8k1AANNlOGRkxMLB2kVMrzPtAVMB98OoVK4wW7lvv93OD3PwInh_xpAZGq0-HPhNm3QuwqrDZtUFI7X0UFTfBdJ9vG_PScHDos-97bVDmdYiAYtT6Peumqc1RIzssmkSz2tw">
+<div class="flex flex-col min-w-0 flex-1">
+<div class="flex items-center justify-between">
+<span class="font-label-code text-label-code text-on-surface truncate font-semibold">درس_أصالة_المعاني_ص٤٢.jpg</span>
+<span class="font-label-tag text-label-tag text-primary bg-primary/15 px-1.5 py-0.5 rounded">تم الفحص</span>
+</div>
+<span class="font-label-tag text-label-tag text-on-surface-variant mt-0.5">دقة المسح: 300 DPI • 18 مدخل</span>
+<div class="w-full bg-surface-container-highest h-1 rounded-full mt-2 overflow-hidden">
+<div class="bg-primary h-full w-full"></div>
+</div>
+</div>
+<button class="p-space-xs text-on-surface-variant hover:text-primary rounded-lg transition-colors" title="إعادة المسح">
+<span class="material-symbols-outlined text-base">refresh</span>
+</button>
+</div>
+</div>
+<!-- Exam Header Metadata Card -->
+<div class="bg-surface-container rounded-xl p-space-lg shadow-md flex flex-col gap-space-md">
+<div class="flex items-center gap-space-xs pb-space-xs">
+<span class="material-symbols-outlined text-tertiary text-xl">badge</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">بيانات ترويسة الاختبار</span>
+</div>
+<div class="flex flex-col gap-space-sm">
+<div class="flex flex-col gap-1">
+<label class="font-label-code text-label-code text-on-surface-variant">اسم المدرسة أو الأستاذ</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute right-3 text-on-surface-variant text-base">apartment</span>
+<input class="w-full h-10 pr-9 pl-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-sm text-body-sm focus:bg-surface-container-high focus:outline-none transition-colors" id="schoolNameInput" type="text" value="مدرسة النور الخاصة للغات">
+</div>
+</div>
+<div class="grid grid-cols-2 gap-space-sm">
+<div class="flex flex-col gap-1">
+<label class="font-label-code text-label-code text-on-surface-variant">الصف الدراسي</label>
+<input class="w-full h-10 px-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-sm text-body-sm focus:bg-surface-container-high focus:outline-none transition-colors" id="gradeInput" type="text" value="الصف الرابع الابتدائي">
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-code text-label-code text-on-surface-variant">المادة / الموضوع</label>
+<input class="w-full h-10 px-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-sm text-body-sm focus:bg-surface-container-high focus:outline-none transition-colors" id="subjectInput" type="text" value="اللغة العربية - معاني المفردات">
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-code text-label-code text-on-surface-variant">صيغة السؤال الرئيسي</label>
+<textarea class="w-full p-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-sm text-body-sm focus:bg-surface-container-high focus:outline-none transition-colors resize-none" id="questionPromptInput" rows="2">اكتب معنى أو مرادف كل كلمة من الكلمات الآتية بدقة وفي المكان المخصص:</textarea>
+</div>
+<div class="grid grid-cols-2 gap-space-sm pt-space-xs">
+<div class="flex flex-col gap-1">
+<label class="font-label-code text-label-code text-on-surface-variant">زمن الاختبار المقترح</label>
+<select class="w-full h-10 px-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-sm text-body-sm focus:outline-none" id="timeLimitSelect">
+<option>15 دقيقة (كويز سريع)</option>
+<option selected="">20 دقيقة (اختبار دوري)</option>
+<option>30 دقيقة (تقييم شهري)</option>
+</select>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-code text-label-code text-on-surface-variant">الدرجة الإجمالية</label>
+<input class="w-full h-10 px-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-sm text-body-sm focus:outline-none font-label-code" id="totalMarksInput" type="number" value="10">
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- COLUMN 2: Extracted Vocabulary Items (Span 4) -->
+<div class="lg:col-span-4 flex flex-col gap-space-lg">
+<div class="bg-surface-container rounded-xl p-space-lg shadow-md flex flex-col gap-space-md">
+<!-- Section Header & Counter -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-xl">fact_check</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">قائمة المفردات</span>
+</div>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10">
+<span class="material-symbols-outlined text-primary text-xs">translate</span>
+<span class="font-label-code text-label-code text-primary font-bold" id="wordCountBadge">5 كلمات نشطة</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-2">
+          اضغط على أي كلمة لنسخها فوراً، أو احذف ما لا تحتاجه في نموذج الامتحان.
+        </p>
+<!-- Quick Add Manual Word Bar -->
+<div class="flex items-center gap-space-xs">
+<input class="w-1/2 h-10 px-3 rounded-lg bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/60 font-body-sm text-body-sm focus:outline-none" id="manualWordInput" placeholder="الكلمة (مثال: بسالة)" type="text">
+<input class="w-1/2 h-10 px-3 rounded-lg bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/60 font-body-sm text-body-sm focus:outline-none" id="manualMeaningInput" placeholder="المعنى (مثال: شجاعة)" type="text">
+<button class="flex-shrink-0 h-10 px-space-sm rounded-lg bg-primary hover:bg-primary-container text-on-primary font-body-sm text-body-sm font-semibold flex items-center justify-center gap-1 transition-all" id="addWordBtn">
+<span class="material-symbols-outlined text-base">add</span>
+            إضافة
+          </button>
+</div>
+<!-- Vocab List Container -->
+<div class="flex flex-col gap-2 max-h-[440px] overflow-y-auto pr-1" id="vocabList">
+<!-- Item 1 -->
+<div class="vocab-item group flex items-center justify-between p-space-sm rounded-lg bg-surface-container-lowest hover:bg-surface-container-high transition-all" data-meaning="بَنَى وأَسَّسَ" data-word="شَيَّدَ">
+<div class="flex items-center gap-space-sm min-w-0">
+<span class="w-6 h-6 rounded-md bg-surface-container-high group-hover:bg-primary/20 text-primary font-label-code text-label-code flex items-center justify-center font-bold">1</span>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate cursor-pointer hover:text-primary" onclick="copyToClipboard('شَيَّدَ')">شَيَّدَ</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">المعنى: بنى وأسس</span>
+</div>
+</div>
+<div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+<button title="نسخ الكلمة" onclick="copyToClipboard('شَيَّدَ')" class="p-1 rounded text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">content_copy</span>
+</button>
+<button title="حذف" onclick="removeVocabItem(this)" class="p-1 rounded text-on-surface-variant hover:text-error transition-colors">
+<span class="material-symbols-outlined text-lg">delete_outline</span>
+</button>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="vocab-item group flex items-center justify-between p-space-sm rounded-lg bg-surface-container-lowest hover:bg-surface-container-high transition-all" data-meaning="المَاضِينَ والسَّالِفِين" data-word="الغَابِرِينَ">
+<div class="flex items-center gap-space-sm min-w-0">
+<span class="w-6 h-6 rounded-md bg-surface-container-high group-hover:bg-primary/20 text-primary font-label-code text-label-code flex items-center justify-center font-bold">2</span>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate cursor-pointer hover:text-primary" onclick="copyToClipboard('الغَابِرِينَ')">الغَابِرِينَ</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">المعنى: الماضين والسالفين</span>
+</div>
+</div>
+<div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+<button class="p-1 rounded text-on-surface-variant hover:text-primary transition-colors" onclick="copyToClipboard('الغَابِرِينَ')" title="نسخ الكلمة">
+<span class="material-symbols-outlined text-lg">content_copy</span>
+</button>
+<button class="p-1 rounded text-on-surface-variant hover:text-error transition-colors" onclick="removeVocabItem(this)" title="حذف">
+<span class="material-symbols-outlined text-lg">delete_outline</span>
+</button>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="vocab-item group flex items-center justify-between p-space-sm rounded-lg bg-surface-container-lowest hover:bg-surface-container-high transition-all" data-meaning="نَوَاحٍ وأَقْطَار" data-word="أَرْجَاء">
+<div class="flex items-center gap-space-sm min-w-0">
+<span class="w-6 h-6 rounded-md bg-surface-container-high group-hover:bg-primary/20 text-primary font-label-code text-label-code flex items-center justify-center font-bold">3</span>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate cursor-pointer hover:text-primary" onclick="copyToClipboard('أَرْجَاء')">أَرْجَاء</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">المعنى: نواحٍ وأقطار</span>
+</div>
+</div>
+<div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+<button class="p-1 rounded text-on-surface-variant hover:text-primary transition-colors" onclick="copyToClipboard('أَرْجَاء')" title="نسخ الكلمة">
+<span class="material-symbols-outlined text-lg">content_copy</span>
+</button>
+<button class="p-1 rounded text-on-surface-variant hover:text-error transition-colors" onclick="removeVocabItem(this)" title="حذف">
+<span class="material-symbols-outlined text-lg">delete_outline</span>
+</button>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="vocab-item group flex items-center justify-between p-space-sm rounded-lg bg-surface-container-lowest hover:bg-surface-container-high transition-all" data-meaning="جَمِيلٌ وحَسَن المَنْظَر" data-word="بَهِيّ">
+<div class="flex items-center gap-space-sm min-w-0">
+<span class="w-6 h-6 rounded-md bg-surface-container-high group-hover:bg-primary/20 text-primary font-label-code text-label-code flex items-center justify-center font-bold">4</span>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate cursor-pointer hover:text-primary" onclick="copyToClipboard('بَهِيّ')">بَهِيّ</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">المعنى: جميل وحسن المنظر</span>
+</div>
+</div>
+<div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+<button class="p-1 rounded text-on-surface-variant hover:text-primary transition-colors" onclick="copyToClipboard('بَهِيّ')" title="نسخ الكلمة">
+<span class="material-symbols-outlined text-lg">content_copy</span>
+</button>
+<button class="p-1 rounded text-on-surface-variant hover:text-error transition-colors" onclick="removeVocabItem(this)" title="حذف">
+<span class="material-symbols-outlined text-lg">delete_outline</span>
+</button>
+</div>
+</div>
+<!-- Item 5 -->
+<div class="vocab-item group flex items-center justify-between p-space-sm rounded-lg bg-surface-container-lowest hover:bg-surface-container-high transition-all" data-meaning="مُتَغَيِّرُ اللَّوْنِ ضَعِيف" data-word="شَاحِب">
+<div class="flex items-center gap-space-sm min-w-0">
+<span class="w-6 h-6 rounded-md bg-surface-container-high group-hover:bg-primary/20 text-primary font-label-code text-label-code flex items-center justify-center font-bold">5</span>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate cursor-pointer hover:text-primary" onclick="copyToClipboard('شَاحِب')">شَاحِب</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">المعنى: متغير اللون وضعيف</span>
+</div>
+</div>
+<div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+<button class="p-1 rounded text-on-surface-variant hover:text-primary transition-colors" onclick="copyToClipboard('شَاحِب')" title="نسخ الكلمة">
+<span class="material-symbols-outlined text-lg">content_copy</span>
+</button>
+<button class="p-1 rounded text-on-surface-variant hover:text-error transition-colors" onclick="removeVocabItem(this)" title="حذف">
+<span class="material-symbols-outlined text-lg">delete_outline</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Big Primary Action Button -->
+<button class="w-full mt-space-xs py-3.5 px-space-md rounded-xl bg-primary text-on-primary font-headline-sm text-headline-sm font-bold flex items-center justify-center gap-space-xs shadow-lg hover:bg-primary-container transition-all" id="generateShuffleBtn">
+<span class="material-symbols-outlined text-2xl">shuffle</span>
+          توليد / خلط نماذج (أ) و (ب)
+        </button>
+</div>
+<!-- Quick Tips Card -->
+<div class="bg-surface-container-low rounded-xl p-space-md flex items-start gap-space-sm">
+<span class="material-symbols-outlined text-tertiary text-xl flex-shrink-0 mt-0.5">lightbulb</span>
+<div class="flex flex-col gap-0.5">
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">ميزة منع الغش المدرسي:</span>
+<p class="font-label-tag text-label-tag text-on-surface-variant">
+            يقوم النظام بإعادة ترتيب الكلمات الـ 5 عشوائياً في «نموذج ب» مع إبقاء نفس الأسئلة لضمان عدالة التقييم أثناء توزيع الاختبار في الصف المدرسي جنباً إلى جنب.
+          </p>
+</div>
+</div>
+</div>
+<!-- COLUMN 3: Live Dual-Model Preview & Export Studio (Span 4) -->
+<div class="lg:col-span-4 flex flex-col gap-space-md">
+<!-- Top Action Ribbon -->
+<div class="flex items-center justify-between bg-surface-container p-space-sm rounded-xl">
+<div class="flex items-center gap-1 bg-surface-container-lowest p-1 rounded-lg">
+<button class="px-3 py-1.5 rounded-md bg-primary text-on-primary font-label-tag text-label-tag transition-all flex items-center gap-1" id="tabModelA">
+<span class="material-symbols-outlined text-sm">view_agenda</span>
+            نموذج (أ)
+          </button>
+<button class="px-3 py-1.5 rounded-md text-on-surface-variant hover:text-on-surface font-label-tag text-label-tag transition-all flex items-center gap-1" id="tabModelB">
+<span class="material-symbols-outlined text-sm">shuffle</span>
+            نموذج (ب) المبعثر
+          </button>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-2 rounded-lg bg-surface-container-high text-on-surface hover:text-primary transition-colors" title="معاينة الشيت بالحجم الكامل">
+<span class="material-symbols-outlined text-lg">fullscreen</span>
+</button>
+<button class="p-2 rounded-lg bg-surface-container-high text-on-surface hover:text-tertiary transition-colors" id="rerollOrderBtn" title="إعادة الترتيب التلقائي">
+<span class="material-symbols-outlined text-lg">cached</span>
+</button>
+</div>
+</div>
+<!-- Live Exam Sheet Card (A4 stylized simulated container) -->
+<div class="relative bg-surface-container-lowest rounded-xl p-space-lg shadow-2xl flex flex-col min-h-[580px] overflow-hidden">
+<!-- Subtle Watermark -->
+<div class="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none select-none">
+<span class="material-symbols-outlined text-[160px]">print</span>
+</div>
+<!-- Sheet Header Box -->
+<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-xs relative z-10">
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold" id="previewSchoolName">مدرسة النور الخاصة للغات</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant" id="previewSubject">اختبار قصير - اللغة العربية (معاني المفردات)</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="px-2.5 py-0.5 rounded bg-primary text-on-primary font-label-code text-label-code font-bold" id="previewModelBadge">
+                نموذج (أ)
+              </span>
+<span class="font-label-tag text-label-tag text-primary-fixed-dim mt-1" id="previewGrade">الصف الرابع الابتدائي</span>
+</div>
+</div>
+<!-- Student Name & Score Row -->
+<div class="grid grid-cols-12 gap-2 mt-space-xs pt-space-xs bg-surface-container p-2 rounded">
+<div class="col-span-8 flex items-center gap-2">
+<span class="font-label-tag text-label-tag text-on-surface-variant">اسم التلميذ:</span>
+<span class="flex-1 border-b border-dotted border-outline/40 h-4"></span>
+</div>
+<div class="col-span-4 flex items-center justify-end gap-2">
+<span class="font-label-tag text-label-tag text-on-surface-variant">الدرجة:</span>
+<div class="px-3 py-0.5 rounded bg-surface-container-highest font-label-code text-label-code text-on-surface">
+                / 10
+              </div>
+</div>
+</div>
+</div>
+<!-- Question Body -->
+<div class="flex flex-col gap-space-md my-space-md flex-1 relative z-10">
+<div class="flex items-center gap-space-xs">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<p class="font-body-sm text-body-sm font-semibold text-on-surface" id="previewPrompt">
+              اكتب معنى أو مرادف كل كلمة من الكلمات الآتية بدقة وفي المكان المخصص:
+            </p>
+</div>
+<!-- Exam Answer Table -->
+<div class="flex flex-col gap-2.5" id="examQuestionsContainer">
+<!-- Dynamic Question Items -->
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container/60 hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="w-5 h-5 rounded-full bg-surface-container-highest text-primary font-label-code text-label-code flex items-center justify-center font-bold">١</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">شَيَّدَ</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-tag text-label-tag text-on-surface-variant">المعنى:</span>
+<span class="w-36 h-6 border-b border-dotted border-outline/60 inline-block"></span>
+</div>
+</div>
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container/60 hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="w-5 h-5 rounded-full bg-surface-container-highest text-primary font-label-code text-label-code flex items-center justify-center font-bold">٢</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">الغَابِرِينَ</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-tag text-label-tag text-on-surface-variant">المعنى:</span>
+<span class="w-36 h-6 border-b border-dotted border-outline/60 inline-block"></span>
+</div>
+</div>
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container/60 hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="w-5 h-5 rounded-full bg-surface-container-highest text-primary font-label-code text-label-code flex items-center justify-center font-bold">٣</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">أَرْجَاء</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-tag text-label-tag text-on-surface-variant">المعنى:</span>
+<span class="w-36 h-6 border-b border-dotted border-outline/60 inline-block"></span>
+</div>
+</div>
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container/60 hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="w-5 h-5 rounded-full bg-surface-container-highest text-primary font-label-code text-label-code flex items-center justify-center font-bold">٤</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">بَهِيّ</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-tag text-label-tag text-on-surface-variant">المعنى:</span>
+<span class="w-36 h-6 border-b border-dotted border-outline/60 inline-block"></span>
+</div>
+</div>
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container/60 hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="w-5 h-5 rounded-full bg-surface-container-highest text-primary font-label-code text-label-code flex items-center justify-center font-bold">٥</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">شَاحِب</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-tag text-label-tag text-on-surface-variant">المعنى:</span>
+<span class="w-36 h-6 border-b border-dotted border-outline/60 inline-block"></span>
+</div>
+</div>
+</div>
+</div>
+<!-- Sheet Footer Bar -->
+<div class="relative z-10 pt-space-xs mt-auto flex items-center justify-between text-on-surface-variant/70 font-label-code text-label-code bg-surface-container-low/50 px-space-sm py-1 rounded">
+<span>مع أطيب أمنياتنا بالنجاح والتوفيق</span>
+<span>صفحة ١ من ١</span>
+</div>
+</div>
+<!-- Action Operations Grid -->
+<div class="flex flex-col gap-space-xs mt-space-xs">
+<button class="w-full py-3 px-space-md rounded-xl bg-primary-container text-on-primary-container hover:bg-primary font-body-sm text-body-sm font-semibold flex items-center justify-center gap-space-xs transition-all shadow-md" id="downloadWordBtn">
+<span class="material-symbols-outlined text-xl">description</span>
+          تنزيل ملف Word (.docx) منسق A4 بهوامش ضيقة
+        </button>
+<div class="grid grid-cols-2 gap-space-xs">
+<button class="py-2.5 px-space-sm rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm font-medium flex items-center justify-center gap-1.5 transition-all" id="printNowBtn">
+<span class="material-symbols-outlined text-primary text-lg">print</span>
+            طباعة المطبعة الفورية
+          </button>
+<button class="py-2.5 px-space-sm rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm font-medium flex items-center justify-center gap-1.5 transition-all" id="whatsappShareBtn">
+<span class="material-symbols-outlined text-tertiary text-lg">share</span>
+            إرسال للأستاذ واتساب
+          </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Operational Telemetry Bar -->
+<div class="bg-surface-container rounded-xl p-space-md flex flex-wrap items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-lg flex-wrap">
+<div class="flex items-center gap-space-xs">
+<span class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
+<span class="font-label-tag text-label-tag text-on-surface font-bold">محرك الذكاء الاصطناعي: جاهز</span>
+</div>
+<div class="flex items-center gap-space-xs font-label-code text-label-code text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">memory</span>
+<span>استهلاك الرام: 142 MB</span>
+</div>
+<div class="flex items-center gap-space-xs font-label-code text-label-code text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">speed</span>
+<span>سرعة التوليد: 0.18 ثانية</span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm">
+<span class="font-label-tag text-label-tag text-on-surface-variant">التوافق:</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface font-label-code text-label-code">Microsoft Word 2016+</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface font-label-code text-label-code">A4 Duplex Ready</span>
+</div>
+</div>
+</div>
+<script>
+  // State store for active vocab items
+  let activeWords = [
+    { id: 1, word: 'شَيَّدَ', meaning: 'بَنَى وأَسَّسَ' },
+    { id: 2, word: 'الغَابِرِينَ', meaning: 'المَاضِينَ والسَّالِفِين' },
+    { id: 3, word: 'أَرْجَاء', meaning: 'نَوَاحٍ وأَقْطَار' },
+    { id: 4, word: 'بَهِيّ', meaning: 'جَمِيلٌ وحَسَن المَنْظَر' },
+    { id: 5, word: 'شَاحِب', meaning: 'مُتَغَيِّرُ اللَّوْنِ ضَعِيف' }
+  ];
+
+  let currentModel = 'A'; // 'A' or 'B'
+  const arabicNumerals = ['١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩', '١٠'];
+
+  // DOM Elements
+  const vocabListEl = document.getElementById('vocabList');
+  const wordCountBadge = document.getElementById('wordCountBadge');
+  const manualWordInput = document.getElementById('manualWordInput');
+  const manualMeaningInput = document.getElementById('manualMeaningInput');
+  const addWordBtn = document.getElementById('addWordBtn');
+  const schoolNameInput = document.getElementById('schoolNameInput');
+  const gradeInput = document.getElementById('gradeInput');
+  const subjectInput = document.getElementById('subjectInput');
+  const questionPromptInput = document.getElementById('questionPromptInput');
+  
+  const previewSchoolName = document.getElementById('previewSchoolName');
+  const previewGrade = document.getElementById('previewGrade');
+  const previewSubject = document.getElementById('previewSubject');
+  const previewPrompt = document.getElementById('previewPrompt');
+  const previewModelBadge = document.getElementById('previewModelBadge');
+  const examQuestionsContainer = document.getElementById('examQuestionsContainer');
+
+  const tabModelA = document.getElementById('tabModelA');
+  const tabModelB = document.getElementById('tabModelB');
+  const generateShuffleBtn = document.getElementById('generateShuffleBtn');
+  const rerollOrderBtn = document.getElementById('rerollOrderBtn');
+  const quickPresetBtn = document.getElementById('quickPresetBtn');
+  const resetAllBtn = document.getElementById('resetAllBtn');
+  const downloadWordBtn = document.getElementById('downloadWordBtn');
+  const printNowBtn = document.getElementById('printNowBtn');
+  const whatsappShareBtn = document.getElementById('whatsappShareBtn');
+
+  // Sync Input Elements with Preview
+  schoolNameInput.addEventListener('input', (e) => {
+    previewSchoolName.textContent = e.target.value || 'اسم المدرسة';
+  });
+  gradeInput.addEventListener('input', (e) => {
+    previewGrade.textContent = e.target.value || 'الصف الدراسي';
+  });
+  subjectInput.addEventListener('input', (e) => {
+    previewSubject.textContent = (e.target.value || 'الموضوع') + ' - اختبار قصير';
+  });
+  questionPromptInput.addEventListener('input', (e) => {
+    previewPrompt.textContent = e.target.value || 'اكتب معاني الكلمات:';
+  });
+
+  // Render Vocab List and Exam Preview
+  function renderVocabList() {
+    vocabListEl.innerHTML = '';
+    activeWords.forEach((item, index) => {
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'vocab-item group flex items-center justify-between p-space-sm rounded-lg bg-surface-container-lowest hover:bg-surface-container-high transition-all';
+      itemDiv.innerHTML = `
+        <div class="flex items-center gap-space-sm min-w-0">
+          <span class="w-6 h-6 rounded-md bg-surface-container-high group-hover:bg-primary/20 text-primary font-label-code text-label-code flex items-center justify-center font-bold">${index + 1}</span>
+          <div class="flex flex-col min-w-0">
+            <span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate cursor-pointer hover:text-primary" onclick="copyToClipboard('${item.word}')">${item.word}</span>
+            <span class="font-body-sm text-body-sm text-on-surface-variant truncate">المعنى: ${item.meaning}</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+          <button title="نسخ الكلمة" onclick="copyToClipboard('${item.word}')" class="p-1 rounded text-on-surface-variant hover:text-primary transition-colors">
+            <span class="material-symbols-outlined text-lg">content_copy</span>
+          </button>
+          <button title="حذف" onclick="deleteWordById(${item.id})" class="p-1 rounded text-on-surface-variant hover:text-error transition-colors">
+            <span class="material-symbols-outlined text-lg">delete_outline</span>
+          </button>
+        </div>
+      `;
+      vocabListEl.appendChild(itemDiv);
+    });
+
+    wordCountBadge.textContent = `${activeWords.length} كلمات نشطة`;
+    renderExamPreview();
+  }
+
+  function renderExamPreview() {
+    examQuestionsContainer.innerHTML = '';
+
+    // Create array to display: normal if A, shuffled if B
+    let displayWords = [...activeWords];
+    if (currentModel === 'B') {
+      // Deterministic reverse/shuffle for demo
+      displayWords = [...activeWords].reverse();
+    }
+
+    displayWords.forEach((item, i) => {
+      const num = arabicNumerals[i] || (i + 1);
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-between p-2.5 rounded-lg bg-surface-container/60 hover:bg-surface-container transition-colors';
+      row.innerHTML = `
+        <div class="flex items-center gap-3">
+          <span class="w-5 h-5 rounded-full bg-surface-container-highest text-primary font-label-code text-label-code flex items-center justify-center font-bold">${num}</span>
+          <span class="font-headline-sm text-headline-sm text-on-surface font-semibold">${item.word}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="font-label-tag text-label-tag text-on-surface-variant">المعنى:</span>
+          <span class="w-36 h-6 border-b border-dotted border-outline/60 inline-block"></span>
+        </div>
+      `;
+      examQuestionsContainer.appendChild(row);
+    });
+
+    // Update Model Badge
+    if (currentModel === 'A') {
+      previewModelBadge.textContent = 'نموذج (أ)';
+      previewModelBadge.className = 'px-2.5 py-0.5 rounded bg-primary text-on-primary font-label-code text-label-code font-bold';
+    } else {
+      previewModelBadge.textContent = 'نموذج (ب) المبعثر';
+      previewModelBadge.className = 'px-2.5 py-0.5 rounded bg-tertiary-container text-on-tertiary-container font-label-code text-label-code font-bold';
+    }
+  }
+
+  // Model Tab Switching
+  tabModelA.addEventListener('click', () => {
+    currentModel = 'A';
+    tabModelA.className = 'px-3 py-1.5 rounded-md bg-primary text-on-primary font-label-tag text-label-tag transition-all flex items-center gap-1';
+    tabModelB.className = 'px-3 py-1.5 rounded-md text-on-surface-variant hover:text-on-surface font-label-tag text-label-tag transition-all flex items-center gap-1';
+    renderExamPreview();
+  });
+
+  tabModelB.addEventListener('click', () => {
+    currentModel = 'B';
+    tabModelB.className = 'px-3 py-1.5 rounded-md bg-tertiary-container text-on-tertiary-container font-label-tag text-label-tag transition-all flex items-center gap-1';
+    tabModelA.className = 'px-3 py-1.5 rounded-md text-on-surface-variant hover:text-on-surface font-label-tag text-label-tag transition-all flex items-center gap-1';
+    renderExamPreview();
+  });
+
+  // Add Manual Word
+  addWordBtn.addEventListener('click', () => {
+    const wordVal = manualWordInput.value.trim();
+    const meaningVal = manualMeaningInput.value.trim();
+    if (!wordVal) return;
+
+    activeWords.push({
+      id: Date.now(),
+      word: wordVal,
+      meaning: meaningVal || 'غير محدد'
+    });
+
+    manualWordInput.value = '';
+    manualMeaningInput.value = '';
+    renderVocabList();
+  });
+
+  // Delete Word Handler
+  window.deleteWordById = function(id) {
+    activeWords = activeWords.filter(item => item.id !== id);
+    renderVocabList();
+  };
+
+  // Quick Copy Helper
+  window.copyToClipboard = function(text) {
+    navigator.clipboard.writeText(text);
+    // Visual indicator on header
+    const prevText = wordCountBadge.textContent;
+    wordCountBadge.textContent = `تم النسخ: ${text}`;
+    setTimeout(() => {
+      wordCountBadge.textContent = prevText;
+    }, 1200);
+  };
+
+  // Shuffle & Generate Action
+  generateShuffleBtn.addEventListener('click', () => {
+    // Fisher-Yates shuffle
+    for (let i = activeWords.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [activeWords[i], activeWords[j]] = [activeWords[j], activeWords[i]];
+    }
+    renderVocabList();
+    
+    // Animate button
+    generateShuffleBtn.classList.add('scale-95');
+    setTimeout(() => generateShuffleBtn.classList.remove('scale-95'), 150);
+  });
+
+  rerollOrderBtn.addEventListener('click', () => {
+    generateShuffleBtn.click();
+  });
+
+  // Preset Template Loader
+  quickPresetBtn.addEventListener('click', () => {
+    schoolNameInput.value = 'مدارس الأوائل النموذجية - بنين';
+    gradeInput.value = 'الصف السادس الابتدائي';
+    subjectInput.value = 'لغتي الجميلة - الوحدة الثالثة';
+    questionPromptInput.value = 'بيّن معاني ومفردات الكلمات الآتية في المساحة الخالية:';
+    
+    activeWords = [
+      { id: 101, word: 'يَمْكُثُ', meaning: 'يَبْقَى وَيَسْتَقِر' },
+      { id: 102, word: 'المُضْمَحِل', meaning: 'المُتَلاشِي والزَّائِل' },
+      { id: 103, word: 'يَجُودُ', meaning: 'يَبْذُلُ وَيَتَكَرَّم' },
+      { id: 104, word: 'الصَّدَى', meaning: 'رَجْعُ الصَّوْتِ' },
+      { id: 105, word: 'المُنْعَفِر', meaning: 'المُتَرَّبُ بِالتُّرَابِ' },
+      { id: 106, word: 'الوَسِيم', meaning: 'حَسَنُ الوَجْهِ وَالمَنْظَرِ' }
+    ];
+
+    previewSchoolName.textContent = schoolNameInput.value;
+    previewGrade.textContent = gradeInput.value;
+    previewSubject.textContent = subjectInput.value + ' - اختبار دوري';
+    previewPrompt.textContent = questionPromptInput.value;
+
+    renderVocabList();
+  });
+
+  // Reset Button
+  resetAllBtn.addEventListener('click', () => {
+    activeWords = [];
+    renderVocabList();
+  });
+
+  // Export Buttons feedback
+  downloadWordBtn.addEventListener('click', () => {
+    const originalText = downloadWordBtn.innerHTML;
+    downloadWordBtn.innerHTML = `<span class="material-symbols-outlined animate-spin text-xl">autorenew</span> جاري إنشاء مستند Word A4 المنسق...`;
+    setTimeout(() => {
+      downloadWordBtn.innerHTML = `<span class="material-symbols-outlined text-xl">check_circle</span> تم تجهيز ملف (اختبار_المفردات_A4.docx)`;
+      setTimeout(() => {
+        downloadWordBtn.innerHTML = originalText;
+      }, 2000);
+    }, 1000);
+  });
+
+  printNowBtn.addEventListener('click', () => {
+    window.print();
+  });
+
+  whatsappShareBtn.addEventListener('click', () => {
+    alert('تم تجهيز رابط الشيت بصيغة PDF قابلة للطباعة للإرسال للأستاذ عبر WhatsApp.');
+  });
+
+  // Initialize
+  renderVocabList();
+</script></main></div></body></html>

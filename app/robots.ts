@@ -14,16 +14,31 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/login"],
-        disallow: ["/admin/", "/api/"],
-      },
-      {
-        userAgent: ["Googlebot", "Googlebot-Image", "Bingbot", "Applebot"],
-        allow: ["/", "/login", "/logo.jpg"],
-        disallow: ["/admin/", "/api/"],
+        allow: [
+          "/",
+          "/logo.jpg",
+          "/favicon.ico",
+          "/icon.png",
+          "/icon-48.png",
+          "/icon-96.png",
+          "/icon-192.png",
+          "/icon-512.png",
+          "/apple-touch-icon.png",
+          "/manifest.json",
+        ],
+        disallow: [
+          "/admin",
+          "/admin/",
+          "/admin/*",
+          "/login",
+          "/login/",
+          "/login/*",
+          "/api",
+          "/api/",
+          "/api/*",
+        ],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
   };
 }
-

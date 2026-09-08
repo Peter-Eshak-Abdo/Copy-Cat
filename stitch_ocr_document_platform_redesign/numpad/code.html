@@ -1,0 +1,606 @@
+<!DOCTYPE html><html class="dark" dir="rtl" lang="ar"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"inverse-primary":"#00687a","inverse-on-surface":"#2c303b","on-error-container":"#ffdad6","on-tertiary-fixed-variant":"#653e00","error":"#ffb4ab","on-tertiary-container":"#563400","error-container":"#93000a","on-primary-fixed-variant":"#004e5c","surface-container-highest":"#313540","secondary-fixed-dim":"#ffb2b7","surface-variant":"#313540","on-tertiary":"#472a00","primary-fixed-dim":"#4cd7f6","tertiary-container":"#e79400","surface-bright":"#353944","on-tertiary-fixed":"#2a1700","surface":"#0f131d","inverse-surface":"#dfe2f1","on-background":"#dfe2f1","tertiary-fixed-dim":"#ffb95f","surface-dim":"#0f131d","primary-container":"#06b6d4","surface-container-lowest":"#0a0e18","primary":"#4cd7f6","surface-tint":"#4cd7f6","surface-container-high":"#262a35","on-surface-variant":"#bcc9cd","tertiary":"#ffb95f","on-surface":"#dfe2f1","secondary-fixed":"#ffdadb","surface-container":"#1c1f2a","secondary-container":"#b50036","on-secondary-fixed-variant":"#92002a","primary-fixed":"#acedff","outline-variant":"#3d494c","on-secondary-container":"#ffc2c4","on-primary-fixed":"#001f26","on-secondary":"#67001b","on-primary":"#003640","secondary":"#ffb2b7","tertiary-fixed":"#ffddb8","on-error":"#690005","background":"#0f131d","on-secondary-fixed":"#40000d","outline":"#869397","surface-container-low":"#171b26","on-primary-container":"#00424f"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-2xl":"3rem","space-3xl":"4rem","space-xs":"0.5rem","space-2xs":"0.25rem","gutter-desktop":"1.5rem","space-md":"1rem","space-sm":"0.75rem","space-lg":"1.5rem","sidebar-width-expanded":"16rem","space-xl":"2rem","gutter-mobile":"0.75rem","sidebar-width-collapsed":"4.5rem"},fontFamily:{"label-tag":["Inter"],"headline-md":["Inter"],"label-code":["JetBrains Mono"],"display-hero-mobile":["Inter"],"body-md":["Inter"],"body-sm":["Inter"],"headline-lg":["Inter"],"display-hero":["Inter"],"headline-lg-mobile":["Inter"],"body-lg":["Inter"],"headline-sm":["Inter"]},fontSize:{"label-tag":["11px",{"lineHeight":"14px","letterSpacing":"0.04em","fontWeight":"700"}],"headline-md":["22px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"label-code":["12px",{"lineHeight":"16px","letterSpacing":"0.02em","fontWeight":"500"}],"display-hero-mobile":["30px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"display-hero":["44px",{"lineHeight":"52px","letterSpacing":"-0.025em","fontWeight":"800"}],"headline-lg-mobile":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-sm":["18px",{"lineHeight":"24px","letterSpacing":"-0.005em","fontWeight":"600"}]}}}};</script></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased min-h-screen selection:bg-primary selection:text-on-primary"><aside class="fixed right-0 top-0 bottom-0 w-sidebar-width-expanded bg-surface-container-lowest z-50 flex flex-col justify-between overflow-y-auto"><div class="p-space-md"><div class="flex items-center gap-space-sm px-space-xs py-space-sm mb-space-md"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary tracking-tight">كوبي كات ERP</span><span class="font-label-code text-label-code text-on-surface-variant">v2.4 Enterprise Hub</span></div></div><nav class="flex flex-col gap-space-md" data-active-classes="bg-primary-container text-on-primary-container font-bold rounded-xl"><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الرئيسية والمخزن</span><a aria-current="page" class="flex items-center gap-space-sm px-space-sm py-space-xs transition-all bg-primary-container text-on-primary-container font-bold rounded-xl" data-path="operations-dashboard" href="#"><span class="material-symbols-outlined text-primary text-xl">dashboard</span><span class="font-body-sm text-body-sm">لوحة العمليات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="inventory-catalog" href="#"><span class="material-symbols-outlined text-xl">inventory_2</span><span class="font-body-sm text-body-sm">المخزن والكتالوج</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">أدوات المطبعة والتصوير</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="print-calculator" href="#"><span class="material-symbols-outlined text-xl">calculate</span><span class="font-body-sm text-body-sm">حاسبة المطبعة والملازم</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="shift-orders" href="#"><span class="material-symbols-outlined text-xl">assignment</span><span class="font-body-sm text-body-sm">مهام وأوردرات الشفت</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="national-id-builder" href="#"><span class="material-symbols-outlined text-xl">badge</span><span class="font-body-sm text-body-sm">مصنع بطاقات الرقم القومي A5</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="portrait-studio" href="#"><span class="material-symbols-outlined text-xl">photo_camera</span><span class="font-body-sm text-body-sm">استوديو الصور 4x6</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="ink-saver-scanner" href="#"><span class="material-symbols-outlined text-xl">document_scanner</span><span class="font-body-sm text-body-sm">ماسح المستندات وتوفير الحبر</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">المستندات والذكاء الاصطناعي</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="advanced-pdf-studio" href="#"><span class="material-symbols-outlined text-xl">picture_as_pdf</span><span class="font-body-sm text-body-sm">استوديو أدوات PDF المتقدمة</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="smart-ocr-hub" href="#"><span class="material-symbols-outlined text-tertiary text-xl">psychology</span><span class="font-body-sm text-body-sm">الماسح الضوئي الذكي (OCR)</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="vocabulary-sheet-generator" href="#"><span class="material-symbols-outlined text-xl">spellcheck</span><span class="font-body-sm text-body-sm">مولد شيتات المفردات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="academic-research-generator" href="#"><span class="material-symbols-outlined text-xl">menu_book</span><span class="font-body-sm text-body-sm">مولد الأبحاث الأكاديمية</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الشبكة والإنتاجية</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="daily-server-links" href="#"><span class="material-symbols-outlined text-xl">dns</span><span class="font-body-sm text-body-sm">مواقع وسيرفرات يومية</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="lan-transfer-hub" href="#"><span class="material-symbols-outlined text-xl">sync_alt</span><span class="font-body-sm text-body-sm">مركز النقل السريع LAN</span></a></div></nav></div><div class="p-space-md bg-surface-container-low/60"><div class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container mb-space-sm"><div class="flex items-center gap-space-xs"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span></span><span class="font-label-code text-label-code text-on-surface-variant">السيرفر نشط</span></div><span class="font-label-tag text-label-tag px-space-xs py-space-2xs rounded-lg bg-surface-container-highest text-primary">99.8%</span></div><div class="flex items-center justify-between pt-space-xs"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-on-surface-variant text-lg">admin_panel_settings</span><span class="font-body-sm text-body-sm text-on-surface font-semibold">مشرف الفرع</span></div><a class="p-space-xs rounded-lg text-error hover:bg-surface-container-high transition-colors" data-path="login" href="#"><span class="material-symbols-outlined text-lg">logout</span></a></div></div></aside><div class="pr-sidebar-width-expanded"><header class="fixed top-0 right-sidebar-width-expanded left-0 h-16 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><img alt="logo.jpg" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VpzC_MDRD3TESDUobuiX8KOyhf9YAC7D76oM-2vUCJPGxHxtmMkXR3GTPKLj0Flc3eduZ8qe4pPhuQe5bIfA-Auf7iwLSrxVotQ91x8igvjXgxxgQMenJrCFx8jdhSLEeCSmJbni47Qw6cxz3PJkzplmCNNC4X21XRIYLOVOgDOKhhh_VLXT22XyFmBc-KaBbNfHIkb4C5yonR-R7b1UNHeH98AduXceN7dLxzXgf9jKxzj0p1llnEpRvuH3k95Tp8VSkifQP_mg"><div class="hidden sm:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-primary"></span><span class="font-label-code text-label-code text-primary">متصل بالخادم السحابي</span></div></div><div class="flex items-center gap-space-sm"><a class="hidden md:flex items-center gap-space-xs px-space-sm py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm transition-all" data-path="public-storefront" href="#"><span class="material-symbols-outlined text-base">storefront</span><span>تبديل للمتجر العام</span></a><button class="p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">dark_mode</span></button><button class="relative p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">notifications</span><span class="absolute top-1 left-1 w-2 h-2 bg-secondary-container rounded-full"></span></button><div class="flex items-center gap-space-xs pl-space-xs"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1UO12gBvuU5lLzzA8LA68aUE6fPaEjN3hhaFLV_103HWeMBpwNH7Y4OLVGnWqTorHT_T_ViOW6zIdaDr2tDRPThaLWkOq_bPkXeuhPWYWx75ElCDr5ivCXxrq2VnwzmXJQ0ianSvzqxnvT97H_hTGnD6ODWqlkMoe14sh47gSUE5F8b8UxP-jA7roIUIYgrkh205MqpdCeP7yjHmBwiA1nYEwz-KKs2BvQuDGpOPny-IlnLzLDmASwddBOD"><div class="hidden xl:flex flex-col text-right"><span class="font-body-sm text-body-sm font-semibold text-on-surface">أحمد المشرف</span><span class="font-label-tag text-label-tag text-on-surface-variant">مدير الوردية</span></div></div></div></header><main class="relative pt-16 min-h-screen bg-background w-full px-gutter-desktop"><div class="flex flex-col w-full">
+<div class="flex flex-col gap-space-lg pb-space-3xl">
+<!-- Top Sub-Header & Navigation Tabs Bar -->
+<div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-md p-space-lg rounded-xl bg-surface-container-low shadow-sm">
+<div class="flex items-center gap-space-md">
+<div class="flex items-center justify-center w-12 h-12 rounded-xl bg-primary-container/20 text-primary">
+<span class="material-symbols-outlined text-3xl">calculate</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<h1 class="font-headline-md text-headline-md text-on-surface">حاسبة المطبعة والملازم الذكية</h1>
+<span class="px-space-xs py-space-2xs rounded-lg bg-surface-container-highest text-primary font-label-code text-label-code uppercase tracking-wider">v2.4 Turbo</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">حساب دقيق لورق الملازم، الكتب، ومستندات العملاء (وش وضهر / وجه واحد) مع حاسبة تسعير فورية ومودات تجليد متقدمة.</p>
+</div>
+</div>
+<div class="flex items-center gap-space-xs p-space-2xs rounded-xl bg-surface-container-lowest">
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-primary-container text-on-primary-container font-headline-sm text-headline-sm transition-all shadow-sm" id="tab-print-mode" onclick="switchCalcTab('print')" type="button">
+<span class="material-symbols-outlined text-lg">print</span>
+<span class="font-body-sm text-body-sm font-semibold">حاسبة الملازم والطباعة</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface font-body-sm text-body-sm transition-all" id="tab-numpad-mode" onclick="switchCalcTab('numpad')" type="button">
+<span class="material-symbols-outlined text-lg">dialpad</span>
+<span class="font-body-sm text-body-sm">حاسبة سريعة (Numpad)</span>
+</button>
+</div>
+</div>
+<!-- Main Dynamic Studio Grid: Two Column Workspace -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg items-start">
+<!-- Right Column: Interactive Configuration Modules (8 Cols on XL) -->
+<div class="xl:col-span-8 flex flex-col gap-space-lg">
+<!-- Panel 1: Document Quantities & Duplex Mechanics -->
+<div class="flex flex-col rounded-xl bg-surface-container p-space-lg shadow-sm">
+<div class="flex items-center justify-between pb-space-sm mb-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-xl">description</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">بيانات المذكرة أو المستند الفعلي</h2>
+</div>
+<span class="font-label-tag text-label-tag px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface-variant">الخطوة 1: المقاس والورق</span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
+<!-- Pages Count in Source Document -->
+<div class="flex flex-col gap-space-2xs">
+<div class="flex justify-between items-center">
+<label class="font-body-sm text-body-sm text-on-surface-variant font-medium" for="input-pages">عدد الصفحات في الملف (PDF / Word):</label>
+<span class="font-label-code text-label-code text-primary" id="badge-source-pages">1 صفحة</span>
+</div>
+<div class="relative flex items-center">
+<input class="w-full h-11 px-space-md rounded-xl bg-surface-container-lowest text-on-surface font-label-code text-headline-sm outline-none focus:bg-surface-container-high transition-all" id="input-pages" min="1" oninput="calculateEstimate()" step="1" type="number" value="1">
+<div class="absolute left-space-xs flex items-center gap-space-2xs text-on-surface-variant">
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-container-high hover:bg-surface-bright text-xs font-bold" onclick="adjustInput('input-pages', -5)" type="button">-5</button>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-container-high hover:bg-surface-bright text-xs font-bold" onclick="adjustInput('input-pages', 5)" type="button">+5</button>
+</div>
+</div>
+<span class="font-label-code text-label-code text-outline">مثال: كتاب جامعي 120 صفحة أو بروشور 4 صفحات</span>
+</div>
+<!-- Total Copies Requested -->
+<div class="flex flex-col gap-space-2xs">
+<div class="flex justify-between items-center">
+<label class="font-body-sm text-body-sm text-on-surface-variant font-medium" for="input-copies">عدد النسخ المطلوبة للعميل:</label>
+<span class="font-label-code text-label-code text-tertiary" id="badge-copies">1 نسخة</span>
+</div>
+<div class="relative flex items-center">
+<input class="w-full h-11 px-space-md rounded-xl bg-surface-container-lowest text-on-surface font-label-code text-headline-sm outline-none focus:bg-surface-container-high transition-all" id="input-copies" min="1" oninput="calculateEstimate()" step="1" type="number" value="1">
+<div class="absolute left-space-xs flex items-center gap-space-2xs text-on-surface-variant">
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-container-high hover:bg-surface-bright text-xs font-bold" onclick="adjustInput('input-copies', -1)" type="button">-1</button>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-container-high hover:bg-surface-bright text-xs font-bold" onclick="adjustInput('input-copies', 1)" type="button">+1</button>
+</div>
+</div>
+<span class="font-label-code text-label-code text-outline">إجمالي الطلاب أو الكمية المطبوعة للشفت</span>
+</div>
+</div>
+<!-- Print Direction / Duplex Toggle -->
+<div class="mt-space-lg flex flex-col gap-space-xs">
+<span class="font-body-sm text-body-sm text-on-surface-variant font-medium">نوع ومسار الطباعة:</span>
+<div class="grid grid-cols-2 gap-space-sm">
+<button class="flex flex-col items-center justify-center p-space-md rounded-xl bg-primary-container text-on-primary-container font-headline-sm transition-all shadow-sm" id="btn-duplex-single" onclick="setDuplexMode(false)" type="button">
+<span class="material-symbols-outlined text-2xl mb-1">note</span>
+<span class="font-body-md text-body-md font-semibold">وجه واحد (Single-Sided)</span>
+<span class="font-label-code text-label-code opacity-80">1 صفحة = 1 ورقة في الماكينة</span>
+</button>
+<button class="flex flex-col items-center justify-center p-space-md rounded-xl bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-all" id="btn-duplex-double" onclick="setDuplexMode(true)" type="button">
+<span class="material-symbols-outlined text-2xl mb-1">menu_book</span>
+<span class="font-body-md text-body-md font-semibold">وش وضهر (Duplex Mode)</span>
+<span class="font-label-code text-label-code opacity-80">صفحتان على كل ورقة فيدر</span>
+</button>
+</div>
+</div>
+<!-- Real-Time Paper Yield Telemetry Bar -->
+<div class="mt-space-md flex flex-col sm:flex-row items-center justify-between p-space-sm rounded-xl bg-surface-container-low">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-xl">layers</span>
+<span class="font-body-sm text-body-sm text-on-surface font-semibold" id="label-sheets-per-book">النتيجة الحسابية: 1 صفحة وجه واحد = 1 ورقة لكل مذكرة</span>
+</div>
+<div class="mt-space-xs sm:mt-0 px-space-sm py-space-2xs rounded-lg bg-surface-container-highest text-primary font-label-code text-label-code">
+              إجمالي الورق للطلب: <span class="font-bold" id="telemetry-total-sheets">1 ورقة</span>
+</div>
+</div>
+</div>
+<!-- Panel 2: Matrix Pricing Selector (Ink & Paper Grades) -->
+<div class="flex flex-col rounded-xl bg-surface-container p-space-lg shadow-sm">
+<div class="flex items-center justify-between pb-space-sm mb-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-xl">local_atm</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">أزرار تسعير الورقة والطباعة المباشرة</h2>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="font-label-code text-label-code text-on-surface-variant">المحدد حالياً:</span>
+<span class="font-label-code text-label-code text-primary bg-primary/10 px-space-xs py-space-2xs rounded" id="badge-active-rate-name">أبيض وأسود (وجه) 0.80 ج.م</span>
+</div>
+</div>
+<!-- Dynamic Preset Buttons Grid -->
+<div class="grid grid-cols-2 md:grid-cols-3 gap-space-sm" id="preset-rates-container">
+<button class="rate-preset-btn active flex flex-col items-center justify-center p-space-md rounded-xl bg-primary-container text-on-primary-container transition-all shadow-sm" onclick="selectRate(0.80, 'أبيض وأسود (وجه)', this)" type="button">
+<span class="font-body-md text-body-md font-semibold">أبيض وأسود (وجه)</span>
+<span class="font-headline-sm text-headline-sm font-label-code mt-1">0.80 ج.م</span>
+<span class="font-label-tag text-label-tag opacity-75">80 جرام قياسي</span>
+</button>
+<button class="rate-preset-btn flex flex-col items-center justify-center p-space-md rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-bright transition-all" onclick="selectRate(0.90, 'أبيض وأسود (وش وضهر)', this)" type="button">
+<span class="font-body-md text-body-md font-semibold">أبيض وأسود (وش وضهر)</span>
+<span class="font-headline-sm text-headline-sm font-label-code mt-1">0.90 ج.م</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">وفر التكلفة للطالب</span>
+</button>
+<button class="rate-preset-btn flex flex-col items-center justify-center p-space-md rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-bright transition-all" onclick="selectRate(1.00, 'ألوان خفيف / هيدر', this)" type="button">
+<span class="font-body-md text-body-md font-semibold">ألوان خفيف / هيدر</span>
+<span class="font-headline-sm text-headline-sm font-label-code mt-1">1.00 ج.م</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">تغطية حتى 15%</span>
+</button>
+<button class="rate-preset-btn flex flex-col items-center justify-center p-space-md rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-bright transition-all" onclick="selectRate(1.50, 'ألوان متوسط (ملازم)', this)" type="button">
+<span class="font-body-md text-body-md font-semibold">ألوان متوسط (ملازم)</span>
+<span class="font-headline-sm text-headline-sm font-label-code mt-1">1.50 ج.م</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">رسومات ومخططات</span>
+</button>
+<button class="rate-preset-btn flex flex-col items-center justify-center p-space-md rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-bright transition-all" onclick="selectRate(2.00, 'ألوان ثقيل / صور وتغطية', this)" type="button">
+<span class="font-body-md text-body-md font-semibold">ألوان ثقيل / تغطية</span>
+<span class="font-headline-sm text-headline-sm font-label-code mt-1">2.00 ج.م</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">صور فوتوغرافية</span>
+</button>
+<button class="rate-preset-btn flex flex-col items-center justify-center p-space-md rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-bright transition-all" onclick="selectRate(10.00, 'كوشيه / جلوسي فاخر', this)" type="button">
+<span class="font-body-md text-body-md font-semibold">كوشيه / جلوسي فاخر</span>
+<span class="font-headline-sm text-headline-sm font-label-code mt-1">10.00 ج.م</span>
+<span class="font-label-tag text-label-tag text-tertiary">150-250 جم فاخر</span>
+</button>
+</div>
+<!-- Custom Manual Unit Price Field -->
+<div class="mt-space-md pt-space-md flex flex-col sm:flex-row items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-lg">tune</span>
+<span class="font-body-sm text-body-sm">أو أدخل سعر ورقة يدوي مخصص للشفت:</span>
+</div>
+<div class="flex items-center gap-space-xs w-full sm:w-auto">
+<input class="w-28 h-10 px-space-sm text-center rounded-xl bg-surface-container-lowest text-primary font-label-code text-body-lg outline-none focus:bg-surface-container-high" id="input-custom-rate" min="0" oninput="applyCustomRate()" placeholder="0.80" step="0.05" type="number">
+<span class="font-label-code text-label-code text-on-surface-variant">ج.م / للورقة</span>
+</div>
+</div>
+</div>
+<!-- Panel 3: Binding, Finishing & Add-ons Section -->
+<div class="flex flex-col rounded-xl bg-surface-container p-space-lg shadow-sm">
+<div class="flex items-center justify-between pb-space-sm mb-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-tertiary text-xl">auto_fix_high</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">خدمات التجليد والتشطيب (Finishing Add-ons)</h2>
+</div>
+<span class="font-label-tag text-label-tag px-space-xs py-space-2xs rounded bg-surface-container-high text-outline">تُحسب لكل نسخة</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-lg">
+<!-- Wire Binding Options -->
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-body-sm text-body-sm font-semibold text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-base">adjust</span>
+                  سلك حلزوني معدني فاخر (Spiral Wire):
+                </span>
+</div>
+<div class="grid grid-cols-3 gap-space-2xs">
+<button class="finishing-bind-btn p-space-sm rounded-xl bg-surface-container-high text-center hover:bg-surface-bright transition-all" onclick="selectFinishingBinding('wire', 15, 'سلك صغير')" type="button">
+<span class="block font-body-sm text-body-sm font-medium">سلك صغير</span>
+<span class="block font-label-code text-label-code text-primary mt-1">15 ج.م</span>
+<span class="block font-label-tag text-label-tag text-outline">&lt; 50 ورقة</span>
+</button>
+<button class="finishing-bind-btn p-space-sm rounded-xl bg-surface-container-high text-center hover:bg-surface-bright transition-all" onclick="selectFinishingBinding('wire', 20, 'سلك وسط')" type="button">
+<span class="block font-body-sm text-body-sm font-medium">سلك وسط</span>
+<span class="block font-label-code text-label-code text-primary mt-1">20 ج.م</span>
+<span class="block font-label-tag text-label-tag text-outline">&lt; 120 ورقة</span>
+</button>
+<button class="finishing-bind-btn p-space-sm rounded-xl bg-surface-container-high text-center hover:bg-surface-bright transition-all" onclick="selectFinishingBinding('wire', 25, 'سلك كبير')" type="button">
+<span class="block font-body-sm text-body-sm font-medium">سلك كبير</span>
+<span class="block font-label-code text-label-code text-primary mt-1">25 ج.م</span>
+<span class="block font-label-tag text-label-tag text-outline">&gt; 120 ورقة</span>
+</button>
+</div>
+</div>
+<!-- Plastic Comb Binding Options -->
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-body-sm text-body-sm font-semibold text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-tertiary text-base">format_list_bulleted</span>
+                  تجليد مشط بلاستيكي (Plastic Comb):
+                </span>
+</div>
+<div class="grid grid-cols-3 gap-space-2xs">
+<button class="finishing-bind-btn p-space-sm rounded-xl bg-surface-container-high text-center hover:bg-surface-bright transition-all" onclick="selectFinishingBinding('plastic', 10, 'بلاستيك صغير')" type="button">
+<span class="block font-body-sm text-body-sm font-medium">بلاستيك صغير</span>
+<span class="block font-label-code text-label-code text-tertiary mt-1">10 ج.م</span>
+<span class="block font-label-tag text-label-tag text-outline">&lt; 40 ورقة</span>
+</button>
+<button class="finishing-bind-btn p-space-sm rounded-xl bg-surface-container-high text-center hover:bg-surface-bright transition-all" onclick="selectFinishingBinding('plastic', 15, 'بلاستيك وسط')" type="button">
+<span class="block font-body-sm text-body-sm font-medium">بلاستيك وسط</span>
+<span class="block font-label-code text-label-code text-tertiary mt-1">15 ج.م</span>
+<span class="block font-label-tag text-label-tag text-outline">&lt; 100 ورقة</span>
+</button>
+<button class="finishing-bind-btn p-space-sm rounded-xl bg-surface-container-high text-center hover:bg-surface-bright transition-all" onclick="selectFinishingBinding('plastic', 20, 'بلاستيك كبير')" type="button">
+<span class="block font-body-sm text-body-sm font-medium">بلاستيك كبير</span>
+<span class="block font-label-code text-label-code text-tertiary mt-1">20 ج.م</span>
+<span class="block font-label-tag text-label-tag text-outline">&gt; 100 ورقة</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Lamination, Thermal Glue & Extra Finishing Toggles -->
+<div class="mt-space-md pt-space-md grid grid-cols-1 sm:grid-cols-3 gap-space-sm">
+<label class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container-low cursor-pointer hover:bg-surface-container-high transition-all">
+<div class="flex items-center gap-space-xs">
+<input class="w-4 h-4 rounded accent-primary bg-surface-container-lowest" id="check-thermal-cover" onchange="calculateEstimate()" type="checkbox">
+<span class="font-body-sm text-body-sm text-on-surface">غلاف كوشيه ملون</span>
+</div>
+<span class="font-label-code text-label-code text-primary">+5.00 ج.م</span>
+</label>
+<label class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container-low cursor-pointer hover:bg-surface-container-high transition-all">
+<div class="flex items-center gap-space-xs">
+<input class="w-4 h-4 rounded accent-primary bg-surface-container-lowest" id="check-lamination" onchange="calculateEstimate()" type="checkbox">
+<span class="font-body-sm text-body-sm text-on-surface">سلوفان حراري مط/لامع</span>
+</div>
+<span class="font-label-code text-label-code text-primary">+8.00 ج.م</span>
+</label>
+<label class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container-low cursor-pointer hover:bg-surface-container-high transition-all">
+<div class="flex items-center gap-space-xs">
+<input class="w-4 h-4 rounded accent-primary bg-surface-container-lowest" id="check-thermal-spine" onchange="calculateEstimate()" type="checkbox">
+<span class="font-body-sm text-body-sm text-on-surface">كعب غراء حراري</span>
+</div>
+<span class="font-label-code text-label-code text-tertiary">+12.00 ج.م</span>
+</label>
+</div>
+</div>
+<!-- Integrated Visual Production Telemetry: Ink & Paper Stock -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<div class="flex items-center justify-between p-space-md rounded-xl bg-surface-container-low">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">inventory</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">رصيد درج ورق A4 (80g)</span>
+<span class="font-label-code text-label-code text-on-surface-variant">المتبقي: 4,820 ورقة (9 رزم)</span>
+</div>
+</div>
+<span class="font-label-tag text-label-tag px-space-xs py-space-2xs rounded bg-surface-container-highest text-primary">كافي للإنتاج</span>
+</div>
+<div class="flex items-center justify-between p-space-md rounded-xl bg-surface-container-low">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">timer</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">زمن التنفيذ التقديري</span>
+<span class="font-label-code text-label-code text-on-surface-variant" id="production-time-estimate">1 دقيقة و 15 ثانية</span>
+</div>
+</div>
+<span class="font-label-tag text-label-tag px-space-xs py-space-2xs rounded bg-surface-container-highest text-tertiary">جاهز للسحب</span>
+</div>
+</div>
+</div>
+<!-- Left Column: Sticky Live Commercial Invoice / Cart (4 Cols on XL) -->
+<div class="xl:col-span-4 flex flex-col gap-space-md xl:sticky xl:top-20">
+<!-- Master Estimate Card -->
+<div class="flex flex-col rounded-xl bg-surface-container-lowest p-space-lg shadow-xl relative overflow-hidden">
+<!-- Subtle ambient glow top aura -->
+<div class="absolute -top-24 -left-24 w-48 h-48 rounded-full bg-primary/10 blur-3xl pointer-events-none"></div>
+<!-- Card Header -->
+<div class="flex items-center justify-between pb-space-md mb-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-xl">receipt_long</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">ملخص الفاتورة التقديرية</h3>
+</div>
+<button class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors p-space-2xs rounded-lg hover:bg-surface-container" onclick="copyInvoiceSummary()" type="button">
+<span class="material-symbols-outlined text-sm">content_copy</span>
+<span class="font-label-tag text-label-tag">نسخ الفاتورة</span>
+</button>
+</div>
+<!-- Specifications Ledger -->
+<div class="flex flex-col gap-space-sm py-space-xs font-body-sm text-body-sm text-on-surface-variant">
+<div class="flex items-center justify-between">
+<span>عدد الصفحات الأصلية:</span>
+<span class="font-label-code text-on-surface font-semibold" id="inv-source-pages">1 صفحة</span>
+</div>
+<div class="flex items-center justify-between">
+<span>نوع الطباعة:</span>
+<span class="font-label-code text-on-surface font-semibold" id="inv-print-mode">وجه واحد (Single)</span>
+</div>
+<div class="flex items-center justify-between">
+<span>الورق لكل نسخة:</span>
+<span class="font-label-code text-on-surface font-semibold" id="inv-sheets-per-copy">1 ورقة</span>
+</div>
+<div class="flex items-center justify-between">
+<span>عدد النسخ المجهزة:</span>
+<span class="font-label-code text-on-surface font-semibold" id="inv-total-copies">1 نسخة</span>
+</div>
+<div class="flex items-center justify-between">
+<span>إجمالي الورق المستخدم:</span>
+<span class="font-label-code text-primary font-bold" id="inv-total-paper-count">1 ورقة</span>
+</div>
+<div class="flex items-center justify-between">
+<span>سعر الورقة المحددة:</span>
+<span class="font-label-code text-on-surface font-semibold" id="inv-rate-applied">0.80 ج.م</span>
+</div>
+<div class="flex items-center justify-between">
+<span>تكلفة الطباعة:</span>
+<span class="font-label-code text-on-surface font-semibold" id="inv-subtotal-print">0.80 ج.م</span>
+</div>
+<div class="flex items-center justify-between">
+<span>تكلفة التجليد والتشطيب:</span>
+<span class="font-label-code text-on-surface font-semibold" id="inv-subtotal-binding">0.00 ج.م</span>
+</div>
+<div class="flex items-center justify-between text-tertiary">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+                هامش الربح التقديري للشفت:
+              </span>
+<span class="font-label-code font-bold" id="inv-profit-margin">62% (0.50 ج.م)</span>
+</div>
+</div>
+<!-- Large Glowing Total Amount Display Box -->
+<div class="my-space-md p-space-md rounded-xl bg-surface-container flex flex-col items-center justify-center text-center">
+<span class="font-label-tag text-label-tag text-on-surface-variant uppercase tracking-wider mb-1">الإجمالي النهائي للعميل</span>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-display-hero text-display-hero font-extrabold text-primary tracking-tight font-label-code" id="inv-grand-total">0.80</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">ج.م</span>
+</div>
+<span class="font-label-code text-label-code text-outline mt-1" id="inv-rate-formula-label">(1 ورقة × 0.80 ج.م)</span>
+</div>
+<!-- Rapid Shift Execution Buttons -->
+<div class="flex flex-col gap-space-xs">
+<button class="w-full flex items-center justify-center gap-space-xs p-space-md rounded-xl bg-primary-container text-on-primary-container font-headline-sm transition-all shadow-md" onclick="dispatchToShiftOrders()" type="button">
+<span class="material-symbols-outlined text-xl">send_and_archive</span>
+<span class="font-body-md text-body-md font-bold">تحويل إلى أوردر في الشفت فوراً</span>
+</button>
+<button class="w-full flex items-center justify-center gap-space-xs p-space-sm rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-bright font-body-sm text-body-sm transition-all" onclick="shareWhatsAppEstimate()" type="button">
+<span class="material-symbols-outlined text-lg text-primary">share</span>
+<span>إرسال عرض السعر للعميل (WhatsApp)</span>
+</button>
+<button class="w-full flex items-center justify-center gap-space-2xs py-space-xs text-on-surface-variant hover:text-error font-body-sm text-body-sm transition-colors mt-space-xs" onclick="resetCalculator()" type="button">
+<span class="material-symbols-outlined text-base">restart_alt</span>
+<span>تصفير الحسابات والبدء من جديد</span>
+</button>
+</div>
+</div>
+<!-- Embedded Numpad Pad (Toggled or accessible for speed) -->
+<div class="p-space-md rounded-xl bg-surface-container shadow-sm flex flex-col gap-space-xs" id="quick-numpad-panel">
+<div class="flex items-center justify-between mb-space-2xs">
+<span class="font-label-tag text-label-tag text-on-surface-variant">لوحة أرقام سريعة للأوردرات المتتالية</span>
+<span class="font-label-code text-label-code text-primary">Active</span>
+</div>
+<div class="grid grid-cols-3 gap-space-2xs">
+<button class="h-10 rounded-lg bg-surface-container-high text-on-surface font-label-code text-body-lg font-bold hover:bg-surface-bright" onclick="pressNumpadKey('7')" type="button">7</button>
+<button class="h-10 rounded-lg bg-surface-container-high text-on-surface font-label-code text-body-lg font-bold hover:bg-surface-bright" onclick="pressNumpadKey('8')" type="button">8</button>
+<button class="h-10 rounded-lg bg-surface-container-high text-on-surface font-label-code text-body-lg font-bold hover:bg-surface-bright" onclick="pressNumpadKey('9')" type="button">9</button>
+<button class="h-10 rounded-lg bg-surface-container-high text-on-surface font-label-code text-body-lg font-bold hover:bg-surface-bright" onclick="pressNumpadKey('4')" type="button">4</button>
+<button class="h-10 rounded-lg bg-surface-container-high text-on-surface font-label-code text-body-lg font-bold hover:bg-surface-bright" onclick="pressNumpadKey('5')" type="button">5</button>
+<button class="h-10 rounded-lg bg-surface-container-high text-on-surface font-label-code text-body-lg font-bold hover:bg-surface-bright" onclick="pressNumpadKey('6')" type="button">6</button>
+<button class="h-10 rounded-lg bg-surface-container-high text-on-surface font-label-code text-body-lg font-bold hover:bg-surface-bright" onclick="pressNumpadKey('1')" type="button">1</button>
+<button class="h-10 rounded-lg bg-surface-container-high text-on-surface font-label-code text-body-lg font-bold hover:bg-surface-bright" onclick="pressNumpadKey('2')" type="button">2</button>
+<button class="h-10 rounded-lg bg-surface-container-high text-on-surface font-label-code text-body-lg font-bold hover:bg-surface-bright" onclick="pressNumpadKey('3')" type="button">3</button>
+<button class="h-10 rounded-lg bg-surface-container-high text-error font-label-code text-body-md font-bold hover:bg-surface-bright" onclick="pressNumpadKey('C')" type="button">C</button>
+<button class="h-10 rounded-lg bg-surface-container-high text-on-surface font-label-code text-body-lg font-bold hover:bg-surface-bright" onclick="pressNumpadKey('0')" type="button">0</button>
+<button class="h-10 rounded-lg bg-primary text-on-primary font-label-code text-body-md font-bold hover:bg-primary-container" onclick="pressNumpadKey('ENTER')" type="button">↵</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // State Store
+  const calcState = {
+    pages: 1,
+    copies: 1,
+    isDuplex: false,
+    ratePerSheet: 0.80,
+    rateLabel: 'أبيض وأسود (وجه)',
+    finishingBinding: { type: 'none', cost: 0, label: 'بدون' },
+    addons: {
+      thermalCover: false,
+      lamination: false,
+      thermalSpine: false
+    }
+  };
+
+  function setDuplexMode(duplex) {
+    calcState.isDuplex = duplex;
+    const btnSingle = document.getElementById('btn-duplex-single');
+    const btnDouble = document.getElementById('btn-duplex-double');
+
+    if (duplex) {
+      btnDouble.className = "flex flex-col items-center justify-center p-space-md rounded-xl bg-primary-container text-on-primary-container font-headline-sm transition-all shadow-sm";
+      btnSingle.className = "flex flex-col items-center justify-center p-space-md rounded-xl bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-all";
+    } else {
+      btnSingle.className = "flex flex-col items-center justify-center p-space-md rounded-xl bg-primary-container text-on-primary-container font-headline-sm transition-all shadow-sm";
+      btnDouble.className = "flex flex-col items-center justify-center p-space-md rounded-xl bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-all";
+    }
+    calculateEstimate();
+  }
+
+  function adjustInput(inputId, delta) {
+    const input = document.getElementById(inputId);
+    let val = parseInt(input.value) || 1;
+    val = Math.max(1, val + delta);
+    input.value = val;
+    calculateEstimate();
+  }
+
+  function selectRate(rate, label, btnElement) {
+    calcState.ratePerSheet = rate;
+    calcState.rateLabel = label;
+    document.getElementById('input-custom-rate').value = '';
+
+    // Update styling on buttons
+    document.querySelectorAll('.rate-preset-btn').forEach(b => {
+      b.className = "rate-preset-btn flex flex-col items-center justify-center p-space-md rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-bright transition-all";
+    });
+    if (btnElement) {
+      btnElement.className = "rate-preset-btn active flex flex-col items-center justify-center p-space-md rounded-xl bg-primary-container text-on-primary-container transition-all shadow-sm";
+    }
+
+    document.getElementById('badge-active-rate-name').innerText = `${label} ${rate.toFixed(2)} ج.م`;
+    calculateEstimate();
+  }
+
+  function applyCustomRate() {
+    const customInput = document.getElementById('input-custom-rate');
+    const val = parseFloat(customInput.value);
+    if (!isNaN(val) && val >= 0) {
+      calcState.ratePerSheet = val;
+      calcState.rateLabel = 'سعر مخصص يدوي';
+      document.querySelectorAll('.rate-preset-btn').forEach(b => {
+        b.className = "rate-preset-btn flex flex-col items-center justify-center p-space-md rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-bright transition-all";
+      });
+      document.getElementById('badge-active-rate-name').innerText = `سعر يدوي: ${val.toFixed(2)} ج.م`;
+      calculateEstimate();
+    }
+  }
+
+  function selectFinishingBinding(type, cost, label) {
+    // Toggle active state if clicking the same
+    if (calcState.finishingBinding.type === type && calcState.finishingBinding.cost === cost) {
+      calcState.finishingBinding = { type: 'none', cost: 0, label: 'بدون' };
+    } else {
+      calcState.finishingBinding = { type, cost, label };
+    }
+
+    // Refresh styling
+    document.querySelectorAll('.finishing-bind-btn').forEach(btn => {
+      btn.classList.remove('bg-primary-container', 'text-on-primary-container', 'bg-tertiary-container', 'text-on-tertiary-container');
+      btn.classList.add('bg-surface-container-high', 'text-on-surface');
+    });
+
+    if (calcState.finishingBinding.cost > 0 && event && event.currentTarget) {
+      event.currentTarget.classList.remove('bg-surface-container-high');
+      event.currentTarget.classList.add('bg-primary-container', 'text-on-primary-container');
+    }
+
+    calculateEstimate();
+  }
+
+  function calculateEstimate() {
+    const pagesInput = parseInt(document.getElementById('input-pages').value) || 1;
+    const copiesInput = parseInt(document.getElementById('input-copies').value) || 1;
+
+    calcState.pages = Math.max(1, pagesInput);
+    calcState.copies = Math.max(1, copiesInput);
+
+    // Calculate sheets per copy based on duplex
+    const sheetsPerCopy = calcState.isDuplex ? Math.ceil(calcState.pages / 2) : calcState.pages;
+    const totalSheets = sheetsPerCopy * calcState.copies;
+
+    // Check finishing add-ons
+    calcState.addons.thermalCover = document.getElementById('check-thermal-cover').checked;
+    calcState.addons.lamination = document.getElementById('check-lamination').checked;
+    calcState.addons.thermalSpine = document.getElementById('check-thermal-spine').checked;
+
+    let finishingCostPerCopy = calcState.finishingBinding.cost;
+    if (calcState.addons.thermalCover) finishingCostPerCopy += 5.0;
+    if (calcState.addons.lamination) finishingCostPerCopy += 8.0;
+    if (calcState.addons.thermalSpine) finishingCostPerCopy += 12.0;
+
+    const totalPrintCost = totalSheets * calcState.ratePerSheet;
+    const totalFinishingCost = finishingCostPerCopy * calcState.copies;
+    const grandTotal = totalPrintCost + totalFinishingCost;
+
+    // Estimate production time (assume 50 pages per min on modern Bizhub/Canon)
+    const totalMinutes = Math.max(1, Math.ceil(totalSheets / 45));
+    const seconds = (totalSheets % 45) * 1.3;
+
+    // Update UI elements
+    document.getElementById('badge-source-pages').innerText = `${calcState.pages} صفحة`;
+    document.getElementById('badge-copies').innerText = `${calcState.copies} نسخة`;
+    
+    document.getElementById('label-sheets-per-book').innerText = calcState.isDuplex
+      ? `النتيجة الحسابية: ${calcState.pages} صفحة وش وضهر = ${sheetsPerCopy} ورقة لكل نسخة`
+      : `النتيجة الحسابية: ${calcState.pages} صفحة وجه واحد = ${sheetsPerCopy} ورقة لكل نسخة`;
+
+    document.getElementById('telemetry-total-sheets').innerText = `${totalSheets} ورقة`;
+    document.getElementById('production-time-estimate').innerText = `${totalMinutes} دقيقة و ${Math.round(seconds)} ثانية`;
+
+    // Update Sticky Invoice Ledger
+    document.getElementById('inv-source-pages').innerText = `${calcState.pages} صفحة`;
+    document.getElementById('inv-print-mode').innerText = calcState.isDuplex ? 'وش وضهر (Duplex)' : 'وجه واحد (Single)';
+    document.getElementById('inv-sheets-per-copy').innerText = `${sheetsPerCopy} ورقة`;
+    document.getElementById('inv-total-copies').innerText = `${calcState.copies} نسخة`;
+    document.getElementById('inv-total-paper-count').innerText = `${totalSheets} ورقة`;
+    document.getElementById('inv-rate-applied').innerText = `${calcState.ratePerSheet.toFixed(2)} ج.م`;
+    document.getElementById('inv-subtotal-print').innerText = `${totalPrintCost.toFixed(2)} ج.م`;
+    document.getElementById('inv-subtotal-binding').innerText = `${totalFinishingCost.toFixed(2)} ج.م`;
+
+    const estimatedCost = (totalSheets * 0.28) + (totalFinishingCost * 0.4);
+    const profit = Math.max(0, grandTotal - estimatedCost);
+    const marginPct = grandTotal > 0 ? Math.round((profit / grandTotal) * 100) : 0;
+    document.getElementById('inv-profit-margin').innerText = `${marginPct}% (${profit.toFixed(2)} ج.م)`;
+
+    document.getElementById('inv-grand-total').innerText = grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('inv-rate-formula-label').innerText = `(${totalSheets} ورقة × ${calcState.ratePerSheet.toFixed(2)} + ${totalFinishingCost.toFixed(2)} خدمات)`;
+  }
+
+  function resetCalculator() {
+    document.getElementById('input-pages').value = 1;
+    document.getElementById('input-copies').value = 1;
+    document.getElementById('input-custom-rate').value = '';
+    document.getElementById('check-thermal-cover').checked = false;
+    document.getElementById('check-lamination').checked = false;
+    document.getElementById('check-thermal-spine').checked = false;
+    setDuplexMode(false);
+    selectRate(0.80, 'أبيض وأسود (وجه)', document.querySelectorAll('.rate-preset-btn')[0]);
+    calcState.finishingBinding = { type: 'none', cost: 0, label: 'بدون' };
+    document.querySelectorAll('.finishing-bind-btn').forEach(btn => {
+      btn.classList.remove('bg-primary-container', 'text-on-primary-container');
+      btn.classList.add('bg-surface-container-high', 'text-on-surface');
+    });
+    calculateEstimate();
+  }
+
+  function copyInvoiceSummary() {
+    const total = document.getElementById('inv-grand-total').innerText;
+    const summary = `كوبي كات ERP - تسعير مطبعة:\nالصفحات: ${calcState.pages} | النسخ: ${calcState.copies}\nالنمط: ${calcState.isDuplex ? 'وش وضهر' : 'وجه واحد'}\nالإجمالي: ${total} ج.م`;
+    navigator.clipboard.writeText(summary);
+    alert('تم نسخ ملخص الفاتورة إلى الحافظة بنجاح!');
+  }
+
+  function shareWhatsAppEstimate() {
+    const total = document.getElementById('inv-grand-total').innerText;
+    const text = encodeURIComponent(`مرحباً بك من مطبعة كوبي كات 🖨️\nتفاصيل عرض السعر للمستند الخاص بكم:\n- عدد الصفحات: ${calcState.pages}\n- عدد النسخ: ${calcState.copies}\n- الإجمالي النهائي: ${total} ج.م`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  }
+
+  function dispatchToShiftOrders() {
+    alert('تم ترحيل الحساب تلقائياً إلى شاشة "مهام وأوردرات الشفت" برقم تذكرة طرد سريع!');
+  }
+
+  function switchCalcTab(tab) {
+    const btnPrint = document.getElementById('tab-print-mode');
+    const btnNumpad = document.getElementById('tab-numpad-mode');
+    const numpadPanel = document.getElementById('quick-numpad-panel');
+
+    if (tab === 'numpad') {
+      btnNumpad.className = "flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-primary-container text-on-primary-container font-headline-sm text-headline-sm transition-all shadow-sm";
+      btnPrint.className = "flex items-center gap-space-xs px-space-md py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface font-body-sm text-body-sm transition-all";
+      numpadPanel.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      btnPrint.className = "flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-primary-container text-on-primary-container font-headline-sm text-headline-sm transition-all shadow-sm";
+      btnNumpad.className = "flex items-center gap-space-xs px-space-md py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface font-body-sm text-body-sm transition-all";
+    }
+  }
+
+  let activeNumpadTarget = 'input-pages';
+  document.getElementById('input-pages').addEventListener('focus', () => { activeNumpadTarget = 'input-pages'; });
+  document.getElementById('input-copies').addEventListener('focus', () => { activeNumpadTarget = 'input-copies'; });
+
+  function pressNumpadKey(key) {
+    const target = document.getElementById(activeNumpadTarget);
+    if (key === 'C') {
+      target.value = '';
+    } else if (key === 'ENTER') {
+      if (activeNumpadTarget === 'input-pages') {
+        activeNumpadTarget = 'input-copies';
+        document.getElementById('input-copies').focus();
+      } else {
+        calculateEstimate();
+      }
+    } else {
+      target.value = (target.value === '0' || target.value === '') ? key : target.value + key;
+    }
+    calculateEstimate();
+  }
+
+  // Initial Run
+  calculateEstimate();
+</script></main></div></body></html>

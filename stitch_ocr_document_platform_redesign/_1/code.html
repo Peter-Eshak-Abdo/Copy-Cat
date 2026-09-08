@@ -1,0 +1,561 @@
+<!DOCTYPE html><html class="dark" dir="rtl" lang="ar"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"inverse-primary":"#00687a","inverse-on-surface":"#2c303b","on-error-container":"#ffdad6","on-tertiary-fixed-variant":"#653e00","error":"#ffb4ab","on-tertiary-container":"#563400","error-container":"#93000a","on-primary-fixed-variant":"#004e5c","surface-container-highest":"#313540","secondary-fixed-dim":"#ffb2b7","surface-variant":"#313540","on-tertiary":"#472a00","primary-fixed-dim":"#4cd7f6","tertiary-container":"#e79400","surface-bright":"#353944","on-tertiary-fixed":"#2a1700","surface":"#0f131d","inverse-surface":"#dfe2f1","on-background":"#dfe2f1","tertiary-fixed-dim":"#ffb95f","surface-dim":"#0f131d","primary-container":"#06b6d4","surface-container-lowest":"#0a0e18","primary":"#4cd7f6","surface-tint":"#4cd7f6","surface-container-high":"#262a35","on-surface-variant":"#bcc9cd","tertiary":"#ffb95f","on-surface":"#dfe2f1","secondary-fixed":"#ffdadb","surface-container":"#1c1f2a","secondary-container":"#b50036","on-secondary-fixed-variant":"#92002a","primary-fixed":"#acedff","outline-variant":"#3d494c","on-secondary-container":"#ffc2c4","on-primary-fixed":"#001f26","on-secondary":"#67001b","on-primary":"#003640","secondary":"#ffb2b7","tertiary-fixed":"#ffddb8","on-error":"#690005","background":"#0f131d","on-secondary-fixed":"#40000d","outline":"#869397","surface-container-low":"#171b26","on-primary-container":"#00424f"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-2xl":"3rem","space-3xl":"4rem","space-xs":"0.5rem","space-2xs":"0.25rem","gutter-desktop":"1.5rem","space-md":"1rem","space-sm":"0.75rem","space-lg":"1.5rem","sidebar-width-expanded":"16rem","space-xl":"2rem","gutter-mobile":"0.75rem","sidebar-width-collapsed":"4.5rem"},fontFamily:{"label-tag":["Inter"],"headline-md":["Inter"],"label-code":["JetBrains Mono"],"display-hero-mobile":["Inter"],"body-md":["Inter"],"body-sm":["Inter"],"headline-lg":["Inter"],"display-hero":["Inter"],"headline-lg-mobile":["Inter"],"body-lg":["Inter"],"headline-sm":["Inter"]},fontSize:{"label-tag":["11px",{"lineHeight":"14px","letterSpacing":"0.04em","fontWeight":"700"}],"headline-md":["22px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"label-code":["12px",{"lineHeight":"16px","letterSpacing":"0.02em","fontWeight":"500"}],"display-hero-mobile":["30px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"display-hero":["44px",{"lineHeight":"52px","letterSpacing":"-0.025em","fontWeight":"800"}],"headline-lg-mobile":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-sm":["18px",{"lineHeight":"24px","letterSpacing":"-0.005em","fontWeight":"600"}]}}}};</script></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased min-h-screen selection:bg-primary selection:text-on-primary"><aside class="fixed right-0 top-0 bottom-0 w-sidebar-width-expanded bg-surface-container-lowest z-50 flex flex-col justify-between overflow-y-auto"><div class="p-space-md"><div class="flex items-center gap-space-sm px-space-xs py-space-sm mb-space-md"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary tracking-tight">كوبي كات ERP</span><span class="font-label-code text-label-code text-on-surface-variant">v2.4 Enterprise Hub</span></div></div><nav class="flex flex-col gap-space-md" data-active-classes="bg-primary-container text-on-primary-container font-bold rounded-xl"><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الرئيسية والمخزن</span><a aria-current="page" class="flex items-center gap-space-sm px-space-sm py-space-xs transition-all bg-primary-container text-on-primary-container font-bold rounded-xl" data-path="operations-dashboard" href="#"><span class="material-symbols-outlined text-primary text-xl">dashboard</span><span class="font-body-sm text-body-sm">لوحة العمليات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="inventory-catalog" href="#"><span class="material-symbols-outlined text-xl">inventory_2</span><span class="font-body-sm text-body-sm">المخزن والكتالوج</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">أدوات المطبعة والتصوير</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="print-calculator" href="#"><span class="material-symbols-outlined text-xl">calculate</span><span class="font-body-sm text-body-sm">حاسبة المطبعة والملازم</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="shift-orders" href="#"><span class="material-symbols-outlined text-xl">assignment</span><span class="font-body-sm text-body-sm">مهام وأوردرات الشفت</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="national-id-builder" href="#"><span class="material-symbols-outlined text-xl">badge</span><span class="font-body-sm text-body-sm">مصنع بطاقات الرقم القومي A5</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="portrait-studio" href="#"><span class="material-symbols-outlined text-xl">photo_camera</span><span class="font-body-sm text-body-sm">استوديو الصور 4x6</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="ink-saver-scanner" href="#"><span class="material-symbols-outlined text-xl">document_scanner</span><span class="font-body-sm text-body-sm">ماسح المستندات وتوفير الحبر</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">المستندات والذكاء الاصطناعي</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="advanced-pdf-studio" href="#"><span class="material-symbols-outlined text-xl">picture_as_pdf</span><span class="font-body-sm text-body-sm">استوديو أدوات PDF المتقدمة</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="smart-ocr-hub" href="#"><span class="material-symbols-outlined text-tertiary text-xl">psychology</span><span class="font-body-sm text-body-sm">الماسح الضوئي الذكي (OCR)</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="vocabulary-sheet-generator" href="#"><span class="material-symbols-outlined text-xl">spellcheck</span><span class="font-body-sm text-body-sm">مولد شيتات المفردات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="academic-research-generator" href="#"><span class="material-symbols-outlined text-xl">menu_book</span><span class="font-body-sm text-body-sm">مولد الأبحاث الأكاديمية</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الشبكة والإنتاجية</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="daily-server-links" href="#"><span class="material-symbols-outlined text-xl">dns</span><span class="font-body-sm text-body-sm">مواقع وسيرفرات يومية</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="lan-transfer-hub" href="#"><span class="material-symbols-outlined text-xl">sync_alt</span><span class="font-body-sm text-body-sm">مركز النقل السريع LAN</span></a></div></nav></div><div class="p-space-md bg-surface-container-low/60"><div class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container mb-space-sm"><div class="flex items-center gap-space-xs"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span></span><span class="font-label-code text-label-code text-on-surface-variant">السيرفر نشط</span></div><span class="font-label-tag text-label-tag px-space-xs py-space-2xs rounded-lg bg-surface-container-highest text-primary">99.8%</span></div><div class="flex items-center justify-between pt-space-xs"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-on-surface-variant text-lg">admin_panel_settings</span><span class="font-body-sm text-body-sm text-on-surface font-semibold">مشرف الفرع</span></div><a class="p-space-xs rounded-lg text-error hover:bg-surface-container-high transition-colors" data-path="login" href="#"><span class="material-symbols-outlined text-lg">logout</span></a></div></div></aside><div class="pr-sidebar-width-expanded"><header class="fixed top-0 right-sidebar-width-expanded left-0 h-16 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><img alt="logo.jpg" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VpzC_MDRD3TESDUobuiX8KOyhf9YAC7D76oM-2vUCJPGxHxtmMkXR3GTPKLj0Flc3eduZ8qe4pPhuQe5bIfA-Auf7iwLSrxVotQ91x8igvjXgxxgQMenJrCFx8jdhSLEeCSmJbni47Qw6cxz3PJkzplmCNNC4X21XRIYLOVOgDOKhhh_VLXT22XyFmBc-KaBbNfHIkb4C5yonR-R7b1UNHeH98AduXceN7dLxzXgf9jKxzj0p1llnEpRvuH3k95Tp8VSkifQP_mg"><div class="hidden sm:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-primary"></span><span class="font-label-code text-label-code text-primary">متصل بالخادم السحابي</span></div></div><div class="flex items-center gap-space-sm"><a class="hidden md:flex items-center gap-space-xs px-space-sm py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm transition-all" data-path="public-storefront" href="#"><span class="material-symbols-outlined text-base">storefront</span><span>تبديل للمتجر العام</span></a><button class="p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">dark_mode</span></button><button class="relative p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">notifications</span><span class="absolute top-1 left-1 w-2 h-2 bg-secondary-container rounded-full"></span></button><div class="flex items-center gap-space-xs pl-space-xs"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1UO12gBvuU5lLzzA8LA68aUE6fPaEjN3hhaFLV_103HWeMBpwNH7Y4OLVGnWqTorHT_T_ViOW6zIdaDr2tDRPThaLWkOq_bPkXeuhPWYWx75ElCDr5ivCXxrq2VnwzmXJQ0ianSvzqxnvT97H_hTGnD6ODWqlkMoe14sh47gSUE5F8b8UxP-jA7roIUIYgrkh205MqpdCeP7yjHmBwiA1nYEwz-KKs2BvQuDGpOPny-IlnLzLDmASwddBOD"><div class="hidden xl:flex flex-col text-right"><span class="font-body-sm text-body-sm font-semibold text-on-surface">أحمد المشرف</span><span class="font-label-tag text-label-tag text-on-surface-variant">مدير الوردية</span></div></div></div></header><main class="relative pt-16 min-h-screen bg-background w-full px-gutter-desktop"><div class="flex flex-col w-full">
+<!-- Top Ambient Glow & Welcome Operations Banner -->
+<div class="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg mb-space-lg shadow-xl">
+<div class="absolute -top-24 -left-20 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="absolute -bottom-20 right-1/4 w-72 h-72 bg-tertiary-container/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="flex flex-col gap-space-xs">
+<div class="flex flex-wrap items-center gap-space-xs">
+<span class="inline-flex items-center gap-1.5 px-space-sm py-space-2xs rounded-full bg-primary/10 text-primary font-label-tag text-label-tag tracking-wider">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+            نظام آمن ومحمي أوفلاين
+          </span>
+<span class="inline-flex items-center gap-1.5 px-space-sm py-space-2xs rounded-full bg-surface-container-high text-on-surface-variant font-label-code text-label-code">
+<span class="material-symbols-outlined text-sm text-tertiary">bolt</span>
+            نسخة ERP v2.4 الذكية
+          </span>
+<span class="inline-flex items-center gap-1 px-space-xs py-space-2xs rounded-lg bg-surface-container text-on-surface-variant font-label-code text-label-code">
+            LAN 192.168.1.120:8080
+          </span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface mt-space-2xs">
+          مرحباً بك يا مدير كوبي كات في مركز العمليات المتقدم 🖨️
+        </h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-3xl">
+          تم تحديث النظام بالكامل ليشمل حاسبة الملازم المتطورة، إدارة أوردرات الشفت، الماسح الضوئي الذكي (OCR)، واستوديو تعديل الـ PDF، ومولد شيتات المدارس لخدمة زبائن المطبعة بأقصى سرعة وكفاءة.
+        </p>
+</div>
+<!-- Quick Header Action Buttons -->
+<div class="flex flex-wrap items-center gap-space-sm self-start lg:self-center">
+<a class="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-primary-container text-on-primary-container font-headline-sm text-headline-sm hover:bg-primary transition-all shadow-md" data-path="print-calculator" href="#">
+<span class="material-symbols-outlined text-xl">calculate</span>
+<span>حاسبة الملازم والطباعة</span>
+</a>
+<a class="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-surface-container-highest text-primary font-headline-sm text-headline-sm hover:bg-surface-bright transition-all" data-path="shift-orders" href="#">
+<span class="material-symbols-outlined text-xl">assignment_turned_in</span>
+<span>مهام وأوردرات الشفت</span>
+</a>
+<a class="flex items-center gap-space-xs px-space-sm py-space-sm rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant font-body-sm text-body-sm transition-all" data-path="public-storefront" href="#">
+<span class="material-symbols-outlined text-lg">visibility</span>
+<span>معاينة متجر الزبائن</span>
+</a>
+</div>
+</div>
+</div>
+<!-- KPI Operational Metrics Grid (4 Top Metric Cards) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md mb-space-lg">
+<!-- Card 1: Active Orders -->
+<div class="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low shadow-md relative overflow-hidden">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-body-sm text-body-sm text-on-surface-variant font-semibold">أوردرات اليوم النشطة</span>
+<div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-xl">receipt_long</span>
+</div>
+</div>
+<div class="flex items-baseline gap-space-xs mb-space-xs">
+<span class="font-display-hero text-display-hero text-on-surface font-extrabold tracking-tight">38</span>
+<span class="font-label-code text-label-code text-primary">أوردر مسجل</span>
+</div>
+<div class="flex items-center justify-between pt-space-xs">
+<span class="inline-flex items-center gap-1 font-label-tag text-label-tag text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+          6 جاري تنفيذها بالماكينات
+        </span>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded bg-surface-container-high text-primary">نشط</span>
+</div>
+</div>
+<!-- Card 2: Printed Sheets Total -->
+<div class="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low shadow-md relative overflow-hidden">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-body-sm text-body-sm text-on-surface-variant font-semibold">إجمالي النسخ المطبوعة اليوم</span>
+<div class="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-xl">print</span>
+</div>
+</div>
+<div class="flex items-baseline gap-space-xs mb-space-xs">
+<span class="font-display-hero text-display-hero text-on-surface font-extrabold tracking-tight">14,850</span>
+<span class="font-label-code text-label-code text-secondary">ورقة A4/A5</span>
+</div>
+<div class="flex items-center justify-between pt-space-xs">
+<span class="inline-flex items-center gap-1 font-label-tag text-label-tag text-secondary">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+          +18.4% مقارنة بالأمس
+        </span>
+<span class="font-label-code text-label-code text-on-surface-variant">شفت النهار</span>
+</div>
+</div>
+<!-- Card 3: Shift Revenue -->
+<div class="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low shadow-md relative overflow-hidden">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-body-sm text-body-sm text-on-surface-variant font-semibold">دخل الوردية الحالية</span>
+<div class="w-10 h-10 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-xl">point_of_sale</span>
+</div>
+</div>
+<div class="flex items-baseline gap-space-xs mb-space-xs">
+<span class="font-display-hero text-display-hero text-tertiary font-extrabold tracking-tight">4,280</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">ج.م</span>
+</div>
+<div class="flex items-center justify-between pt-space-xs">
+<span class="font-label-tag text-label-tag text-on-surface-variant">نقدي: 3,450 | محفظة: 830</span>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded bg-surface-container-high text-tertiary">درج الكاش</span>
+</div>
+</div>
+<!-- Card 4: Hardware & CMYK Health -->
+<div class="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low shadow-md relative overflow-hidden">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-body-sm text-body-sm text-on-surface-variant font-semibold">كفاءة الماكينات وخراطيش الحبر</span>
+<div class="w-10 h-10 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-xl">hub</span>
+</div>
+</div>
+<div class="flex items-baseline gap-space-xs mb-space-xs">
+<span class="font-display-hero text-display-hero text-on-surface font-extrabold tracking-tight">98.2%</span>
+<span class="font-label-code text-label-code text-primary">جاهزية 100%</span>
+</div>
+<!-- CMYK Mini Tank Gauges -->
+<div class="flex flex-col gap-1 pt-space-xs">
+<div class="grid grid-cols-4 gap-1">
+<div class="h-1.5 rounded-full bg-primary" title="Cyan 84%"></div>
+<div class="h-1.5 rounded-full bg-secondary-container" title="Magenta 76%"></div>
+<div class="h-1.5 rounded-full bg-tertiary" title="Yellow 92%"></div>
+<div class="h-1.5 rounded-full bg-surface-bright" title="Black/Key 88%"></div>
+</div>
+<span class="font-label-code text-label-code text-on-surface-variant text-[10px]">4 طابعات ليزر وريزو متصلة بالشبكة</span>
+</div>
+</div>
+</div>
+<!-- Header for Workstations Section -->
+<div class="flex items-center justify-between mb-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-2xl">grid_view</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">جميع أدوات وماكينات العمل اليومية</h2>
+<span class="font-label-tag text-label-tag px-space-xs py-space-2xs rounded-lg bg-surface-container text-on-surface-variant">12 أداة جاهزة للتشغيل الفوري</span>
+</div>
+<div class="hidden sm:flex items-center gap-space-xs text-on-surface-variant font-label-code text-label-code">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+      وضع الإنتاج الفائق نشط
+    </div>
+</div>
+<!-- The 12 Smart Machinery & Workstation Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-space-md mb-space-xl">
+<!-- Tool 1: Smart Print & Booklets Calculator -->
+<a class="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md" data-path="print-calculator" href="#">
+<div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-2xl">calculate</span>
+</div>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-primary">حساب وش وظهر دقيق</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs">
+          حاسبة المطبعة والملازم الذكية
+        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          حساب دقيق لورق الملازم (وش وضهر)، أزرار تسعير الورقة، وإضافات التجليد والسلوفان مع حاسبة عامة سريعة بنظام Numpad.
+        </p>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md">
+<span class="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform">
+          تشغيل الأداة
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">تسعير مخصص للمكتبة</span>
+</div>
+</a>
+<!-- Tool 2: Shift Printing & Delivery Orders -->
+<a class="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md" data-path="shift-orders" href="#">
+<div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined text-2xl">task_alt</span>
+</div>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-on-surface">مراسلة واتساب فورية</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs">
+          أوردرات الطباعة وتسليم الشفت
+        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          متابعة أوردرات وملازم المدرسين، عداد النسخ المطبوعة الحي، مراسلة واتساب فورية، وتوليد تقرير تسليم الشفت بضغطة واحدة.
+        </p>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md">
+<span class="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform">
+          تشغيل الأداة
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">تقرير شفت متكامل</span>
+</div>
+</a>
+<!-- Tool 3: Advanced PDF Studio -->
+<a class="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md" data-path="advanced-pdf-studio" href="#">
+<div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-secondary-container/20 flex items-center justify-center text-secondary group-hover:bg-secondary-container group-hover:text-on-secondary-container transition-colors">
+<span class="material-symbols-outlined text-2xl">picture_as_pdf</span>
+</div>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-secondary">تعديل PDF أوفلاين</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-secondary transition-colors mb-space-xs">
+          استوديو وأدوات الـ PDF المتقدمة
+        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          حذف صفحات الملازم من المنتصف والأطراف، تجميع الصور في ملف PDF، وتحويل المستندات العربية إلى Word بمسافات ضيقة وخط 18pt.
+        </p>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md">
+<span class="font-label-code text-label-code text-secondary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform">
+          تشغيل الأداة
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">حذف صفحات &amp; صور لـ PDF</span>
+</div>
+</a>
+<!-- Tool 4: Multi-Stage Smart OCR -->
+<a class="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md" data-path="smart-ocr-hub" href="#">
+<div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary group-hover:bg-tertiary group-hover:text-on-tertiary transition-colors">
+<span class="material-symbols-outlined text-2xl">psychology</span>
+</div>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-tertiary">تدقيق لغوي ذكي</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-tertiary transition-colors mb-space-xs">
+          الماسح الضوئي الذكي (Multi-Stage OCR)
+        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          استخراج نصوص الأوراق والملازم على مرحلتين: استخراج بصري يتبعه تدقيق لغوي ونحوي عربي مع تصدير Word جاهز للطباعة.
+        </p>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md">
+<span class="font-label-code text-label-code text-tertiary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform">
+          تشغيل الأداة
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">تصدير Word بخط 18pt</span>
+</div>
+</a>
+<!-- Tool 5: School Vocabulary Generator -->
+<a class="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md" data-path="vocabulary-sheet-generator" href="#">
+<div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-2xl">school</span>
+</div>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-primary">خلط عشوائي للمفردات</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs">
+          مولد شيتات المفردات المدرسية
+        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          استخراج معاني الكلمات من كتب المدرسين، عداد النسخ، وتوليد نموذجين امتحانيين (نموذج أ / نموذج ب) بترتيب عشوائي وتصدير Word فوري.
+        </p>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md">
+<span class="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform">
+          تشغيل الأداة
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">نموذج أ + نموذج ب</span>
+</div>
+</a>
+<!-- Tool 6: LAN Rapid Transfer Hub -->
+<a class="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md" data-path="lan-transfer-hub" href="#">
+<div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center text-on-surface group-hover:bg-surface-bright transition-colors">
+<span class="material-symbols-outlined text-2xl">share</span>
+</div>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-on-surface-variant">0 استهلاك نت</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs">
+          مركز النقل السريع الداخلي (LAN Transfer)
+        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          نقل فوري للملفات والملازم الكبيرة بين أجهزة المكتبة عبر كابل الشبكة المحلية أو الراوتر بدون استهلاك باقة الإنترنت وبسرعات خيالية.
+        </p>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md">
+<span class="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform">
+          تشغيل الأداة
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">سرعة كابل الشبكة القصوى</span>
+</div>
+</a>
+<!-- Tool 7: National ID & Document Factory A5 -->
+<a class="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md" data-path="national-id-builder" href="#">
+<div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-2xl">badge</span>
+</div>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-primary">تصدير Word A5</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs">
+          مصنع البطاقات والمستندات (A5)
+        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          قص وتجهيز بطاقات الرقم القومي، رخص القيادة، وشهادات الميلاد وش وظهر على ورقة A5 فورية مع معاينة حية ومحاذاة قياسية للطباعة.
+        </p>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md">
+<span class="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform">
+          تشغيل الأداة
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">معيار رسمي 100%</span>
+</div>
+</a>
+<!-- Tool 8: 4x6 Portrait Studio -->
+<a class="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md" data-path="portrait-studio" href="#">
+<div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-2xl">photo_camera</span>
+</div>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-on-surface-variant">AI بدون سيرفر</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs">
+          استوديو الصور الشخصية (4x6)
+        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          عزل الخلفية تلقائياً، تبييض وترميم ملامح الوجه، وضبط البدلات والملابس الرسمية مع رص 8 صور بجودة عالية جاهزة للطابعة الملونة.
+        </p>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md">
+<span class="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform">
+          تشغيل الأداة
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">رص 8 صور 4x6</span>
+</div>
+</a>
+<!-- Tool 9: Ink Saver & Document Whitener Scanner -->
+<a class="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md" data-path="ink-saver-scanner" href="#">
+<div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined text-2xl">invert_colors</span>
+</div>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-primary">توفير 70% حبر</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs">
+          ماسح المستندات وتوفير الحبر
+        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          قلب ألوان لقطات الشاشة الداكنة (Dark Mode Invert) وتبييض خلفية الورق الأصفر والظلال لتوفير الحبر الأسود مع نصوص عالية الحدة.
+        </p>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md">
+<span class="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform">
+          تشغيل الأداة
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">تبييض فوري ونقي</span>
+</div>
+</a>
+<!-- Tool 10: Academic Research Generator -->
+<a class="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md" data-path="academic-research-generator" href="#">
+<div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary group-hover:bg-tertiary group-hover:text-on-tertiary transition-colors">
+<span class="material-symbols-outlined text-2xl">auto_stories</span>
+</div>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-tertiary">أكاديمي معتمد</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-tertiary transition-colors mb-space-xs">
+          مولد الأبحاث المدرسية والجامعية
+        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          صياغة وتنسيق الأبحاث A4 بهوامش ضيقة، فهارس ومراجع أكاديمية موثقة، غلاف رسمي للمدرسة أو الجامعة وتصدير Word جاهز فوراً.
+        </p>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md">
+<span class="font-label-code text-label-code text-tertiary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform">
+          تشغيل الأداة
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">تنسيق Word A4 قياسي</span>
+</div>
+</a>
+<!-- Tool 11: Daily Server Links & Government Portals -->
+<a class="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md" data-path="daily-server-links" href="#">
+<div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center text-on-surface group-hover:bg-surface-bright transition-colors">
+<span class="material-symbols-outlined text-2xl">language</span>
+</div>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-on-surface-variant">وصول سريع بضغطة زر</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs">
+          روابط وسيرفرات العمل اليومية
+        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          دليل الخدمات الحكومية، بوابات التنسيق والجامعات، منصات التقديم لوظائف المعلمين، ومواقع فحص وحساب التكلفة السريعة.
+        </p>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md">
+<span class="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform">
+          تشغيل الأداة
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">24 بوابة حكومية</span>
+</div>
+</a>
+<!-- Tool 12: Inventory & Materials Catalog -->
+<a class="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md" data-path="inventory-catalog" href="#">
+<div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-2xl">inventory</span>
+</div>
+<span class="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-primary">حصر 361 صنف</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs">
+          إدارة المخزن والكتالوج (حصر)
+        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          متابعة رصيد باكتات الورق 70g و 80g، خراطيش الحبر، السلك الحلزوني، وتحديث فوري لأسعار التوريد والبيع للزبائن.
+        </p>
+</div>
+<div class="flex items-center justify-between pt-space-md mt-space-md">
+<span class="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform">
+          تشغيل الأداة
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+</span>
+<span class="font-label-tag text-label-tag text-on-surface-variant">تحديث الأسعار والموردين</span>
+</div>
+</a>
+</div>
+<!-- Recent Shift Activity & Active Print Queue Table -->
+<div class="rounded-xl bg-surface-container-low p-space-lg shadow-xl mb-space-lg">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm mb-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-2xl">hourglass_top</span>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">أوردرات الشفت المباشرة وقائمة الانتظار</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">متابعة فورية للمهام قيد الطباعة والجاهزة للتسليم للزبائن والمدرسين</p>
+</div>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="flex items-center gap-1 px-space-sm py-space-xs rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm text-body-sm transition-colors" type="button">
+<span class="material-symbols-outlined text-base">refresh</span>
+<span>تحديث القائمة</span>
+</button>
+<a class="flex items-center gap-1 px-space-sm py-space-xs rounded-xl bg-primary-container text-on-primary-container font-body-sm text-body-sm hover:bg-primary transition-colors" data-path="shift-orders" href="#">
+<span class="material-symbols-outlined text-base">add</span>
+<span>أوردر جديد</span>
+</a>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-right border-collapse">
+<thead>
+<tr class="bg-surface-container text-on-surface-variant font-label-code text-label-code">
+<th class="p-space-sm rounded-r-xl">رقم الأوردر</th>
+<th class="p-space-sm">اسم العميل / المدرس</th>
+<th class="p-space-sm">تفاصيل المهمة</th>
+<th class="p-space-sm text-left">الكمية</th>
+<th class="p-space-sm text-left">الإجمالي</th>
+<th class="p-space-sm text-center">الحالة</th>
+<th class="p-space-sm text-center rounded-l-xl">إجراءات سريعة</th>
+</tr>
+</thead>
+<tbody class="divide-y-0 text-on-surface font-body-sm text-body-sm">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-high/40 transition-colors">
+<td class="p-space-sm font-label-code text-label-code text-primary font-bold">#ORD-9421</td>
+<td class="p-space-sm font-semibold">أ. محمود عبد العال (فيزياء)</td>
+<td class="p-space-sm text-on-surface-variant">مذكرة ليلة الامتحان 1 ث - وش وظهر + غلاف كوشيه سلوفان</td>
+<td class="p-space-sm text-left font-label-code text-label-code">80 ملزمة (48 ص)</td>
+<td class="p-space-sm text-left font-label-code text-label-code text-tertiary font-bold">1,920 ج.م</td>
+<td class="p-space-sm text-center">
+<span class="inline-flex items-center gap-1 px-space-xs py-space-2xs rounded-full bg-primary/10 text-primary font-label-tag text-label-tag">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+                جاري الطباعة (ماكينة 1)
+              </span>
+</td>
+<td class="p-space-sm text-center">
+<div class="flex items-center justify-center gap-space-2xs">
+<a class="p-space-xs rounded-lg bg-surface-container hover:bg-surface-bright text-primary transition-colors" href="https://wa.me/" target="_blank" title="مراسلة واتساب">
+<span class="material-symbols-outlined text-base">chat</span>
+</a>
+<button class="p-space-xs rounded-lg bg-surface-container hover:bg-surface-bright text-on-surface transition-colors" title="معاينة الفاتورة" type="button">
+<span class="material-symbols-outlined text-base">description</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-high/40 transition-colors">
+<td class="p-space-sm font-label-code text-label-code text-primary font-bold">#ORD-9420</td>
+<td class="p-space-sm font-semibold">مدرسة النصر الإعدادية</td>
+<td class="p-space-sm text-on-surface-variant">شهادات تقدير أوائل الطلبة A4 ورق مقوى 250g ألوان</td>
+<td class="p-space-sm text-left font-label-code text-label-code">150 شهادة</td>
+<td class="p-space-sm text-left font-label-code text-label-code text-tertiary font-bold">750 ج.م</td>
+<td class="p-space-sm text-center">
+<span class="inline-flex items-center gap-1 px-space-xs py-space-2xs rounded-full bg-surface-container-highest text-secondary font-label-tag text-label-tag">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                جاهز للتسليم
+              </span>
+</td>
+<td class="p-space-sm text-center">
+<div class="flex items-center justify-center gap-space-2xs">
+<a class="p-space-xs rounded-lg bg-surface-container hover:bg-surface-bright text-primary transition-colors" href="https://wa.me/" target="_blank" title="إرسال إشعار جاهزية">
+<span class="material-symbols-outlined text-base">send</span>
+</a>
+<button class="p-space-xs rounded-lg bg-surface-container hover:bg-surface-bright text-on-surface transition-colors" title="تسليم الأوردر" type="button">
+<span class="material-symbols-outlined text-base">check_circle</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-high/40 transition-colors">
+<td class="p-space-sm font-label-code text-label-code text-primary font-bold">#ORD-9419</td>
+<td class="p-space-sm font-semibold">عميل نقدي (مكتب توثيق)</td>
+<td class="p-space-sm text-on-surface-variant">سحب سكانر وتجهيز بطاقات رقم قومي A5 وش وظهر</td>
+<td class="p-space-sm text-left font-label-code text-label-code">12 بطاقة</td>
+<td class="p-space-sm text-left font-label-code text-label-code text-tertiary font-bold">60 ج.م</td>
+<td class="p-space-sm text-center">
+<span class="inline-flex items-center gap-1 px-space-xs py-space-2xs rounded-full bg-surface-container-highest text-on-surface-variant font-label-tag text-label-tag">
+                تم التسليم والكاش
+              </span>
+</td>
+<td class="p-space-sm text-center">
+<div class="flex items-center justify-center gap-space-2xs">
+<button class="p-space-xs rounded-lg bg-surface-container hover:bg-surface-bright text-on-surface transition-colors" title="إعادة طباعة إيصال" type="button">
+<span class="material-symbols-outlined text-base">print</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Bottom Quick Network Telemetry & Hardware Status Bar -->
+<div class="flex flex-col md:flex-row items-center justify-between p-space-sm rounded-xl bg-surface-container-low text-on-surface-variant font-label-code text-label-code gap-space-xs">
+<div class="flex items-center gap-space-md flex-wrap">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+<span class="text-on-surface font-semibold">سيرفر المحطة:</span>
+<span>Local Machine (Offline Engine)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-base">speed</span>
+<span>زمن المعالجة البصرية OCR: 0.28 ثانية</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary text-base">folder_open</span>
+<span>مجلد الإخراج: D:\CopyCat_Vault_2025</span>
+</div>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="px-space-xs py-space-2xs rounded bg-surface-container-high text-primary">Shift: النهار (أحمد المشرف)</span>
+<span class="text-on-surface-variant">الفرع الرئيسي - ميت غمر</span>
+</div>
+</div>
+</div></main></div></body></html>

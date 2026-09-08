@@ -1,0 +1,738 @@
+<!DOCTYPE html><html class="dark" dir="rtl" lang="ar"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"inverse-primary":"#00687a","inverse-on-surface":"#2c303b","on-error-container":"#ffdad6","on-tertiary-fixed-variant":"#653e00","error":"#ffb4ab","on-tertiary-container":"#563400","error-container":"#93000a","on-primary-fixed-variant":"#004e5c","surface-container-highest":"#313540","secondary-fixed-dim":"#ffb2b7","surface-variant":"#313540","on-tertiary":"#472a00","primary-fixed-dim":"#4cd7f6","tertiary-container":"#e79400","surface-bright":"#353944","on-tertiary-fixed":"#2a1700","surface":"#0f131d","inverse-surface":"#dfe2f1","on-background":"#dfe2f1","tertiary-fixed-dim":"#ffb95f","surface-dim":"#0f131d","primary-container":"#06b6d4","surface-container-lowest":"#0a0e18","primary":"#4cd7f6","surface-tint":"#4cd7f6","surface-container-high":"#262a35","on-surface-variant":"#bcc9cd","tertiary":"#ffb95f","on-surface":"#dfe2f1","secondary-fixed":"#ffdadb","surface-container":"#1c1f2a","secondary-container":"#b50036","on-secondary-fixed-variant":"#92002a","primary-fixed":"#acedff","outline-variant":"#3d494c","on-secondary-container":"#ffc2c4","on-primary-fixed":"#001f26","on-secondary":"#67001b","on-primary":"#003640","secondary":"#ffb2b7","tertiary-fixed":"#ffddb8","on-error":"#690005","background":"#0f131d","on-secondary-fixed":"#40000d","outline":"#869397","surface-container-low":"#171b26","on-primary-container":"#00424f"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-2xl":"3rem","space-3xl":"4rem","space-xs":"0.5rem","space-2xs":"0.25rem","gutter-desktop":"1.5rem","space-md":"1rem","space-sm":"0.75rem","space-lg":"1.5rem","sidebar-width-expanded":"16rem","space-xl":"2rem","gutter-mobile":"0.75rem","sidebar-width-collapsed":"4.5rem"},fontFamily:{"label-tag":["Inter"],"headline-md":["Inter"],"label-code":["JetBrains Mono"],"display-hero-mobile":["Inter"],"body-md":["Inter"],"body-sm":["Inter"],"headline-lg":["Inter"],"display-hero":["Inter"],"headline-lg-mobile":["Inter"],"body-lg":["Inter"],"headline-sm":["Inter"]},fontSize:{"label-tag":["11px",{"lineHeight":"14px","letterSpacing":"0.04em","fontWeight":"700"}],"headline-md":["22px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"label-code":["12px",{"lineHeight":"16px","letterSpacing":"0.02em","fontWeight":"500"}],"display-hero-mobile":["30px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"display-hero":["44px",{"lineHeight":"52px","letterSpacing":"-0.025em","fontWeight":"800"}],"headline-lg-mobile":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-sm":["18px",{"lineHeight":"24px","letterSpacing":"-0.005em","fontWeight":"600"}]}}}};</script></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased min-h-screen selection:bg-primary selection:text-on-primary"><aside class="fixed right-0 top-0 bottom-0 w-sidebar-width-expanded bg-surface-container-lowest z-50 flex flex-col justify-between overflow-y-auto"><div class="p-space-md"><div class="flex items-center gap-space-sm px-space-xs py-space-sm mb-space-md"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary tracking-tight">كوبي كات ERP</span><span class="font-label-code text-label-code text-on-surface-variant">v2.4 Enterprise Hub</span></div></div><nav class="flex flex-col gap-space-md" data-active-classes="bg-primary-container text-on-primary-container font-bold rounded-xl"><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الرئيسية والمخزن</span><a aria-current="page" class="flex items-center gap-space-sm px-space-sm py-space-xs transition-all bg-primary-container text-on-primary-container font-bold rounded-xl" data-path="operations-dashboard" href="#"><span class="material-symbols-outlined text-primary text-xl">dashboard</span><span class="font-body-sm text-body-sm">لوحة العمليات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="inventory-catalog" href="#"><span class="material-symbols-outlined text-xl">inventory_2</span><span class="font-body-sm text-body-sm">المخزن والكتالوج</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">أدوات المطبعة والتصوير</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="print-calculator" href="#"><span class="material-symbols-outlined text-xl">calculate</span><span class="font-body-sm text-body-sm">حاسبة المطبعة والملازم</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="shift-orders" href="#"><span class="material-symbols-outlined text-xl">assignment</span><span class="font-body-sm text-body-sm">مهام وأوردرات الشفت</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="national-id-builder" href="#"><span class="material-symbols-outlined text-xl">badge</span><span class="font-body-sm text-body-sm">مصنع بطاقات الرقم القومي A5</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="portrait-studio" href="#"><span class="material-symbols-outlined text-xl">photo_camera</span><span class="font-body-sm text-body-sm">استوديو الصور 4x6</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="ink-saver-scanner" href="#"><span class="material-symbols-outlined text-xl">document_scanner</span><span class="font-body-sm text-body-sm">ماسح المستندات وتوفير الحبر</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">المستندات والذكاء الاصطناعي</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="advanced-pdf-studio" href="#"><span class="material-symbols-outlined text-xl">picture_as_pdf</span><span class="font-body-sm text-body-sm">استوديو أدوات PDF المتقدمة</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="smart-ocr-hub" href="#"><span class="material-symbols-outlined text-tertiary text-xl">psychology</span><span class="font-body-sm text-body-sm">الماسح الضوئي الذكي (OCR)</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="vocabulary-sheet-generator" href="#"><span class="material-symbols-outlined text-xl">spellcheck</span><span class="font-body-sm text-body-sm">مولد شيتات المفردات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="academic-research-generator" href="#"><span class="material-symbols-outlined text-xl">menu_book</span><span class="font-body-sm text-body-sm">مولد الأبحاث الأكاديمية</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الشبكة والإنتاجية</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="daily-server-links" href="#"><span class="material-symbols-outlined text-xl">dns</span><span class="font-body-sm text-body-sm">مواقع وسيرفرات يومية</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="lan-transfer-hub" href="#"><span class="material-symbols-outlined text-xl">sync_alt</span><span class="font-body-sm text-body-sm">مركز النقل السريع LAN</span></a></div></nav></div><div class="p-space-md bg-surface-container-low/60"><div class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container mb-space-sm"><div class="flex items-center gap-space-xs"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span></span><span class="font-label-code text-label-code text-on-surface-variant">السيرفر نشط</span></div><span class="font-label-tag text-label-tag px-space-xs py-space-2xs rounded-lg bg-surface-container-highest text-primary">99.8%</span></div><div class="flex items-center justify-between pt-space-xs"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-on-surface-variant text-lg">admin_panel_settings</span><span class="font-body-sm text-body-sm text-on-surface font-semibold">مشرف الفرع</span></div><a class="p-space-xs rounded-lg text-error hover:bg-surface-container-high transition-colors" data-path="login" href="#"><span class="material-symbols-outlined text-lg">logout</span></a></div></div></aside><div class="pr-sidebar-width-expanded"><header class="fixed top-0 right-sidebar-width-expanded left-0 h-16 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><img alt="logo.jpg" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VpzC_MDRD3TESDUobuiX8KOyhf9YAC7D76oM-2vUCJPGxHxtmMkXR3GTPKLj0Flc3eduZ8qe4pPhuQe5bIfA-Auf7iwLSrxVotQ91x8igvjXgxxgQMenJrCFx8jdhSLEeCSmJbni47Qw6cxz3PJkzplmCNNC4X21XRIYLOVOgDOKhhh_VLXT22XyFmBc-KaBbNfHIkb4C5yonR-R7b1UNHeH98AduXceN7dLxzXgf9jKxzj0p1llnEpRvuH3k95Tp8VSkifQP_mg"><div class="hidden sm:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-primary"></span><span class="font-label-code text-label-code text-primary">متصل بالخادم السحابي</span></div></div><div class="flex items-center gap-space-sm"><a class="hidden md:flex items-center gap-space-xs px-space-sm py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm transition-all" data-path="public-storefront" href="#"><span class="material-symbols-outlined text-base">storefront</span><span>تبديل للمتجر العام</span></a><button class="p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">dark_mode</span></button><button class="relative p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">notifications</span><span class="absolute top-1 left-1 w-2 h-2 bg-secondary-container rounded-full"></span></button><div class="flex items-center gap-space-xs pl-space-xs"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1UO12gBvuU5lLzzA8LA68aUE6fPaEjN3hhaFLV_103HWeMBpwNH7Y4OLVGnWqTorHT_T_ViOW6zIdaDr2tDRPThaLWkOq_bPkXeuhPWYWx75ElCDr5ivCXxrq2VnwzmXJQ0ianSvzqxnvT97H_hTGnD6ODWqlkMoe14sh47gSUE5F8b8UxP-jA7roIUIYgrkh205MqpdCeP7yjHmBwiA1nYEwz-KKs2BvQuDGpOPny-IlnLzLDmASwddBOD"><div class="hidden xl:flex flex-col text-right"><span class="font-body-sm text-body-sm font-semibold text-on-surface">أحمد المشرف</span><span class="font-label-tag text-label-tag text-on-surface-variant">مدير الوردية</span></div></div></div></header><main class="relative pt-16 min-h-screen bg-background w-full px-gutter-desktop"><div class="flex flex-col w-full pb-space-3xl gap-space-lg text-right" dir="rtl">
+<!-- Breadcrumbs & Quick Telemetry Header -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs">
+<div class="flex items-center gap-space-xs font-label-code text-label-code text-on-surface-variant">
+<span class="material-symbols-outlined text-sm text-primary">precision_manufacturing</span>
+<span>وحدة الإنتاج والتشغيل السريع</span>
+<span>/</span>
+<span class="text-primary font-semibold">وردية المساء (A)</span>
+<span class="inline-flex items-center px-space-xs py-0.5 rounded-full bg-surface-container-high text-tertiary text-label-tag">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary ml-1.5 animate-pulse"></span>
+        الإنتاج نشط
+      </span>
+</div>
+<div class="flex items-center gap-space-sm">
+<span class="font-label-code text-label-code text-on-surface-variant">آخر مزامنة قبل <strong class="text-on-surface font-mono" id="syncTimer">12 ثانية</strong></span>
+<button class="flex items-center justify-center p-space-xs rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-primary transition-all duration-200" onclick="refreshTasks()" title="تحديث حي" type="button">
+<span class="material-symbols-outlined text-lg">sync</span>
+</button>
+</div>
+</div>
+<!-- Main Hero Card: Page Title & Global Shift Actions -->
+<section class="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg shadow-xl">
+<div class="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-primary/5 blur-3xl pointer-events-none"></div>
+<div class="absolute -bottom-24 right-1/3 w-80 h-80 rounded-full bg-primary-container/10 blur-3xl pointer-events-none"></div>
+<div class="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-space-lg">
+<div class="flex flex-col gap-space-2xs max-w-2xl">
+<div class="flex items-center gap-space-sm">
+<div class="p-space-xs rounded-xl bg-primary-container/15 text-primary">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">assignment_turned_in</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface font-extrabold tracking-tight">
+            مهام وأوردرات الشفت وتسليم الورديات
+          </h1>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant pr-11 leading-relaxed">
+          إدارة أوردرات وملازم المدرسين والعملاء، عداد النسخ المطبوعة الحي، إرسال تنبيهات واتساب بنقرة واحدة، وتوليد تقرير استلام وتسليم الشفت بالكامل لعهدة الكاشير والماكينات.
+        </p>
+</div>
+<!-- Quick Action Buttons -->
+<div class="flex flex-wrap items-center gap-space-sm">
+<button class="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-surface-container-highest hover:bg-surface-bright text-primary font-body-sm text-body-sm font-semibold transition-all shadow-md active:scale-95" onclick="openHandoverModal()" type="button">
+<span class="material-symbols-outlined text-lg">fact_check</span>
+<span>تقرير تسليم الشفت</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-lg py-space-sm rounded-xl bg-primary hover:bg-primary-fixed text-on-primary font-body-sm text-body-sm font-bold shadow-lg shadow-primary/20 transition-all hover:shadow-primary/30 active:scale-95" onclick="openNewTaskModal()" type="button">
+<span class="material-symbols-outlined text-xl">add_circle</span>
+<span>+ أوردر طباعة جديد</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Live Shift Telemetry Metric Bar -->
+<section class="grid grid-cols-2 md:grid-cols-4 gap-space-md">
+<div class="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between relative overflow-hidden">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-tag text-label-tag tracking-wider uppercase">الأوردرات الجارية</span>
+<span class="material-symbols-outlined text-primary text-xl">print</span>
+</div>
+<div class="mt-space-sm flex items-baseline justify-between">
+<span class="font-headline-lg text-headline-lg text-on-surface font-bold font-mono">4</span>
+<span class="font-label-code text-label-code text-primary bg-primary/10 px-space-xs py-0.5 rounded-lg">3 قيد التنفيذ</span>
+</div>
+<div class="w-full bg-surface-container h-1 rounded-full mt-space-sm overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 75%"></div>
+</div>
+</div>
+<div class="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between relative overflow-hidden">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-tag text-label-tag tracking-wider uppercase">النسخ المنجزة الوردية</span>
+<span class="material-symbols-outlined text-tertiary text-xl">layers</span>
+</div>
+<div class="mt-space-sm flex items-baseline justify-between">
+<span class="font-headline-lg text-headline-lg text-on-surface font-bold font-mono" id="totalShiftCopies">412</span>
+<span class="font-label-code text-label-code text-tertiary bg-tertiary/10 px-space-xs py-0.5 rounded-lg">هدف الشفت 500</span>
+</div>
+<div class="w-full bg-surface-container h-1 rounded-full mt-space-sm overflow-hidden">
+<div class="bg-tertiary h-full rounded-full" style="width: 82%"></div>
+</div>
+</div>
+<div class="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between relative overflow-hidden">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-tag text-label-tag tracking-wider uppercase">نقدية الدرج (الكاشير)</span>
+<span class="material-symbols-outlined text-primary text-xl">payments</span>
+</div>
+<div class="mt-space-sm flex items-baseline justify-between">
+<span class="font-headline-lg text-headline-lg text-on-surface font-bold font-mono">2,480 <span class="text-body-sm font-normal text-on-surface-variant">ج.م</span></span>
+<span class="font-label-code text-label-code text-primary bg-primary/10 px-space-xs py-0.5 rounded-lg">مطابق للفواتير</span>
+</div>
+<div class="w-full bg-surface-container h-1 rounded-full mt-space-sm overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 100%"></div>
+</div>
+</div>
+<div class="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between relative overflow-hidden">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-tag text-label-tag tracking-wider uppercase">كفاءة تشغيل الماكينات</span>
+<span class="material-symbols-outlined text-secondary text-xl">speed</span>
+</div>
+<div class="mt-space-sm flex items-baseline justify-between">
+<span class="font-headline-lg text-headline-lg text-on-surface font-bold font-mono">98.4%</span>
+<span class="font-label-code text-label-code text-secondary bg-secondary-container/20 px-space-xs py-0.5 rounded-lg">صفر أعطال</span>
+</div>
+<div class="w-full bg-surface-container h-1 rounded-full mt-space-sm overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 98%"></div>
+</div>
+</div>
+</section>
+<!-- Filter & Search Command Ribbon -->
+<section class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-space-md rounded-xl bg-surface-container-low p-space-sm shadow-md">
+<!-- Filter Tabs -->
+<div class="flex items-center gap-space-2xs overflow-x-auto pb-space-xs lg:pb-0 scrollbar-none" id="statusFilterTabs">
+<button class="px-space-md py-space-xs rounded-lg bg-surface-container-highest text-on-surface font-body-sm text-body-sm font-semibold transition-all" onclick="filterCategory('all', this)" type="button">
+        الكل <span class="font-label-code text-label-code mr-1 px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant">4</span>
+</button>
+<button class="px-space-md py-space-xs rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm font-medium transition-all" onclick="filterCategory('in_progress', this)" type="button">
+        الطلبات الجارية
+      </button>
+<button class="px-space-md py-space-xs rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm font-medium transition-all" onclick="filterCategory('printing', this)" type="button">
+        جاري الطباعة
+      </button>
+<button class="px-space-md py-space-xs rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm font-medium transition-all" onclick="filterCategory('pending', this)" type="button">
+        في قائمة الانتظار
+      </button>
+<button class="px-space-md py-space-xs rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm font-medium transition-all" onclick="filterCategory('ready', this)" type="button">
+        جاهز للتسليم
+      </button>
+<button class="px-space-md py-space-xs rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm font-medium transition-all" onclick="filterCategory('completed', this)" type="button">
+        المكتملة
+      </button>
+</div>
+<!-- Search Input -->
+<div class="relative min-w-[280px] lg:w-80">
+<span class="absolute inset-y-0 right-0 flex items-center pr-space-sm pointer-events-none text-on-surface-variant">
+<span class="material-symbols-outlined text-lg">search</span>
+</span>
+<input class="w-full pr-10 pl-space-md py-space-xs rounded-xl bg-surface-container-high text-on-surface placeholder:text-outline font-body-sm text-body-sm focus:bg-surface-container-highest focus:outline-none transition-all" id="orderSearchInput" onkeyup="searchOrders()" placeholder="بحث باسم العميل، المذكرة، الملاحظات..." type="text">
+</div>
+</section>
+<!-- Interactive Task Cards Container -->
+<div class="flex flex-col gap-space-md" id="ordersList">
+<!-- Card 1: Physics 1st Secondary - Printing (64%) -->
+<article class="order-card rounded-xl bg-surface-container-low p-space-md md:p-space-lg shadow-md flex flex-col gap-space-md transition-all hover:bg-surface-container duration-200" data-status="printing" data-title="مذكرة فيزياء أولى ثانوي - ترم أول أ/ محمد سامي">
+<div class="flex flex-col lg:flex-row lg:items-start justify-between gap-space-md">
+<!-- Order Header & Meta Info -->
+<div class="flex items-start gap-space-md min-w-0">
+<div class="p-space-xs rounded-xl bg-primary-container/20 text-primary mt-1 shrink-0">
+<span class="material-symbols-outlined text-2xl">auto_stories</span>
+</div>
+<div class="flex flex-col gap-space-2xs min-w-0">
+<div class="flex flex-wrap items-center gap-space-xs">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold truncate">
+                مذكرة فيزياء أولى ثانوي - ترم أول
+              </h2>
+<span class="px-space-xs py-0.5 rounded-full bg-primary/10 text-primary font-label-tag text-label-tag flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+                جاري الطباعة
+              </span>
+<span class="px-space-xs py-0.5 rounded-full bg-surface-container-highest text-tertiary font-label-code text-label-code flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">schedule</span>
+                الموعد: اليوم 6:00 م
+              </span>
+</div>
+<div class="flex flex-wrap items-center gap-x-space-md gap-y-1 font-body-sm text-body-sm text-on-surface-variant">
+<span>العميل / الأستاذ: <strong class="text-on-surface font-semibold">أ/ محمد سامي</strong></span>
+<span class="flex items-center gap-1 font-mono text-xs text-outline">
+<span class="material-symbols-outlined text-sm">phone</span>
+                01012345678
+              </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">content_cut</span>
+                التجليد: <span class="text-on-surface">سلك حلزوني 20مم + غلاف كريستال</span>
+</span>
+</div>
+<!-- Notes Capsule -->
+<div class="mt-space-2xs inline-flex items-center gap-space-xs px-space-sm py-1 rounded-lg bg-surface-container font-label-code text-label-code text-on-surface-variant max-w-fit">
+<span class="material-symbols-outlined text-sm text-tertiary">info</span>
+<span>ملاحظات: طباعة وجهين، الغلاف ملون كوشيه 250 جرام لامع، ورق داخلي 80 جرام أبيض فاخر</span>
+</div>
+</div>
+</div>
+<!-- Controls: Counter & Actions -->
+<div class="flex flex-wrap items-center justify-end gap-space-sm shrink-0">
+<!-- Live Counter Widget -->
+<div class="flex items-center rounded-xl bg-surface-container-high p-1 shadow-inner" id="counter-card-1">
+<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-container hover:bg-surface-container-highest text-on-surface font-mono font-bold transition-colors active:scale-90" onclick="adjustCount('c1', -1, 50)" type="button">
+              -1
+            </button>
+<div class="px-space-md flex flex-col items-center">
+<div class="font-mono text-body-lg font-bold text-on-surface">
+<span class="text-primary font-bold" id="c1-current">32</span> / <span id="c1-target">50</span>
+</div>
+<span class="font-label-tag text-label-tag text-outline">نسخة مطبوعة</span>
+</div>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-container hover:bg-surface-container-highest text-on-surface font-mono font-bold transition-colors active:scale-90 ml-1" onclick="adjustCount('c1', 1, 50)" type="button">
+              +1
+            </button>
+<button class="h-8 px-2 rounded-lg flex items-center justify-center bg-primary/20 hover:bg-primary/30 text-primary font-mono text-xs font-bold transition-colors active:scale-90 mr-1" onclick="adjustCount('c1', 5, 50)" type="button">
+              +5
+            </button>
+</div>
+<!-- Quick WhatsApp Link -->
+<a class="flex items-center gap-1.5 px-space-md py-space-xs rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 font-body-sm text-body-sm font-semibold transition-all" href="https://wa.me/201012345678?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%20%D8%A3%D8%B3%D8%AA%D8%A7%D8%B0%20%D9%85%D8%AD%D9%85%D8%AF%20%D8%B3%D8%A7%D9%85%D9%8A%D8%8C%20%D8%AA%D9%85%20%D8%A5%D9%86%D8%AC%D8%A7%D8%B2%20%D8%AC%D8%B2%D8%A1%20%D9%83%D8%A8%D9%8A%D8%B1%20%D9%85%D9%86%20%D9%85%D8%B0%D9%83%D8%B1%D8%A9%20%D8%A7%D9%84%D9%81%D9%8A%D8%B2%D9%8A%D8%A7%D8%A1%20%D9%88%D8%AC%D8%A7%D8%B1%D9%8A%20%D8%A7%D9%84%D8%AA%D8%AC%D9%84%D9%8A%D8%AF%20%D8%A7%D9%84%D8%AD%D9%84%D8%B2%D9%88%D9%86%D9%8A%20%D9%84%D9%84%D8%AA%D8%B3%D9%84%D9%8A%D9%85." target="_blank">
+<span class="material-symbols-outlined text-base">chat</span>
+<span>واتساب</span>
+</a>
+<!-- Context Actions -->
+<div class="flex items-center gap-1">
+<button class="p-space-xs rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" title="تعديل الأوردر" type="button">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+<button class="p-space-xs rounded-lg text-outline hover:text-error hover:bg-error-container/20 transition-colors" onclick="deleteTask(this)" title="حذف الأوردر" type="button">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Live Progress Bar Track -->
+<div class="flex flex-col gap-1.5 pt-space-xs">
+<div class="flex items-center justify-between font-label-code text-label-code">
+<span class="text-on-surface-variant">نسبة إنجاز الطباعة والتجليد</span>
+<span class="font-bold text-primary font-mono" id="c1-percent">64%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full transition-all duration-300" id="c1-bar" style="width: 64%"></div>
+</div>
+</div>
+</article>
+<!-- Card 2: Arabic School Booklets - Pending Queue (0%) -->
+<article class="order-card rounded-xl bg-surface-container-low p-space-md md:p-space-lg shadow-md flex flex-col gap-space-md transition-all hover:bg-surface-container duration-200" data-status="pending" data-title="ملازم لغة عربية - مراجعة ليلة الامتحان مدرسة الفتح">
+<div class="flex flex-col lg:flex-row lg:items-start justify-between gap-space-md">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="p-space-xs rounded-xl bg-tertiary/15 text-tertiary mt-1 shrink-0">
+<span class="material-symbols-outlined text-2xl">history_toggle_off</span>
+</div>
+<div class="flex flex-col gap-space-2xs min-w-0">
+<div class="flex flex-wrap items-center gap-space-xs">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold truncate">
+                ملازم لغة عربية - مراجعة ليلة الامتحان
+              </h2>
+<span class="px-space-xs py-0.5 rounded-full bg-tertiary/10 text-tertiary font-label-tag text-label-tag flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+                في قائمة الانتظار
+              </span>
+<span class="px-space-xs py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-label-code text-label-code flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">event</span>
+                الموعد: غداً 10:00 ص
+              </span>
+</div>
+<div class="flex flex-wrap items-center gap-x-space-md gap-y-1 font-body-sm text-body-sm text-on-surface-variant">
+<span>العميل: <strong class="text-on-surface font-semibold">مدرسة الفتح الخاصة</strong></span>
+<span class="flex items-center gap-1 font-mono text-xs text-outline">
+<span class="material-symbols-outlined text-sm">phone</span>
+                01198765432
+              </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">inventory_2</span>
+                التجليد: <span class="text-on-surface">دبوسين نصف للملزمة (Saddle Stitch)</span>
+</span>
+</div>
+<div class="mt-space-2xs inline-flex items-center gap-space-xs px-space-sm py-1 rounded-lg bg-surface-container font-label-code text-label-code text-on-surface-variant max-w-fit">
+<span class="material-symbols-outlined text-sm text-outline">info</span>
+<span>ملاحظات: ورق 70 جرام أبيض وجه وظهر، الترتيب بالرزم كل 20 نسخة مربوطة</span>
+</div>
+</div>
+</div>
+<div class="flex flex-wrap items-center justify-end gap-space-sm shrink-0">
+<!-- Counter Widget -->
+<div class="flex items-center rounded-xl bg-surface-container-high p-1 shadow-inner" id="counter-card-2">
+<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-container hover:bg-surface-container-highest text-on-surface font-mono font-bold transition-colors active:scale-90" onclick="adjustCount('c2', -1, 120)" type="button">
+              -1
+            </button>
+<div class="px-space-md flex flex-col items-center">
+<div class="font-mono text-body-lg font-bold text-on-surface">
+<span class="text-tertiary font-bold" id="c2-current">0</span> / <span id="c2-target">120</span>
+</div>
+<span class="font-label-tag text-label-tag text-outline">نسخة مطبوعة</span>
+</div>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-container hover:bg-surface-container-highest text-on-surface font-mono font-bold transition-colors active:scale-90 ml-1" onclick="adjustCount('c2', 1, 120)" type="button">
+              +1
+            </button>
+<button class="h-8 px-2 rounded-lg flex items-center justify-center bg-tertiary/20 hover:bg-tertiary/30 text-tertiary font-mono text-xs font-bold transition-colors active:scale-90 mr-1" onclick="adjustCount('c2', 10, 120)" type="button">
+              +10
+            </button>
+</div>
+<a class="flex items-center gap-1.5 px-space-md py-space-xs rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 font-body-sm text-body-sm font-semibold transition-all" href="https://wa.me/201198765432?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%20%D8%A5%D8%AF%D8%A7%D8%B1%D8%A9%20%D9%85%D8%AF%D8%B1%D8%B3%D8%A9%20%D8%A7%D9%84%D9%81%D8%AA%D8%AD%D8%8C%20%D8%A3%D9%88%D8%B1%D8%AF%D8%B1%20%D9%85%D9%84%D8%A7%D8%B2%D9%85%20%D8%A7%D9%84%D9%84%D8%BA%D8%A9%20%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9%20%D9%81%D9%8A%20%D8%AC%D8%AF%D9%88%D9%84%20%D8%A7%D9%84%D8%B7%D8%A8%D8%A7%D8%B9%D8%A9%20%D8%AD%D8%A7%D9%84%D9%8A%D8%A7%D9%8B." target="_blank">
+<span class="material-symbols-outlined text-base">chat</span>
+<span>واتساب</span>
+</a>
+<div class="flex items-center gap-1">
+<button class="p-space-xs rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" title="تعديل" type="button">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+<button class="p-space-xs rounded-lg text-outline hover:text-error hover:bg-error-container/20 transition-colors" onclick="deleteTask(this)" title="حذف" type="button">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-1.5 pt-space-xs">
+<div class="flex items-center justify-between font-label-code text-label-code">
+<span class="text-on-surface-variant">نسبة إنجاز الطباعة والتجليد</span>
+<span class="font-bold text-tertiary font-mono" id="c2-percent">0%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="h-full bg-tertiary rounded-full transition-all duration-300" id="c2-bar" style="width: 0%"></div>
+</div>
+</div>
+</article>
+<!-- Card 3: Graduation Certificates - Ready for Pickup (100%) -->
+<article class="order-card rounded-xl bg-surface-container-low p-space-md md:p-space-lg shadow-md flex flex-col gap-space-md transition-all hover:bg-surface-container duration-200" data-status="ready" data-title="شهادات تقدير خريجين دورة حاسب أكاديمية المستقبل">
+<div class="flex flex-col lg:flex-row lg:items-start justify-between gap-space-md">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="p-space-xs rounded-xl bg-emerald-500/20 text-emerald-400 mt-1 shrink-0">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="flex flex-col gap-space-2xs min-w-0">
+<div class="flex flex-wrap items-center gap-space-xs">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold truncate">
+                شهادات تقدير خريجين دورة حاسب
+              </h2>
+<span class="px-space-xs py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-label-tag text-label-tag flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                جاهز للتسليم
+              </span>
+<span class="px-space-xs py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-label-code text-label-code flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">done_all</span>
+                الموعد: اليوم 3:00 م (جاهز)
+              </span>
+</div>
+<div class="flex flex-wrap items-center gap-x-space-md gap-y-1 font-body-sm text-body-sm text-on-surface-variant">
+<span>العميل: <strong class="text-on-surface font-semibold">أكاديمية المستقبل</strong></span>
+<span class="flex items-center gap-1 font-mono text-xs text-outline">
+<span class="material-symbols-outlined text-sm">phone</span>
+                01234567890
+              </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">verified</span>
+                التجليد: <span class="text-on-surface">سلوفان حراري لامع A4 فاخر مع بصمة ذهبية</span>
+</span>
+</div>
+<div class="mt-space-2xs inline-flex items-center gap-space-xs px-space-sm py-1 rounded-lg bg-surface-container font-label-code text-label-code text-on-surface-variant max-w-fit">
+<span class="material-symbols-outlined text-sm text-emerald-400">task_alt</span>
+<span>ملاحظات: طباعة ورق كوشيه ألوان عالي الجودة 300 جرام، تم التغليف في كيس مانع للرطوبة</span>
+</div>
+</div>
+</div>
+<div class="flex flex-wrap items-center justify-end gap-space-sm shrink-0">
+<!-- Counter Widget Full -->
+<div class="flex items-center rounded-xl bg-surface-container-high p-1 shadow-inner" id="counter-card-3">
+<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-container hover:bg-surface-container-highest text-on-surface font-mono font-bold transition-colors active:scale-90" onclick="adjustCount('c3', -1, 25)" type="button">
+              -1
+            </button>
+<div class="px-space-md flex flex-col items-center">
+<div class="font-mono text-body-lg font-bold text-emerald-400">
+<span id="c3-current">25</span> / <span id="c3-target">25</span>
+</div>
+<span class="font-label-tag text-label-tag text-outline">مكتمل بالكامل</span>
+</div>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-container hover:bg-surface-container-highest text-on-surface font-mono font-bold transition-colors active:scale-90 ml-1" onclick="adjustCount('c3', 1, 25)" type="button">
+              +1
+            </button>
+</div>
+<a class="flex items-center gap-1.5 px-space-md py-space-xs rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-body-sm text-body-sm font-semibold transition-all shadow-md shadow-emerald-900/30" href="https://wa.me/201234567890?text=%D8%A3%D9%87%D9%84%D8%A7%D9%8B%20%D8%A8%D9%83%D9%85%20%D9%81%D9%8A%20%D9%85%D9%83%D8%AA%D8%A8%D8%A9%20%D9%83%D9%88%D8%A8%D9%8A%20%D9%83%D8%A7%D8%AA%D8%8C%20%D8%AA%D9%85%D8%AA%20%D8%B7%D8%A8%D8%A7%D8%B9%D8%A9%20%D9%88%D8%AA%D8%BA%D9%84%D9%8A%D9%81%20%D8%B4%D9%87%D8%A7%D8%AF%D8%A7%D8%AA%20%D8%A7%D9%84%D8%AA%D9%82%D8%AF%D9%8A%D8%B1%20%D8%A8%D9%86%D8%AC%D8%A7%D8%AD%20%D9%88%D9%87%D9%8A%20%D8%AC%D8%A7%D9%87%D8%B2%D8%A9%20%D9%84%D9%84%D8%A7%D8%B3%D8%AA%D9%84%D8%A7%D9%85%20%D8%A7%D9%84%D8%A2%D9%86." target="_blank">
+<span class="material-symbols-outlined text-base">send</span>
+<span>إشعار بالاستلام</span>
+</a>
+<div class="flex items-center gap-1">
+<button class="p-space-xs rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" title="تعديل" type="button">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+<button class="p-space-xs rounded-lg text-outline hover:text-error hover:bg-error-container/20 transition-colors" onclick="deleteTask(this)" title="حذف" type="button">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-1.5 pt-space-xs">
+<div class="flex items-center justify-between font-label-code text-label-code">
+<span class="text-on-surface-variant">نسبة إنجاز الطباعة والتجليد</span>
+<span class="font-bold text-emerald-400 font-mono" id="c3-percent">100%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 rounded-full transition-all duration-300" id="c3-bar" style="width: 100%"></div>
+</div>
+</div>
+</article>
+<!-- Card 4: Urgent National IDs & Notary Scans -->
+<article class="order-card rounded-xl bg-surface-container-low p-space-md md:p-space-lg shadow-md flex flex-col gap-space-md transition-all hover:bg-surface-container duration-200" data-status="in_progress" data-title="بطاقات رقم قومي ومستندات مكتب توثيق محاماة مستعجل">
+<div class="flex flex-col lg:flex-row lg:items-start justify-between gap-space-md">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="p-space-xs rounded-xl bg-secondary-container/30 text-secondary mt-1 shrink-0">
+<span class="material-symbols-outlined text-2xl">badge</span>
+</div>
+<div class="flex flex-col gap-space-2xs min-w-0">
+<div class="flex flex-wrap items-center gap-space-xs">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold truncate">
+                تصوير بطاقات رقم قومي ومستندات توثيق A5
+              </h2>
+<span class="px-space-xs py-0.5 rounded-full bg-secondary-container/20 text-secondary font-label-tag text-label-tag flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+                أوردر مستعجل
+              </span>
+<span class="px-space-xs py-0.5 rounded-full bg-surface-container-highest text-tertiary font-label-code text-label-code flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">timer</span>
+                تسليم فوري بعد 15 دقيقة
+              </span>
+</div>
+<div class="flex flex-wrap items-center gap-x-space-md gap-y-1 font-body-sm text-body-sm text-on-surface-variant">
+<span>العميل: <strong class="text-on-surface font-semibold">مكتب الأستاذ طارق المحامي</strong></span>
+<span class="flex items-center gap-1 font-mono text-xs text-outline">
+<span class="material-symbols-outlined text-sm">phone</span>
+                01099887766
+              </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">flip</span>
+                النوع: <span class="text-on-surface">بطاقات A5 وجهين مع توفير الحبر + توكيلات</span>
+</span>
+</div>
+<div class="mt-space-2xs inline-flex items-center gap-space-xs px-space-sm py-1 rounded-lg bg-surface-container font-label-code text-label-code text-on-surface-variant max-w-fit">
+<span class="material-symbols-outlined text-sm text-primary">filter_center_focus</span>
+<span>ملاحظات: تعتيم الخلفيات وتبييض نصوص الأختام، تصغير كارت الرقم القومي بالمقاس القانوني الدقيق</span>
+</div>
+</div>
+</div>
+<div class="flex flex-wrap items-center justify-end gap-space-sm shrink-0">
+<div class="flex items-center rounded-xl bg-surface-container-high p-1 shadow-inner" id="counter-card-4">
+<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-container hover:bg-surface-container-highest text-on-surface font-mono font-bold transition-colors active:scale-90" onclick="adjustCount('c4', -1, 15)" type="button">
+              -1
+            </button>
+<div class="px-space-md flex flex-col items-center">
+<div class="font-mono text-body-lg font-bold text-on-surface">
+<span class="text-primary font-bold" id="c4-current">10</span> / <span id="c4-target">15</span>
+</div>
+<span class="font-label-tag text-label-tag text-outline">بطاقة منجزة</span>
+</div>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-container hover:bg-surface-container-highest text-on-surface font-mono font-bold transition-colors active:scale-90 ml-1" onclick="adjustCount('c4', 1, 15)" type="button">
+              +1
+            </button>
+<button class="h-8 px-2 rounded-lg flex items-center justify-center bg-primary/20 hover:bg-primary/30 text-primary font-mono text-xs font-bold transition-colors active:scale-90 mr-1" onclick="adjustCount('c4', 5, 15)" type="button">
+              +5
+            </button>
+</div>
+<a class="flex items-center gap-1.5 px-space-md py-space-xs rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 font-body-sm text-body-sm font-semibold transition-all" href="https://wa.me/201099887766?text=%D8%A3%D9%88%D8%B1%D8%AF%D8%B1%20%D8%A7%D9%84%D8%A8%D8%B7%D8%A7%D9%82%D8%A7%D8%AA%20%D9%88%D8%A7%D9%84%D9%85%D8%B3%D8%AA%D9%86%D8%AF%D8%A7%D8%AA%20%D8%AC%D8%A7%D8%B1%D9%8A%20%D8%AA%D8%B5%D9%88%D9%8A%D8%B1%D9%87%20%D8%B9%D9%84%D9%89%20%D9%85%D8%A7%D9%83%D9%8A%D9%86%D8%A9%20Canon%20%D9%88%D8%B3%D9%8A%D9%83%D9%88%D9%86%20%D8%AC%D8%A7%D9%87%D8%B2%D8%A7%D9%8B%20%D8%AE%D9%84%D8%A7%D9%84%20%D8%AF%D9%82%D8%A7%D8%A6%D9%82." target="_blank">
+<span class="material-symbols-outlined text-base">chat</span>
+<span>واتساب</span>
+</a>
+<div class="flex items-center gap-1">
+<button class="p-space-xs rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" title="تعديل" type="button">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+<button class="p-space-xs rounded-lg text-outline hover:text-error hover:bg-error-container/20 transition-colors" onclick="deleteTask(this)" title="حذف" type="button">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-1.5 pt-space-xs">
+<div class="flex items-center justify-between font-label-code text-label-code">
+<span class="text-on-surface-variant">نسبة إنجاز الطباعة والتجليد</span>
+<span class="font-bold text-primary font-mono" id="c4-percent">67%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full transition-all duration-300" id="c4-bar" style="width: 67%"></div>
+</div>
+</div>
+</article>
+</div>
+<!-- Bottom Shift Handover Sticky Audit Strip -->
+<section class="rounded-xl bg-surface-container-low p-space-md shadow-lg flex flex-col md:flex-row items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">badge</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm font-bold text-on-surface">استلام الوردية القادمة: كابتن مازن (شفت الليل)</span>
+<span class="font-label-code text-label-code text-on-surface-variant">تبدأ الساعة 11:00 م • تم تأكيد توفر الورق وأحبار CMYK</span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm w-full md:w-auto justify-end">
+<button class="flex-1 md:flex-none flex items-center justify-center gap-space-xs px-space-md py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm font-semibold transition-colors" onclick="openHandoverModal()" type="button">
+<span class="material-symbols-outlined text-base">print</span>
+<span>طباعة ملخص الشيفت A4</span>
+</button>
+<button class="flex-1 md:flex-none flex items-center justify-center gap-space-xs px-space-md py-space-xs rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-body-sm text-body-sm font-bold transition-all shadow-md shadow-emerald-900/30" onclick="sendWhatsappToNextShift()" type="button">
+<span class="material-symbols-outlined text-base">forward_to_inbox</span>
+<span>إرسال تقرير الواتساب لكابتن الوردية</span>
+</button>
+</div>
+</section>
+<!-- Modal 1: Shift Handover Dialog -->
+<div class="fixed inset-0 z-50 hidden flex items-center justify-center p-space-md bg-surface-container-lowest/80 backdrop-blur-sm" id="handoverModal">
+<div class="relative w-full max-w-xl rounded-xl bg-surface-container p-space-lg shadow-2xl flex flex-col gap-space-md max-h-[90vh] overflow-y-auto">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs text-primary">
+<span class="material-symbols-outlined text-2xl">receipt_long</span>
+<h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">ملخص تسليم وتسلم الشيفت</h3>
+</div>
+<button class="p-1 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high" onclick="closeHandoverModal()" type="button">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-space-sm font-body-sm text-body-sm">
+<div class="p-space-sm rounded-lg bg-surface-container-high flex justify-between items-center">
+<span class="text-on-surface-variant">مسؤول الورد الحالية:</span>
+<strong class="text-on-surface font-semibold">أحمد المشرف (الفرع الرئيسي)</strong>
+</div>
+<div class="p-space-sm rounded-lg bg-surface-container-high flex justify-between items-center">
+<span class="text-on-surface-variant">الوردية التالية:</span>
+<strong class="text-primary font-semibold">مازن الورداني (كابتن الشفت الليلي)</strong>
+</div>
+<div class="grid grid-cols-2 gap-space-sm">
+<div class="p-space-sm rounded-lg bg-surface-container-low flex flex-col">
+<span class="text-on-surface-variant text-label-tag">الأوردرات الجاهزة للتسليم:</span>
+<span class="font-mono text-headline-sm font-bold text-emerald-400">1 أوردر (جاهز)</span>
+</div>
+<div class="p-space-sm rounded-lg bg-surface-container-low flex flex-col">
+<span class="text-on-surface-variant text-label-tag">أوردرات قيد الطباعة:</span>
+<span class="font-mono text-headline-sm font-bold text-primary">3 أوردرات</span>
+</div>
+</div>
+<div class="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-1">
+<label class="text-on-surface-variant font-label-tag">ملاحظات تسليم خاصة لكابتن الشفت:</label>
+<textarea class="w-full h-20 p-space-xs rounded bg-surface-container-high text-on-surface font-body-sm text-body-sm focus:outline-none" placeholder="مثال: تم شحن رول السلوفان اللامع 100م، ماكينة زيروكس 2 تحتاج تنظيف حساس الدرج الثاني..."></textarea>
+</div>
+<div class="p-space-sm rounded-lg bg-surface-container-high flex justify-between items-center">
+<span class="text-on-surface-variant">صافي نقدية الدرج الفعلي:</span>
+<span class="font-mono font-bold text-body-lg text-emerald-400">2,480.00 ج.م</span>
+</div>
+</div>
+<div class="flex items-center justify-end gap-space-sm pt-space-xs">
+<button class="px-space-md py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm font-medium" onclick="closeHandoverModal()" type="button">
+          إلغاء
+        </button>
+<button class="flex items-center gap-1 px-space-lg py-space-xs rounded-xl bg-primary hover:bg-primary-fixed text-on-primary font-body-sm font-bold shadow-lg shadow-primary/25" onclick="confirmShiftHandover()" type="button">
+<span class="material-symbols-outlined text-base">check_circle</span>
+<span>اعتماد وتسليم الشفت</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Modal 2: Create New Print Task -->
+<div class="fixed inset-0 z-50 hidden flex items-center justify-center p-space-md bg-surface-container-lowest/80 backdrop-blur-sm" id="newTaskModal">
+<div class="relative w-full max-w-xl rounded-xl bg-surface-container p-space-lg shadow-2xl flex flex-col gap-space-md max-h-[90vh] overflow-y-auto">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs text-primary">
+<span class="material-symbols-outlined text-2xl">post_add</span>
+<h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">إضافة أوردر طباعة جديد للشفت</h3>
+</div>
+<button class="p-1 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high" onclick="closeNewTaskModal()" type="button">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<form class="flex flex-col gap-space-sm" id="newTaskForm" onsubmit="handleCreateTask(event)">
+<div class="flex flex-col gap-1">
+<label class="font-label-tag text-label-tag text-on-surface-variant">عنوان المذكرة أو العمل</label>
+<input class="w-full px-space-sm py-space-xs rounded-xl bg-surface-container-high text-on-surface font-body-sm focus:outline-none" placeholder="مثال: مذكرة كيمياء تانية ثانوي أ/ عاطف" required="" type="text">
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
+<div class="flex flex-col gap-1">
+<label class="font-label-tag text-label-tag text-on-surface-variant">اسم العميل / المدرس</label>
+<input class="w-full px-space-sm py-space-xs rounded-xl bg-surface-container-high text-on-surface font-body-sm focus:outline-none" placeholder="أ/ عاطف النجار" required="" type="text">
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-tag text-label-tag text-on-surface-variant">رقم هاتف الواتساب</label>
+<input class="w-full px-space-sm py-space-xs rounded-xl bg-surface-container-high text-on-surface font-body-sm font-mono text-left focus:outline-none" dir="ltr" placeholder="010XXXXXXXX" required="" type="tel">
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-sm">
+<div class="flex flex-col gap-1">
+<label class="font-label-tag text-label-tag text-on-surface-variant">عدد النسخ المطلوب</label>
+<input class="w-full px-space-sm py-space-xs rounded-xl bg-surface-container-high text-on-surface font-body-sm font-mono focus:outline-none" min="1" required="" type="number" value="50">
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-tag text-label-tag text-on-surface-variant">نوع التجليد</label>
+<select class="w-full px-space-sm py-space-xs rounded-xl bg-surface-container-high text-on-surface font-body-sm focus:outline-none">
+<option>سلك حلزوني + غلاف شفاف</option>
+<option>دبوسين نصف (ملازم)</option>
+<option>تجليد حراري (غراء كعب)</option>
+<option>سلوفان حراري لامع A4</option>
+<option>بدون تجليد (فرط)</option>
+</select>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-tag text-label-tag text-on-surface-variant">موعد التسليم المتوقع</label>
+<input class="w-full px-space-sm py-space-xs rounded-xl bg-surface-container-high text-on-surface font-body-sm focus:outline-none" placeholder="اليوم 8:00 م" type="text">
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-tag text-label-tag text-on-surface-variant">الملاحظات الفنية للطباعة</label>
+<textarea class="w-full p-space-xs rounded-xl bg-surface-container-high text-on-surface font-body-sm focus:outline-none" placeholder="نوع الورق، طباعة ملونة أم أبيض وأسود، خامة الغلاف..." rows="2"></textarea>
+</div>
+<div class="flex items-center justify-end gap-space-sm pt-space-xs mt-2">
+<button class="px-space-md py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm font-medium" onclick="closeNewTaskModal()" type="button">
+            إلغاء
+          </button>
+<button class="flex items-center gap-1 px-space-lg py-space-xs rounded-xl bg-primary hover:bg-primary-fixed text-on-primary font-body-sm font-bold shadow-lg shadow-primary/25" type="submit">
+<span class="material-symbols-outlined text-base">save</span>
+<span>حفظ وإرسال لماكينة الطباعة</span>
+</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<!-- Logic for Dynamic Counter, Filters, Modals, and WhatsApp Integration -->
+<script>
+  function adjustCount(id, delta, maxTarget) {
+    const curElem = document.getElementById(id + '-current');
+    const pctElem = document.getElementById(id + '-percent');
+    const barElem = document.getElementById(id + '-bar');
+    
+    if (!curElem) return;
+    
+    let current = parseInt(curElem.innerText, 10) || 0;
+    current = Math.max(0, Math.min(maxTarget, current + delta));
+    curElem.innerText = current;
+
+    const percentage = Math.round((current / maxTarget) * 100);
+    if (pctElem) pctElem.innerText = percentage + '%';
+    if (barElem) barElem.style.width = percentage + '%';
+
+    // Update global counter in telemetry summary
+    const shiftCopiesEl = document.getElementById('totalShiftCopies');
+    if (shiftCopiesEl && delta !== 0) {
+      let shiftTotal = parseInt(shiftCopiesEl.innerText, 10) || 412;
+      shiftTotal = Math.max(0, shiftTotal + delta);
+      shiftCopiesEl.innerText = shiftTotal;
+    }
+  }
+
+  function filterCategory(category, btnElement) {
+    // Toggle active tab style
+    const container = document.getElementById('statusFilterTabs');
+    if (container) {
+      Array.from(container.children).forEach(btn => {
+        btn.className = 'px-space-md py-space-xs rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm font-medium transition-all';
+      });
+    }
+    if (btnElement) {
+      btnElement.className = 'px-space-md py-space-xs rounded-lg bg-surface-container-highest text-on-surface font-body-sm text-body-sm font-semibold transition-all';
+    }
+
+    const cards = document.querySelectorAll('.order-card');
+    cards.forEach(card => {
+      const cardStatus = card.getAttribute('data-status');
+      if (category === 'all') {
+        card.style.display = 'flex';
+      } else if (category === 'in_progress') {
+        if (cardStatus === 'printing' || cardStatus === 'in_progress' || cardStatus === 'pending') {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      } else if (cardStatus === category) {
+        card.style.display = 'flex';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+
+  function searchOrders() {
+    const query = (document.getElementById('orderSearchInput')?.value || '').trim().toLowerCase();
+    const cards = document.querySelectorAll('.order-card');
+    cards.forEach(card => {
+      const text = card.getAttribute('data-title')?.toLowerCase() || '';
+      if (!query || text.includes(query)) {
+        card.style.display = 'flex';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+
+  function refreshTasks() {
+    const timer = document.getElementById('syncTimer');
+    if (timer) {
+      timer.innerText = 'الآن';
+      setTimeout(() => { timer.innerText = '5 ثواني'; }, 5000);
+    }
+  }
+
+  function deleteTask(button) {
+    if (confirm('هل أنت متأكد من حذف هذا الأوردر من مهام الشفت؟')) {
+      const card = button.closest('.order-card');
+      if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.95)';
+        setTimeout(() => card.remove(), 200);
+      }
+    }
+  }
+
+  function openHandoverModal() {
+    const modal = document.getElementById('handoverModal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function closeHandoverModal() {
+    const modal = document.getElementById('handoverModal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function openNewTaskModal() {
+    const modal = document.getElementById('newTaskModal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function closeNewTaskModal() {
+    const modal = document.getElementById('newTaskModal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function handleCreateTask(e) {
+    e.preventDefault();
+    closeNewTaskModal();
+    alert('تم تسجيل الأوردر بنجاح وإرساله لطابور الطباعة المباشر!');
+  }
+
+  function confirmShiftHandover() {
+    closeHandoverModal();
+    alert('تم توثيق تقرير الشفت بنجاح وإرسال النسخة المؤرشفة للسيرفر المحاسبي.');
+  }
+
+  function sendWhatsappToNextShift() {
+    const text = encodeURIComponent(
+      "تقرير تسليم وردية مطبعة كوبي كات:\n" +
+      "• الوردية المسلمة: الوردية المسائية A (أحمد المشرف)\n" +
+      "• الوردية المستلمة: الوردية الليلية B (كابتن مازن)\n" +
+      "• عدد النسخ المطبوعة: 412 نسخة\n" +
+      "• عهدة الكاشير بالدرج: 2,480 ج.م\n" +
+      "• الأوردرات الجاهزة: 1 أوردر\n" +
+      "• الأوردرات المتبقية قيد التنفيذ: 3 أوردرات\n" +
+      "الماكينات تعمل بحالة ممتازة ومخزون الورق جاهز."
+    );
+    window.open(`https://wa.me/201000000000?text=${text}`, '_blank');
+  }
+</script></main></div></body></html>

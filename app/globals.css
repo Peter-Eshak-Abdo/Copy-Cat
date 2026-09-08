@@ -1,5 +1,70 @@
 @import "tailwindcss";
 
+@theme {
+  --color-surface: #0f131d;
+  --color-surface-dim: #0f131d;
+  --color-surface-bright: #353944;
+  --color-surface-container-lowest: #0a0e18;
+  --color-surface-container-low: #171b26;
+  --color-surface-container: #1c1f2a;
+  --color-surface-container-high: #262a35;
+  --color-surface-container-highest: #313540;
+  --color-on-surface: #dfe2f1;
+  --color-on-surface-variant: #bcc9cd;
+  --color-inverse-surface: #dfe2f1;
+  --color-inverse-on-surface: #2c303b;
+  --color-outline: #869397;
+  --color-outline-variant: #3d494c;
+  --color-surface-tint: #4cd7f6;
+  --color-primary: #4cd7f6;
+  --color-on-primary: #003640;
+  --color-primary-container: #06b6d4;
+  --color-on-primary-container: #00424f;
+  --color-inverse-primary: #00687a;
+  --color-secondary: #ffb2b7;
+  --color-on-secondary: #67001b;
+  --color-secondary-container: #b50036;
+  --color-on-secondary-container: #ffc2c4;
+  --color-tertiary: #ffb95f;
+  --color-on-tertiary: #472a00;
+  --color-tertiary-container: #e79400;
+  --color-on-tertiary-container: #563400;
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+  --color-primary-fixed: #acedff;
+  --color-primary-fixed-dim: #4cd7f6;
+  --color-secondary-fixed: #ffdadb;
+  --color-secondary-fixed-dim: #ffb2b7;
+  --color-tertiary-fixed: #ffddb8;
+  --color-tertiary-fixed-dim: #ffb95f;
+
+  --spacing-space-3xs: 0.125rem;
+  --spacing-space-2xs: 0.25rem;
+  --spacing-space-xs: 0.5rem;
+  --spacing-space-sm: 0.75rem;
+  --spacing-space-md: 1rem;
+  --spacing-space-lg: 1.5rem;
+  --spacing-space-xl: 2rem;
+  --spacing-space-2xl: 3rem;
+  --spacing-space-3xl: 4rem;
+  --spacing-gutter-desktop: 1.5rem;
+  --spacing-gutter-mobile: 0.75rem;
+  --spacing-sidebar-width-expanded: 16rem;
+  --spacing-sidebar-width-collapsed: 4.5rem;
+
+  --font-label-tag: "Inter", sans-serif;
+  --font-label-code: "JetBrains Mono", monospace;
+  --font-headline-sm: "Inter", sans-serif;
+  --font-headline-md: "Inter", sans-serif;
+  --font-headline-lg: "Inter", sans-serif;
+  --font-body-sm: "Inter", sans-serif;
+  --font-body-md: "Inter", sans-serif;
+  --font-body-lg: "Inter", sans-serif;
+  --font-display-hero: "Inter", sans-serif;
+}
+
 @variant light (&:where(.light, .light *));
 @variant dark (&:where(.dark, .dark *));
 
@@ -171,48 +236,41 @@ html.light {
     color: #0369a1 !important;
   }
 
-  /* 6. PRESERVE PURE WHITE TEXT ON PRIMARY/SOLID COLORED ELEMENTS */
-  & .bg-blue-600,
-  & .bg-blue-700,
-  & .bg-emerald-600,
-  & .bg-emerald-700,
-  & .bg-red-600,
-  & .bg-amber-600,
-  & .bg-purple-600,
-  & [class*="bg-blue-600"],
-  & [class*="bg-emerald-600"],
-  & [class*="bg-linear-to-r"],
-  & [class*="bg-gradient-to-r"],
-  & [class*="bg-gradient-to-tr"] {
+  /* 6. PRESERVE PURE WHITE TEXT ON PRIMARY BUTTONS & SOLID COLORED CONTROLS ONLY */
+  & button.bg-blue-600,
+  & a.bg-blue-600,
+  & button.bg-blue-700,
+  & a.bg-blue-700,
+  & button.bg-emerald-600,
+  & a.bg-emerald-600,
+  & button.bg-emerald-700,
+  & a.bg-emerald-700,
+  & button.bg-red-600,
+  & a.bg-red-600,
+  & button.bg-amber-600,
+  & a.bg-amber-600,
+  & button.bg-purple-600,
+  & a.bg-purple-600,
+  & .btn-primary,
+  & .btn-success,
+  & .btn-danger {
     color: #ffffff !important;
 
-    & .text-white,
-    & span:not([class*="bg-white"] *),
-    & a:not([class*="bg-white"] *),
-    & p,
-    & h1,
-    & h2,
-    & h3,
-    & h4,
+    & span,
     & svg {
       color: #ffffff !important;
     }
   }
 
-  & [class*="bg-blue-600"] button.bg-white,
-  & [class*="bg-blue-600"] button.bg-white span,
-  & [class*="bg-blue-600"] a.bg-white,
-  & [class*="bg-blue-600"] a.bg-white span {
-    color: #1e3a8a !important;
-  }
-
-  & .bg-linear-to-r {
-    background: linear-gradient(to right, #1d4ed8, #4338ca, #0284c7) !important;
+  /* Dark hero banners (preserve contrast in light mode) */
+  & .admin-dark-banner,
+  & .admin-dark-banner h1,
+  & .admin-dark-banner h2,
+  & .admin-dark-banner h3 {
     color: #ffffff !important;
   }
-
-  & .bg-linear-to-r a {
-    color: #e0f2fe !important;
+  & .admin-dark-banner p {
+    color: #cbd5e1 !important;
   }
 
   /* 7. Floating Action Bars */

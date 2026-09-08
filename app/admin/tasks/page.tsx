@@ -1,19 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  CheckSquare,
-  Plus,
-  Trash2,
-  Edit2,
-  Clock,
-  Phone,
-  MessageCircle,
-  FileText,
-  Copy,
-  CheckCircle2,
-  Search,
-} from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/components/toast-provider";
 import { safeOpenUrl } from "@/lib/utils";
 
@@ -36,46 +23,72 @@ const STORAGE_KEY = "copycat_tasks_v1";
 
 const INITIAL_TASKS: PrintTask[] = [
   {
-    id: "task-1",
-    title: "مذكرة فيزياء أولى ثانوي - ترم أول",
-    customerName: "أ/ محمد سامي",
+    id: "ORD-9421",
+    title: "مذكرة ليلة الامتحان 1 ث - وش وظهر + غلاف كوشيه سلوفان",
+    customerName: "أ. محمود عبد العال (فيزياء)",
     phone: "01012345678",
     deadline: "اليوم 6:00 م",
-    totalCopies: 50,
-    completedCopies: 32,
+    totalCopies: 80,
+    completedCopies: 48,
     bindingType: "تجليد سلك حلزوني 20مم + غلاف كريستال",
     notes: "طباعة وجهين، الغلاف ملون 250 جرام",
     status: "in_progress",
     createdAt: Date.now() - 1000 * 60 * 180,
   },
   {
-    id: "task-2",
-    title: "ملازم لغة عربية - مراجعة ليلة الامتحان",
-    customerName: "مدرسة الفتح",
+    id: "ORD-9420",
+    title: "شهادات تقدير أوائل الطلبة A4 ورق مقوى 250g ألوان",
+    customerName: "مدرسة النصر الإعدادية",
     phone: "01198765432",
     deadline: "غداً 10:00 ص",
-    totalCopies: 120,
-    completedCopies: 0,
-    bindingType: "دبوسين نص",
-    notes: "ورق 70 جرام أبيض وجه وظهر",
-    status: "pending",
-    createdAt: Date.now() - 1000 * 60 * 90,
-  },
-  {
-    id: "task-3",
-    title: "شهادات تقدير خريجين دورة حاسب",
-    customerName: "أكاديمية المستقبل",
-    phone: "01234567890",
-    deadline: "اليوم 3:00 م",
-    totalCopies: 25,
-    completedCopies: 25,
+    totalCopies: 150,
+    completedCopies: 150,
     bindingType: "سلوفان حراري لامع A4",
-    notes: "طباعة ورق كوشيه ألوان عالي الجودة",
+    notes: "ورق كوشيه 250 جرام ألوان عالي الجودة",
     status: "ready",
-    createdAt: Date.now() - 1000 * 60 * 300,
+    createdAt: Date.now() - 1000 * 60 * 240,
     completedAt: Date.now() - 1000 * 60 * 30,
   },
+  {
+    id: "ORD-9419",
+    title: "سحب سكانر وتجهيز بطاقات رقم قومي A5 وش وظهر",
+    customerName: "عميل نقدي (مكتب توثيق)",
+    phone: "01210571251",
+    deadline: "اليوم 3:00 م",
+    totalCopies: 12,
+    completedCopies: 12,
+    bindingType: "بدون تجليد (فرط)",
+    notes: "تجهيز وقص وتسليف فوري",
+    status: "completed",
+    createdAt: Date.now() - 1000 * 60 * 360,
+    completedAt: Date.now() - 1000 * 60 * 60,
+  },
 ];
+
+function getCurrentShift(date: Date = new Date()): {
+  id: "morning" | "evening";
+  label: string;
+  timeRange: string;
+} {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const totalMinutes = hours * 60 + minutes;
+
+  // 8:30 AM to 4:00 PM
+  if (totalMinutes >= 510 && totalMinutes < 960) {
+    return {
+      id: "morning",
+      label: "شفت صباحي",
+      timeRange: "08:30 ص - 04:00 م",
+    };
+  }
+
+  return {
+    id: "evening",
+    label: "شفت مسائي",
+    timeRange: "04:00 م - 12:00 ص",
+  };
+}
 
 export default function TasksHandoverPage() {
   const toast = useToast();
@@ -85,10 +98,9 @@ export default function TasksHandoverPage() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         try {
-          return JSON.parse(saved);
-        } catch {
-          // ignore error
-        }
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch {}
       }
     }
     return INITIAL_TASKS;
@@ -106,35 +118,55 @@ export default function TasksHandoverPage() {
   const [formCustomerName, setFormCustomerName] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formDeadline, setFormDeadline] = useState("");
-  const [formTotalCopies, setFormTotalCopies] = useState<number>(10);
+  const [formTotalCopies, setFormTotalCopies] = useState<number>(50);
   const [formCompletedCopies, setFormCompletedCopies] = useState<number>(0);
-  const [formBindingType, setFormBindingType] = useState("");
+  const [formBindingType, setFormBindingType] = useState("سلك حلزوني + غلاف شفاف");
   const [formNotes, setFormNotes] = useState("");
-  const [formStatus, setFormStatus] = useState<PrintTask["status"]>("pending");
+  const [formStatus, setFormStatus] = useState<PrintTask["status"]>("in_progress");
 
   // Shift Handover Modal State
   const [isHandoverModalOpen, setIsHandoverModalOpen] = useState(false);
 
-  // Persist to localStorage
+  // Current dynamic shift
+  const currentShift = getCurrentShift();
+
+  // Sync to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    } catch {
-      // ignore
-    }
+      window.dispatchEvent(new Event("storage"));
+    } catch {}
   }, [tasks]);
+
+  // Telemetry Calculations
+  const activeTasksCount = useMemo(
+    () => tasks.filter((t) => t.status === "in_progress" || t.status === "pending").length,
+    [tasks]
+  );
+  const inProgressCount = useMemo(
+    () => tasks.filter((t) => t.status === "in_progress").length,
+    [tasks]
+  );
+  const totalCompletedCopies = useMemo(
+    () => tasks.reduce((sum, t) => sum + (t.completedCopies || 0), 0),
+    [tasks]
+  );
+  const shiftCashVal = useMemo(
+    () => tasks.reduce((sum, t) => sum + (t.completedCopies || 0) * 1.5, 0),
+    [tasks]
+  );
 
   const openAddModal = () => {
     setEditingTask(null);
     setFormTitle("");
     setFormCustomerName("");
     setFormPhone("");
-    setFormDeadline("");
-    setFormTotalCopies(10);
+    setFormDeadline("اليوم 6:00 م");
+    setFormTotalCopies(50);
     setFormCompletedCopies(0);
-    setFormBindingType("");
+    setFormBindingType("سلك حلزوني + غلاف شفاف");
     setFormNotes("");
-    setFormStatus("pending");
+    setFormStatus("in_progress");
     setIsModalOpen(true);
   };
 
@@ -146,7 +178,7 @@ export default function TasksHandoverPage() {
     setFormDeadline(task.deadline);
     setFormTotalCopies(task.totalCopies);
     setFormCompletedCopies(task.completedCopies);
-    setFormBindingType(task.bindingType || "");
+    setFormBindingType(task.bindingType || "سلك حلزوني + غلاف شفاف");
     setFormNotes(task.notes || "");
     setFormStatus(task.status);
     setIsModalOpen(true);
@@ -155,16 +187,15 @@ export default function TasksHandoverPage() {
   const handleSaveTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim() || !formCustomerName.trim()) {
-      toast.warning("بيانات ناقصة", "يرجى كتابة عنوان العمل واسم العميل / الأستاذ");
+      toast.warning("بيانات ناقصة", "يرجى كتابة عنوان العمل واسم العميل / المدرس");
       return;
     }
 
     if (editingTask) {
-      // Update
       const updated = tasks.map((t) => {
         if (t.id === editingTask.id) {
-          const isNowCompleted = formStatus === "completed" || formCompletedCopies >= formTotalCopies;
-          const targetStatus: PrintTask["status"] = isNowCompleted ? "completed" : formStatus;
+          const isDone = formStatus === "completed" || formCompletedCopies >= formTotalCopies;
+          const targetStatus: PrintTask["status"] = isDone ? "completed" : formStatus;
           return {
             ...t,
             title: formTitle.trim(),
@@ -173,10 +204,10 @@ export default function TasksHandoverPage() {
             deadline: formDeadline.trim(),
             totalCopies: Number(formTotalCopies) || 1,
             completedCopies: Number(formCompletedCopies) || 0,
-            bindingType: formBindingType.trim(),
+            bindingType: formBindingType,
             notes: formNotes.trim(),
             status: targetStatus,
-            completedAt: isNowCompleted ? t.completedAt || Date.now() : undefined,
+            completedAt: isDone ? t.completedAt || Date.now() : undefined,
           };
         }
         return t;
@@ -184,30 +215,31 @@ export default function TasksHandoverPage() {
       setTasks(updated);
       toast.success("تم التعديل", "تم حفظ تعديلات المهمة بنجاح");
     } else {
-      // Create new
       const newTask: PrintTask = {
-        id: `task-${Date.now()}`,
+        id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
         title: formTitle.trim(),
         customerName: formCustomerName.trim(),
         phone: formPhone.trim(),
         deadline: formDeadline.trim(),
         totalCopies: Number(formTotalCopies) || 1,
         completedCopies: Number(formCompletedCopies) || 0,
-        bindingType: formBindingType.trim(),
+        bindingType: formBindingType,
         notes: formNotes.trim(),
         status: formStatus,
         createdAt: Date.now(),
       };
       setTasks([newTask, ...tasks]);
-      toast.success("تمت الإضافة", "تمت إضافة مهمة الطباعة الجديدة");
+      toast.success("تم تسجيل الأوردر", "تمت إضافة أوردر الطباعة الجديد إلى شفت اليوم بنجاح");
     }
 
     setIsModalOpen(false);
   };
 
   const handleDeleteTask = (id: string) => {
-    setTasks(tasks.filter((t) => t.id !== id));
-    toast.success("تم الحذف", "تم حذف المهمة من السجل");
+    if (confirm("هل أنت متأكد من حذف هذا الأوردر من مهام الشفت؟")) {
+      setTasks(tasks.filter((t) => t.id !== id));
+      toast.success("تم الحذف", "تم حذف المهمة من سجل الشفت");
+    }
   };
 
   const handleUpdateCopies = (id: string, delta: number) => {
@@ -232,12 +264,19 @@ export default function TasksHandoverPage() {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === id) {
-          const isCompleted = t.status === "completed";
+          const nextStatus: PrintTask["status"] =
+            t.status === "pending"
+              ? "in_progress"
+              : t.status === "in_progress"
+              ? "ready"
+              : t.status === "ready"
+              ? "completed"
+              : "in_progress";
           return {
             ...t,
-            status: isCompleted ? "in_progress" : "completed",
-            completedCopies: isCompleted ? Math.max(0, t.totalCopies - 1) : t.totalCopies,
-            completedAt: isCompleted ? undefined : Date.now(),
+            status: nextStatus,
+            completedCopies: nextStatus === "completed" ? t.totalCopies : t.completedCopies,
+            completedAt: nextStatus === "completed" ? Date.now() : undefined,
           };
         }
         return t;
@@ -245,13 +284,12 @@ export default function TasksHandoverPage() {
     );
   };
 
-  const handleWhatsAppChat = (phone: string, title: string, customerName: string) => {
-    if (!phone) {
+  const handleWhatsAppNotify = (task: PrintTask) => {
+    if (!task.phone) {
       toast.warning("لا يوجد رقم", "لم يتم تسجيل رقم هاتف لهذا العميل");
       return;
     }
-    // Clean phone number (Egypt format)
-    let cleanPhone = phone.replace(/[^0-9]/g, "");
+    let cleanPhone = task.phone.replace(/[^0-9]/g, "");
     if (cleanPhone.startsWith("0")) {
       cleanPhone = "20" + cleanPhone.substring(1);
     } else if (!cleanPhone.startsWith("20") && cleanPhone.length === 10) {
@@ -259,7 +297,7 @@ export default function TasksHandoverPage() {
     }
 
     const message = encodeURIComponent(
-      `أهلاً أ/ ${customerName}، بخصوص طلبك (${title}) في مركز الطباعة والتصوير: الطلب جاهز للتسليم، يسعدنا تشريفك.`
+      `أهلاً أ/ ${task.customerName}، يسعدنا إبلاغك بأن طلبك (${task.title}) في مكتبة كوبي كات Copy Cat أصبح جاهزاً للاستلام. نتشرف بزيارتك في أي وقت.`
     );
     safeOpenUrl(`https://wa.me/${cleanPhone}?text=${message}`);
   };
@@ -269,19 +307,20 @@ export default function TasksHandoverPage() {
     const matchesSearch =
       t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (t.notes && t.notes.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesStatus =
       statusFilter === "all"
         ? true
         : statusFilter === "active"
-        ? t.status !== "completed"
+        ? t.status === "in_progress" || t.status === "pending"
         : t.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
 
-  // Handover Report Text Generator
+  // Shift Handover Report Text
   const generateHandoverReport = () => {
     const nowStr = new Date().toLocaleString("ar-EG", {
       dateStyle: "full",
@@ -291,35 +330,40 @@ export default function TasksHandoverPage() {
     const completedList = tasks.filter((t) => t.status === "completed" || t.status === "ready");
     const activeList = tasks.filter((t) => t.status === "in_progress" || t.status === "pending");
 
-    let report = `📋 *تقرير تسليم شيفت المكتبة (Copy-Cat)*\n`;
+    let report = `📋 *تقرير تسليم شفت مطبعة كوبي كات Copy Cat*\n`;
     report += `🕒 التاريخ والوقت: ${nowStr}\n`;
-    report += `------------------------------------\n\n`;
+    report += `🏢 الوردية: ${currentShift.label} (${currentShift.timeRange})\n`;
+    report += `📄 إجمالي النسخ المطبوعة: ${totalCompletedCopies.toLocaleString("ar-EG")} ورقة\n`;
+    report += `💵 نقدية الدرج المحصلة: ${shiftCashVal.toLocaleString("ar-EG")} ج.م\n`;
+    report += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     report += `✅ *الطلبات المنجزة والجاهزة للتسليم (${completedList.length}):*\n`;
     if (completedList.length === 0) {
-      report += `• لا توجد طلبات منجزة في هذا الشيفت.\n`;
+      report += `• لا توجد طلبات مكتملة في هذه الوردية.\n`;
     } else {
       completedList.forEach((t, i) => {
-        report += `${i + 1}. ${t.title} - ${t.customerName} (${t.totalCopies} نسخة) [${
-          t.status === "ready" ? "جاهز للتسليم" : "تم تسليمه"
+        report += `${i + 1}. #${t.id} - ${t.title} [${t.customerName}] (${t.totalCopies} نسخة) [${
+          t.status === "ready" ? "جاهز للتسليم" : "تم التسليم"
         }]\n`;
       });
     }
 
-    report += `\n⏳ *الطلبات الجارية والمتبقية للشيفت القادم (${activeList.length}):*\n`;
+    report += `\n⏳ *الطلبات المتبقية للشفت القادم (${activeList.length}):*\n`;
     if (activeList.length === 0) {
-      report += `• الشيفت القادم خالٍ من أي أعمال متأخرة! 🎉\n`;
+      report += `• الشفت القادم خالٍ من أي أعمال متأخرة! 🎉\n`;
     } else {
       activeList.forEach((t, i) => {
-        report += `${i + 1}. *${t.title}* - أ/ ${t.customerName}\n`;
-        report += `   - الإنجاز: تم طباعة ${t.completedCopies} من إجمالي ${t.totalCopies} نسخة\n`;
+        report += `${i + 1}. *#${t.id} - ${t.title}* [${t.customerName}]\n`;
+        report += `   - الإنجاز: تم طباعة ${t.completedCopies} من ${t.totalCopies} نسخة (${Math.round(
+          (t.completedCopies / t.totalCopies) * 100
+        )}%)\n`;
         report += `   - موعد التسليم: ${t.deadline || "غير محدد"}\n`;
-        if (t.bindingType) report += `   - التشطيب: ${t.bindingType}\n`;
+        if (t.bindingType) report += `   - التجليد: ${t.bindingType}\n`;
         if (t.notes) report += `   - ملاحظات: ${t.notes}\n`;
       });
     }
 
-    report += `\n------------------------------------\nبالتوفيق لزملاء الشيفت القادم! 👍`;
+    report += `\n━━━━━━━━━━━━━━━━━━━━━\nالماكينات في حالة ممتازة ومخزون الورق متوفر. بالتوفيق لزملاء الشفت القادم! 👍`;
     return report;
   };
 
@@ -327,78 +371,190 @@ export default function TasksHandoverPage() {
     const text = generateHandoverReport();
     try {
       await navigator.clipboard.writeText(text);
-      toast.success("تم النسخ", "تم نسخ تقرير الشيفت كاملاً بصيغة واتساب جاهزة");
+      toast.success("تم النسخ", "تم نسخ تقرير تسليم الشفت بصيغة واتساب جاهزة");
     } catch {
       toast.error("خطأ", "تعذر نسخ التقرير");
     }
   };
 
+  const sendWhatsappHandover = () => {
+    const text = encodeURIComponent(generateHandoverReport());
+    window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
+  };
+
   return (
-    <div className="space-y-6" dir="rtl">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card/60 backdrop-blur-md p-6 rounded-2xl border border-border shadow-sm">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-primary/10 text-primary rounded-xl">
-              <CheckSquare className="w-6 h-6" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">مهام الطباعة وتسليم الشيفت (Tasks & Shift Handover)</h1>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            إدارة أوردرات وملازم المدرسين والعملاء، عداد النسخ المطبوعة الحي، إرسال رسائل واتساب سريعة، وتوليد تقرير تسليم الشيفت بضغطة زر.
-          </p>
+    <div className="flex flex-col w-full pb-space-3xl gap-space-lg text-right" dir="rtl">
+      {/* Breadcrumbs & Quick Telemetry Header */}
+      <div className="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs">
+        <div className="flex items-center gap-space-xs font-label-code text-label-code text-on-surface-variant">
+          <span className="material-symbols-outlined text-sm text-primary">precision_manufacturing</span>
+          <span>وحدة الإنتاج والتشغيل السريع</span>
+          <span>/</span>
+          <span className="text-primary font-semibold">{currentShift.label}</span>
+          <span className="inline-flex items-center px-space-xs py-0.5 rounded-full bg-surface-container-high text-tertiary text-label-tag">
+            <span className="w-1.5 h-1.5 rounded-full bg-tertiary ml-1.5 animate-pulse"></span>
+            الإنتاج نشط ({currentShift.timeRange})
+          </span>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setIsHandoverModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition shadow-sm text-sm"
-          >
-            <FileText className="w-4 h-4" />
-            تقرير تسليم الشيفت
-          </button>
-
-          <button
-            onClick={openAddModal}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition shadow-md text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            أوردر طباعة جديد
-          </button>
+        <div className="flex items-center gap-space-sm">
+          <span className="font-label-code text-label-code text-on-surface-variant">
+            إجمالي الأوردرات المسجلة: <strong className="text-on-surface font-mono">{tasks.length} أوردر</strong>
+          </span>
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-card/70 backdrop-blur-md p-4 rounded-2xl border border-border">
+      {/* Main Hero Card: Page Title & Global Shift Actions */}
+      <section className="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg shadow-xl border border-surface-container-high/40">
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-primary/5 blur-3xl pointer-events-none"></div>
+        <div className="absolute -bottom-24 right-1/3 w-80 h-80 rounded-full bg-primary-container/10 blur-3xl pointer-events-none"></div>
+        <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-space-lg">
+          <div className="flex flex-col gap-space-2xs max-w-2xl">
+            <div className="flex items-center gap-space-sm">
+              <div className="p-space-xs rounded-xl bg-primary-container/15 text-primary">
+                <span className="material-symbols-outlined text-2xl">assignment_turned_in</span>
+              </div>
+              <h1 className="font-headline-lg text-headline-lg text-on-surface font-extrabold tracking-tight">
+                مهام وأوردرات الشفت وتسليم الورديات
+              </h1>
+            </div>
+            <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+              إدارة أوردرات وملازم المدرسين والعملاء، عداد النسخ المطبوعة الحي، إرسال تنبيهات واتساب بنقرة واحدة، وتوليد تقرير استلام وتسليم الشفت بالكامل لعهدة الكاشير والماكينات.
+            </p>
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="flex flex-wrap items-center gap-space-sm">
+            <button
+              className="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-surface-container-highest hover:bg-surface-bright text-primary font-body-sm text-body-sm font-semibold transition-all shadow-md active:scale-95 cursor-pointer"
+              onClick={() => setIsHandoverModalOpen(true)}
+              type="button"
+            >
+              <span className="material-symbols-outlined text-lg">fact_check</span>
+              <span>تقرير تسليم الشفت</span>
+            </button>
+            <button
+              className="flex items-center gap-space-xs px-space-lg py-space-sm rounded-xl bg-primary hover:bg-primary-fixed text-on-primary font-body-sm text-body-sm font-bold shadow-lg shadow-primary/20 transition-all hover:shadow-primary/30 active:scale-95 cursor-pointer"
+              onClick={openAddModal}
+              type="button"
+            >
+              <span className="material-symbols-outlined text-xl">add_circle</span>
+              <span>+ أوردر طباعة جديد</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Live Shift Telemetry Metric Bar */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-space-md">
+        <div className="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between relative overflow-hidden border border-surface-container-high/40">
+          <div className="flex items-center justify-between text-on-surface-variant">
+            <span className="font-label-tag text-label-tag tracking-wider uppercase">الأوردرات الجارية</span>
+            <span className="material-symbols-outlined text-primary text-xl">print</span>
+          </div>
+          <div className="mt-space-sm flex items-baseline justify-between">
+            <span className="font-headline-lg text-headline-lg text-on-surface font-bold font-mono">
+              {activeTasksCount}
+            </span>
+            <span className="font-label-code text-label-code text-primary bg-primary/10 px-space-xs py-0.5 rounded-lg">
+              {inProgressCount} قيد التنفيذ
+            </span>
+          </div>
+          <div className="w-full bg-surface-container h-1 rounded-full mt-space-sm overflow-hidden">
+            <div
+              className="bg-primary h-full rounded-full transition-all"
+              style={{ width: `${tasks.length ? (activeTasksCount / tasks.length) * 100 : 0}%` }}
+            ></div>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between relative overflow-hidden border border-surface-container-high/40">
+          <div className="flex items-center justify-between text-on-surface-variant">
+            <span className="font-label-tag text-label-tag tracking-wider uppercase">النسخ المنجزة بالشفت</span>
+            <span className="material-symbols-outlined text-tertiary text-xl">layers</span>
+          </div>
+          <div className="mt-space-sm flex items-baseline justify-between">
+            <span className="font-headline-lg text-headline-lg text-on-surface font-bold font-mono">
+              {totalCompletedCopies.toLocaleString("ar-EG")}
+            </span>
+            <span className="font-label-code text-label-code text-tertiary bg-tertiary/10 px-space-xs py-0.5 rounded-lg">
+              {currentShift.label}
+            </span>
+          </div>
+          <div className="w-full bg-surface-container h-1 rounded-full mt-space-sm overflow-hidden">
+            <div className="bg-tertiary h-full rounded-full" style={{ width: "85%" }}></div>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between relative overflow-hidden border border-surface-container-high/40">
+          <div className="flex items-center justify-between text-on-surface-variant">
+            <span className="font-label-tag text-label-tag tracking-wider uppercase">نقدية الدرج المحصلة</span>
+            <span className="material-symbols-outlined text-primary text-xl">payments</span>
+          </div>
+          <div className="mt-space-sm flex items-baseline justify-between">
+            <span className="font-headline-lg text-headline-lg text-on-surface font-bold font-mono">
+              {shiftCashVal.toLocaleString("ar-EG")}{" "}
+              <span className="text-body-sm font-normal text-on-surface-variant">ج.م</span>
+            </span>
+            <span className="font-label-code text-label-code text-primary bg-primary/10 px-space-xs py-0.5 rounded-lg">
+              مطابق للنسخ
+            </span>
+          </div>
+          <div className="w-full bg-surface-container h-1 rounded-full mt-space-sm overflow-hidden">
+            <div className="bg-primary h-full rounded-full" style={{ width: "100%" }}></div>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between relative overflow-hidden border border-surface-container-high/40">
+          <div className="flex items-center justify-between text-on-surface-variant">
+            <span className="font-label-tag text-label-tag tracking-wider uppercase">كفاءة تشغيل الماكينات</span>
+            <span className="material-symbols-outlined text-secondary text-xl">speed</span>
+          </div>
+          <div className="mt-space-sm flex items-baseline justify-between">
+            <span className="font-headline-lg text-headline-lg text-on-surface font-bold font-mono">98.4%</span>
+            <span className="font-label-code text-label-code text-secondary bg-secondary-container/20 px-space-xs py-0.5 rounded-lg">
+              4 ماكينات جاهزة
+            </span>
+          </div>
+          <div className="w-full bg-surface-container h-1 rounded-full mt-space-sm overflow-hidden">
+            <div className="bg-secondary-container h-full rounded-full" style={{ width: "98%" }}></div>
+          </div>
+        </div>
+      </section>
+
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-space-sm bg-surface-container-low p-space-sm rounded-xl border border-surface-container-high/40 shadow-sm">
         {/* Search */}
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative w-full md:w-80">
+          <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">
+            search
+          </span>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="بحث باسم العمل، العميل، الملاحظات..."
-            className="w-full pr-9 pl-4 py-2 rounded-xl bg-background border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            placeholder="بحث باسم العمل، العميل، رقم الأوردر..."
+            className="w-full pr-9 pl-4 py-2 rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none focus:ring-2 focus:ring-primary border border-surface-container-high"
           />
         </div>
 
         {/* Status Filter Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-muted/40 rounded-xl text-xs w-full sm:w-auto overflow-x-auto">
+        <div className="flex items-center gap-1 p-1 bg-surface-container-lowest rounded-xl overflow-x-auto w-full md:w-auto border border-surface-container-high/50">
           {[
             { key: "all", label: "الكل" },
             { key: "active", label: "الطلبات الجارية" },
             { key: "pending", label: "في الانتظار" },
             { key: "in_progress", label: "جاري الطباعة" },
             { key: "ready", label: "جاهز للتسليم" },
-            { key: "completed", label: "المكتملة" },
+            { key: "completed", label: "تم التسليم" },
           ].map((tab) => (
             <button
               key={tab.key}
               onClick={() => setStatusFilter(tab.key)}
-              className={`px-3 py-1.5 rounded-lg font-medium transition whitespace-nowrap ${
+              type="button"
+              className={`px-space-md py-space-xs rounded-lg font-body-sm text-body-sm whitespace-nowrap transition-all cursor-pointer ${
                 statusFilter === tab.key
-                  ? "bg-background text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-surface-container-highest text-primary font-bold shadow-xs"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container"
               }`}
             >
               {tab.label}
@@ -407,198 +563,159 @@ export default function TasksHandoverPage() {
         </div>
       </div>
 
-      {/* Tasks List */}
-      <div className="space-y-4">
+      {/* Orders List / Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-space-md">
         {filteredTasks.length === 0 ? (
-          <div className="bg-card/40 border border-dashed border-border rounded-2xl p-12 text-center text-muted-foreground">
-            <CheckSquare className="w-10 h-10 mx-auto opacity-30 mb-2" />
-            <p className="text-base font-medium">لا توجد طلبات تطابق هذا البحث</p>
-            <p className="text-xs mt-1">أضف أوردرات جديدة أو غيّر خيارات التصفية</p>
+          <div className="col-span-full p-space-3xl rounded-xl bg-surface-container-low border border-dashed border-surface-container-high text-center text-on-surface-variant flex flex-col items-center justify-center gap-space-xs">
+            <span className="material-symbols-outlined text-4xl opacity-40">inventory_2</span>
+            <p className="font-headline-sm text-headline-sm font-semibold text-on-surface">
+              لا توجد طلبات تطابق هذا البحث
+            </p>
+            <p className="font-body-sm text-body-sm">أضف أوردرات جديدة أو قم بتغيير خيارات التصفية بالأعلى</p>
           </div>
         ) : (
           filteredTasks.map((task) => {
             const progress = Math.min(100, Math.round((task.completedCopies / task.totalCopies) * 100));
-            const isDone = task.status === "completed";
-
             return (
               <div
                 key={task.id}
-                className={`group p-5 rounded-2xl border transition-all duration-200 bg-card/80 backdrop-blur-md shadow-xs ${
-                  isDone
-                    ? "opacity-60 border-border/40 bg-muted/20"
-                    : task.status === "ready"
-                    ? "border-emerald-500/40 hover:border-emerald-500"
-                    : "border-border hover:border-primary/40"
-                }`}
+                className="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low border border-surface-container-high/40 shadow-md hover:border-primary/40 transition-all gap-space-sm"
               >
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                  {/* Info Left */}
-                  <div className="flex items-start gap-3.5 flex-1">
-                    <button
-                      onClick={() => handleToggleStatus(task.id)}
-                      className={`mt-1 p-1 rounded-lg border transition ${
-                        isDone
-                          ? "bg-emerald-600 border-emerald-600 text-white"
-                          : "border-muted-foreground/40 hover:border-primary text-transparent"
-                      }`}
-                      title={isDone ? "تحديد كغير مكتمل" : "تحديد كمكتمل"}
-                    >
-                      <CheckCircle2 className="w-5 h-5" />
-                    </button>
+                {/* Card Header */}
+                <div className="flex items-start justify-between gap-space-xs">
+                  <div className="flex flex-col gap-1">
+                    <span className="font-label-code text-label-code text-primary font-bold">
+                      #{task.id}
+                    </span>
+                    <h3 className="font-headline-sm text-body-lg font-bold text-on-surface line-clamp-2 leading-snug">
+                      {task.title}
+                    </h3>
+                  </div>
+                  <span
+                    onClick={() => handleToggleStatus(task.id)}
+                    className={`inline-flex items-center gap-1 px-space-xs py-space-2xs rounded-full font-label-tag text-label-tag cursor-pointer select-none transition-all ${
+                      task.status === "in_progress"
+                        ? "bg-primary/15 text-primary border border-primary/30"
+                        : task.status === "ready"
+                        ? "bg-secondary-container/20 text-secondary border border-secondary-container/40"
+                        : task.status === "completed"
+                        ? "bg-surface-container-highest text-on-surface-variant"
+                        : "bg-surface-container text-tertiary border border-tertiary/30"
+                    }`}
+                    title="اضغط لتغيير الحالة فورياً"
+                  >
+                    {task.status === "in_progress" && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+                    )}
+                    {task.status === "in_progress"
+                      ? "جاري الطباعة"
+                      : task.status === "ready"
+                      ? "جاهز للتسليم"
+                      : task.status === "completed"
+                      ? "تم التسليم"
+                      : "في الانتظار"}
+                  </span>
+                </div>
 
-                    <div className="space-y-1.5 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3
-                          className={`font-bold text-base text-foreground ${
-                            isDone ? "line-through text-muted-foreground" : ""
-                          }`}
-                        >
-                          {task.title}
-                        </h3>
-
-                        {/* Status Badge */}
-                        <span
-                          className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
-                            task.status === "completed"
-                              ? "bg-muted text-muted-foreground"
-                              : task.status === "ready"
-                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                              : task.status === "in_progress"
-                              ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
-                              : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                          }`}
-                        >
-                          {task.status === "completed"
-                            ? "مكتمل ومسلّم"
-                            : task.status === "ready"
-                            ? "جاهز للتسليم"
-                            : task.status === "in_progress"
-                            ? "جاري الطباعة"
-                            : "في قائمة الانتظار"}
-                        </span>
-
-                        {task.deadline && (
-                          <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-lg">
-                            <Clock className="w-3 h-3" />
-                            الموعد: {task.deadline}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Customer & Specs */}
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span className="font-semibold text-foreground">العميل / الأستاذ: {task.customerName}</span>
-
-                        {task.phone && (
-                          <span className="flex items-center gap-1" dir="ltr">
-                            <Phone className="w-3 h-3 text-primary" />
-                            {task.phone}
-                          </span>
-                        )}
-
-                        {task.bindingType && (
-                          <span className="bg-primary/5 text-primary px-2 py-0.5 rounded-md font-medium">
-                            التجليد: {task.bindingType}
-                          </span>
-                        )}
-                      </div>
-
-                      {task.notes && (
-                        <p className="text-xs text-muted-foreground/90 bg-muted/30 p-2 rounded-lg border border-border/40 inline-block mt-1">
-                          ملاحظات: {task.notes}
-                        </p>
-                      )}
+                {/* Details Meta */}
+                <div className="flex flex-col gap-1 text-on-surface-variant font-body-sm text-body-sm py-1 border-y border-surface-container-high/40">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-on-surface">العميل / المدرس:</span>
+                    <span className="font-semibold text-primary">{task.customerName}</span>
+                  </div>
+                  {task.deadline && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span>موعد التسليم:</span>
+                      <span className="font-label-code">{task.deadline}</span>
                     </div>
+                  )}
+                  {task.bindingType && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span>التجليد والتشطيب:</span>
+                      <span className="text-on-surface">{task.bindingType}</span>
+                    </div>
+                  )}
+                  {task.notes && (
+                    <p className="text-xs text-on-surface-variant bg-surface-container p-1.5 rounded-lg mt-1 italic line-clamp-2">
+                      {task.notes}
+                    </p>
+                  )}
+                </div>
+
+                {/* Progress bar & Counter Adjuster */}
+                <div className="flex flex-col gap-space-2xs">
+                  <div className="flex items-center justify-between text-xs font-label-code">
+                    <span className="text-on-surface-variant">
+                      تم طباعة: {task.completedCopies} / {task.totalCopies} نسخة
+                    </span>
+                    <span className="font-bold text-primary">{progress}%</span>
+                  </div>
+                  <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-primary h-full rounded-full transition-all duration-300"
+                      style={{ width: `${progress}%` }}
+                    ></div>
                   </div>
 
-                  {/* Counter & Controls Right */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-3 lg:pt-0 border-t lg:border-t-0 border-border">
-                    {/* Live Copies Counter */}
-                    <div className="flex items-center gap-2 bg-muted/40 p-1.5 rounded-xl border border-border">
+                  {/* Counter Buttons */}
+                  <div className="flex items-center justify-between pt-1">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleUpdateCopies(task.id, -5)}
+                        className="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-xs font-bold"
+                        title="-5 نسخ"
+                      >
+                        -5
+                      </button>
                       <button
                         onClick={() => handleUpdateCopies(task.id, -1)}
-                        disabled={task.completedCopies <= 0}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-background hover:bg-muted font-bold text-foreground disabled:opacity-30 transition text-sm shadow-xs"
-                        title="طرح نسخة (-1)"
+                        className="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-xs font-bold"
+                        title="-1 نسخة"
                       >
                         -1
                       </button>
-
-                      <div className="text-center px-2 min-w-[90px]">
-                        <div className="text-sm font-bold text-foreground">
-                          {task.completedCopies} / {task.totalCopies}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">نسخة مطبوعة</div>
-                      </div>
-
                       <button
                         onClick={() => handleUpdateCopies(task.id, 1)}
-                        disabled={task.completedCopies >= task.totalCopies}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-background hover:bg-muted font-bold text-foreground disabled:opacity-30 transition text-sm shadow-xs"
-                        title="إضافة نسخة (+1)"
+                        className="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-xs font-bold text-primary"
+                        title="+1 نسخة"
                       >
                         +1
                       </button>
-
                       <button
                         onClick={() => handleUpdateCopies(task.id, 5)}
-                        disabled={task.completedCopies >= task.totalCopies}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 hover:bg-primary/20 font-bold text-primary disabled:opacity-30 transition text-xs shadow-xs"
-                        title="إضافة 5 نسخ (+5)"
+                        className="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-xs font-bold text-primary"
+                        title="+5 نسخ"
                       >
                         +5
                       </button>
                     </div>
 
-                    {/* Quick WhatsApp button */}
-                    {task.phone && (
-                      <button
-                        onClick={() => handleWhatsAppChat(task.phone || "", task.title, task.customerName)}
-                        className="flex items-center gap-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition shadow-xs"
-                        title="مراسلة العميل واتساب"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        واتساب
-                      </button>
-                    )}
-
-                    {/* Edit & Delete */}
+                    {/* Action icons */}
                     <div className="flex items-center gap-1">
+                      {task.phone && (
+                        <button
+                          onClick={() => handleWhatsAppNotify(task)}
+                          className="p-1.5 rounded-lg bg-surface-container hover:bg-surface-bright text-primary transition-colors cursor-pointer"
+                          title="إرسال إشعار واتساب للعميل"
+                        >
+                          <span className="material-symbols-outlined text-base">chat</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => openEditModal(task)}
-                        className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition"
-                        title="تعديل الأوردر"
+                        className="p-1.5 rounded-lg bg-surface-container hover:bg-surface-bright text-on-surface transition-colors cursor-pointer"
+                        title="تعديل تفاصيل الأوردر"
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <span className="material-symbols-outlined text-base">edit</span>
                       </button>
                       <button
                         onClick={() => handleDeleteTask(task.id)}
-                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition"
+                        className="p-1.5 rounded-lg bg-surface-container hover:bg-error/20 text-on-surface-variant hover:text-error transition-colors cursor-pointer"
                         title="حذف الأوردر"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <span className="material-symbols-outlined text-base">delete</span>
                       </button>
                     </div>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="mt-3.5 pt-2 border-t border-border/30">
-                  <div className="flex justify-between items-center text-[11px] text-muted-foreground mb-1">
-                    <span>نسبة إنجاز الطباعة</span>
-                    <span className="font-semibold">{progress}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${
-                        progress === 100
-                          ? "bg-emerald-500"
-                          : progress > 50
-                          ? "bg-blue-500"
-                          : "bg-primary"
-                      }`}
-                      style={{ width: `${progress}%` }}
-                    />
                   </div>
                 </div>
               </div>
@@ -607,148 +724,172 @@ export default function TasksHandoverPage() {
         )}
       </div>
 
-      {/* Add / Edit Task Modal */}
+      {/* Modal: New / Edit Task */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="p-5 border-b border-border flex items-center justify-between">
-              <h2 className="text-lg font-bold text-foreground">
-                {editingTask ? "تعديل أوردر الطباعة" : "إضافة أوردر طباعة جديد"}
-              </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-surface-container-low border border-surface-container-high rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-surface-container-high">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-xl">assignment</span>
+                <h3 className="font-bold text-lg text-on-surface">
+                  {editingTask ? "تعديل أوردر الطباعة" : "تسجيل أوردر طباعة جديد للشفت"}
+                </h3>
+              </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-lg"
+                className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container-high"
               >
-                ✕
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            <form onSubmit={handleSaveTask} className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">عنوان المذكرة أو الأوردر *</label>
+            <form onSubmit={handleSaveTask} className="flex flex-col gap-space-sm">
+              <div className="flex flex-col gap-1">
+                <label className="font-label-tag text-label-tag text-on-surface-variant">
+                  عنوان المذكرة أو العمل *
+                </label>
                 <input
                   type="text"
                   required
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder="مثال: مذكرة أحياء ثانوية عامة - الفصل الأول"
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  placeholder="مثال: مذكرة كيمياء تانية ثانوي أ/ عاطف"
+                  className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none focus:ring-2 focus:ring-primary border border-surface-container-high"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">اسم العميل / الأستاذ *</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
+                <div className="flex flex-col gap-1">
+                  <label className="font-label-tag text-label-tag text-on-surface-variant">
+                    اسم العميل / المدرس *
+                  </label>
                   <input
                     type="text"
                     required
                     value={formCustomerName}
                     onChange={(e) => setFormCustomerName(e.target.value)}
-                    placeholder="أ/ أحمد إبراهيم"
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="أ/ عاطف النجار"
+                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none focus:ring-2 focus:ring-primary border border-surface-container-high"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">رقم الهاتف (للواتساب)</label>
+                <div className="flex flex-col gap-1">
+                  <label className="font-label-tag text-label-tag text-on-surface-variant">
+                    رقم هاتف الواتساب
+                  </label>
                   <input
-                    type="text"
+                    type="tel"
+                    dir="ltr"
                     value={formPhone}
                     onChange={(e) => setFormPhone(e.target.value)}
                     placeholder="010XXXXXXXX"
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    dir="ltr"
+                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm font-mono text-left focus:outline-none focus:ring-2 focus:ring-primary border border-surface-container-high"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">إجمالي النسخ المطلوبة</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-space-sm">
+                <div className="flex flex-col gap-1">
+                  <label className="font-label-tag text-label-tag text-on-surface-variant">
+                    عدد النسخ المطلوب
+                  </label>
                   <input
                     type="number"
                     min="1"
+                    required
                     value={formTotalCopies}
-                    onChange={(e) => setFormTotalCopies(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    onChange={(e) => setFormTotalCopies(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm font-mono focus:outline-none border border-surface-container-high"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">النسخ المنجزة حالياً</label>
+                <div className="flex flex-col gap-1">
+                  <label className="font-label-tag text-label-tag text-on-surface-variant">
+                    النسخ المكتملة حالياً
+                  </label>
                   <input
                     type="number"
                     min="0"
-                    max={formTotalCopies}
                     value={formCompletedCopies}
-                    onChange={(e) => setFormCompletedCopies(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    onChange={(e) => setFormCompletedCopies(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm font-mono focus:outline-none border border-surface-container-high"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">موعد التسليم</label>
+                <div className="flex flex-col gap-1">
+                  <label className="font-label-tag text-label-tag text-on-surface-variant">
+                    موعد التسليم المتوقع
+                  </label>
                   <input
                     type="text"
                     value={formDeadline}
                     onChange={(e) => setFormDeadline(e.target.value)}
-                    placeholder="اليوم 5 م أو غداً"
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="اليوم 8:00 م"
+                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none border border-surface-container-high"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">نوع التجليد والتشطيب</label>
-                  <input
-                    type="text"
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
+                <div className="flex flex-col gap-1">
+                  <label className="font-label-tag text-label-tag text-on-surface-variant">
+                    نوع التجليد والتشطيب
+                  </label>
+                  <select
                     value={formBindingType}
                     onChange={(e) => setFormBindingType(e.target.value)}
-                    placeholder="سلك، بلاستيك، كعب حراري..."
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
+                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none border border-surface-container-high"
+                  >
+                    <option value="سلك حلزوني + غلاف شفاف">سلك حلزوني + غلاف شفاف</option>
+                    <option value="تجليد سلك معدني 20مم">تجليد سلك معدني 20مم</option>
+                    <option value="دبوسين نصف (ملازم)">دبوسين نصف (ملازم)</option>
+                    <option value="تجليد حراري (غراء كعب)">تجليد حراري (غراء كعب)</option>
+                    <option value="سلوفان حراري لامع A4">سلوفان حراري لامع A4</option>
+                    <option value="سلوفان حراري مط A4">سلوفان حراري مط A4</option>
+                    <option value="بدون تجليد (فرط)">بدون تجليد (فرط)</option>
+                  </select>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">الحالة</label>
+                <div className="flex flex-col gap-1">
+                  <label className="font-label-tag text-label-tag text-on-surface-variant">
+                    حالة المهمة
+                  </label>
                   <select
                     value={formStatus}
                     onChange={(e) => setFormStatus(e.target.value as PrintTask["status"])}
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none border border-surface-container-high"
                   >
-                    <option value="pending">في الانتظار</option>
-                    <option value="in_progress">جاري الطباعة</option>
-                    <option value="ready">جاهز للتسليم</option>
-                    <option value="completed">مكتمل ومسلّم</option>
+                    <option value="pending">في الانتظار (لم تبدأ)</option>
+                    <option value="in_progress">جاري الطباعة والتنفيذ</option>
+                    <option value="ready">جاهز للتسليم للعميل</option>
+                    <option value="completed">تم التسليم واستلام الحساب</option>
                   </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">ملاحظات ومواصفات إضافية</label>
+              <div className="flex flex-col gap-1">
+                <label className="font-label-tag text-label-tag text-on-surface-variant">
+                  الملاحظات الفنية للطباعة
+                </label>
                 <textarea
                   rows={2}
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
-                  placeholder="ملاحظات الورق، الألوان، تعليمات العميل..."
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
+                  placeholder="نوع الورق، طباعة ملونة أم أبيض وأسود، خامة الغلاف..."
+                  className="w-full p-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none border border-surface-container-high"
+                ></textarea>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+              <div className="flex items-center justify-end gap-space-sm pt-space-xs mt-2 border-t border-surface-container-high">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm text-muted-foreground hover:bg-muted rounded-xl transition"
+                  className="px-space-md py-space-xs rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm"
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-sm bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition shadow-md"
+                  className="flex items-center gap-1 px-space-lg py-space-xs rounded-xl bg-primary hover:bg-primary-fixed text-on-primary font-body-sm font-bold shadow-lg shadow-primary/25 cursor-pointer"
                 >
-                  حفظ الأوردر
+                  <span className="material-symbols-outlined text-base">save</span>
+                  <span>{editingTask ? "حفظ التعديلات" : "حفظ وإرسال للماكينة"}</span>
                 </button>
               </div>
             </form>
@@ -756,50 +897,78 @@ export default function TasksHandoverPage() {
         </div>
       )}
 
-      {/* Shift Handover Report Modal */}
+      {/* Modal: Shift Handover Report */}
       {isHandoverModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
-            <div className="p-5 border-b border-border flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-surface-container-low border border-surface-container-high rounded-2xl p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-surface-container-high">
               <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-emerald-500" />
-                <h2 className="text-lg font-bold text-foreground">تقرير تسليم واستلام الشيفت</h2>
+                <span className="material-symbols-outlined text-primary text-2xl">fact_check</span>
+                <div>
+                  <h3 className="font-bold text-lg text-on-surface">تقرير تسليم واستلام الشفت</h3>
+                  <span className="text-xs text-on-surface-variant font-label-code">
+                    {currentShift.label} ({currentShift.timeRange})
+                  </span>
+                </div>
               </div>
               <button
                 onClick={() => setIsHandoverModalOpen(false)}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-lg"
+                className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container-high"
               >
-                ✕
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            <div className="p-5 flex-1 overflow-y-auto space-y-4">
-              <p className="text-xs text-muted-foreground">
-                ملخص جاهز لجميع الطلبات الحالية والمكتملة لنسخه ومشاركته مع زميل الشيفت التالي عبر الواتساب:
-              </p>
-
-              <pre className="p-4 bg-muted/30 border border-border rounded-xl text-xs font-mono text-foreground whitespace-pre-wrap leading-relaxed">
-                {generateHandoverReport()}
-              </pre>
+            {/* Shift Stats Card */}
+            <div className="grid grid-cols-2 gap-space-sm">
+              <div className="p-space-sm rounded-xl bg-surface-container">
+                <span className="text-xs text-on-surface-variant block">النسخ المطبوعة بالشفت:</span>
+                <span className="text-xl font-bold font-mono text-tertiary">
+                  {totalCompletedCopies.toLocaleString("ar-EG")} ورقة
+                </span>
+              </div>
+              <div className="p-space-sm rounded-xl bg-surface-container">
+                <span className="text-xs text-on-surface-variant block">عهدة النقدية بالدرج:</span>
+                <span className="text-xl font-bold font-mono text-primary">
+                  {shiftCashVal.toLocaleString("ar-EG")} ج.م
+                </span>
+              </div>
             </div>
 
-            <div className="p-4 border-t border-border flex items-center justify-between bg-muted/20">
-              <span className="text-xs text-muted-foreground">
-                إجمالي المهام المسجلة: {tasks.length} مهمة
-              </span>
+            {/* Generated Text View */}
+            <div className="p-space-sm rounded-xl bg-surface-container-lowest border border-surface-container-high/60 font-mono text-xs text-on-surface max-h-60 overflow-y-auto whitespace-pre-wrap leading-relaxed select-all">
+              {generateHandoverReport()}
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-space-sm pt-2 border-t border-surface-container-high">
+              <button
+                type="button"
+                onClick={copyHandoverReport}
+                className="flex items-center gap-1.5 px-space-md py-space-xs rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm font-semibold cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">content_copy</span>
+                <span>نسخ التقرير</span>
+              </button>
+
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setIsHandoverModalOpen(false)}
-                  className="px-4 py-2 text-xs text-muted-foreground hover:bg-muted rounded-xl transition"
+                  type="button"
+                  onClick={sendWhatsappHandover}
+                  className="flex items-center gap-1.5 px-space-md py-space-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-body-sm font-semibold cursor-pointer shadow-md"
                 >
-                  إغلاق
+                  <span className="material-symbols-outlined text-base">send</span>
+                  <span>إرسال للشفت القادم واتساب</span>
                 </button>
                 <button
-                  onClick={copyHandoverReport}
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition shadow-sm"
+                  type="button"
+                  onClick={() => {
+                    setIsHandoverModalOpen(false);
+                    toast.success("تم توثيق الشفت", "تم اعتماد تقرير تسليم الوردية بنجاح");
+                  }}
+                  className="px-space-md py-space-xs rounded-xl bg-primary text-on-primary font-body-sm font-bold shadow-md cursor-pointer"
                 >
-                  <Copy className="w-4 h-4" />
-                  نسخ التقرير للواتساب
+                  اعتماد وإغلاق
                 </button>
               </div>
             </div>

@@ -1,0 +1,882 @@
+<!DOCTYPE html><html class="dark" dir="rtl" lang="ar"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"inverse-primary":"#00687a","inverse-on-surface":"#2c303b","on-error-container":"#ffdad6","on-tertiary-fixed-variant":"#653e00","error":"#ffb4ab","on-tertiary-container":"#563400","error-container":"#93000a","on-primary-fixed-variant":"#004e5c","surface-container-highest":"#313540","secondary-fixed-dim":"#ffb2b7","surface-variant":"#313540","on-tertiary":"#472a00","primary-fixed-dim":"#4cd7f6","tertiary-container":"#e79400","surface-bright":"#353944","on-tertiary-fixed":"#2a1700","surface":"#0f131d","inverse-surface":"#dfe2f1","on-background":"#dfe2f1","tertiary-fixed-dim":"#ffb95f","surface-dim":"#0f131d","primary-container":"#06b6d4","surface-container-lowest":"#0a0e18","primary":"#4cd7f6","surface-tint":"#4cd7f6","surface-container-high":"#262a35","on-surface-variant":"#bcc9cd","tertiary":"#ffb95f","on-surface":"#dfe2f1","secondary-fixed":"#ffdadb","surface-container":"#1c1f2a","secondary-container":"#b50036","on-secondary-fixed-variant":"#92002a","primary-fixed":"#acedff","outline-variant":"#3d494c","on-secondary-container":"#ffc2c4","on-primary-fixed":"#001f26","on-secondary":"#67001b","on-primary":"#003640","secondary":"#ffb2b7","tertiary-fixed":"#ffddb8","on-error":"#690005","background":"#0f131d","on-secondary-fixed":"#40000d","outline":"#869397","surface-container-low":"#171b26","on-primary-container":"#00424f"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-2xl":"3rem","space-3xl":"4rem","space-xs":"0.5rem","space-2xs":"0.25rem","gutter-desktop":"1.5rem","space-md":"1rem","space-sm":"0.75rem","space-lg":"1.5rem","sidebar-width-expanded":"16rem","space-xl":"2rem","gutter-mobile":"0.75rem","sidebar-width-collapsed":"4.5rem"},fontFamily:{"label-tag":["Inter"],"headline-md":["Inter"],"label-code":["JetBrains Mono"],"display-hero-mobile":["Inter"],"body-md":["Inter"],"body-sm":["Inter"],"headline-lg":["Inter"],"display-hero":["Inter"],"headline-lg-mobile":["Inter"],"body-lg":["Inter"],"headline-sm":["Inter"]},fontSize:{"label-tag":["11px",{"lineHeight":"14px","letterSpacing":"0.04em","fontWeight":"700"}],"headline-md":["22px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"label-code":["12px",{"lineHeight":"16px","letterSpacing":"0.02em","fontWeight":"500"}],"display-hero-mobile":["30px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"display-hero":["44px",{"lineHeight":"52px","letterSpacing":"-0.025em","fontWeight":"800"}],"headline-lg-mobile":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-sm":["18px",{"lineHeight":"24px","letterSpacing":"-0.005em","fontWeight":"600"}]}}}};</script></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased min-h-screen selection:bg-primary selection:text-on-primary"><aside class="fixed right-0 top-0 bottom-0 w-sidebar-width-expanded bg-surface-container-lowest z-50 flex flex-col justify-between overflow-y-auto"><div class="p-space-md"><div class="flex items-center gap-space-sm px-space-xs py-space-sm mb-space-md"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary tracking-tight">كوبي كات ERP</span><span class="font-label-code text-label-code text-on-surface-variant">v2.4 Enterprise Hub</span></div></div><nav class="flex flex-col gap-space-md" data-active-classes="bg-primary-container text-on-primary-container font-bold rounded-xl"><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الرئيسية والمخزن</span><a aria-current="page" class="flex items-center gap-space-sm px-space-sm py-space-xs transition-all bg-primary-container text-on-primary-container font-bold rounded-xl" data-path="operations-dashboard" href="#"><span class="material-symbols-outlined text-primary text-xl">dashboard</span><span class="font-body-sm text-body-sm">لوحة العمليات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="inventory-catalog" href="#"><span class="material-symbols-outlined text-xl">inventory_2</span><span class="font-body-sm text-body-sm">المخزن والكتالوج</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">أدوات المطبعة والتصوير</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="print-calculator" href="#"><span class="material-symbols-outlined text-xl">calculate</span><span class="font-body-sm text-body-sm">حاسبة المطبعة والملازم</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="shift-orders" href="#"><span class="material-symbols-outlined text-xl">assignment</span><span class="font-body-sm text-body-sm">مهام وأوردرات الشفت</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="national-id-builder" href="#"><span class="material-symbols-outlined text-xl">badge</span><span class="font-body-sm text-body-sm">مصنع بطاقات الرقم القومي A5</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="portrait-studio" href="#"><span class="material-symbols-outlined text-xl">photo_camera</span><span class="font-body-sm text-body-sm">استوديو الصور 4x6</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="ink-saver-scanner" href="#"><span class="material-symbols-outlined text-xl">document_scanner</span><span class="font-body-sm text-body-sm">ماسح المستندات وتوفير الحبر</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">المستندات والذكاء الاصطناعي</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="advanced-pdf-studio" href="#"><span class="material-symbols-outlined text-xl">picture_as_pdf</span><span class="font-body-sm text-body-sm">استوديو أدوات PDF المتقدمة</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="smart-ocr-hub" href="#"><span class="material-symbols-outlined text-tertiary text-xl">psychology</span><span class="font-body-sm text-body-sm">الماسح الضوئي الذكي (OCR)</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="vocabulary-sheet-generator" href="#"><span class="material-symbols-outlined text-xl">spellcheck</span><span class="font-body-sm text-body-sm">مولد شيتات المفردات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="academic-research-generator" href="#"><span class="material-symbols-outlined text-xl">menu_book</span><span class="font-body-sm text-body-sm">مولد الأبحاث الأكاديمية</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الشبكة والإنتاجية</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="daily-server-links" href="#"><span class="material-symbols-outlined text-xl">dns</span><span class="font-body-sm text-body-sm">مواقع وسيرفرات يومية</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="lan-transfer-hub" href="#"><span class="material-symbols-outlined text-xl">sync_alt</span><span class="font-body-sm text-body-sm">مركز النقل السريع LAN</span></a></div></nav></div><div class="p-space-md bg-surface-container-low/60"><div class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container mb-space-sm"><div class="flex items-center gap-space-xs"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span></span><span class="font-label-code text-label-code text-on-surface-variant">السيرفر نشط</span></div><span class="font-label-tag text-label-tag px-space-xs py-space-2xs rounded-lg bg-surface-container-highest text-primary">99.8%</span></div><div class="flex items-center justify-between pt-space-xs"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-on-surface-variant text-lg">admin_panel_settings</span><span class="font-body-sm text-body-sm text-on-surface font-semibold">مشرف الفرع</span></div><a class="p-space-xs rounded-lg text-error hover:bg-surface-container-high transition-colors" data-path="login" href="#"><span class="material-symbols-outlined text-lg">logout</span></a></div></div></aside><div class="pr-sidebar-width-expanded"><header class="fixed top-0 right-sidebar-width-expanded left-0 h-16 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><img alt="logo.jpg" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VpzC_MDRD3TESDUobuiX8KOyhf9YAC7D76oM-2vUCJPGxHxtmMkXR3GTPKLj0Flc3eduZ8qe4pPhuQe5bIfA-Auf7iwLSrxVotQ91x8igvjXgxxgQMenJrCFx8jdhSLEeCSmJbni47Qw6cxz3PJkzplmCNNC4X21XRIYLOVOgDOKhhh_VLXT22XyFmBc-KaBbNfHIkb4C5yonR-R7b1UNHeH98AduXceN7dLxzXgf9jKxzj0p1llnEpRvuH3k95Tp8VSkifQP_mg"><div class="hidden sm:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-primary"></span><span class="font-label-code text-label-code text-primary">متصل بالخادم السحابي</span></div></div><div class="flex items-center gap-space-sm"><a class="hidden md:flex items-center gap-space-xs px-space-sm py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm transition-all" data-path="public-storefront" href="#"><span class="material-symbols-outlined text-base">storefront</span><span>تبديل للمتجر العام</span></a><button class="p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">dark_mode</span></button><button class="relative p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">notifications</span><span class="absolute top-1 left-1 w-2 h-2 bg-secondary-container rounded-full"></span></button><div class="flex items-center gap-space-xs pl-space-xs"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1UO12gBvuU5lLzzA8LA68aUE6fPaEjN3hhaFLV_103HWeMBpwNH7Y4OLVGnWqTorHT_T_ViOW6zIdaDr2tDRPThaLWkOq_bPkXeuhPWYWx75ElCDr5ivCXxrq2VnwzmXJQ0ianSvzqxnvT97H_hTGnD6ODWqlkMoe14sh47gSUE5F8b8UxP-jA7roIUIYgrkh205MqpdCeP7yjHmBwiA1nYEwz-KKs2BvQuDGpOPny-IlnLzLDmASwddBOD"><div class="hidden xl:flex flex-col text-right"><span class="font-body-sm text-body-sm font-semibold text-on-surface">أحمد المشرف</span><span class="font-label-tag text-label-tag text-on-surface-variant">مدير الوردية</span></div></div></div></header><main class="relative pt-16 min-h-screen bg-background w-full px-gutter-desktop"><div class="flex flex-col w-full pb-space-3xl gap-space-lg">
+<!-- Top Workspace Header Banner -->
+<div class="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg shadow-xl">
+<div class="absolute -left-20 -top-20 w-80 h-80 rounded-full bg-primary-container/10 blur-3xl pointer-events-none"></div>
+<div class="absolute right-1/3 -bottom-20 w-64 h-64 rounded-full bg-tertiary-container/10 blur-3xl pointer-events-none"></div>
+<div class="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-space-md">
+<div class="flex flex-col gap-space-xs max-w-3xl">
+<div class="flex items-center gap-space-xs">
+<span class="inline-flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-full bg-primary-container/15 text-primary font-label-tag text-label-tag">
+<span class="material-symbols-outlined text-sm">auto_stories</span>
+            استوديو إدارة وتفكيك صفحات الـ PDF
+          </span>
+<span class="inline-flex items-center gap-1 px-space-xs py-space-2xs rounded-full bg-surface-container-high text-on-surface-variant font-label-code text-label-code">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+            محرك العرض السريع v4.1
+          </span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">
+          منظم ومفكك صفحات PDF <span class="text-primary font-label-code text-headline-md font-normal">(حذف، نقل، تدوير، تكرار، ودمج)</span>
+</h1>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+          فكك أي ملف PDF إلى صفحات مرئية تفاعلية، احذف أو رتّب أو اقلب الصفحات، كرّر أي صفحة بضغطة زر، أو ادمج ملفات PDF أخرى معاً ورتّب صفحاتها المطبوعة بدقة فائقة!
+        </p>
+</div>
+<!-- Studio Mode Switcher Tabs -->
+<div class="flex items-center p-1 rounded-xl bg-surface-container-lowest shadow-inner gap-1 self-start xl:self-auto">
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-primary text-on-primary font-body-sm text-body-sm font-semibold shadow-md transition-all" type="button">
+<span class="material-symbols-outlined text-base">view_carousel</span>
+<span>تفكيك وتنظيم الصفحات</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all font-body-sm text-body-sm" type="button">
+<span class="material-symbols-outlined text-base">photo_library</span>
+<span>تحويل صور إلى PDF</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all font-body-sm text-body-sm" type="button">
+<span class="material-symbols-outlined text-base">article</span>
+<span>تحويل PDF إلى Word ذكي</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Primary Spooler Toolbar & Action Matrix -->
+<div class="flex flex-col gap-space-md bg-surface-container p-space-md rounded-xl shadow-md">
+<!-- Row 1: Document Commands & Primary Export -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm">
+<div class="flex flex-wrap items-center gap-space-xs">
+<!-- Open File -->
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-xl bg-primary-container text-on-primary-container hover:bg-primary transition-all font-body-sm text-body-sm font-semibold shadow-sm" type="button">
+<span class="material-symbols-outlined text-lg">upload_file</span>
+<span>فتح ملف جديد...</span>
+</button>
+<!-- Append / Merge Secondary PDF -->
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-bright text-primary font-body-sm text-body-sm font-semibold transition-all" type="button">
+<span class="material-symbols-outlined text-lg">library_add</span>
+<span>إضافة ملف PDF آخر للدمج والترتيب</span>
+</button>
+<!-- Rotate All Pages -->
+<div class="relative group">
+<button class="flex items-center gap-space-xs px-space-sm py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-bright text-on-surface font-body-sm text-body-sm transition-all" id="rotateAllBtn" type="button">
+<span class="material-symbols-outlined text-lg">rotate_right</span>
+<span>تدوير الكل 90°</span>
+</button>
+</div>
+<!-- Invert / Reverse Order -->
+<button class="flex items-center gap-space-xs px-space-sm py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-bright text-on-surface font-body-sm text-body-sm transition-all" onclick="reversePagesOrder()" type="button">
+<span class="material-symbols-outlined text-lg">swap_vert</span>
+<span class="hidden sm:inline">عكس الترتيب</span>
+</button>
+<!-- Clear Selection / Reset -->
+<button class="flex items-center gap-space-xs px-space-sm py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-bright text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm transition-all" onclick="resetAllRotations()" type="button">
+<span class="material-symbols-outlined text-lg">restart_alt</span>
+<span class="hidden md:inline">استعادة الضبط</span>
+</button>
+</div>
+<!-- Spooler Final Print Download Glow Button -->
+<div class="flex items-center gap-space-xs">
+<button class="group relative flex items-center gap-space-sm px-space-lg py-space-xs rounded-xl bg-primary text-on-primary font-body-sm text-body-sm font-bold shadow-[0_0_22px_rgba(76,215,246,0.4)] hover:shadow-[0_0_30px_rgba(76,215,246,0.65)] hover:bg-primary-fixed transition-all" type="button">
+<span class="material-symbols-outlined text-xl transition-transform group-hover:-translate-y-0.5">download</span>
+<span>تنزيل الـ PDF المرتب والنهائي</span>
+<span class="px-space-xs py-0.5 rounded-full bg-on-primary/20 text-on-primary font-label-code text-label-code" id="globalPageCountBadge">إجمالي 8 صفحات</span>
+</button>
+</div>
+</div>
+<!-- Row 2: Range Bulk Deletion & Document Metadata Bar -->
+<div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-space-sm pt-space-xs bg-surface-container-low/70 p-space-sm rounded-lg">
+<!-- File Metadata Chips -->
+<div class="flex flex-wrap items-center gap-space-xs">
+<div class="flex items-center gap-space-xs px-space-sm py-1 rounded-md bg-surface-container-highest text-on-surface">
+<span class="material-symbols-outlined text-primary text-base">description</span>
+<span class="font-label-code text-label-code truncate max-w-xs" dir="ltr">دراسة اعدادي-11-18.pdf</span>
+</div>
+<div class="flex items-center gap-1 px-space-xs py-1 rounded-md bg-surface-container text-on-surface-variant font-label-code text-label-code">
+<span>الحجم:</span>
+<span class="text-on-surface font-semibold">14.2 ميجابايت</span>
+</div>
+<div class="flex items-center gap-1 px-space-xs py-1 rounded-md bg-surface-container text-on-surface-variant font-label-code text-label-code">
+<span>أبعاد الورق:</span>
+<span class="text-on-surface">A4 (210 × 297 mm)</span>
+</div>
+<div class="flex items-center gap-1 px-space-xs py-1 rounded-md bg-surface-container text-tertiary font-label-code text-label-code">
+<span class="material-symbols-outlined text-sm">verified</span>
+<span>جاهز للمكائن الرقمية</span>
+</div>
+</div>
+<!-- Quick Batch Range Selector Form -->
+<div class="flex items-center gap-space-xs self-end lg:self-auto">
+<label class="font-body-sm text-body-sm text-on-surface-variant whitespace-nowrap" for="rangeDeleteInput">
+          حذف سريع بنطاق الأرقام:
+        </label>
+<div class="relative flex items-center">
+<input class="h-9 w-44 rounded-lg bg-surface-container-lowest px-space-sm font-label-code text-label-code text-on-surface placeholder:text-outline focus:outline-none focus:ring-1 focus:ring-primary shadow-inner" dir="ltr" id="rangeDeleteInput" placeholder="مثال: 1-3, 5, 8" type="text">
+</div>
+<button class="flex items-center gap-1 h-9 px-space-md rounded-lg bg-secondary-container hover:bg-on-secondary-fixed-variant text-on-secondary-container font-body-sm text-body-sm font-semibold transition-colors shadow-sm" onclick="deleteByRange()" type="button">
+<span class="material-symbols-outlined text-base">delete_sweep</span>
+<span>حذف النطاق</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Main Work Canvas: Visual Grid & Interactive Inspector -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg">
+<!-- Visual Pages Grid (Interactive 10 cols desktop) -->
+<div class="xl:col-span-9 flex flex-col gap-space-md">
+<!-- Grid Operational Bar -->
+<div class="flex items-center justify-between px-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="font-headline-sm text-headline-sm text-on-surface">صفحات المذكرة المنفصلة</span>
+<span class="px-space-xs py-0.5 rounded-full bg-surface-container-high text-primary font-label-code text-label-code" id="activePagesTracker">8 / 8 نشطة</span>
+</div>
+<div class="flex items-center gap-space-sm text-on-surface-variant font-body-sm text-body-sm">
+<span class="flex items-center gap-1 text-outline">
+<span class="material-symbols-outlined text-sm">touch_app</span>
+            اسحب الصفحة لتغيير ترتيبها بالماوس
+          </span>
+<div class="flex items-center gap-1 bg-surface-container-lowest p-1 rounded-lg">
+<button class="p-1 rounded bg-surface-container text-primary hover:text-on-surface" type="button">
+<span class="material-symbols-outlined text-base">grid_view</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container text-outline hover:text-on-surface" type="button">
+<span class="material-symbols-outlined text-base">view_stream</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Thumbnails Grid (5 across on standard full screens, responsive) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-space-md" id="pagesGridContainer">
+<!-- Page Card #1 -->
+<div class="page-card group flex flex-col rounded-xl bg-surface-container-low shadow-lg hover:shadow-cyan-500/10 transition-all duration-200 overflow-hidden" data-page-index="1" data-rotation="0">
+<!-- Card Header Bar -->
+<div class="flex items-center justify-between px-space-sm py-space-xs bg-surface-container-high">
+<span class="font-label-code text-label-code text-outline truncate max-w-[100px]" dir="ltr">دراسة اعدادي-11-...</span>
+<span class="px-space-xs py-0.5 rounded bg-primary-container/20 text-primary font-label-tag text-label-tag font-bold">صفحة #1</span>
+</div>
+<!-- Page Mockup Sheet (A4 Proportion Canvas) -->
+<div class="relative p-space-sm flex items-center justify-center bg-surface-container-lowest/70 cursor-pointer" onclick="inspectPage(1)">
+<div class="sheet-preview relative w-full aspect-[1/1.414] bg-white rounded shadow-md flex flex-col p-3 overflow-hidden text-neutral-900 transition-transform duration-300">
+<!-- Top document simulated header -->
+<div class="flex items-center justify-between pb-2 mb-2 bg-neutral-100 p-1.5 rounded">
+<div class="flex flex-col gap-0.5">
+<div class="h-2 w-16 bg-neutral-800 rounded-sm"></div>
+<div class="h-1.5 w-10 bg-neutral-400 rounded-sm"></div>
+</div>
+<div class="w-5 h-5 rounded-full bg-cyan-600 flex items-center justify-center text-white text-[9px] font-bold">1</div>
+</div>
+<!-- Simulated Exam Content -->
+<div class="flex flex-col gap-1.5 flex-1">
+<div class="h-2 w-11/12 bg-neutral-300 rounded-sm"></div>
+<div class="h-2 w-full bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-4/5 bg-neutral-200 rounded-sm"></div>
+<div class="my-2 p-2 rounded bg-neutral-100 flex items-center justify-center">
+<!-- Vector diagram mockup -->
+<svg class="w-16 h-10 text-neutral-400" fill="none" viewBox="0 0 100 60">
+<rect height="40" rx="4" stroke="currentColor" stroke-width="2" width="80" x="10" y="10"></rect>
+<line stroke="currentColor" stroke-dasharray="3 3" stroke-width="1.5" x1="10" x2="90" y1="30" y2="30"></line>
+<circle cx="50" cy="30" fill="#06b6d4" r="8"></circle>
+</svg>
+</div>
+<div class="h-2 w-full bg-neutral-300 rounded-sm"></div>
+<div class="h-2 w-2/3 bg-neutral-200 rounded-sm"></div>
+</div>
+<div class="pt-2 mt-auto text-center">
+<span class="font-label-code text-[9px] text-neutral-400">كوبي كات للطباعة والنشر - صفحة 1</span>
+</div>
+</div>
+<!-- Hover Quick Zoom Button -->
+<button class="absolute inset-0 m-auto w-10 h-10 rounded-full bg-surface/80 text-primary opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-lg transition-all transform scale-90 group-hover:scale-100" type="button">
+<span class="material-symbols-outlined text-xl">zoom_in</span>
+</button>
+</div>
+<!-- 5-Button Toolstrip -->
+<div class="flex items-center justify-between p-space-xs bg-surface-container">
+<button class="p-1.5 rounded-lg text-error hover:bg-error-container hover:text-on-error-container transition-colors" onclick="deleteSinglePage(this)" title="حذف الصفحة" type="button">
+<span class="material-symbols-outlined text-base">delete</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'left')" title="تحريك لليسار" type="button">
+<span class="material-symbols-outlined text-base">arrow_forward</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-colors" onclick="duplicatePage(this)" title="تكرار / مضاعفة" type="button">
+<span class="material-symbols-outlined text-base">content_copy</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-tertiary hover:bg-surface-container-highest transition-colors" onclick="rotateSinglePage(this)" title="تدوير 90°" type="button">
+<span class="material-symbols-outlined text-base">rotate_right</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'right')" title="تحريك لليمين" type="button">
+<span class="material-symbols-outlined text-base">arrow_back</span>
+</button>
+</div>
+</div>
+<!-- Page Card #2 -->
+<div class="page-card group flex flex-col rounded-xl bg-surface-container-low shadow-lg hover:shadow-cyan-500/10 transition-all duration-200 overflow-hidden" data-page-index="2" data-rotation="0">
+<div class="flex items-center justify-between px-space-sm py-space-xs bg-surface-container-high">
+<span class="font-label-code text-label-code text-outline truncate max-w-[100px]" dir="ltr">دراسة اعدادي-11-...</span>
+<span class="px-space-xs py-0.5 rounded bg-primary-container/20 text-primary font-label-tag text-label-tag font-bold">صفحة #2</span>
+</div>
+<div class="relative p-space-sm flex items-center justify-center bg-surface-container-lowest/70 cursor-pointer" onclick="inspectPage(2)">
+<div class="sheet-preview relative w-full aspect-[1/1.414] bg-white rounded shadow-md flex flex-col p-3 overflow-hidden text-neutral-900 transition-transform duration-300">
+<div class="flex items-center justify-between pb-2 mb-2 bg-neutral-100 p-1.5 rounded">
+<div class="flex flex-col gap-0.5">
+<div class="h-2 w-20 bg-neutral-800 rounded-sm"></div>
+<div class="h-1.5 w-12 bg-neutral-400 rounded-sm"></div>
+</div>
+<div class="w-5 h-5 rounded-full bg-cyan-600 flex items-center justify-center text-white text-[9px] font-bold">2</div>
+</div>
+<div class="flex flex-col gap-1.5 flex-1">
+<div class="h-2 w-full bg-neutral-300 rounded-sm"></div>
+<div class="h-2 w-5/6 bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-3/4 bg-neutral-200 rounded-sm"></div>
+<div class="grid grid-cols-2 gap-1.5 my-2">
+<div class="h-10 bg-neutral-100 rounded flex items-center justify-center font-label-code text-[9px] text-neutral-500 font-bold">جدول 1</div>
+<div class="h-10 bg-neutral-100 rounded flex items-center justify-center font-label-code text-[9px] text-neutral-500 font-bold">جدول 2</div>
+</div>
+<div class="h-2 w-full bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-4/5 bg-neutral-200 rounded-sm"></div>
+</div>
+<div class="pt-2 mt-auto text-center">
+<span class="font-label-code text-[9px] text-neutral-400">كوبي كات للطباعة والنشر - صفحة 2</span>
+</div>
+</div>
+<button class="absolute inset-0 m-auto w-10 h-10 rounded-full bg-surface/80 text-primary opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-lg transition-all transform scale-90 group-hover:scale-100" type="button">
+<span class="material-symbols-outlined text-xl">zoom_in</span>
+</button>
+</div>
+<div class="flex items-center justify-between p-space-xs bg-surface-container">
+<button class="p-1.5 rounded-lg text-error hover:bg-error-container hover:text-on-error-container transition-colors" onclick="deleteSinglePage(this)" title="حذف الصفحة" type="button">
+<span class="material-symbols-outlined text-base">delete</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'left')" title="تحريك لليسار" type="button">
+<span class="material-symbols-outlined text-base">arrow_forward</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-colors" onclick="duplicatePage(this)" title="تكرار / مضاعفة" type="button">
+<span class="material-symbols-outlined text-base">content_copy</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-tertiary hover:bg-surface-container-highest transition-colors" onclick="rotateSinglePage(this)" title="تدوير 90°" type="button">
+<span class="material-symbols-outlined text-base">rotate_right</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'right')" title="تحريك لليمين" type="button">
+<span class="material-symbols-outlined text-base">arrow_back</span>
+</button>
+</div>
+</div>
+<!-- Page Card #3 -->
+<div class="page-card group flex flex-col rounded-xl bg-surface-container-low shadow-lg hover:shadow-cyan-500/10 transition-all duration-200 overflow-hidden" data-page-index="3" data-rotation="0">
+<div class="flex items-center justify-between px-space-sm py-space-xs bg-surface-container-high">
+<span class="font-label-code text-label-code text-outline truncate max-w-[100px]" dir="ltr">دراسة اعدادي-11-...</span>
+<span class="px-space-xs py-0.5 rounded bg-primary-container/20 text-primary font-label-tag text-label-tag font-bold">صفحة #3</span>
+</div>
+<div class="relative p-space-sm flex items-center justify-center bg-surface-container-lowest/70 cursor-pointer" onclick="inspectPage(3)">
+<div class="sheet-preview relative w-full aspect-[1/1.414] bg-white rounded shadow-md flex flex-col p-3 overflow-hidden text-neutral-900 transition-transform duration-300">
+<div class="flex items-center justify-between pb-2 mb-2 bg-neutral-100 p-1.5 rounded">
+<div class="flex flex-col gap-0.5">
+<div class="h-2 w-14 bg-neutral-800 rounded-sm"></div>
+<div class="h-1.5 w-8 bg-neutral-400 rounded-sm"></div>
+</div>
+<div class="w-5 h-5 rounded-full bg-cyan-600 flex items-center justify-center text-white text-[9px] font-bold">3</div>
+</div>
+<div class="flex flex-col gap-1.5 flex-1">
+<div class="h-2 w-full bg-neutral-300 rounded-sm"></div>
+<div class="h-2 w-11/12 bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-5/6 bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-full bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-3/4 bg-neutral-300 rounded-sm"></div>
+<div class="h-2 w-4/5 bg-neutral-200 rounded-sm"></div>
+</div>
+<div class="pt-2 mt-auto text-center">
+<span class="font-label-code text-[9px] text-neutral-400">كوبي كات للطباعة والنشر - صفحة 3</span>
+</div>
+</div>
+<button class="absolute inset-0 m-auto w-10 h-10 rounded-full bg-surface/80 text-primary opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-lg transition-all transform scale-90 group-hover:scale-100" type="button">
+<span class="material-symbols-outlined text-xl">zoom_in</span>
+</button>
+</div>
+<div class="flex items-center justify-between p-space-xs bg-surface-container">
+<button class="p-1.5 rounded-lg text-error hover:bg-error-container hover:text-on-error-container transition-colors" onclick="deleteSinglePage(this)" title="حذف الصفحة" type="button">
+<span class="material-symbols-outlined text-base">delete</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'left')" title="تحريك لليسار" type="button">
+<span class="material-symbols-outlined text-base">arrow_forward</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-colors" onclick="duplicatePage(this)" title="تكرار / مضاعفة" type="button">
+<span class="material-symbols-outlined text-base">content_copy</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-tertiary hover:bg-surface-container-highest transition-colors" onclick="rotateSinglePage(this)" title="تدوير 90°" type="button">
+<span class="material-symbols-outlined text-base">rotate_right</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'right')" title="تحريك لليمين" type="button">
+<span class="material-symbols-outlined text-base">arrow_back</span>
+</button>
+</div>
+</div>
+<!-- Page Card #4 -->
+<div class="page-card group flex flex-col rounded-xl bg-surface-container-low shadow-lg hover:shadow-cyan-500/10 transition-all duration-200 overflow-hidden" data-page-index="4" data-rotation="0">
+<div class="flex items-center justify-between px-space-sm py-space-xs bg-surface-container-high">
+<span class="font-label-code text-label-code text-outline truncate max-w-[100px]" dir="ltr">دراسة اعدادي-11-...</span>
+<span class="px-space-xs py-0.5 rounded bg-primary-container/20 text-primary font-label-tag text-label-tag font-bold">صفحة #4</span>
+</div>
+<div class="relative p-space-sm flex items-center justify-center bg-surface-container-lowest/70 cursor-pointer" onclick="inspectPage(4)">
+<div class="sheet-preview relative w-full aspect-[1/1.414] bg-white rounded shadow-md flex flex-col p-3 overflow-hidden text-neutral-900 transition-transform duration-300">
+<div class="flex items-center justify-between pb-2 mb-2 bg-neutral-100 p-1.5 rounded">
+<div class="flex flex-col gap-0.5">
+<div class="h-2 w-16 bg-neutral-800 rounded-sm"></div>
+<div class="h-1.5 w-10 bg-neutral-400 rounded-sm"></div>
+</div>
+<div class="w-5 h-5 rounded-full bg-cyan-600 flex items-center justify-center text-white text-[9px] font-bold">4</div>
+</div>
+<div class="flex flex-col gap-1.5 flex-1">
+<div class="h-2 w-full bg-neutral-300 rounded-sm"></div>
+<div class="h-2 w-4/5 bg-neutral-200 rounded-sm"></div>
+<div class="my-1 border-t border-neutral-200"></div>
+<div class="h-2 w-full bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-5/6 bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-2/3 bg-neutral-300 rounded-sm"></div>
+</div>
+<div class="pt-2 mt-auto text-center">
+<span class="font-label-code text-[9px] text-neutral-400">كوبي كات للطباعة والنشر - صفحة 4</span>
+</div>
+</div>
+<button class="absolute inset-0 m-auto w-10 h-10 rounded-full bg-surface/80 text-primary opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-lg transition-all transform scale-90 group-hover:scale-100" type="button">
+<span class="material-symbols-outlined text-xl">zoom_in</span>
+</button>
+</div>
+<div class="flex items-center justify-between p-space-xs bg-surface-container">
+<button class="p-1.5 rounded-lg text-error hover:bg-error-container hover:text-on-error-container transition-colors" onclick="deleteSinglePage(this)" title="حذف الصفحة" type="button">
+<span class="material-symbols-outlined text-base">delete</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'left')" title="تحريك لليسار" type="button">
+<span class="material-symbols-outlined text-base">arrow_forward</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-colors" onclick="duplicatePage(this)" title="تكرار / مضاعفة" type="button">
+<span class="material-symbols-outlined text-base">content_copy</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-tertiary hover:bg-surface-container-highest transition-colors" onclick="rotateSinglePage(this)" title="تدوير 90°" type="button">
+<span class="material-symbols-outlined text-base">rotate_right</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'right')" title="تحريك لليمين" type="button">
+<span class="material-symbols-outlined text-base">arrow_back</span>
+</button>
+</div>
+</div>
+<!-- Page Card #5 -->
+<div class="page-card group flex flex-col rounded-xl bg-surface-container-low shadow-lg hover:shadow-cyan-500/10 transition-all duration-200 overflow-hidden" data-page-index="5" data-rotation="0">
+<div class="flex items-center justify-between px-space-sm py-space-xs bg-surface-container-high">
+<span class="font-label-code text-label-code text-outline truncate max-w-[100px]" dir="ltr">دراسة اعدادي-11-...</span>
+<span class="px-space-xs py-0.5 rounded bg-primary-container/20 text-primary font-label-tag text-label-tag font-bold">صفحة #5</span>
+</div>
+<div class="relative p-space-sm flex items-center justify-center bg-surface-container-lowest/70 cursor-pointer" onclick="inspectPage(5)">
+<div class="sheet-preview relative w-full aspect-[1/1.414] bg-white rounded shadow-md flex flex-col p-3 overflow-hidden text-neutral-900 transition-transform duration-300">
+<div class="flex items-center justify-between pb-2 mb-2 bg-neutral-100 p-1.5 rounded">
+<div class="flex flex-col gap-0.5">
+<div class="h-2 w-18 bg-neutral-800 rounded-sm"></div>
+<div class="h-1.5 w-10 bg-neutral-400 rounded-sm"></div>
+</div>
+<div class="w-5 h-5 rounded-full bg-cyan-600 flex items-center justify-center text-white text-[9px] font-bold">5</div>
+</div>
+<div class="flex flex-col gap-1.5 flex-1">
+<div class="h-2 w-11/12 bg-neutral-300 rounded-sm"></div>
+<div class="h-2 w-full bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-3/4 bg-neutral-200 rounded-sm"></div>
+<div class="h-8 bg-neutral-100 rounded my-1.5 p-1 flex items-center justify-between text-[8px] text-neutral-600 font-label-code">
+<span>صيغة رياضية [A]</span>
+<span>f(x) = dx/dt</span>
+</div>
+<div class="h-2 w-full bg-neutral-200 rounded-sm"></div>
+</div>
+<div class="pt-2 mt-auto text-center">
+<span class="font-label-code text-[9px] text-neutral-400">كوبي كات للطباعة والنشر - صفحة 5</span>
+</div>
+</div>
+<button class="absolute inset-0 m-auto w-10 h-10 rounded-full bg-surface/80 text-primary opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-lg transition-all transform scale-90 group-hover:scale-100" type="button">
+<span class="material-symbols-outlined text-xl">zoom_in</span>
+</button>
+</div>
+<div class="flex items-center justify-between p-space-xs bg-surface-container">
+<button class="p-1.5 rounded-lg text-error hover:bg-error-container hover:text-on-error-container transition-colors" onclick="deleteSinglePage(this)" title="حذف الصفحة" type="button">
+<span class="material-symbols-outlined text-base">delete</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'left')" title="تحريك لليسار" type="button">
+<span class="material-symbols-outlined text-base">arrow_forward</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-colors" onclick="duplicatePage(this)" title="تكرار / مضاعفة" type="button">
+<span class="material-symbols-outlined text-base">content_copy</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-tertiary hover:bg-surface-container-highest transition-colors" onclick="rotateSinglePage(this)" title="تدوير 90°" type="button">
+<span class="material-symbols-outlined text-base">rotate_right</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'right')" title="تحريك لليمين" type="button">
+<span class="material-symbols-outlined text-base">arrow_back</span>
+</button>
+</div>
+</div>
+<!-- Page Card #6 -->
+<div class="page-card group flex flex-col rounded-xl bg-surface-container-low shadow-lg hover:shadow-cyan-500/10 transition-all duration-200 overflow-hidden" data-page-index="6" data-rotation="0">
+<div class="flex items-center justify-between px-space-sm py-space-xs bg-surface-container-high">
+<span class="font-label-code text-label-code text-outline truncate max-w-[100px]" dir="ltr">دراسة اعدادي-11-...</span>
+<span class="px-space-xs py-0.5 rounded bg-primary-container/20 text-primary font-label-tag text-label-tag font-bold">صفحة #6</span>
+</div>
+<div class="relative p-space-sm flex items-center justify-center bg-surface-container-lowest/70 cursor-pointer" onclick="inspectPage(6)">
+<div class="sheet-preview relative w-full aspect-[1/1.414] bg-white rounded shadow-md flex flex-col p-3 overflow-hidden text-neutral-900 transition-transform duration-300">
+<div class="flex items-center justify-between pb-2 mb-2 bg-neutral-100 p-1.5 rounded">
+<div class="flex flex-col gap-0.5">
+<div class="h-2 w-14 bg-neutral-800 rounded-sm"></div>
+<div class="h-1.5 w-8 bg-neutral-400 rounded-sm"></div>
+</div>
+<div class="w-5 h-5 rounded-full bg-cyan-600 flex items-center justify-center text-white text-[9px] font-bold">6</div>
+</div>
+<div class="flex flex-col gap-1.5 flex-1">
+<div class="h-2 w-full bg-neutral-300 rounded-sm"></div>
+<div class="h-2 w-4/5 bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-full bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-3/4 bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-5/6 bg-neutral-200 rounded-sm"></div>
+</div>
+<div class="pt-2 mt-auto text-center">
+<span class="font-label-code text-[9px] text-neutral-400">كوبي كات للطباعة والنشر - صفحة 6</span>
+</div>
+</div>
+<button class="absolute inset-0 m-auto w-10 h-10 rounded-full bg-surface/80 text-primary opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-lg transition-all transform scale-90 group-hover:scale-100" type="button">
+<span class="material-symbols-outlined text-xl">zoom_in</span>
+</button>
+</div>
+<div class="flex items-center justify-between p-space-xs bg-surface-container">
+<button class="p-1.5 rounded-lg text-error hover:bg-error-container hover:text-on-error-container transition-colors" onclick="deleteSinglePage(this)" title="حذف الصفحة" type="button">
+<span class="material-symbols-outlined text-base">delete</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'left')" title="تحريك لليسار" type="button">
+<span class="material-symbols-outlined text-base">arrow_forward</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-colors" onclick="duplicatePage(this)" title="تكرار / مضاعفة" type="button">
+<span class="material-symbols-outlined text-base">content_copy</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-tertiary hover:bg-surface-container-highest transition-colors" onclick="rotateSinglePage(this)" title="تدوير 90°" type="button">
+<span class="material-symbols-outlined text-base">rotate_right</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'right')" title="تحريك لليمين" type="button">
+<span class="material-symbols-outlined text-base">arrow_back</span>
+</button>
+</div>
+</div>
+<!-- Page Card #7 -->
+<div class="page-card group flex flex-col rounded-xl bg-surface-container-low shadow-lg hover:shadow-cyan-500/10 transition-all duration-200 overflow-hidden" data-page-index="7" data-rotation="0">
+<div class="flex items-center justify-between px-space-sm py-space-xs bg-surface-container-high">
+<span class="font-label-code text-label-code text-outline truncate max-w-[100px]" dir="ltr">دراسة اعدادي-11-...</span>
+<span class="px-space-xs py-0.5 rounded bg-primary-container/20 text-primary font-label-tag text-label-tag font-bold">صفحة #7</span>
+</div>
+<div class="relative p-space-sm flex items-center justify-center bg-surface-container-lowest/70 cursor-pointer" onclick="inspectPage(7)">
+<div class="sheet-preview relative w-full aspect-[1/1.414] bg-white rounded shadow-md flex flex-col p-3 overflow-hidden text-neutral-900 transition-transform duration-300">
+<div class="flex items-center justify-between pb-2 mb-2 bg-neutral-100 p-1.5 rounded">
+<div class="flex flex-col gap-0.5">
+<div class="h-2 w-16 bg-neutral-800 rounded-sm"></div>
+<div class="h-1.5 w-10 bg-neutral-400 rounded-sm"></div>
+</div>
+<div class="w-5 h-5 rounded-full bg-cyan-600 flex items-center justify-center text-white text-[9px] font-bold">7</div>
+</div>
+<div class="flex flex-col gap-1.5 flex-1">
+<div class="h-2 w-11/12 bg-neutral-300 rounded-sm"></div>
+<div class="h-2 w-full bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-4/5 bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-3/4 bg-neutral-200 rounded-sm"></div>
+</div>
+<div class="pt-2 mt-auto text-center">
+<span class="font-label-code text-[9px] text-neutral-400">كوبي كات للطباعة والنشر - صفحة 7</span>
+</div>
+</div>
+<button class="absolute inset-0 m-auto w-10 h-10 rounded-full bg-surface/80 text-primary opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-lg transition-all transform scale-90 group-hover:scale-100" type="button">
+<span class="material-symbols-outlined text-xl">zoom_in</span>
+</button>
+</div>
+<div class="flex items-center justify-between p-space-xs bg-surface-container">
+<button class="p-1.5 rounded-lg text-error hover:bg-error-container hover:text-on-error-container transition-colors" onclick="deleteSinglePage(this)" title="حذف الصفحة" type="button">
+<span class="material-symbols-outlined text-base">delete</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'left')" title="تحريك لليسار" type="button">
+<span class="material-symbols-outlined text-base">arrow_forward</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-colors" onclick="duplicatePage(this)" title="تكرار / مضاعفة" type="button">
+<span class="material-symbols-outlined text-base">content_copy</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-tertiary hover:bg-surface-container-highest transition-colors" onclick="rotateSinglePage(this)" title="تدوير 90°" type="button">
+<span class="material-symbols-outlined text-base">rotate_right</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'right')" title="تحريك لليمين" type="button">
+<span class="material-symbols-outlined text-base">arrow_back</span>
+</button>
+</div>
+</div>
+<!-- Page Card #8 -->
+<div class="page-card group flex flex-col rounded-xl bg-surface-container-low shadow-lg hover:shadow-cyan-500/10 transition-all duration-200 overflow-hidden" data-page-index="8" data-rotation="0">
+<div class="flex items-center justify-between px-space-sm py-space-xs bg-surface-container-high">
+<span class="font-label-code text-label-code text-outline truncate max-w-[100px]" dir="ltr">دراسة اعدادي-11-...</span>
+<span class="px-space-xs py-0.5 rounded bg-primary-container/20 text-primary font-label-tag text-label-tag font-bold">صفحة #8</span>
+</div>
+<div class="relative p-space-sm flex items-center justify-center bg-surface-container-lowest/70 cursor-pointer" onclick="inspectPage(8)">
+<div class="sheet-preview relative w-full aspect-[1/1.414] bg-white rounded shadow-md flex flex-col p-3 overflow-hidden text-neutral-900 transition-transform duration-300">
+<div class="flex items-center justify-between pb-2 mb-2 bg-neutral-100 p-1.5 rounded">
+<div class="flex flex-col gap-0.5">
+<div class="h-2 w-16 bg-neutral-800 rounded-sm"></div>
+<div class="h-1.5 w-10 bg-neutral-400 rounded-sm"></div>
+</div>
+<div class="w-5 h-5 rounded-full bg-cyan-600 flex items-center justify-center text-white text-[9px] font-bold">8</div>
+</div>
+<div class="flex flex-col gap-1.5 flex-1">
+<div class="h-2 w-full bg-neutral-300 rounded-sm"></div>
+<div class="h-2 w-3/4 bg-neutral-200 rounded-sm"></div>
+<div class="my-2 p-2 rounded bg-neutral-50 border border-neutral-200 flex flex-col items-center justify-center text-center">
+<span class="font-headline-sm text-[11px] font-bold text-neutral-700">تمت المذكرة بحمد الله</span>
+<span class="font-label-code text-[8px] text-neutral-400">نهاية المراجعة النهائية</span>
+</div>
+<div class="h-2 w-2/3 bg-neutral-200 rounded-sm"></div>
+</div>
+<div class="pt-2 mt-auto text-center">
+<span class="font-label-code text-[9px] text-neutral-400">كوبي كات للطباعة والنشر - صفحة 8</span>
+</div>
+</div>
+<button class="absolute inset-0 m-auto w-10 h-10 rounded-full bg-surface/80 text-primary opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-lg transition-all transform scale-90 group-hover:scale-100" type="button">
+<span class="material-symbols-outlined text-xl">zoom_in</span>
+</button>
+</div>
+<div class="flex items-center justify-between p-space-xs bg-surface-container">
+<button class="p-1.5 rounded-lg text-error hover:bg-error-container hover:text-on-error-container transition-colors" onclick="deleteSinglePage(this)" title="حذف الصفحة" type="button">
+<span class="material-symbols-outlined text-base">delete</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'left')" title="تحريك لليسار" type="button">
+<span class="material-symbols-outlined text-base">arrow_forward</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-colors" onclick="duplicatePage(this)" title="تكرار / مضاعفة" type="button">
+<span class="material-symbols-outlined text-base">content_copy</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-tertiary hover:bg-surface-container-highest transition-colors" onclick="rotateSinglePage(this)" title="تدوير 90°" type="button">
+<span class="material-symbols-outlined text-base">rotate_right</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors" onclick="movePage(this, 'right')" title="تحريك لليمين" type="button">
+<span class="material-symbols-outlined text-base">arrow_back</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Quick Document Statistics Strip -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-space-sm p-space-md rounded-xl bg-surface-container">
+<div class="flex items-center gap-space-sm">
+<div class="p-2.5 rounded-lg bg-primary-container/20 text-primary">
+<span class="material-symbols-outlined">analytics</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-tag text-label-tag text-outline">معدل التغطية الحبرية المتوقع</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">14.6% <span class="text-xs font-normal text-on-surface-variant">توفير عالي</span></span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm">
+<div class="p-2.5 rounded-lg bg-tertiary-container/20 text-tertiary">
+<span class="material-symbols-outlined">layers</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-tag text-label-tag text-outline">ورق الطباعة الموصى به</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">80 جرام <span class="text-xs font-normal text-on-surface-variant">أبيض ليزر</span></span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm">
+<div class="p-2.5 rounded-lg bg-surface-bright text-on-surface">
+<span class="material-symbols-outlined">speed</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-tag text-label-tag text-outline">زمن الفرز على الماكينة</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">4 ثوانٍ <span class="text-xs font-normal text-primary">فوري</span></span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm">
+<div class="p-2.5 rounded-lg bg-secondary-container/20 text-secondary">
+<span class="material-symbols-outlined">lock_reset</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-tag text-label-tag text-outline">حالة تشفير المستند</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">مفتوح <span class="text-xs font-normal text-on-surface-variant">بدون قيود DRM</span></span>
+</div>
+</div>
+</div>
+</div>
+<!-- Inspector & Live Full Page Zoom Sidebar (3 cols desktop) -->
+<div class="xl:col-span-3 flex flex-col gap-space-md">
+<!-- Live Zoom Preview Card -->
+<div class="sticky top-20 flex flex-col rounded-xl bg-surface-container p-space-md shadow-xl gap-space-sm">
+<div class="flex items-center justify-between pb-space-xs bg-surface-container-high/50 p-space-xs rounded-lg">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-base">visibility</span>
+<span class="font-headline-sm text-body-lg font-bold text-on-surface">معاينة موسعة</span>
+</div>
+<span class="px-space-xs py-0.5 rounded bg-primary-container/20 text-primary font-label-code text-label-code" id="inspectorPageLabel">صفحة #1</span>
+</div>
+<!-- High-res Mockup Paper Display -->
+<div class="relative w-full aspect-[1/1.414] bg-surface-container-lowest rounded-lg overflow-hidden flex items-center justify-center p-3 shadow-inner">
+<div class="w-full h-full bg-white rounded shadow-md p-4 flex flex-col justify-between text-neutral-900 transition-all duration-300" id="inspectorCanvas">
+<div class="flex items-center justify-between border-b border-neutral-200 pb-2">
+<div class="flex flex-col">
+<span class="font-bold text-xs text-neutral-800">مذكرة المراجعة النهائية (رياضيات)</span>
+<span class="text-[9px] text-neutral-500">الفصل الدراسي الثاني - الصف الثالث الإعدادي</span>
+</div>
+<span class="px-1.5 py-0.5 rounded bg-neutral-900 text-white font-label-code text-[10px]" id="inspectorCanvasBadge">P.1</span>
+</div>
+<!-- Page Detailed Vector Simulation -->
+<div class="flex flex-col gap-2 my-auto">
+<div class="p-2 rounded bg-neutral-100 flex flex-col gap-1">
+<span class="font-bold text-[10px] text-cyan-800">السؤال الأول: اختر الإجابة الصحيحة:</span>
+<div class="flex items-center justify-between text-[9px] text-neutral-600 pr-2">
+<span>1. مجموع قياسات الزوايا الداخلية للمثلث:</span>
+<span class="font-label-code font-bold">( 180° )</span>
+</div>
+<div class="flex items-center justify-between text-[9px] text-neutral-600 pr-2">
+<span>2. معادلة الخط المستقيم المار بالنقطة الأصل:</span>
+<span class="font-label-code font-bold">ص = م س</span>
+</div>
+</div>
+<!-- High fidelity diagram mockup -->
+<div class="h-28 bg-neutral-50 rounded border border-neutral-200 p-2 flex items-center justify-center">
+<svg class="w-full h-full text-neutral-700" viewBox="0 0 240 90">
+<path d="M 20 80 L 120 20 L 220 80 Z" fill="none" stroke="currentColor" stroke-width="2"></path>
+<circle cx="120" cy="20" fill="#06b6d4" r="4"></circle>
+<text font-family="sans-serif" font-size="10" x="115" y="15">أ</text>
+<text font-family="sans-serif" font-size="10" x="10" y="85">ب</text>
+<text font-family="sans-serif" font-size="10" x="225" y="85">ج</text>
+<path d="M 120 20 L 120 80" stroke="#f43f5e" stroke-dasharray="3 3" stroke-width="1.5"></path>
+<rect fill="none" height="10" stroke="#f43f5e" stroke-width="1" width="10" x="115" y="70"></rect>
+</svg>
+</div>
+<div class="flex flex-col gap-1">
+<div class="h-2 w-full bg-neutral-200 rounded-sm"></div>
+<div class="h-2 w-3/4 bg-neutral-200 rounded-sm"></div>
+</div>
+</div>
+<!-- Footer Details -->
+<div class="border-t border-neutral-200 pt-2 flex items-center justify-between text-[9px] text-neutral-400">
+<span>مطبعة ومركز تصوير كوبي كات</span>
+<span class="font-label-code" id="inspectorCanvasFooter">1 / 8</span>
+</div>
+</div>
+</div>
+<!-- Quick Controls inside Inspector -->
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<div class="grid grid-cols-2 gap-space-xs">
+<button class="flex items-center justify-center gap-1 py-2 px-space-xs rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface font-body-sm text-body-sm transition-colors" onclick="rotateInspectorCurrent()" type="button">
+<span class="material-symbols-outlined text-sm">rotate_right</span>
+<span>تدوير هذه الصفحة</span>
+</button>
+<button class="flex items-center justify-center gap-1 py-2 px-space-xs rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface font-body-sm text-body-sm transition-colors" onclick="duplicateInspectorCurrent()" type="button">
+<span class="material-symbols-outlined text-sm">copy_all</span>
+<span>مضاعفة الصفحة</span>
+</button>
+</div>
+<button class="flex items-center justify-center gap-1 py-2 px-space-xs rounded-lg bg-secondary-container/20 hover:bg-secondary-container text-secondary hover:text-on-secondary-container font-body-sm text-body-sm font-semibold transition-colors" onclick="deleteInspectorCurrent()" type="button">
+<span class="material-symbols-outlined text-sm">delete_forever</span>
+<span>حذف هذه الصفحة من الـ PDF</span>
+</button>
+</div>
+<!-- Spooler Direct Print Specs -->
+<div class="flex flex-col gap-1.5 p-space-xs bg-surface-container-lowest rounded-lg font-label-code text-label-code text-outline">
+<div class="flex justify-between">
+<span>دقة العرض:</span>
+<span class="text-on-surface">300 DPI Vector</span>
+</div>
+<div class="flex justify-between">
+<span>درجة التدوير:</span>
+<span class="text-primary font-bold" id="inspectorRotationDeg">0°</span>
+</div>
+<div class="flex justify-between">
+<span>مساحة الحبر:</span>
+<span class="text-on-surface">Standard CMYK</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  let currentInspectedPage = 1;
+
+  function updatePageBadges() {
+    const cards = document.querySelectorAll('.page-card');
+    cards.forEach((card, index) => {
+      const pageNum = index + 1;
+      card.setAttribute('data-page-index', pageNum);
+      const tag = card.querySelector('.font-label-tag');
+      if (tag) tag.textContent = 'صفحة #' + pageNum;
+    });
+
+    const total = cards.length;
+    const countBadge = document.getElementById('globalPageCountBadge');
+    const activeTracker = document.getElementById('activePagesTracker');
+    if (countBadge) countBadge.textContent = 'إجمالي ' + total + ' صفحات';
+    if (activeTracker) activeTracker.textContent = total + ' / 8 نشطة';
+  }
+
+  function inspectPage(index) {
+    currentInspectedPage = index;
+    const label = document.getElementById('inspectorPageLabel');
+    const badge = document.getElementById('inspectorCanvasBadge');
+    const footer = document.getElementById('inspectorCanvasFooter');
+    const rotDeg = document.getElementById('inspectorRotationDeg');
+    
+    if (label) label.textContent = 'صفحة #' + index;
+    if (badge) badge.textContent = 'P.' + index;
+    if (footer) footer.textContent = index + ' / ' + document.querySelectorAll('.page-card').length;
+
+    const targetCard = document.querySelector(`.page-card[data-page-index="${index}"]`);
+    if (targetCard) {
+      const rot = targetCard.getAttribute('data-rotation') || '0';
+      if (rotDeg) rotDeg.textContent = rot + '°';
+      const canvas = document.getElementById('inspectorCanvas');
+      if (canvas) {
+        canvas.style.transform = `rotate(${rot}deg)`;
+      }
+    }
+  }
+
+  function rotateSinglePage(button) {
+    const card = button.closest('.page-card');
+    if (!card) return;
+    let currentRot = parseInt(card.getAttribute('data-rotation') || '0', 10);
+    currentRot = (currentRot + 90) % 360;
+    card.setAttribute('data-rotation', currentRot);
+
+    const sheet = card.querySelector('.sheet-preview');
+    if (sheet) {
+      sheet.style.transform = `rotate(${currentRot}deg)`;
+    }
+
+    const pIndex = parseInt(card.getAttribute('data-page-index'), 10);
+    if (pIndex === currentInspectedPage) {
+      inspectPage(pIndex);
+    }
+  }
+
+  function deleteSinglePage(button) {
+    const card = button.closest('.page-card');
+    if (!card) return;
+    card.style.opacity = '0';
+    card.style.transform = 'scale(0.8)';
+    setTimeout(() => {
+      card.remove();
+      updatePageBadges();
+      const firstCard = document.querySelector('.page-card');
+      if (firstCard) {
+        inspectPage(parseInt(firstCard.getAttribute('data-page-index'), 10));
+      }
+    }, 180);
+  }
+
+  function duplicatePage(button) {
+    const card = button.closest('.page-card');
+    if (!card) return;
+    const clone = card.cloneNode(true);
+    card.after(clone);
+    updatePageBadges();
+  }
+
+  function movePage(button, direction) {
+    const card = button.closest('.page-card');
+    if (!card) return;
+    if (direction === 'left') {
+      const prev = card.previousElementSibling;
+      if (prev) {
+        card.parentNode.insertBefore(card, prev);
+        updatePageBadges();
+      }
+    } else {
+      const next = card.nextElementSibling;
+      if (next) {
+        card.parentNode.insertBefore(next, card);
+        updatePageBadges();
+      }
+    }
+  }
+
+  function reversePagesOrder() {
+    const container = document.getElementById('pagesGridContainer');
+    if (!container) return;
+    const cards = Array.from(container.children);
+    cards.reverse().forEach(card => container.appendChild(card));
+    updatePageBadges();
+  }
+
+  function resetAllRotations() {
+    const cards = document.querySelectorAll('.page-card');
+    cards.forEach(card => {
+      card.setAttribute('data-rotation', '0');
+      const sheet = card.querySelector('.sheet-preview');
+      if (sheet) sheet.style.transform = 'rotate(0deg)';
+    });
+    inspectPage(currentInspectedPage);
+  }
+
+  document.getElementById('rotateAllBtn')?.addEventListener('click', () => {
+    const cards = document.querySelectorAll('.page-card');
+    cards.forEach(card => {
+      let rot = parseInt(card.getAttribute('data-rotation') || '0', 10);
+      rot = (rot + 90) % 360;
+      card.setAttribute('data-rotation', rot);
+      const sheet = card.querySelector('.sheet-preview');
+      if (sheet) sheet.style.transform = `rotate(${rot}deg)`;
+    });
+    inspectPage(currentInspectedPage);
+  });
+
+  function deleteByRange() {
+    const input = document.getElementById('rangeDeleteInput');
+    if (!input || !input.value.trim()) return;
+    const query = input.value.trim();
+    const parts = query.split(',');
+    const pagesToDelete = new Set();
+
+    parts.forEach(part => {
+      const p = part.trim();
+      if (p.includes('-')) {
+        const [start, end] = p.split('-').map(x => parseInt(x.trim(), 10));
+        if (!isNaN(start) && !isNaN(end)) {
+          for (let i = Math.min(start, end); i <= Math.max(start, end); i++) {
+            pagesToDelete.add(i);
+          }
+        }
+      } else {
+        const num = parseInt(p, 10);
+        if (!isNaN(num)) pagesToDelete.add(num);
+      }
+    });
+
+    const cards = document.querySelectorAll('.page-card');
+    cards.forEach(card => {
+      const pageIndex = parseInt(card.getAttribute('data-page-index'), 10);
+      if (pagesToDelete.has(pageIndex)) {
+        card.remove();
+      }
+    });
+
+    updatePageBadges();
+    input.value = '';
+    const firstCard = document.querySelector('.page-card');
+    if (firstCard) {
+      inspectPage(parseInt(firstCard.getAttribute('data-page-index'), 10));
+    }
+  }
+
+  function rotateInspectorCurrent() {
+    const targetCard = document.querySelector(`.page-card[data-page-index="${currentInspectedPage}"]`);
+    if (targetCard) {
+      const btn = targetCard.querySelector('button[title="تدوير 90°"]');
+      if (btn) rotateSinglePage(btn);
+    }
+  }
+
+  function duplicateInspectorCurrent() {
+    const targetCard = document.querySelector(`.page-card[data-page-index="${currentInspectedPage}"]`);
+    if (targetCard) {
+      const btn = targetCard.querySelector('button[title="تكرار / مضاعفة"]');
+      if (btn) duplicatePage(btn);
+    }
+  }
+
+  function deleteInspectorCurrent() {
+    const targetCard = document.querySelector(`.page-card[data-page-index="${currentInspectedPage}"]`);
+    if (targetCard) {
+      const btn = targetCard.querySelector('button[title="حذف الصفحة"]');
+      if (btn) deleteSinglePage(btn);
+    }
+  }
+</script></main></div></body></html>

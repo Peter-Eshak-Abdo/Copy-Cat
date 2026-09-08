@@ -1,0 +1,708 @@
+<!DOCTYPE html><html class="dark" dir="rtl" lang="ar"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"inverse-primary":"#00687a","inverse-on-surface":"#2c303b","on-error-container":"#ffdad6","on-tertiary-fixed-variant":"#653e00","error":"#ffb4ab","on-tertiary-container":"#563400","error-container":"#93000a","on-primary-fixed-variant":"#004e5c","surface-container-highest":"#313540","secondary-fixed-dim":"#ffb2b7","surface-variant":"#313540","on-tertiary":"#472a00","primary-fixed-dim":"#4cd7f6","tertiary-container":"#e79400","surface-bright":"#353944","on-tertiary-fixed":"#2a1700","surface":"#0f131d","inverse-surface":"#dfe2f1","on-background":"#dfe2f1","tertiary-fixed-dim":"#ffb95f","surface-dim":"#0f131d","primary-container":"#06b6d4","surface-container-lowest":"#0a0e18","primary":"#4cd7f6","surface-tint":"#4cd7f6","surface-container-high":"#262a35","on-surface-variant":"#bcc9cd","tertiary":"#ffb95f","on-surface":"#dfe2f1","secondary-fixed":"#ffdadb","surface-container":"#1c1f2a","secondary-container":"#b50036","on-secondary-fixed-variant":"#92002a","primary-fixed":"#acedff","outline-variant":"#3d494c","on-secondary-container":"#ffc2c4","on-primary-fixed":"#001f26","on-secondary":"#67001b","on-primary":"#003640","secondary":"#ffb2b7","tertiary-fixed":"#ffddb8","on-error":"#690005","background":"#0f131d","on-secondary-fixed":"#40000d","outline":"#869397","surface-container-low":"#171b26","on-primary-container":"#00424f"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-2xl":"3rem","space-3xl":"4rem","space-xs":"0.5rem","space-2xs":"0.25rem","gutter-desktop":"1.5rem","space-md":"1rem","space-sm":"0.75rem","space-lg":"1.5rem","sidebar-width-expanded":"16rem","space-xl":"2rem","gutter-mobile":"0.75rem","sidebar-width-collapsed":"4.5rem"},fontFamily:{"label-tag":["Inter"],"headline-md":["Inter"],"label-code":["JetBrains Mono"],"display-hero-mobile":["Inter"],"body-md":["Inter"],"body-sm":["Inter"],"headline-lg":["Inter"],"display-hero":["Inter"],"headline-lg-mobile":["Inter"],"body-lg":["Inter"],"headline-sm":["Inter"]},fontSize:{"label-tag":["11px",{"lineHeight":"14px","letterSpacing":"0.04em","fontWeight":"700"}],"headline-md":["22px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"label-code":["12px",{"lineHeight":"16px","letterSpacing":"0.02em","fontWeight":"500"}],"display-hero-mobile":["30px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"display-hero":["44px",{"lineHeight":"52px","letterSpacing":"-0.025em","fontWeight":"800"}],"headline-lg-mobile":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-sm":["18px",{"lineHeight":"24px","letterSpacing":"-0.005em","fontWeight":"600"}]}}}};</script></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased min-h-screen selection:bg-primary selection:text-on-primary"><aside class="fixed right-0 top-0 bottom-0 w-sidebar-width-expanded bg-surface-container-lowest z-50 flex flex-col justify-between overflow-y-auto"><div class="p-space-md"><div class="flex items-center gap-space-sm px-space-xs py-space-sm mb-space-md"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary tracking-tight">كوبي كات ERP</span><span class="font-label-code text-label-code text-on-surface-variant">v2.4 Enterprise Hub</span></div></div><nav class="flex flex-col gap-space-md" data-active-classes="bg-primary-container text-on-primary-container font-bold rounded-xl"><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الرئيسية والمخزن</span><a aria-current="page" class="flex items-center gap-space-sm px-space-sm py-space-xs transition-all bg-primary-container text-on-primary-container font-bold rounded-xl" data-path="operations-dashboard" href="#"><span class="material-symbols-outlined text-primary text-xl">dashboard</span><span class="font-body-sm text-body-sm">لوحة العمليات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="inventory-catalog" href="#"><span class="material-symbols-outlined text-xl">inventory_2</span><span class="font-body-sm text-body-sm">المخزن والكتالوج</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">أدوات المطبعة والتصوير</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="print-calculator" href="#"><span class="material-symbols-outlined text-xl">calculate</span><span class="font-body-sm text-body-sm">حاسبة المطبعة والملازم</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="shift-orders" href="#"><span class="material-symbols-outlined text-xl">assignment</span><span class="font-body-sm text-body-sm">مهام وأوردرات الشفت</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="national-id-builder" href="#"><span class="material-symbols-outlined text-xl">badge</span><span class="font-body-sm text-body-sm">مصنع بطاقات الرقم القومي A5</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="portrait-studio" href="#"><span class="material-symbols-outlined text-xl">photo_camera</span><span class="font-body-sm text-body-sm">استوديو الصور 4x6</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="ink-saver-scanner" href="#"><span class="material-symbols-outlined text-xl">document_scanner</span><span class="font-body-sm text-body-sm">ماسح المستندات وتوفير الحبر</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">المستندات والذكاء الاصطناعي</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="advanced-pdf-studio" href="#"><span class="material-symbols-outlined text-xl">picture_as_pdf</span><span class="font-body-sm text-body-sm">استوديو أدوات PDF المتقدمة</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="smart-ocr-hub" href="#"><span class="material-symbols-outlined text-tertiary text-xl">psychology</span><span class="font-body-sm text-body-sm">الماسح الضوئي الذكي (OCR)</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="vocabulary-sheet-generator" href="#"><span class="material-symbols-outlined text-xl">spellcheck</span><span class="font-body-sm text-body-sm">مولد شيتات المفردات</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="academic-research-generator" href="#"><span class="material-symbols-outlined text-xl">menu_book</span><span class="font-body-sm text-body-sm">مولد الأبحاث الأكاديمية</span></a></div><div class="flex flex-col gap-space-2xs"><span class="px-space-sm font-label-tag text-label-tag text-outline uppercase tracking-wider">الشبكة والإنتاجية</span><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="daily-server-links" href="#"><span class="material-symbols-outlined text-xl">dns</span><span class="font-body-sm text-body-sm">مواقع وسيرفرات يومية</span></a><a class="flex items-center gap-space-sm px-space-sm py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="lan-transfer-hub" href="#"><span class="material-symbols-outlined text-xl">sync_alt</span><span class="font-body-sm text-body-sm">مركز النقل السريع LAN</span></a></div></nav></div><div class="p-space-md bg-surface-container-low/60"><div class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container mb-space-sm"><div class="flex items-center gap-space-xs"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span></span><span class="font-label-code text-label-code text-on-surface-variant">السيرفر نشط</span></div><span class="font-label-tag text-label-tag px-space-xs py-space-2xs rounded-lg bg-surface-container-highest text-primary">99.8%</span></div><div class="flex items-center justify-between pt-space-xs"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-on-surface-variant text-lg">admin_panel_settings</span><span class="font-body-sm text-body-sm text-on-surface font-semibold">مشرف الفرع</span></div><a class="p-space-xs rounded-lg text-error hover:bg-surface-container-high transition-colors" data-path="login" href="#"><span class="material-symbols-outlined text-lg">logout</span></a></div></div></aside><div class="pr-sidebar-width-expanded"><header class="fixed top-0 right-sidebar-width-expanded left-0 h-16 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><img alt="logo.jpg" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VpzC_MDRD3TESDUobuiX8KOyhf9YAC7D76oM-2vUCJPGxHxtmMkXR3GTPKLj0Flc3eduZ8qe4pPhuQe5bIfA-Auf7iwLSrxVotQ91x8igvjXgxxgQMenJrCFx8jdhSLEeCSmJbni47Qw6cxz3PJkzplmCNNC4X21XRIYLOVOgDOKhhh_VLXT22XyFmBc-KaBbNfHIkb4C5yonR-R7b1UNHeH98AduXceN7dLxzXgf9jKxzj0p1llnEpRvuH3k95Tp8VSkifQP_mg"><div class="hidden sm:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-primary"></span><span class="font-label-code text-label-code text-primary">متصل بالخادم السحابي</span></div></div><div class="flex items-center gap-space-sm"><a class="hidden md:flex items-center gap-space-xs px-space-sm py-space-xs rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm transition-all" data-path="public-storefront" href="#"><span class="material-symbols-outlined text-base">storefront</span><span>تبديل للمتجر العام</span></a><button class="p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">dark_mode</span></button><button class="relative p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">notifications</span><span class="absolute top-1 left-1 w-2 h-2 bg-secondary-container rounded-full"></span></button><div class="flex items-center gap-space-xs pl-space-xs"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1UO12gBvuU5lLzzA8LA68aUE6fPaEjN3hhaFLV_103HWeMBpwNH7Y4OLVGnWqTorHT_T_ViOW6zIdaDr2tDRPThaLWkOq_bPkXeuhPWYWx75ElCDr5ivCXxrq2VnwzmXJQ0ianSvzqxnvT97H_hTGnD6ODWqlkMoe14sh47gSUE5F8b8UxP-jA7roIUIYgrkh205MqpdCeP7yjHmBwiA1nYEwz-KKs2BvQuDGpOPny-IlnLzLDmASwddBOD"><div class="hidden xl:flex flex-col text-right"><span class="font-body-sm text-body-sm font-semibold text-on-surface">أحمد المشرف</span><span class="font-label-tag text-label-tag text-on-surface-variant">مدير الوردية</span></div></div></div></header><main class="relative pt-16 min-h-screen bg-background w-full px-gutter-desktop"><div class="flex flex-col w-full pb-space-3xl gap-space-lg">
+<!-- Interactive Feedback Banner -->
+<div class="hidden items-center justify-between px-space-md py-space-xs rounded-xl bg-primary-container/15 text-primary text-body-sm shadow-md transition-all" id="statusNotification">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-base">check_circle</span>
+<span id="notificationText">تم تحديث مرشح HSL وحفظ إعدادات البطاقة بنجاح.</span>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors" onclick="dismissNotification()">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+<!-- Hero Header Panel -->
+<div class="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg shadow-xl">
+<div class="absolute -left-20 -top-20 w-80 h-80 rounded-full bg-primary/10 blur-3xl pointer-events-none"></div>
+<div class="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-secondary-container/10 blur-3xl pointer-events-none"></div>
+<div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-space-lg">
+<div class="flex flex-col items-start gap-space-xs max-w-3xl">
+<div class="inline-flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container-high text-primary">
+<span class="material-symbols-outlined text-base" style="font-variation-settings: 'FILL' 1;">badge</span>
+<span class="font-label-code text-label-code font-semibold">مصنع بطاقات الرقم القومي A5 (وش وظهر 9 سم)</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">
+          تجهيز وقص وطباعة بطاقات الرقم القومي الفورية A5
+        </h1>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+          أداة قص دقيقة لحواف البطاقات وتفتيح لوني متطور (HSL) يحافظ على الألوان الطبيعية وسواد الأرقام بدون بهتان أو تشويش، مع تدوير دقيق وتصدير مقاس A5 حقيقي للتسليف والطباعة الفورية في الوردية!
+        </p>
+</div>
+<!-- Action Button Group -->
+<div class="flex flex-wrap items-center gap-space-xs shrink-0">
+<button class="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-primary-container text-on-primary-container font-headline-sm text-headline-sm font-bold shadow-lg shadow-primary-container/20 hover:brightness-110 active:scale-95 transition-all" id="exportWordBtn" onclick="triggerExport('word')">
+<span class="material-symbols-outlined text-xl">description</span>
+<span>تصدير الوورد A5</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-sm py-space-sm rounded-xl bg-surface-container text-on-surface font-body-sm text-body-sm hover:bg-surface-container-high transition-all" onclick="toggleSizeConfigModal()">
+<span class="material-symbols-outlined text-base">straighten</span>
+<span>إعدادات المقاس</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-sm py-space-sm rounded-xl bg-secondary-container/20 text-secondary hover:bg-secondary-container/40 transition-all font-body-sm text-body-sm" onclick="clearAllCards()">
+<span class="material-symbols-outlined text-base">delete_sweep</span>
+<span>مسح الكل</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Processing Modes & Calibration Control Bar -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-md bg-surface-container-lowest p-space-md rounded-xl shadow-md">
+<!-- Preset Filter Mode Switcher -->
+<div class="xl:col-span-8 flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-tertiary text-base">auto_fix_high</span>
+<span class="font-headline-sm text-body-md text-on-surface font-semibold">نظام التفتيح اللوني وحفظ الألوان (Smart HSL Calibration)</span>
+</div>
+<span class="font-label-tag text-label-tag px-space-xs py-space-2xs rounded bg-surface-container text-primary">حفظ الألوان الطبيعية 100%</span>
+</div>
+<div class="flex flex-wrap items-center gap-space-xs pt-space-2xs" id="filterPresetContainer">
+<button class="preset-btn active-preset flex items-center gap-space-xs px-space-sm py-space-xs rounded-lg bg-primary text-on-primary font-body-sm text-body-sm font-semibold shadow-md transition-all" onclick="applyFilterPreset('balanced', this)">
+<span class="material-symbols-outlined text-sm">flare</span>
+<span>تفتيح متوازن مع حفظ الألوان (موصى به)</span>
+</button>
+<button class="preset-btn flex items-center gap-space-xs px-space-sm py-space-xs rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high font-body-sm text-body-sm transition-all" onclick="applyFilterPreset('deep-dark', this)">
+<span class="material-symbols-outlined text-sm">flash_on</span>
+<span>تفتيح فائق للبطاقات المظلمة جداً</span>
+</button>
+<button class="preset-btn flex items-center gap-space-xs px-space-sm py-space-xs rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high font-body-sm text-body-sm transition-all" onclick="applyFilterPreset('denoise', this)">
+<span class="material-symbols-outlined text-sm">clean_hands</span>
+<span>إزالة الظلال والشوائب</span>
+</button>
+<button class="preset-btn flex items-center gap-space-xs px-space-sm py-space-xs rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high font-body-sm text-body-sm transition-all" onclick="applyFilterPreset('original', this)">
+<span class="material-symbols-outlined text-sm">restart_alt</span>
+<span>الوضع الأصلي (Raw)</span>
+</button>
+</div>
+</div>
+<!-- Paper & Dimension Specifications -->
+<div class="xl:col-span-4 flex flex-col justify-between p-space-sm rounded-xl bg-surface-container-low gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-tag text-label-tag text-on-surface-variant uppercase tracking-wider">العرض المعتمد لكل بطاقة</span>
+<span class="font-label-code text-label-code font-bold text-primary" id="currentSizeIndicator">9.00 × 5.50 سم</span>
+</div>
+<div class="flex items-center gap-space-sm">
+<div class="flex-1 flex items-center justify-between px-space-sm py-space-2xs bg-surface-container rounded-lg">
+<span class="font-body-sm text-body-sm text-on-surface-variant">مقاس التسليف القياسي:</span>
+<span class="font-label-code text-label-code text-on-surface font-semibold">9.0 سم</span>
+</div>
+<button class="px-space-sm py-space-2xs rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface font-label-code text-label-code transition-all" onclick="resetCardDimensions()">
+          إعادة ضبط
+        </button>
+</div>
+</div>
+</div>
+<!-- Interactive Drag & Drop / Upload Target Zone -->
+<div class="relative group cursor-pointer overflow-hidden rounded-xl bg-surface-container/60 hover:bg-surface-container p-space-xl transition-all text-center" id="dropzoneContainer">
+<input accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10" id="fileUploaderInput" multiple="" onchange="handleIncomingUpload(this.files)" type="file">
+<!-- Stylized Dotted Border Container with Glow -->
+<div class="absolute inset-2 rounded-lg pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity" style="background: radial-gradient(circle, rgba(76, 215, 246, 0.08) 0%, transparent 70%);"></div>
+<div class="relative flex flex-col items-center justify-center gap-space-sm">
+<div class="w-16 h-16 rounded-full bg-primary-container/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl">upload_file</span>
+</div>
+<div class="flex flex-col gap-space-2xs">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">
+          اضغط هنا لرفع صور البطاقات أو اسحبها وأفلتها مباشرة (Drag &amp; Drop)
+        </h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+          يمكنك رفع الوش والظهر معاً، وسيقوم النظام بتجميع كل وجهين متتاليين في بطاقة واحدة تلقائياً وتجهيز مقاس التسليف المصري A5
+        </p>
+</div>
+<div class="flex items-center gap-space-md pt-space-xs">
+<span class="inline-flex items-center gap-space-2xs font-label-code text-label-code text-primary bg-primary/10 px-space-sm py-space-2xs rounded-full">
+<span class="material-symbols-outlined text-sm">verified</span>
+          تجميع تلقائي (Auto-Pairing)
+        </span>
+<span class="inline-flex items-center gap-space-2xs font-label-code text-label-code text-tertiary bg-tertiary/10 px-space-sm py-space-2xs rounded-full">
+<span class="material-symbols-outlined text-sm">high_density</span>
+          دقة إخراج 300 DPI حقيقية
+        </span>
+</div>
+</div>
+</div>
+<!-- Cards Grid State & Layout Telemetry Bar -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm px-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="w-2.5 h-2.5 rounded-full bg-primary"></span>
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">
+        تم تجميع <span class="text-primary font-bold" id="totalPairsCounter">3</span> بطاقات
+      </span>
+<span class="text-outline font-label-code text-label-code">|</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+        إجمالي <span class="text-on-surface font-semibold" id="totalSidesCounter">5</span> أوجه جاهزة للتسليف والطباعة الفورية
+      </span>
+</div>
+<!-- Quick Ordering Guide Tag -->
+<div class="flex items-center gap-space-sm">
+<div class="flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container font-label-tag text-label-tag text-on-surface-variant">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+<span>الوجه الأول = وش البطاقة</span>
+<span class="text-outline">/</span>
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span>الوجه الثاني = ظهر البطاقة</span>
+</div>
+<button class="p-space-2xs rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-all" onclick="autoReorderPairs()" title="إعادة ترتيب الوش والظهر لكل البطاقات">
+<span class="material-symbols-outlined text-base">sync_alt</span>
+</button>
+</div>
+</div>
+<!-- Active Card List Stack -->
+<div class="flex flex-col gap-space-lg" id="idCardsContainer">
+<!-- Card Entity #1 -->
+<div class="relative flex flex-col rounded-xl bg-surface-container-low p-space-md shadow-lg transition-all" id="cardEntity-1">
+<!-- Card Sub-header & Action Ribbon -->
+<div class="flex items-center justify-between pb-space-sm mb-space-sm">
+<div class="flex items-center gap-space-sm">
+<span class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-code text-label-code font-bold">1</span>
+<span class="font-headline-sm text-body-md font-bold text-on-surface">بطاقة رقم 1 • الرقم القومي</span>
+<span class="px-space-xs py-space-2xs rounded bg-surface-container text-primary font-label-tag text-label-tag">جاهزة للقص A5</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm text-body-sm transition-all" onclick="swapCardSides(1)">
+<span class="material-symbols-outlined text-base">swap_horiz</span>
+<span>تبديل الوش والظهر</span>
+</button>
+<button class="p-space-2xs rounded-lg bg-secondary-container/10 text-secondary hover:bg-secondary-container/30 transition-colors" onclick="deleteCardEntity(1)" title="حذف هذه البطاقة">
+<span class="material-symbols-outlined text-base">delete</span>
+</button>
+</div>
+</div>
+<!-- Sides Split Canvas (Front & Back) -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-space-md">
+<!-- Front Side (Face) -->
+<div class="flex flex-col gap-space-xs rounded-xl bg-surface-container p-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-base">person</span>
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">الوش (صفحة 1)</span>
+<span class="font-label-code text-label-code text-on-surface-variant">9.0x5.5 سم</span>
+</div>
+<!-- Face Micro Tools -->
+<div class="flex items-center gap-space-2xs">
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-on-surface text-label-code flex items-center gap-space-2xs" onclick="rotateSide('card-1-front')">
+<span class="material-symbols-outlined text-sm">rotate_90_degrees_cw</span>
+<span class="hidden sm:inline">تدوير</span>
+</button>
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-primary text-label-code flex items-center gap-space-2xs" onclick="cropSide('card-1-front')">
+<span class="material-symbols-outlined text-sm">crop</span>
+<span class="hidden sm:inline">قص الحواف</span>
+</button>
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-tertiary text-label-code flex items-center gap-space-2xs" onclick="enhanceSideColors('card-1-front')">
+<span class="material-symbols-outlined text-sm">tune</span>
+<span class="hidden sm:inline">تفتيح</span>
+</button>
+</div>
+</div>
+<!-- Card Graphic Container -->
+<div class="relative aspect-[1.636/1] w-full bg-surface-container-lowest rounded-lg overflow-hidden flex items-center justify-center group shadow-inner">
+<img class="w-full h-full object-cover transition-transform duration-300" data-alt="Clear high resolution scanned photo of the front of an Egyptian National ID smart card with portrait photo, eagle watermark insignia, clean HSL white backdrop, golden-amber undertones, crisp black Arabic typography and numbers, studio copy center precision lighting" id="card-1-front" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbiP4o8ZBad26haDVdEhFNPCX7vEMfVJhqHs4_0PdMVknWPPaGJKrzjXuRjGViFJcQ5A0B10ED39h9hOMFbTcYqvNTHLFz5RSoGtO4xPzt1CMZjqomOSxrgxAKjmjykF7yzj7NeLwkQOz9HJpr49eQKn8AFiRaRHFtwjjCuh2WMnzQNEDGbPxF8SLJdVg3DPTBxJ62xQ5iy79BWU_3maZhVes985g_38TiL2iJFsZDvWKT_RyHXu3KtA">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-space-sm justify-between">
+<span class="font-label-code text-label-code text-primary bg-surface/90 px-space-xs py-space-2xs rounded">الأبعاد: 1063 × 650 بكسل</span>
+<span class="font-label-tag text-label-tag text-on-surface bg-surface/90 px-space-xs py-space-2xs rounded">حواف مستقيمة (Auto Deskewed)</span>
+</div>
+</div>
+</div>
+<!-- Back Side -->
+<div class="flex flex-col gap-space-xs rounded-xl bg-surface-container p-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-tertiary text-base">contact_emergency</span>
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">الظهر (صفحة 2)</span>
+<span class="font-label-code text-label-code text-on-surface-variant">9.0x5.5 سم</span>
+</div>
+<!-- Back Micro Tools -->
+<div class="flex items-center gap-space-2xs">
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-on-surface text-label-code flex items-center gap-space-2xs" onclick="rotateSide('card-1-back')">
+<span class="material-symbols-outlined text-sm">rotate_90_degrees_cw</span>
+<span class="hidden sm:inline">تدوير</span>
+</button>
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-primary text-label-code flex items-center gap-space-2xs" onclick="cropSide('card-1-back')">
+<span class="material-symbols-outlined text-sm">crop</span>
+<span class="hidden sm:inline">قص الحواف</span>
+</button>
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-tertiary text-label-code flex items-center gap-space-2xs" onclick="enhanceSideColors('card-1-back')">
+<span class="material-symbols-outlined text-sm">tune</span>
+<span class="hidden sm:inline">تفتيح</span>
+</button>
+</div>
+</div>
+<!-- Card Graphic Container -->
+<div class="relative aspect-[1.636/1] w-full bg-surface-container-lowest rounded-lg overflow-hidden flex items-center justify-center group shadow-inner">
+<img class="w-full h-full object-cover transition-transform duration-300" data-alt="Clear high resolution scanned photo of the rear back side of an Egyptian national ID card showing official optical barcode, job classification, civil status registration seal, dark sharp Arabic lettering on neutral bright paper background" id="card-1-back" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8NJ5njkGRW-ytqME79IyrqofrJCyzdeB7Lhe7AhI5NbedLiIJ-mvm1QZ-6cqRgG73vD8DSYFCrQa7Jp5RLLKWARkNz6tSQpR-sK5PPYBoTAuMZ-Lho8tKX-JWP1pHFoR-891uCuZF95PSgghKtE2J3tfRWchf3Me3clADNXP7ZLma4TjPY_viVgi-xcLDc_MWFIxxl0LGZYpxq-l695SBvByG-wlbBSfQkaOp7Orhq3STQBT5Naetmw">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-space-sm justify-between">
+<span class="font-label-code text-label-code text-tertiary bg-surface/90 px-space-xs py-space-2xs rounded">باركود مقروء 100%</span>
+<span class="font-label-tag text-label-tag text-on-surface bg-surface/90 px-space-xs py-space-2xs rounded">متطابق ليزرياً مع الوش</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Card Entity #2 -->
+<div class="relative flex flex-col rounded-xl bg-surface-container-low p-space-md shadow-lg transition-all" id="cardEntity-2">
+<!-- Card Sub-header & Action Ribbon -->
+<div class="flex items-center justify-between pb-space-sm mb-space-sm">
+<div class="flex items-center gap-space-sm">
+<span class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-code text-label-code font-bold">2</span>
+<span class="font-headline-sm text-body-md font-bold text-on-surface">بطاقة رقم 2 • الرقم القومي</span>
+<span class="px-space-xs py-space-2xs rounded bg-surface-container text-tertiary font-label-tag text-label-tag">تم تطبيق HSL</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm text-body-sm transition-all" onclick="swapCardSides(2)">
+<span class="material-symbols-outlined text-base">swap_horiz</span>
+<span>تبديل الوش والظهر</span>
+</button>
+<button class="p-space-2xs rounded-lg bg-secondary-container/10 text-secondary hover:bg-secondary-container/30 transition-colors" onclick="deleteCardEntity(2)" title="حذف هذه البطاقة">
+<span class="material-symbols-outlined text-base">delete</span>
+</button>
+</div>
+</div>
+<!-- Sides Split Canvas (Front & Back) -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-space-md">
+<!-- Front Side (Face) -->
+<div class="flex flex-col gap-space-xs rounded-xl bg-surface-container p-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-base">person</span>
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">الوش (صفحة 1)</span>
+<span class="font-label-code text-label-code text-on-surface-variant">9.0x5.5 سم</span>
+</div>
+<div class="flex items-center gap-space-2xs">
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-on-surface text-label-code flex items-center gap-space-2xs" onclick="rotateSide('card-2-front')">
+<span class="material-symbols-outlined text-sm">rotate_90_degrees_cw</span>
+<span class="hidden sm:inline">تدوير</span>
+</button>
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-primary text-label-code flex items-center gap-space-2xs" onclick="cropSide('card-2-front')">
+<span class="material-symbols-outlined text-sm">crop</span>
+<span class="hidden sm:inline">قص الحواف</span>
+</button>
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-tertiary text-label-code flex items-center gap-space-2xs" onclick="enhanceSideColors('card-2-front')">
+<span class="material-symbols-outlined text-sm">tune</span>
+<span class="hidden sm:inline">تفتيح</span>
+</button>
+</div>
+</div>
+<div class="relative aspect-[1.636/1] w-full bg-surface-container-lowest rounded-lg overflow-hidden flex items-center justify-center group shadow-inner">
+<img class="w-full h-full object-cover transition-transform duration-300" data-alt="High contrast clean digital scan of an Egyptian identity card showing face photograph, microtext security patterns, sharp black Arabic personal information without glare or camera shadow, neutral slate borders" id="card-2-front" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALTZSy0MJN9UYy31CanGhw11UTHlBVQ8yYPtCdT4u6uOq9IPMglzQEohEduI3Bk354rzYPEsMF7ZoPFqOnCiWi8oCrPSra8foRdQ-E8stwO4V84V4FCV4Gnnrddhwr8eTsxSrALZrBtLPMVZUIoMxHMPIyD7ghSS0EfJS8mmeJZmJ9y3Qp6U5qitT1Hns5VGbl694leN26LaKPMu3Uj0LEyoIgOQ27g7P3170fVSk_MW1vcaqc40fIwQ">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-space-sm justify-between">
+<span class="font-label-code text-label-code text-primary bg-surface/90 px-space-xs py-space-2xs rounded">معالجة تباين الأرقام: ممتازة</span>
+<span class="font-label-tag text-label-tag text-on-surface bg-surface/90 px-space-xs py-space-2xs rounded">قص حواف دقيق</span>
+</div>
+</div>
+</div>
+<!-- Back Side -->
+<div class="flex flex-col gap-space-xs rounded-xl bg-surface-container p-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-tertiary text-base">contact_emergency</span>
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">الظهر (صفحة 2)</span>
+<span class="font-label-code text-label-code text-on-surface-variant">9.0x5.5 سم</span>
+</div>
+<div class="flex items-center gap-space-2xs">
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-on-surface text-label-code flex items-center gap-space-2xs" onclick="rotateSide('card-2-back')">
+<span class="material-symbols-outlined text-sm">rotate_90_degrees_cw</span>
+<span class="hidden sm:inline">تدوير</span>
+</button>
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-primary text-label-code flex items-center gap-space-2xs" onclick="cropSide('card-2-back')">
+<span class="material-symbols-outlined text-sm">crop</span>
+<span class="hidden sm:inline">قص الحواف</span>
+</button>
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-tertiary text-label-code flex items-center gap-space-2xs" onclick="enhanceSideColors('card-2-back')">
+<span class="material-symbols-outlined text-sm">tune</span>
+<span class="hidden sm:inline">تفتيح</span>
+</button>
+</div>
+</div>
+<div class="relative aspect-[1.636/1] w-full bg-surface-container-lowest rounded-lg overflow-hidden flex items-center justify-center group shadow-inner">
+<img class="w-full h-full object-cover transition-transform duration-300" data-alt="Egyptian civil registry card backside scanned under studio flatbed scanner, sharp dark black magnetic OCR zone at bottom, clear official stamp watermark, zero ink spread" id="card-2-back" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtp4rP3WHEqVUpkbwdiuGbU1AygFqZqnARsKfM1thlKxt0an6fI9GkC8WmfED3gS8-u6B5t9nM52uEw6Ec0lmEAfCNI-umCxU13DhLRzUOtdzJHvw3PBJ0FerWyb8cO5ycYXV_6CRHOtGubDc_82_iCdmGUI4X3cPblo_ccnKvv07TOTVRXj_Ndttdy1Aq8HBvvqqwP7R9FEYs7ypr1kidWMYqQLWM4Gz0xOfwTUCvyUZCXXlPBu5f7w">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-space-sm justify-between">
+<span class="font-label-code text-label-code text-tertiary bg-surface/90 px-space-xs py-space-2xs rounded">مطابقة المقاس مع الوجه 1: 100%</span>
+<span class="font-label-tag text-label-tag text-on-surface bg-surface/90 px-space-xs py-space-2xs rounded">جاهز للسحب المباشر</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Card Entity #3 (Single Side Pending Back Pairing) -->
+<div class="relative flex flex-col rounded-xl bg-surface-container-low p-space-md shadow-lg transition-all" id="cardEntity-3">
+<div class="flex items-center justify-between pb-space-sm mb-space-sm">
+<div class="flex items-center gap-space-sm">
+<span class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-code text-label-code font-bold">3</span>
+<span class="font-headline-sm text-body-md font-bold text-on-surface">بطاقة رقم 3 • الرقم القومي</span>
+<span class="px-space-xs py-space-2xs rounded bg-tertiary/20 text-tertiary font-label-tag text-label-tag">بانتظار رفع الظهر</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm text-body-sm transition-all" onclick="swapCardSides(3)">
+<span class="material-symbols-outlined text-base">swap_horiz</span>
+<span>تبديل الوش والظهر</span>
+</button>
+<button class="p-space-2xs rounded-lg bg-secondary-container/10 text-secondary hover:bg-secondary-container/30 transition-colors" onclick="deleteCardEntity(3)" title="حذف هذه البطاقة">
+<span class="material-symbols-outlined text-base">delete</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-space-md">
+<!-- Front Side (Face) -->
+<div class="flex flex-col gap-space-xs rounded-xl bg-surface-container p-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-base">person</span>
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">الوش (صفحة 1)</span>
+<span class="font-label-code text-label-code text-on-surface-variant">9.0x5.5 سم</span>
+</div>
+<div class="flex items-center gap-space-2xs">
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-on-surface text-label-code flex items-center gap-space-2xs" onclick="rotateSide('card-3-front')">
+<span class="material-symbols-outlined text-sm">rotate_90_degrees_cw</span>
+<span class="hidden sm:inline">تدوير</span>
+</button>
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-primary text-label-code flex items-center gap-space-2xs" onclick="cropSide('card-3-front')">
+<span class="material-symbols-outlined text-sm">crop</span>
+<span class="hidden sm:inline">قص الحواف</span>
+</button>
+<button class="p-space-2xs rounded-md bg-surface-container-high hover:bg-surface-bright text-tertiary text-label-code flex items-center gap-space-2xs" onclick="enhanceSideColors('card-3-front')">
+<span class="material-symbols-outlined text-sm">tune</span>
+<span class="hidden sm:inline">تفتيح</span>
+</button>
+</div>
+</div>
+<div class="relative aspect-[1.636/1] w-full bg-surface-container-lowest rounded-lg overflow-hidden flex items-center justify-center group shadow-inner">
+<img class="w-full h-full object-cover transition-transform duration-300" data-alt="Scanned clean document of an Egyptian modern smart identity card front face, natural daylight coloration, ultra clear photo of man, crisp dark 14 digits national id number" id="card-3-front" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBazZarjFjKrAc34HIavEcjfox2Gv5jpT5yDuxquIFUxL9p6N0ALxnXjExPUp6P-GxcF6VqZobPsV9IKchY29I4GSc_zJRMvKoQv0zO0NGONLmqLjr_S12UzwVlkN0gu6xGO2HbB1_UJhu972aWlNmMDBdCaYtOFGyWOb8_u6cbmeS_6DeXGl-Lw6393MWO5Pm3Mn27TpoS-vzpBMLLBpV3FrrJ2MoschT5HJqLVBlf0sXcq-Zy-NtcwQ">
+</div>
+</div>
+<!-- Missing Back Side Placeholder (Ready for Fast Drop) -->
+<div class="flex flex-col gap-space-xs rounded-xl bg-surface-container p-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-on-surface-variant text-base">contact_emergency</span>
+<span class="font-body-sm text-body-sm font-semibold text-on-surface-variant">الظهر (مطلوب للورقة A5)</span>
+</div>
+<span class="font-label-tag text-label-tag text-tertiary bg-tertiary/10 px-space-xs py-space-2xs rounded">فارغ</span>
+</div>
+<div class="relative aspect-[1.636/1] w-full rounded-lg bg-surface-container-lowest/80 flex flex-col items-center justify-center gap-space-xs cursor-pointer hover:bg-surface-container-high transition-colors p-space-md text-center">
+<input accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="uploadSingleBack(3, this.files)" type="file">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-xl">add_photo_alternate</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">اضغط أو أسقط ظهر هذه البطاقة هنا</span>
+<span class="font-label-code text-label-code text-on-surface-variant">لتكتمل الورقة A5 للطباعة الفورية والتسليف</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- A5 Sheet Imposition Print Preview Card -->
+<div class="flex flex-col rounded-xl bg-surface-container-low p-space-lg shadow-xl gap-space-md">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm pb-space-sm">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-xl">layers</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">معاينة رص البطاقات على ورقة A5 للتسليف السريع</h3>
+<span class="font-body-sm text-body-sm text-on-surface-variant">الوش في النصف العلوي، والظهر في النصف السفلي بدقة هندسية 100% لتسهيل القلب والتسليف الحراري</span>
+</div>
+</div>
+<!-- Live Sheet Indicator Badge -->
+<div class="flex items-center gap-space-xs px-space-sm py-space-xs rounded-lg bg-surface-container font-label-code text-label-code text-on-surface">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span>الورقة رقم: 1 من 2 (A5 Portrait 148×210 مم)</span>
+</div>
+</div>
+<!-- Visual Paper Imposition Mockup -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-lg items-center bg-surface-container-lowest p-space-md rounded-xl">
+<div class="flex flex-col items-center justify-center p-space-md">
+<!-- SVG Vector Schematic of A5 Sheet Layout -->
+<div class="w-56 aspect-[148/210] bg-surface rounded shadow-2xl p-3 flex flex-col justify-between relative overflow-hidden">
+<div class="absolute top-1 right-2 text-[9px] font-label-code text-on-surface-variant">A5 (148 x 210 mm)</div>
+<!-- Top Card Slot (Front) -->
+<div class="w-full h-[45%] rounded bg-primary/10 flex flex-col items-center justify-center gap-1">
+<span class="font-label-code text-[10px] text-primary font-bold">وش البطاقة (9.0 سم)</span>
+<div class="w-16 h-2 bg-primary/20 rounded-full"></div>
+<div class="w-10 h-1.5 bg-primary/20 rounded-full"></div>
+</div>
+<!-- Cut Guideline / Folding Center Axis -->
+<div class="w-full flex items-center justify-between px-2 text-[9px] text-outline font-label-code py-1">
+<span>--- خط التسليف والقص المباشر ---</span>
+<span class="material-symbols-outlined text-xs">content_cut</span>
+</div>
+<!-- Bottom Card Slot (Back) -->
+<div class="w-full h-[45%] rounded bg-tertiary/10 flex flex-col items-center justify-center gap-1">
+<span class="font-label-code text-[10px] text-tertiary font-bold">ظهر البطاقة (9.0 سم)</span>
+<div class="w-14 h-1.5 bg-tertiary/20 rounded-full"></div>
+<div class="w-20 h-2 bg-tertiary/20 rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Quick Imposition Configs -->
+<div class="flex flex-col gap-space-sm">
+<h4 class="font-headline-sm text-body-md font-bold text-on-surface">مواصفات التصدير للماكينة:</h4>
+<ul class="flex flex-col gap-space-xs font-body-sm text-body-sm text-on-surface-variant">
+<li class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-base">check</span>
+<span>الهوامش العلوية والسفلية: <strong class="text-on-surface">15 ملم ثابتة</strong> لمنع قطع النصوص</span>
+</li>
+<li class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-base">check</span>
+<span>توسيط أفقي تلقائي في منتصف ورقة الـ A5</span>
+</li>
+<li class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-base">check</span>
+<span>سواد حبري فائق (Rich Black K100%) لباركود الظهر ورقم البطاقة</span>
+</li>
+<li class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-base">check</span>
+<span>دعم مباشر لجميع طابعات الليزر (Canon / Xerox / HP / Ricoh)</span>
+</li>
+</ul>
+<div class="flex items-center gap-space-xs pt-space-xs">
+<button class="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-surface-container-high hover:bg-surface-bright text-on-surface font-headline-sm text-body-md font-semibold transition-all" onclick="triggerDirectSpool()">
+<span class="material-symbols-outlined text-primary text-xl">print</span>
+<span>إرسال مباشر إلى Canon iR (الماكينة 2)</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Floating Command Bar (Fixed Ergonomics) -->
+<div class="sticky bottom-4 z-40 flex items-center justify-between px-space-lg py-space-sm rounded-xl bg-surface-container/90 backdrop-blur-xl shadow-2xl">
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-xl">bolt</span>
+<div class="flex flex-col">
+<span class="font-headline-sm text-body-md font-bold text-on-surface">أوامر الإنتاج السريعة</span>
+<span class="font-label-code text-label-code text-on-surface-variant">جاهزية التصدير: 100% مطابقة لمعايير وزارة الداخلية</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-space-sm">
+<button class="flex items-center gap-space-xs px-space-lg py-space-sm rounded-xl bg-primary-container text-on-primary-container font-headline-sm text-body-md font-bold shadow-lg shadow-primary-container/30 hover:brightness-110 active:scale-95 transition-all" onclick="triggerExport('word')">
+<span class="material-symbols-outlined text-xl">file_download</span>
+<span>تنزيل ملف Word A5</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-bright font-body-sm text-body-sm transition-all" onclick="triggerExport('pdf')">
+<span class="material-symbols-outlined text-base">picture_as_pdf</span>
+<span>PDF A5 جاهز</span>
+</button>
+</div>
+</div>
+<!-- Modal: Custom Dimensions Configuration (Toggled by Button) -->
+<div class="fixed inset-0 z-50 hidden items-center justify-center bg-surface-container-lowest/80 backdrop-blur-sm p-space-md" id="sizeConfigModal">
+<div class="w-full max-w-md rounded-xl bg-surface-container p-space-lg shadow-2xl flex flex-col gap-space-md">
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-xl">tune</span>
+<h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">تخصيص أبعاد البطاقة والتسليف</h3>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface" onclick="toggleSizeConfigModal()">
+<span class="material-symbols-outlined text-lg">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-space-sm">
+<div class="flex flex-col gap-space-2xs">
+<label class="font-body-sm text-body-sm text-on-surface font-semibold">عرض البطاقة (سم):</label>
+<input class="px-space-sm py-space-xs bg-surface-container-lowest text-on-surface rounded-lg font-label-code text-label-code focus:outline-none" id="cardWidthInput" step="0.1" type="number" value="9.0">
+</div>
+<div class="flex flex-col gap-space-2xs">
+<label class="font-body-sm text-body-sm text-on-surface font-semibold">ارتفاع البطاقة (سم):</label>
+<input class="px-space-sm py-space-xs bg-surface-container-lowest text-on-surface rounded-lg font-label-code text-label-code focus:outline-none" id="cardHeightInput" step="0.1" type="number" value="5.5">
+</div>
+<div class="flex flex-col gap-space-2xs">
+<label class="font-body-sm text-body-sm text-on-surface font-semibold">المسافة بين الوش والظهر (سم):</label>
+<input class="px-space-sm py-space-xs bg-surface-container-lowest text-on-surface rounded-lg font-label-code text-label-code focus:outline-none" step="0.1" type="number" value="1.2">
+</div>
+</div>
+<div class="flex items-center justify-end gap-space-xs pt-space-xs">
+<button class="px-space-md py-space-xs rounded-lg bg-surface-container-high text-on-surface font-body-sm text-body-sm" onclick="toggleSizeConfigModal()">
+          إلغاء
+        </button>
+<button class="px-space-md py-space-xs rounded-lg bg-primary text-on-primary font-body-sm text-body-sm font-semibold" onclick="saveDimensionsConfig()">
+          حفظ وتطبيق
+        </button>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // State variables for dynamic rotation and filters
+  const rotationStates = {};
+  const enhancementStates = {};
+
+  function showNotification(msg) {
+    const banner = document.getElementById('statusNotification');
+    const textSpan = document.getElementById('notificationText');
+    if (banner && textSpan) {
+      textSpan.innerText = msg;
+      banner.classList.remove('hidden');
+      banner.classList.add('flex');
+      setTimeout(() => {
+        banner.classList.add('hidden');
+        banner.classList.remove('flex');
+      }, 4000);
+    }
+  }
+
+  function dismissNotification() {
+    const banner = document.getElementById('statusNotification');
+    if (banner) {
+      banner.classList.add('hidden');
+      banner.classList.remove('flex');
+    }
+  }
+
+  function applyFilterPreset(presetName, clickedBtn) {
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.className = 'preset-btn flex items-center gap-space-xs px-space-sm py-space-xs rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high font-body-sm text-body-sm transition-all';
+    });
+    clickedBtn.className = 'preset-btn flex items-center gap-space-xs px-space-sm py-space-xs rounded-lg bg-primary text-on-primary font-body-sm text-body-sm font-semibold shadow-md transition-all';
+
+    const images = document.querySelectorAll('#idCardsContainer img');
+    images.forEach(img => {
+      if (presetName === 'balanced') {
+        img.style.filter = 'contrast(1.15) brightness(1.12) saturate(1.05)';
+      } else if (presetName === 'deep-dark') {
+        img.style.filter = 'contrast(1.35) brightness(1.35) saturate(1.1)';
+      } else if (presetName === 'denoise') {
+        img.style.filter = 'contrast(1.25) brightness(1.18) grayscale(0.15)';
+      } else {
+        img.style.filter = 'none';
+      }
+    });
+
+    showNotification('تم تطبيق وضع: ' + clickedBtn.innerText.trim());
+  }
+
+  function rotateSide(elementId) {
+    const img = document.getElementById(elementId);
+    if (!img) return;
+    rotationStates[elementId] = ((rotationStates[elementId] || 0) + 90) % 360;
+    img.style.transform = `rotate(${rotationStates[elementId]}deg)`;
+    showNotification(`تم تدوير الوجه 90 درجة (الزاوية الحالية: ${rotationStates[elementId]}°)`);
+  }
+
+  function cropSide(elementId) {
+    const img = document.getElementById(elementId);
+    if (!img) return;
+    img.classList.toggle('scale-105');
+    showNotification('تم تفعيل الاقتصاص التلقائي لهوامش البطاقة');
+  }
+
+  function enhanceSideColors(elementId) {
+    const img = document.getElementById(elementId);
+    if (!img) return;
+    enhancementStates[elementId] = !enhancementStates[elementId];
+    if (enhancementStates[elementId]) {
+      img.style.filter = 'contrast(1.2) brightness(1.15) saturate(1.1)';
+      showNotification('تم تفتيح البطاقة وحفظ تباين الأرقام الوطنية');
+    } else {
+      img.style.filter = 'none';
+      showNotification('تمت إعادة الوجه للوضع الطبيعي');
+    }
+  }
+
+  function swapCardSides(cardId) {
+    const frontImg = document.getElementById(`card-${cardId}-front`);
+    const backImg = document.getElementById(`card-${cardId}-back`);
+    if (frontImg && backImg) {
+      const tempSrc = frontImg.src;
+      const tempAlt = frontImg.getAttribute('data-alt');
+      frontImg.src = backImg.src;
+      frontImg.setAttribute('data-alt', backImg.getAttribute('data-alt'));
+      backImg.src = tempSrc;
+      backImg.setAttribute('data-alt', tempAlt);
+      showNotification(`تم عكس ترتيب الوش والظهر للبطاقة رقم ${cardId}`);
+    }
+  }
+
+  function deleteCardEntity(cardId) {
+    const entity = document.getElementById(`cardEntity-${cardId}`);
+    if (entity) {
+      entity.style.opacity = '0';
+      entity.style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        entity.remove();
+        updateCounters();
+        showNotification(`تم حذف البطاقة رقم ${cardId} من قائمة التجهيز`);
+      }, 250);
+    }
+  }
+
+  function updateCounters() {
+    const cards = document.querySelectorAll('#idCardsContainer > div');
+    const pairCounter = document.getElementById('totalPairsCounter');
+    const sideCounter = document.getElementById('totalSidesCounter');
+    if (pairCounter) pairCounter.innerText = cards.length;
+    if (sideCounter) sideCounter.innerText = Math.max(0, cards.length * 2 - 1);
+  }
+
+  function autoReorderPairs() {
+    showNotification('جاري فحص وتصحيح ترتيب الأوجه تلقائياً حسب تقنية التعرف على الصور...');
+  }
+
+  function toggleSizeConfigModal() {
+    const modal = document.getElementById('sizeConfigModal');
+    if (modal) {
+      modal.classList.toggle('hidden');
+      modal.classList.toggle('flex');
+    }
+  }
+
+  function saveDimensionsConfig() {
+    const w = document.getElementById('cardWidthInput').value || '9.0';
+    const h = document.getElementById('cardHeightInput').value || '5.5';
+    const indicator = document.getElementById('currentSizeIndicator');
+    if (indicator) {
+      indicator.innerText = `${parseFloat(w).toFixed(2)} × ${parseFloat(h).toFixed(2)} سم`;
+    }
+    toggleSizeConfigModal();
+    showNotification(`تم حفظ المقاس الجديد: ${w} × ${h} سم`);
+  }
+
+  function resetCardDimensions() {
+    const indicator = document.getElementById('currentSizeIndicator');
+    if (indicator) indicator.innerText = '9.00 × 5.50 سم';
+    showNotification('تمت استعادة المقاس القياسي للتسليف (9.0 سم)');
+  }
+
+  function clearAllCards() {
+    const container = document.getElementById('idCardsContainer');
+    if (container) {
+      container.innerHTML = `
+        <div class="p-space-2xl text-center flex flex-col items-center justify-center gap-space-sm bg-surface-container rounded-xl">
+          <span class="material-symbols-outlined text-4xl text-on-surface-variant">check_box_outline_blank</span>
+          <span class="font-headline-sm text-body-md text-on-surface font-semibold">تم إفراغ مصنع البطاقات</span>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">اسحب وأفلت صور بطاقات جديدة في المنطقة العلوية للبدء الفوري.</p>
+        </div>
+      `;
+      const pairCounter = document.getElementById('totalPairsCounter');
+      const sideCounter = document.getElementById('totalSidesCounter');
+      if (pairCounter) pairCounter.innerText = '0';
+      if (sideCounter) sideCounter.innerText = '0';
+      showNotification('تم تفريغ جميع البطاقات بنجاح');
+    }
+  }
+
+  function triggerExport(type) {
+    showNotification(`جاري تحضير ملف ${type.toUpperCase()} A5 عالي الجودة وتضمين الأوجه بدقة 300 DPI...`);
+    setTimeout(() => {
+      showNotification(`تم تجهيز ملف ${type.toUpperCase()} بنجاح وهو جاهز للطباعة المباشرة!`);
+    }, 1200);
+  }
+
+  function triggerDirectSpool() {
+    showNotification('تم إرسال أمر الطباعة المباشر إلى ماكينة Canon ImageRUNNER عبر بروتوكول IPP');
+  }
+
+  function handleIncomingUpload(files) {
+    if (files && files.length > 0) {
+      showNotification(`تم استلام ${files.length} ملفات جاري معالجتها وضبط الأبعاد تلقائياً...`);
+    }
+  }
+
+  function uploadSingleBack(cardId, files) {
+    if (files && files.length > 0) {
+      showNotification(`تم رفع ظهر البطاقة رقم ${cardId} واكتمال شيت A5`);
+    }
+  }
+</script></main></div></body></html>
