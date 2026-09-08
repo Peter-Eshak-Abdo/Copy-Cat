@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -45,6 +45,25 @@ interface CartItem {
   quantity: number;
 }
 
+const emptySubscribe = () => () => {};
+
+function subscribeOnline(callback: () => void) {
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+}
+
+function getOnlineSnapshot() {
+  return navigator.onLine;
+}
+
+function getOnlineServerSnapshot() {
+  return true;
+}
+
 export default function StorefrontPage() {
   const { toast } = useToast();
   const [products, setProducts] = useState<InventoryItem[]>(INITIAL_PRODUCTS);
@@ -58,24 +77,13 @@ export default function StorefrontPage() {
   const [visibleCount, setVisibleCount] = useState(24);
 
   // Offline Detection & Mobile Handling
-  const [mounted, setMounted] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
+  const isOnline = useSyncExternalStore(
+    subscribeOnline,
+    getOnlineSnapshot,
+    getOnlineServerSnapshot
+  );
   const [offlineNoticeModal, setOfflineNoticeModal] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    if (typeof navigator !== "undefined") {
-      setIsOnline(navigator.onLine);
-    }
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
 
   // Product Details Modal State (Point 8 in edits2.0.md)
   const [selectedProductModal, setSelectedProductModal] = useState<InventoryItem | null>(null);

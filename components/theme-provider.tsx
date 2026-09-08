@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 
 type Theme = "dark" | "light";
@@ -28,27 +28,45 @@ function applyTheme(t: Theme) {
   }
 }
 
+// Subscribe to storage events for cross-tab sync and local updates
+const THEME_CHANGE_EVENT = "copycat-theme-change";
+
+function subscribe(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(THEME_CHANGE_EVENT, callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(THEME_CHANGE_EVENT, callback);
+  };
+}
+
+function getSnapshot(): Theme {
+  try {
+    const savedTheme = localStorage.getItem("copycat-theme");
+    if (savedTheme === "light" || savedTheme === "dark") {
+      return savedTheme;
+    }
+  } catch {}
+  return "dark";
+}
+
+function getServerSnapshot(): Theme {
+  return "dark";
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark");
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   useEffect(() => {
-    try {
-      const savedTheme = localStorage.getItem("copycat-theme") as Theme;
-      if (savedTheme === "light" || savedTheme === "dark") {
-        setThemeState(savedTheme);
-        applyTheme(savedTheme);
-        return;
-      }
-    } catch {}
-    applyTheme("dark");
-  }, []);
+    applyTheme(theme);
+  }, [theme]);
 
   const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
     try {
       localStorage.setItem("copycat-theme", newTheme);
     } catch {}
     applyTheme(newTheme);
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
   };
 
   const toggleTheme = () => {
@@ -77,17 +95,19 @@ interface ThemeToggleProps {
   compact?: boolean;
 }
 
+const emptySubscribe = () => () => {};
+
 export function ThemeToggle({
   className = "",
   showLabel = false,
   compact = false,
 }: ThemeToggleProps) {
   const { theme, toggleTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
 
   if (!mounted) {
     return (
