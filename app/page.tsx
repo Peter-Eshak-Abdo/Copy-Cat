@@ -24,6 +24,8 @@ import {
   Share2,
   Package,
   Image as ImageIcon,
+  WifiOff,
+  Wifi,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -55,33 +57,116 @@ export default function StorefrontPage() {
   const [orderSent, setOrderSent] = useState(false);
   const [visibleCount, setVisibleCount] = useState(24);
 
+  // Offline Detection & Mobile Handling
+  const [mounted, setMounted] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [offlineNoticeModal, setOfflineNoticeModal] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof navigator !== "undefined") {
+      setIsOnline(navigator.onLine);
+    }
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
   // Product Details Modal State (Point 8 in edits2.0.md)
   const [selectedProductModal, setSelectedProductModal] = useState<InventoryItem | null>(null);
   const [activeModalImageIndex, setActiveModalImageIndex] = useState<number>(0);
 
-  // Load products from Supabase or localStorage cache
+  // Load products from Supabase or localStorage cache with custom image support
   useEffect(() => {
     async function loadProducts() {
       try {
-        const hasV6 = localStorage.getItem("copycat_inventory_v6_smart_avatar");
-        const cached = hasV6 ? localStorage.getItem("copycat_inventory_v6_smart_avatar") : null;
+        // 1. Purge legacy / corrupted cache keys that contained external wikimedia/unsplash links
+        const STALE_KEYS = [
+          "copycat_inventory_v1",
+          "copycat_inventory_v2",
+          "copycat_inventory_v2_img",
+          "copycat_inventory_v3",
+          "copycat_inventory_v4_realistic",
+          "copycat_inventory_v5_pure_real",
+          "copycat_inventory_v6_smart_avatar",
+          "copycat_inventory_v7_clean_assets",
+        ];
+        for (const key of STALE_KEYS) {
+          try {
+            localStorage.removeItem(key);
+          } catch {}
+        }
 
+        // 2. Clean customImagesMap of any external 404 links
+        let customImagesMap: Record<string | number, { image?: string; images?: string[] }> = {};
+        try {
+          const savedCustom = localStorage.getItem("copycat_custom_images");
+          if (savedCustom) {
+            const parsed = JSON.parse(savedCustom);
+            let dirty = false;
+            for (const id in parsed) {
+              const img = parsed[id]?.image;
+              if (
+                !img ||
+                img.includes("wikimedia.org") ||
+                img.includes("unsplash.com") ||
+                img.includes("undefined") ||
+                img.includes("null")
+              ) {
+                delete parsed[id];
+                dirty = true;
+              }
+            }
+            if (dirty) {
+              localStorage.setItem("copycat_custom_images", JSON.stringify(parsed));
+            }
+            customImagesMap = parsed;
+          }
+        } catch {}
+
+        const mergeWithCustomImages = (list: InventoryItem[]): InventoryItem[] => {
+          return list.map((it) => {
+            const custom = customImagesMap[it.id];
+            if (custom && custom.image) {
+              return sanitizeItem({
+                ...it,
+                image: custom.image,
+                images: custom.images || [custom.image],
+              });
+            }
+            const initMatch = INITIAL_PRODUCTS.find((p) => p.id === it.id || p.name === it.name);
+            if (initMatch) {
+              return sanitizeItem({
+                ...it,
+                image: initMatch.image,
+                images: initMatch.images,
+              });
+            }
+            return sanitizeItem(it);
+          });
+        };
+
+        const CURRENT_CACHE_KEY = "copycat_inventory_v8_local_catalog";
+        const cached = localStorage.getItem(CURRENT_CACHE_KEY);
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length >= INITIAL_PRODUCTS.length) {
-            const sanitizedList = parsed.map((it: InventoryItem) => sanitizeItem(it));
+            const sanitizedList = mergeWithCustomImages(parsed);
             setProducts(sanitizedList);
-            localStorage.setItem("copycat_inventory_v6_smart_avatar", JSON.stringify(sanitizedList));
           } else {
-            const sanitizedInit = INITIAL_PRODUCTS.map(sanitizeItem);
+            const sanitizedInit = mergeWithCustomImages(INITIAL_PRODUCTS);
             setProducts(sanitizedInit);
-            localStorage.setItem("copycat_inventory_v6_smart_avatar", JSON.stringify(sanitizedInit));
+            localStorage.setItem(CURRENT_CACHE_KEY, JSON.stringify(sanitizedInit));
           }
         } else {
-          // Fresh bump ensures high-fidelity word-matched stickers, folscap and avatar fallbacks
-          const sanitizedInit = INITIAL_PRODUCTS.map(sanitizeItem);
+          const sanitizedInit = mergeWithCustomImages(INITIAL_PRODUCTS);
           setProducts(sanitizedInit);
-          localStorage.setItem("copycat_inventory_v6_smart_avatar", JSON.stringify(sanitizedInit));
+          localStorage.setItem(CURRENT_CACHE_KEY, JSON.stringify(sanitizedInit));
         }
 
         if (isSupabaseConfigured) {
@@ -91,9 +176,9 @@ export default function StorefrontPage() {
             .order("id", { ascending: true });
 
           if (!error && data && data.length > 0) {
-            const hydrated = data.map((it: InventoryItem) => sanitizeItem(it));
+            const hydrated = mergeWithCustomImages(data as InventoryItem[]);
             setProducts(hydrated);
-            localStorage.setItem("copycat_inventory_v4_realistic", JSON.stringify(hydrated));
+            localStorage.setItem(CURRENT_CACHE_KEY, JSON.stringify(hydrated));
           }
         }
       } catch {
@@ -178,7 +263,7 @@ export default function StorefrontPage() {
     0
   );
 
-  // Send WhatsApp Order
+  // Send WhatsApp Order with Offline support & guidance
   const handleSendWhatsAppOrder = () => {
     if (cart.length === 0) return;
 
@@ -215,38 +300,87 @@ export default function StorefrontPage() {
       window.location.href = waUrl;
     }
 
+    // If customer is offline, persist order in local queue and display modal guidance
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      try {
+        const existing = JSON.parse(localStorage.getItem("copycat_offline_orders") || "[]");
+        existing.push({
+          id: Date.now(),
+          date: new Date().toISOString(),
+          customerName: customerName.trim() || "طلب مباشر",
+          customerNotes: customerNotes.trim(),
+          cart,
+          totalPrice: totalCartPrice,
+          message,
+        });
+        localStorage.setItem("copycat_offline_orders", JSON.stringify(existing));
+      } catch {}
+
+      setOfflineNoticeModal(true);
+      toast.info(
+        "طلب في وضع Offline",
+        "تم حفظ طلبك محلياً وتوجيهه لواتساب. اضغط إرسال داخل واتساب وستصل الرسالة أول ما تفتح نت."
+      );
+    } else {
+      toast.success("تم إرسال الطلب", "جاري فتح تطبيق واتساب لتأكيد الطلب مع المكتبة.");
+    }
+
     setOrderSent(true);
-    toast.success("تم إرسال الطلب", "جاري فتح تطبيق واتساب لتأكيد الطلب مع المكتبة.");
     setTimeout(() => {
       setOrderSent(false);
       setIsCartOpen(false);
     }, 4000);
   };
 
+  // Direct WhatsApp order from product modal
+  const handleDirectWhatsAppOrder = (product: InventoryItem) => {
+    const text = `مرحباً مكتبة كوبي كات، أود طلب الصنف التالي:\n- ${product.name}\n- السعر: ${product.price} ج.م`;
+    const waUrl = `https://wa.me/${WHATSAPP_INTERNATIONAL}?text=${encodeURIComponent(text)}`;
+    const opened = safeOpenUrl(waUrl);
+    if (!opened) {
+      window.location.href = waUrl;
+    }
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      try {
+        const existing = JSON.parse(localStorage.getItem("copycat_offline_orders") || "[]");
+        existing.push({
+          id: Date.now(),
+          date: new Date().toISOString(),
+          customerName: "طلب فوري",
+          cart: [{ product, quantity: 1 }],
+          totalPrice: product.price,
+          message: text,
+        });
+        localStorage.setItem("copycat_offline_orders", JSON.stringify(existing));
+      } catch {}
+      setOfflineNoticeModal(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-blue-600 selection:text-white transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100 light:bg-slate-50 light:text-slate-900">
-      {/* Top Notification Bar */}
-      <div className="bg-linear-to-r from-blue-700 via-indigo-700 to-cyan-600 text-white text-xs py-2 px-4 text-center font-bold flex items-center justify-center gap-3 shadow-md">
+      {/* Top Notification Bar - Optimized for 360px up to 4K */}
+      <div className="bg-linear-to-r from-blue-700 via-indigo-700 to-cyan-600 text-white py-1.5 sm:py-2 px-3 sm:px-4 text-center font-bold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 shadow-md text-[11px] sm:text-xs">
         <span className="inline-flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 animate-spin" />
-          <span>خصم خاص وتجهيز فوري لكروت الرقم القومي والشهادات وطباعة الأبحاث!</span>
+          <Sparkles className="w-3.5 h-3.5 animate-spin shrink-0" />
+          <span className="line-clamp-1 sm:line-clamp-none">خصم خاص وتجهيز فوري لكروت الرقم القومي والشهادات وطباعة الأبحاث!</span>
         </span>
         <a
           href={`https://wa.me/${WHATSAPP_INTERNATIONAL}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="underline hover:text-cyan-200 transition font-black"
+          className="underline hover:text-cyan-200 transition font-black text-cyan-100"
         >
           اطلب واتساب الآن: {WHATSAPP_NUMBER}
         </a>
       </div>
 
-      {/* Main Navbar */}
+      {/* Main Navbar - Compact & sleek for mobile phones */}
       <header className="sticky top-0 z-40 bg-slate-900/90 dark:bg-slate-900/90 light:bg-white/90 backdrop-blur-md border-b border-slate-800 dark:border-slate-800 light:border-slate-200 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
           {/* Brand Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center p-1 shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform border border-slate-700/50">
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 group shrink-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white flex items-center justify-center p-1 shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform border border-slate-700/50 shrink-0">
               <Image
                 src="/logo.jpg"
                 alt="كوبي كات - Copy Cat"
@@ -258,38 +392,38 @@ export default function StorefrontPage() {
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-black text-white dark:text-white light:text-slate-900 text-lg sm:text-xl tracking-tight leading-tight">
+                <span className="font-black text-white dark:text-white light:text-slate-900 text-base sm:text-xl tracking-tight leading-tight">
                   كوبي كات
                 </span>
-                <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
                   Copy Cat
                 </span>
               </div>
-              <span className="text-xs text-slate-400 dark:text-slate-400 light:text-slate-500 block">
+              <span className="text-[11px] text-slate-400 dark:text-slate-400 light:text-slate-500 hidden sm:block">
                 للطباعة الرقمية والتصوير والحلول المكتبية
               </span>
             </div>
           </Link>
 
           {/* Quick Contact & Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             {/* Direct WhatsApp Call/Chat */}
             <a
               href={`https://wa.me/${WHATSAPP_INTERNATIONAL}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition"
+              className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition shrink-0"
               title="تواصل واتساب مباشرة"
             >
               <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="hidden sm:inline">واتساب: {WHATSAPP_NUMBER}</span>
-              <span className="sm:hidden font-bold">واتساب</span>
+              <span className="hidden md:inline">واتساب: {WHATSAPP_NUMBER}</span>
+              <span className="md:hidden font-bold">واتساب</span>
             </a>
 
             {/* Cart Trigger */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-600/30 transition cursor-pointer"
+              className="relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-600/30 transition cursor-pointer shrink-0"
               title="عرض سلة المشتريات"
             >
               <ShoppingBag className="w-4 h-4" />
@@ -301,19 +435,19 @@ export default function StorefrontPage() {
               )}
             </button>
 
-            {/* Theme Toggle Button */}
-            <ThemeToggle />
+            {/* Theme Toggle Button - High Contrast with Label for Seniors */}
+            <ThemeToggle showLabel />
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-14 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto w-full text-center">
+      <section className="relative overflow-hidden py-10 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto w-full text-center">
         {/* Glow ambient background */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-linear-to-tr from-blue-600/20 via-cyan-500/10 to-indigo-600/20 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow" />
 
         {/* Hero Logo Banner */}
-        <div className="w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-6 rounded-3xl overflow-hidden bg-white shadow-2xl shadow-blue-500/20 p-2 border border-slate-700/50 hover:scale-105 transition-transform flex items-center justify-center">
+        <div className="w-20 h-20 sm:w-28 sm:h-28 mx-auto mb-4 sm:mb-6 rounded-3xl overflow-hidden bg-white shadow-2xl shadow-blue-500/20 p-2 border border-slate-700/50 hover:scale-105 transition-transform flex items-center justify-center">
           <Image
             src="/logo.jpg"
             alt="Copy Cat Logo"
@@ -324,30 +458,30 @@ export default function StorefrontPage() {
           />
         </div>
 
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black mb-6">
-          <Zap className="w-4 h-4 text-amber-400" />
+        <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] sm:text-xs font-black mb-4 sm:mb-6">
+          <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
           <span>المركز الأول لخدمات التصوير والطباعة والمستلزمات المكتبية</span>
         </div>
 
-        <h1 className="text-3xl sm:text-5xl md:text-6xl font-black leading-tight mb-6 max-w-4xl mx-auto text-white dark:text-white light:text-slate-950">
+        <h1 className="text-2xl sm:text-5xl md:text-6xl font-black leading-tight mb-4 sm:mb-6 max-w-4xl mx-auto text-white dark:text-white light:text-slate-950">
           كل ما تحتاجه في عالم{" "}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-indigo-400">
             الطباعة، البطاقات، والمستلزمات المكتبية
           </span>
         </h1>
 
-        <p className="text-slate-400 dark:text-slate-400 light:text-slate-600 text-sm sm:text-lg max-w-3xl mx-auto leading-relaxed mb-10 font-medium">
+        <p className="text-slate-400 dark:text-slate-400 light:text-slate-600 text-xs sm:text-lg max-w-3xl mx-auto leading-relaxed mb-6 sm:mb-10 font-medium">
           نوفر لك كافة احتياجاتك من الأدوات المكتبية والمدرسية والأوراق ومستلزمات الطباعة، اختر الأصناف التي تريدها
           واطلبها مباشرة وسنقوم بتجهيزها لك فوراً عبر الواتساب.
         </p>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-4">
+        {/* Action Buttons - Full width on small mobile, auto on larger screens */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto">
           <a
             href="#catalog"
-            className="flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-sm sm:text-base shadow-xl shadow-blue-600/30 hover:scale-105 transition-all"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs sm:text-base shadow-xl shadow-blue-600/30 hover:scale-105 transition-all"
           >
-            <ShoppingBag className="w-5 h-5" />
+            <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>تصفح المنتجات واطلب بالواتس</span>
           </a>
 
@@ -355,9 +489,9 @@ export default function StorefrontPage() {
             href={`https://wa.me/${WHATSAPP_INTERNATIONAL}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm sm:text-base shadow-xl shadow-emerald-600/20 hover:scale-105 transition-all"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs sm:text-base shadow-xl shadow-emerald-600/20 hover:scale-105 transition-all"
           >
-            <MessageCircle className="w-5 h-5" />
+            <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>واتساب مباشر: {WHATSAPP_NUMBER}</span>
           </a>
 
@@ -365,9 +499,9 @@ export default function StorefrontPage() {
             href={GOOGLE_MAPS_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm sm:text-base border border-slate-700 hover:scale-105 transition-all"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs sm:text-base border border-slate-700 hover:scale-105 transition-all"
           >
-            <MapPin className="w-5 h-5 text-rose-400" />
+            <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400" />
             <span>موقعنا على خريطة Google</span>
           </a>
         </div>
@@ -471,6 +605,7 @@ export default function StorefrontPage() {
                             src="/logo.jpg"
                             alt="كوبي كات"
                             fill
+                            sizes="48px"
                             className="object-contain p-1"
                           />
                         </div>
@@ -715,10 +850,10 @@ export default function StorefrontPage() {
         </div>
       </section>
 
-      {/* Floating Cart Drawer / Modal */}
+      {/* Floating Cart Drawer / Modal - Responsive for compact and modern phones */}
       {isCartOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-6 max-w-lg w-full shadow-2xl space-y-3.5 sm:space-y-4 max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
@@ -730,21 +865,35 @@ export default function StorefrontPage() {
               </div>
               <button
                 onClick={() => setIsCartOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
+            {/* Offline Notification Banner inside Cart */}
+            {mounted && !isOnline && (
+              <div className="bg-amber-500/15 border border-amber-500/40 text-amber-300 p-3 rounded-2xl text-xs font-bold flex items-start gap-2.5">
+                <WifiOff className="w-4 h-4 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+                <div className="space-y-0.5 text-right">
+                  <span className="block font-black text-amber-200">أنت في وضع عدم الاتصال (Offline) 📴</span>
+                  <span className="text-[11px] text-amber-300/90 leading-relaxed block">
+                    يمكنك إتمام الطلب الآن وسيتم تجهيز نص الرسالة في واتساب؛ اضغط إرسال وستصل للمكتبة فور عودة الإنترنت لهاتفك.
+                  </span>
+                </div>
+              </div>
+            )}
+
             {orderSent ? (
-              <div className="py-12 text-center space-y-3">
+              <div className="py-10 text-center space-y-3">
                 <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 mx-auto flex items-center justify-center">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
                 <h4 className="text-xl font-black text-white">تم فتح الواتساب بنجاح!</h4>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  تم تجهيز نص طلبك وتوجيهه إلى رقم مكتبة كوبي كات ({WHATSAPP_NUMBER}). اضغط إرسال في
-                  الواتساب لتأكيد الطلب.
+                <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                  {mounted && !isOnline
+                    ? "تم فتح محادثة واتساب ووضع طلبك؛ اضغط إرسال وستصل الرسالة للمكتبة أول ما تفتح إنترنت."
+                    : `تم تجهيز نص طلبك وتوجيهه إلى رقم مكتبة كوبي كات (${WHATSAPP_NUMBER}). اضغط إرسال في الواتساب لتأكيد الطلب.`}
                 </p>
               </div>
             ) : (
@@ -761,7 +910,7 @@ export default function StorefrontPage() {
                         key={item.product.id}
                         className="pt-3 flex items-center justify-between gap-3"
                       >
-                        <div className="flex-1">
+                        <div className="flex-1 text-right">
                           <h5 className="font-bold text-white text-xs sm:text-sm">
                             {item.product.name}
                           </h5>
@@ -843,16 +992,16 @@ export default function StorefrontPage() {
                     <div className="flex gap-2 pt-1">
                       <button
                         onClick={clearCart}
-                        className="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-bold transition cursor-pointer"
+                        className="py-3 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-bold transition cursor-pointer"
                       >
                         إفراغ
                       </button>
                       <button
                         onClick={handleSendWhatsAppOrder}
-                        className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
+                        className="flex-1 py-3 px-3 sm:px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer"
                       >
-                        <Send className="w-4 h-4" />
-                        <span>إرسال الطلب عبر واتساب مباشرة ({WHATSAPP_NUMBER})</span>
+                        <Send className="w-4 h-4 shrink-0" />
+                        <span>إرسال الطلب بالواتس {mounted && !isOnline ? "(ستصل فور توفر نت)" : `(${WHATSAPP_NUMBER})`}</span>
                       </button>
                     </div>
                   </div>
@@ -864,23 +1013,23 @@ export default function StorefrontPage() {
       )}
 
       {/* Floating Bottom WhatsApp & Cart Bar for mobile / fast access */}
-      {totalCartCount > 0 && !isCartOpen && (
-        <div className="fixed bottom-5 right-1/2 translate-x-1/2 z-30 w-[92%] max-w-md bg-blue-600/95 text-white p-3.5 rounded-2xl shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-float border border-blue-400/40">
+      {mounted && totalCartCount > 0 && !isCartOpen && (
+        <div className="fixed bottom-4 sm:bottom-5 right-1/2 translate-x-1/2 z-30 w-[94%] max-w-md bg-blue-600/95 text-white p-3 sm:p-3.5 rounded-2xl shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-float border border-blue-400/40">
           <div className="flex items-center gap-2">
             <span className="w-7 h-7 rounded-lg bg-white/20 text-white font-black text-xs flex items-center justify-center">
               {totalCartCount}
             </span>
             <div>
-              <span className="text-xs font-bold block leading-tight">طلبك قيد التجهيز</span>
-              <span className="text-sm font-black">{formatCurrency(totalCartPrice)}</span>
+              <span className="text-[11px] sm:text-xs font-bold block leading-tight">طلبك قيد التجهيز</span>
+              <span className="text-xs sm:text-sm font-black">{formatCurrency(totalCartPrice)}</span>
             </div>
           </div>
 
           <button
             onClick={() => setIsCartOpen(true)}
-            className="px-4 py-2 rounded-xl bg-white text-blue-900 font-black text-xs shadow-md hover:bg-blue-50 transition cursor-pointer flex items-center gap-1.5"
+            className="px-3.5 sm:px-4 py-2 rounded-xl bg-white text-blue-900 font-black text-xs shadow-md hover:bg-blue-50 transition cursor-pointer flex items-center gap-1.5"
           >
-            <span>إتمام الطلب بالواتس</span>
+            <span>إتمام الطلب {mounted && !isOnline ? "أوفلاين" : "بالواتس"}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -984,11 +1133,9 @@ export default function StorefrontPage() {
             جميع الحقوق محفوظة © كوبي كات للادوات المكتبية والطباعة والتصوير 2026
           </span>
           <div className="flex items-center gap-4 text-[11px] text-slate-500">
-            <span>سرعة تسليم قياسية</span>
-            <span>•</span>
-            <span>جودة استوديو أصلية</span>
-            <span>•</span>
-            <span>أمان وحماية تامة للبيانات</span>
+            <ThemeToggle showLabel />
+            <span className="hidden sm:inline">•</span>
+            <span className="hidden sm:inline">جودة استوديو أصلية وتسليم فوري</span>
           </div>
         </div>
       </footer>
@@ -1116,27 +1263,58 @@ export default function StorefrontPage() {
 
             {/* Modal Actions */}
             <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-              <a
-                href={`https://wa.me/${WHATSAPP_INTERNATIONAL}?text=${encodeURIComponent(
-                  `مرحباً مكتبة كوبي كات، أود طلب الصنف التالي:\n- ${selectedProductModal.name}\n- السعر: ${selectedProductModal.price} ج.م`
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => handleDirectWhatsAppOrder(selectedProductModal)}
                 className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition cursor-pointer"
               >
-                <MessageCircle className="w-4 h-4" />
-                <span>طلب فوري عبر الواتساب</span>
-              </a>
+                <MessageCircle className="w-4 h-4 shrink-0" />
+                <span>طلب فوري عبر الواتساب {mounted && !isOnline && "(ستصل فور توفر نت)"}</span>
+              </button>
 
               <button
+                type="button"
                 onClick={() => {
                   addToCart(selectedProductModal);
                   setSelectedProductModal(null);
                 }}
                 className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition cursor-pointer"
               >
-                <ShoppingBag className="w-4 h-4" />
+                <ShoppingBag className="w-4 h-4 shrink-0" />
                 <span>إضافة إلى سلة الطلبات</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Offline WhatsApp Order Guidance Modal */}
+      {mounted && offlineNoticeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-amber-500/50 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center space-y-4 relative">
+            <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
+              <WifiOff className="w-8 h-8 animate-pulse" />
+            </div>
+
+            <h3 className="text-xl font-black text-white">
+              تم تجهيز طلبك في واتساب (وضع Offline) 📴
+            </h3>
+
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed text-right">
+              تم فتح تطبيق واتساب ووضع تفاصيل وأسعار طلبك كاملة في الرسالة.
+              <br />
+              <strong className="text-amber-400 block mt-2 text-sm">
+                👈 اضغط زر الإرسال (Send) داخل واتساب الآن، وستصل الرسالة للمكتبة تلقائياً بمجرد تشغيل باقة النت أو الواي فاي على هاتفك!
+              </strong>
+            </p>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setOfflineNoticeModal(false)}
+                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm transition cursor-pointer shadow-lg shadow-amber-500/20"
+              >
+                حسناً، فهمت
               </button>
             </div>
           </div>

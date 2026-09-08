@@ -21,6 +21,7 @@ import {
   Loader2,
   Sparkles,
   RefreshCw,
+  Camera,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { formatCurrency, safeOpenUrl, compressImageToWebP } from "@/lib/utils";
@@ -43,12 +44,16 @@ export function isItemIncomplete(item: InventoryItem): boolean {
   );
 }
 
+export function isItemMissingImage(item: InventoryItem): boolean {
+  return !item.image || !item.image.trim();
+}
+
 export default function InventoryPage() {
   const { toast } = useToast();
   const [items, setItems] = useState<InventoryItem[]>(INITIAL_PRODUCTS);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("الكل");
-  const [completionFilter, setCompletionFilter] = useState<"all" | "complete" | "incomplete">("all");
+  const [completionFilter, setCompletionFilter] = useState<"all" | "complete" | "incomplete" | "missing_image">("all");
   const [isAddingModal, setIsAddingModal] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
@@ -178,25 +183,88 @@ export default function InventoryPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const hasV6 = localStorage.getItem("copycat_inventory_v6_smart_avatar");
-        const saved = hasV6 ? localStorage.getItem("copycat_inventory_v6_smart_avatar") : null;
+        // 1. Purge legacy / corrupted cache keys that contained external wikimedia/unsplash links
+        const STALE_KEYS = [
+          "copycat_inventory_v1",
+          "copycat_inventory_v2",
+          "copycat_inventory_v2_img",
+          "copycat_inventory_v3",
+          "copycat_inventory_v4_realistic",
+          "copycat_inventory_v5_pure_real",
+          "copycat_inventory_v6_smart_avatar",
+          "copycat_inventory_v7_clean_assets",
+        ];
+        for (const key of STALE_KEYS) {
+          try {
+            localStorage.removeItem(key);
+          } catch {}
+        }
+
+        let customImagesMap: Record<string | number, { image?: string; images?: string[] }> = {};
+        try {
+          const savedCustom = localStorage.getItem("copycat_custom_images");
+          if (savedCustom) {
+            const parsed = JSON.parse(savedCustom);
+            let dirty = false;
+            for (const id in parsed) {
+              const img = parsed[id]?.image;
+              if (
+                !img ||
+                img.includes("wikimedia.org") ||
+                img.includes("unsplash.com") ||
+                img.includes("undefined") ||
+                img.includes("null")
+              ) {
+                delete parsed[id];
+                dirty = true;
+              }
+            }
+            if (dirty) {
+              localStorage.setItem("copycat_custom_images", JSON.stringify(parsed));
+            }
+            customImagesMap = parsed;
+          }
+        } catch {}
+
+        const mergeWithCustomImages = (list: InventoryItem[]): InventoryItem[] => {
+          return list.map((it) => {
+            const custom = customImagesMap[it.id];
+            if (custom && custom.image) {
+              return sanitizeItem({
+                ...it,
+                image: custom.image,
+                images: custom.images || [custom.image],
+              });
+            }
+            const initMatch = INITIAL_PRODUCTS.find((p) => p.id === it.id || p.name === it.name);
+            if (initMatch) {
+              return sanitizeItem({
+                ...it,
+                image: initMatch.image,
+                images: initMatch.images,
+              });
+            }
+            return sanitizeItem(it);
+          });
+        };
+
+        const CURRENT_CACHE_KEY = "copycat_inventory_v8_local_catalog";
+        const saved = localStorage.getItem(CURRENT_CACHE_KEY);
 
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length >= INITIAL_PRODUCTS.length) {
-            const sanitizedList = parsed.map((it: InventoryItem) => sanitizeItem(it));
+            const sanitizedList = mergeWithCustomImages(parsed);
             setItems(sanitizedList);
-            localStorage.setItem("copycat_inventory_v6_smart_avatar", JSON.stringify(sanitizedList));
           } else {
-            const sanitizedInit = INITIAL_PRODUCTS.map(sanitizeItem);
+            const sanitizedInit = mergeWithCustomImages(INITIAL_PRODUCTS);
             setItems(sanitizedInit);
-            localStorage.setItem("copycat_inventory_v6_smart_avatar", JSON.stringify(sanitizedInit));
+            localStorage.setItem(CURRENT_CACHE_KEY, JSON.stringify(sanitizedInit));
           }
         } else {
-          // Fresh bump ensures high-fidelity word-matched stickers, folscap and avatar fallbacks
-          const sanitizedInit = INITIAL_PRODUCTS.map(sanitizeItem);
+          const sanitizedInit = mergeWithCustomImages(INITIAL_PRODUCTS);
           setItems(sanitizedInit);
-          localStorage.setItem("copycat_inventory_v6_smart_avatar", JSON.stringify(sanitizedInit));
+          localStorage.setItem(CURRENT_CACHE_KEY, JSON.stringify(sanitizedInit));
         }
 
         // 2. Fetch from Supabase only if configured
@@ -207,9 +275,9 @@ export default function InventoryPage() {
             .order("id", { ascending: true });
 
           if (!error && data && data.length > 0) {
-            const hydrated = data.map((it: InventoryItem) => sanitizeItem(it));
+            const hydrated = mergeWithCustomImages(data as InventoryItem[]);
             setItems(hydrated);
-            localStorage.setItem("copycat_inventory_v4_realistic", JSON.stringify(hydrated));
+            localStorage.setItem(CURRENT_CACHE_KEY, JSON.stringify(hydrated));
           }
         }
       } catch {
@@ -239,6 +307,10 @@ export default function InventoryPage() {
 
   const incompleteCount = useMemo(() => {
     return items.filter(isItemIncomplete).length;
+  }, [items]);
+
+  const missingImagesCount = useMemo(() => {
+    return items.filter(isItemMissingImage).length;
   }, [items]);
 
   const handleAddItem = async (e: React.FormEvent) => {
@@ -274,7 +346,12 @@ export default function InventoryPage() {
     const updated = [newItem, ...items];
     setItems(updated);
     try {
-      localStorage.setItem("copycat_inventory_v2_img", JSON.stringify(updated));
+      if (newItem.image) {
+        const customMap = JSON.parse(localStorage.getItem("copycat_custom_images") || "{}");
+        customMap[newItem.id] = { image: newItem.image, images: newItem.images || [newItem.image] };
+        localStorage.setItem("copycat_custom_images", JSON.stringify(customMap));
+      }
+      localStorage.setItem("copycat_inventory_v8_local_catalog", JSON.stringify(updated));
     } catch {}
 
     setIsAddingModal(false);
@@ -337,7 +414,13 @@ export default function InventoryPage() {
     const updatedList = items.map((it) => (it.id === editingItem.id ? updatedItem : it));
     setItems(updatedList);
     try {
-      localStorage.setItem("copycat_inventory_v2_img", JSON.stringify(updatedList));
+      const customMap = JSON.parse(localStorage.getItem("copycat_custom_images") || "{}");
+      customMap[editingItem.id] = {
+        image: updatedItem.image || "",
+        images: updatedItem.images || [],
+      };
+      localStorage.setItem("copycat_custom_images", JSON.stringify(customMap));
+      localStorage.setItem("copycat_inventory_v8_local_catalog", JSON.stringify(updatedList));
     } catch {}
 
     setEditingItem(null);
@@ -369,7 +452,10 @@ export default function InventoryPage() {
     const updated = items.filter((item) => item.id !== id);
     setItems(updated);
     try {
-      localStorage.setItem("copycat_inventory_v2_img", JSON.stringify(updated));
+      const customMap = JSON.parse(localStorage.getItem("copycat_custom_images") || "{}");
+      delete customMap[id];
+      localStorage.setItem("copycat_custom_images", JSON.stringify(customMap));
+      localStorage.setItem("copycat_inventory_v8_local_catalog", JSON.stringify(updated));
     } catch {}
     showNotification("تم حذف الصنف.");
 
@@ -411,11 +497,12 @@ export default function InventoryPage() {
     }
   };
 
-  // Calculations & Filtering with incomplete data handling
+  // Calculations & Filtering with incomplete data handling and missing image filter
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       if (completionFilter === "complete" && isItemIncomplete(item)) return false;
       if (completionFilter === "incomplete" && !isItemIncomplete(item)) return false;
+      if (completionFilter === "missing_image" && Boolean(item.image && item.image.trim().length > 0)) return false;
 
       const matchesSearch =
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -468,7 +555,7 @@ export default function InventoryPage() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
             <Package className="w-6 h-6" />
@@ -480,17 +567,55 @@ export default function InventoryPage() {
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center">
             <Boxes className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs text-slate-400 font-bold block">الأقسام والتصنيفات النشطة</span>
-            <span className="text-2xl font-black text-purple-400">{existingCategories.length} قسم</span>
+            <span className="text-xs text-slate-400 font-bold block">الأقسام والتصنيفات</span>
+            <span className="text-2xl font-black text-cyan-400">{existingCategories.length} قسم</span>
           </div>
         </div>
 
+        {/* Missing Images Queue Card */}
         <div
-          onClick={() => setCompletionFilter(completionFilter === "incomplete" ? "all" : "incomplete")}
+          onClick={() => {
+            setCompletionFilter(completionFilter === "missing_image" ? "all" : "missing_image");
+            setCurrentPage(1);
+          }}
+          className={`border rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition ${
+            missingImagesCount > 0
+              ? "bg-purple-950/30 border-purple-500/40 hover:bg-purple-950/50"
+              : "bg-slate-900 border-slate-800"
+          }`}
+        >
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+            missingImagesCount > 0
+              ? "bg-purple-500/20 border border-purple-500/30 text-purple-400"
+              : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+          }`}>
+            <Camera className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-xs text-slate-400 font-bold block">بدون صورة (تحتاج تصوير)</span>
+            <div className="flex items-center gap-2">
+              <span className={`text-2xl font-black ${missingImagesCount > 0 ? "text-purple-400" : "text-emerald-400"}`}>
+                {missingImagesCount} صنف
+              </span>
+              {missingImagesCount > 0 && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  لوجو المتجر
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Incomplete Data Card */}
+        <div
+          onClick={() => {
+            setCompletionFilter(completionFilter === "incomplete" ? "all" : "incomplete");
+            setCurrentPage(1);
+          }}
           className={`border rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition ${
             incompleteCount > 0
               ? "bg-amber-950/30 border-amber-500/40 hover:bg-amber-950/50"
@@ -585,9 +710,9 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        {/* Completion Status Tabs (Requirement #4) */}
+        {/* Completion Status Tabs */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/80">
-          <span className="text-xs font-bold text-slate-400 ml-1">حالة العرض للزبون:</span>
+          <span className="text-xs font-bold text-slate-400 ml-1">تصفية العرض:</span>
           <button
             onClick={() => {
               setCompletionFilter("all");
@@ -616,6 +741,20 @@ export default function InventoryPage() {
           </button>
           <button
             onClick={() => {
+              setCompletionFilter("missing_image");
+              setCurrentPage(1);
+            }}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              completionFilter === "missing_image"
+                ? "bg-purple-600 text-white font-black shadow"
+                : "bg-slate-950 text-purple-400 hover:bg-purple-950/40 border border-purple-500/30"
+            }`}
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span>بدون صورة ({missingImagesCount} صنف)</span>
+          </button>
+          <button
+            onClick={() => {
               setCompletionFilter("incomplete");
               setCurrentPage(1);
             }}
@@ -626,7 +765,7 @@ export default function InventoryPage() {
             }`}
           >
             <AlertTriangle className="w-3 h-3" />
-            <span>ناقصة البيانات ({incompleteCount})</span>
+            <span>بيانات ناقصة ({incompleteCount})</span>
           </button>
         </div>
       </div>
@@ -676,12 +815,15 @@ export default function InventoryPage() {
             <tbody className="divide-y divide-slate-800/60 text-slate-300">
               {paginatedItems.map((item) => {
                 const incomplete = isItemIncomplete(item);
+                const missingImg = !item.image || !item.image.trim();
                 return (
                   <tr
                     key={item.id}
                     className={`transition ${
                       incomplete
                         ? "bg-amber-950/20 hover:bg-amber-950/35 border-r-4 border-amber-500"
+                        : missingImg
+                        ? "bg-purple-950/10 hover:bg-purple-950/25 border-r-4 border-purple-500/60"
                         : "hover:bg-slate-800/40"
                     }`}
                   >
@@ -703,17 +845,30 @@ export default function InventoryPage() {
                               }}
                             />
                           ) : (
-                            <Package className="w-5 h-5 text-slate-600" />
+                            <Camera className="w-5 h-5 text-purple-400/70" />
                           )}
                         </div>
                         <div className="flex flex-col gap-1">
                           <span>{item.name || "— بدون اسم —"}</span>
-                          {incomplete && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 w-fit">
-                              <AlertTriangle className="w-3 h-3 text-amber-400" />
-                              بيانات غير مكتملة (مخفي عن الزبون حتى التعديل)
-                            </span>
-                          )}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {incomplete && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 w-fit">
+                                <AlertTriangle className="w-3 h-3 text-amber-400" />
+                                بيانات ناقصة (مخفي عن الزبون)
+                              </span>
+                            )}
+                            {missingImg && (
+                              <button
+                                type="button"
+                                onClick={() => handleEditItem(item)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 w-fit hover:bg-purple-500/30 cursor-pointer transition"
+                                title="انقر لإضافة صورة للمنتج بالهاتف أو الكاميرا"
+                              >
+                                <Camera className="w-3 h-3 text-purple-400" />
+                                <span>بدون صورة — اضغط للتصوير أو الرفع</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -742,6 +897,19 @@ export default function InventoryPage() {
                     <td className="p-3.5 text-xs text-slate-400 max-w-xs truncate">{item.notes || "—"}</td>
                     <td className="p-3.5 text-center">
                       <div className="flex items-center justify-center gap-1.5">
+                        {/* Quick Camera action for missing image */}
+                        {missingImg && (
+                          <button
+                            type="button"
+                            onClick={() => handleEditItem(item)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-purple-950/70 hover:bg-purple-900 text-purple-300 border border-purple-800/60 transition cursor-pointer"
+                            title="إضافة صورة للمنتج بالهاتف أو الكاميرا"
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>تصوير</span>
+                          </button>
+                        )}
+
                         {/* Supply order via WhatsApp */}
                         <button
                           onClick={() => handleNotifyEngineer(item)}

@@ -1,0 +1,409 @@
+{
+  "generatedAt": "2026-09-07T23:16:07.250Z",
+  "facebookSource": "https://www.facebook.com/p/%D9%83%D9%88%D8%A8%D9%89-%D9%83%D8%A7%D8%AA-100090709554990/",
+  "totalItems": 361,
+  "confirmedWithImagesCount": 304,
+  "missingImagesQueueCount": 57,
+  "archetypesCount": 28,
+  "missingItemsQueue": [
+    {
+      "id": 28,
+      "name": "شنطة هدايا كرتون صغيره",
+      "category": "ورق وخامات فنية",
+      "price": 5,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 29,
+      "name": "شنطة هدايا كرتون وسط",
+      "category": "ورق وخامات فنية",
+      "price": 7,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 30,
+      "name": "شنطة هدايا كرتون وسط طويل",
+      "category": "ورق وخامات فنية",
+      "price": 15,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 31,
+      "name": "شنطة هدايا كرتون كبيرة عرض",
+      "category": "ورق وخامات فنية",
+      "price": 30,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 32,
+      "name": "شنطة هدايا كرتون كبيرة طول / كرافت",
+      "category": "ورق وخامات فنية",
+      "price": 20,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 45,
+      "name": "صلصال عادي صغير",
+      "category": "ورق وخامات فنية",
+      "price": 12,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 46,
+      "name": "صلصال عادي كبير",
+      "category": "ورق وخامات فنية",
+      "price": 30,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 52,
+      "name": "فرخ لوح ابيض-ازرق-بمبي-اخضر-اصفر",
+      "category": "ورق وخامات فنية",
+      "price": 10,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 59,
+      "name": "دبل فيس سيليكون شفاف",
+      "category": "ورق وخامات فنية",
+      "price": 20,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 63,
+      "name": "عصاية استيك صغيره عادي",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 15,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 64,
+      "name": "عصاية استيك صغيره ملون",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 15,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 65,
+      "name": "عصاية استيك كبيره عادي",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 25,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 66,
+      "name": "عصاية استيك كبيره ملون",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 25,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 67,
+      "name": "شمع أعياد ميلاد",
+      "category": "لواصق ومثبتات",
+      "price": 20,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 98,
+      "name": "بوك مارك",
+      "category": "بطاقات ومطبوعات",
+      "price": 10,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 152,
+      "name": "بادة ماوس صغيرة",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 20,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 153,
+      "name": "بادة ماوس كبير",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 25,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 155,
+      "name": "كارت عيد",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 3,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 156,
+      "name": "مناديل",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 3,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 171,
+      "name": "خلاعة دبابيس",
+      "category": "لواصق ومثبتات",
+      "price": 15,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 172,
+      "name": "دبابيس مكتب",
+      "category": "لواصق ومثبتات",
+      "price": 5,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 175,
+      "name": "لزق اسكوتش نص متر",
+      "category": "لواصق ومثبتات",
+      "price": 7,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 178,
+      "name": "حجارة ايفرريدي ريموت ازرق",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 10,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 179,
+      "name": "حجارة ايفرريدي ريموت احمر",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 25,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 183,
+      "name": "بكرة ستان رفيع احمر-بيض-اسود-لبني",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 10,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 184,
+      "name": "بكرة ستان عريض احمر-بيض-اسود-لبني",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 14,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 185,
+      "name": "ماوس",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 70,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 186,
+      "name": "كيبورده",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 145,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 187,
+      "name": "صفارة بلاستيك",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 7,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 188,
+      "name": "صفارة حديد",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 10,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 189,
+      "name": "لانشبوكس",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 50,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 190,
+      "name": "لزق عريض 80ياردة",
+      "category": "لواصق ومثبتات",
+      "price": 8,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 191,
+      "name": "لزق عريض 100ياردة",
+      "category": "لواصق ومثبتات",
+      "price": 10,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 192,
+      "name": "لزق عريض 150ياردة",
+      "category": "لواصق ومثبتات",
+      "price": 15,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 193,
+      "name": "لزق عريض 200ياردة",
+      "category": "لواصق ومثبتات",
+      "price": 20,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 195,
+      "name": "لزق صغير",
+      "category": "لواصق ومثبتات",
+      "price": 4,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 196,
+      "name": "لزق صغير عريض",
+      "category": "لواصق ومثبتات",
+      "price": 5,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 197,
+      "name": "لزق  شكرتون اسود",
+      "category": "ورق وخامات فنية",
+      "price": 5,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 198,
+      "name": "لزق دهان",
+      "category": "لواصق ومثبتات",
+      "price": 6,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 199,
+      "name": "لزق دهان عريض",
+      "category": "لواصق ومثبتات",
+      "price": 12,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 216,
+      "name": "علم مصر صغير",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 7,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 217,
+      "name": "علم مصر وسط",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 10,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 228,
+      "name": "خرز",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 45,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 230,
+      "name": "شربات",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 12,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 231,
+      "name": "شربات طويلة - تقيلة",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 20,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 232,
+      "name": "صلصال طين اسواني 250جم اسود",
+      "category": "ورق وخامات فنية",
+      "price": 10,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 233,
+      "name": "صلصال طين اسواني 500جم اسود",
+      "category": "ورق وخامات فنية",
+      "price": 15,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 234,
+      "name": "صلصال طين اسواني 1كم اسود",
+      "category": "ورق وخامات فنية",
+      "price": 25,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 235,
+      "name": "صلصال طين اسواني 1كم ابيض",
+      "category": "ورق وخامات فنية",
+      "price": 30,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 236,
+      "name": "صلصال طين اسواني 500جم اسود عالي",
+      "category": "ورق وخامات فنية",
+      "price": 45,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 237,
+      "name": "صلصال طين اسواني 500جم ابيض عالي",
+      "category": "ورق وخامات فنية",
+      "price": 55,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 241,
+      "name": "كراس رسم وسط",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 10,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 248,
+      "name": "قص ولزق صغير",
+      "category": "لواصق ومثبتات",
+      "price": 5,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 249,
+      "name": "قص ولزق وسط",
+      "category": "لواصق ومثبتات",
+      "price": 8,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 250,
+      "name": "قص ولزق كبير",
+      "category": "لواصق ومثبتات",
+      "price": 14,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 307,
+      "name": "مناديل جيب",
+      "category": "أدوات ومستلزمات عامة",
+      "price": 3,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    },
+    {
+      "id": 352,
+      "name": "لزق Faber Castell",
+      "category": "لواصق ومثبتات",
+      "price": 60,
+      "actionRequired": "تصوير يدوي بكاميرا الهاتف من لوحة تحكم المسؤول (Admin Dashboard)"
+    }
+  ]
+}

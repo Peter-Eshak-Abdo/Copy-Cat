@@ -1,5 +1,5 @@
-// Copy-Cat Service Worker v2.1 - High Performance Offline First
-const CACHE_NAME = "copycat-cache-v2.1";
+// Copy-Cat Service Worker v3.0 - High Performance Offline First
+const CACHE_NAME = "copycat-cache-v3.0";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
@@ -55,6 +55,11 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // Skip localhost / development completely to prevent HMR chunk caching and hydration mismatches
+  if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+    return;
+  }
 
   // 1. Skip non-GET, non-HTTP, and Next.js /api/ routes
   if (request.method !== "GET") return;

@@ -38,18 +38,23 @@ body {
 }
 
 /* -------------------------------------------------------------
-   COMPREHENSIVE LIGHT MODE PALETTE OVERRIDES
-   Ensures seamless, elegant contrast on every page & component
+   COMPREHENSIVE SENIOR-ACCESSIBLE LIGHT MODE (وضع فاتح عالي التباين)
+   Meets WCAG AAA contrast standards for seniors and vision comfort
 ------------------------------------------------------------- */
 html.light {
-  /* Slate 950 / 900 Backgrounds become clean white / light slate */
+  /* 1. Surfaces & Backgrounds */
+  &,
+  & body {
+    background-color: #f8fafc !important;
+    color: #090d16 !important;
+  }
   & .bg-slate-950 {
     background-color: #f8fafc !important;
   }
   & .bg-slate-950\/60,
   & .bg-slate-950\/80,
   & .bg-slate-950\/90 {
-    background-color: rgba(241, 245, 249, 0.95) !important;
+    background-color: rgba(241, 245, 249, 0.96) !important;
   }
   & .bg-slate-900 {
     background-color: #ffffff !important;
@@ -60,70 +65,228 @@ html.light {
   & .bg-slate-900\/70,
   & .bg-slate-900\/50,
   & .bg-slate-900\/40 {
-    background-color: rgba(255, 255, 255, 0.96) !important;
+    background-color: rgba(255, 255, 255, 0.98) !important;
   }
-  & .bg-slate-800,
+  & .bg-slate-800 {
+    background-color: #f1f5f9 !important;
+  }
   & .bg-slate-800\/80,
   & .bg-slate-800\/60,
   & .bg-slate-800\/40 {
-    background-color: #f1f5f9 !important;
+    background-color: #e2e8f0 !important;
   }
 
-  /* Borders become subtle light slate */
+  /* 2. Defined, High-Contrast Borders (محددة بوضوح لكبار السن) */
   & .border-slate-800,
   & .border-slate-800\/80,
+  & .border-slate-800\/60,
   & .border-slate-800\/50,
   & .border-slate-700,
   & .border-slate-700\/50 {
-    border-color: #e2e8f0 !important;
+    border-color: #cbd5e1 !important;
   }
 
-  /* Text colors: dark slate for readable, high-contrast typography */
+  /* 3. High-Contrast Typography for Seniors (خط عالي الوضوح والتباين) */
   & .text-white {
-    color: #0f172a !important;
+    color: #090d16 !important;
   }
   & .text-slate-100 {
-    color: #1e293b !important;
+    color: #0f172a !important;
   }
   & .text-slate-200 {
-    color: #334155 !important;
+    color: #1e293b !important;
   }
   & .text-slate-300 {
-    color: #475569 !important;
+    color: #334155 !important;
   }
   & .text-slate-400 {
+    color: #475569 !important;
+  }
+  & .text-slate-500 {
     color: #64748b !important;
   }
 
-  /* Keep intentional white text on primary/action colored buttons */
-  & .bg-blue-600 .text-white,
-  & .bg-emerald-600 .text-white,
-  & .bg-purple-600 .text-white,
-  & .bg-red-600 .text-white,
-  & button.bg-blue-600,
-  & button.bg-emerald-600,
-  & a.bg-blue-600,
-  & a.bg-emerald-600 {
+  /* 4. High-Contrast Accents (بدلاً من الألوان الفاتحة غير المقروءة) */
+  & .text-blue-400,
+  & .text-blue-300 {
+    color: #1d4ed8 !important;
+    font-weight: 700;
+  }
+  & .text-emerald-400,
+  & .text-emerald-300,
+  & .text-green-400 {
+    color: #047857 !important;
+    font-weight: 800;
+  }
+  & .text-amber-400,
+  & .text-amber-300,
+  & .text-amber-200 {
+    color: #9a3412 !important;
+    font-weight: 700;
+  }
+  & .text-rose-400,
+  & .text-red-400 {
+    color: #b91c1c !important;
+    font-weight: 700;
+  }
+  & .text-cyan-400,
+  & .text-cyan-300 {
+    color: #0369a1 !important;
+    font-weight: 700;
+  }
+  & .text-purple-400,
+  & .text-purple-300 {
+    color: #6b21a8 !important;
+    font-weight: 700;
+  }
+
+  /* 5. Soft Tint Badges & Pills */
+  & .bg-blue-500\/10,
+  & .bg-blue-600\/10 {
+    background-color: #eff6ff !important;
+    border-color: #bfdbfe !important;
+    color: #1d4ed8 !important;
+  }
+  & .bg-emerald-500\/10,
+  & .bg-emerald-600\/10 {
+    background-color: #ecfdf5 !important;
+    border-color: #a7f3d0 !important;
+    color: #047857 !important;
+  }
+  & .bg-amber-500\/10,
+  & .bg-amber-500\/15 {
+    background-color: #fffbeb !important;
+    border-color: #fde68a !important;
+    color: #9a3412 !important;
+  }
+  & .bg-rose-500\/10,
+  & .bg-red-500\/10 {
+    background-color: #fff1f2 !important;
+    border-color: #fecdd3 !important;
+    color: #b91c1c !important;
+  }
+  & .bg-cyan-500\/10 {
+    background-color: #f0f9ff !important;
+    border-color: #bae6fd !important;
+    color: #0369a1 !important;
+  }
+
+  /* 6. PRESERVE PURE WHITE TEXT ON PRIMARY/SOLID COLORED ELEMENTS */
+  & .bg-blue-600,
+  & .bg-blue-700,
+  & .bg-emerald-600,
+  & .bg-emerald-700,
+  & .bg-red-600,
+  & .bg-amber-600,
+  & .bg-purple-600,
+  & [class*="bg-blue-600"],
+  & [class*="bg-emerald-600"],
+  & [class*="bg-linear-to-r"],
+  & [class*="bg-gradient-to-r"],
+  & [class*="bg-gradient-to-tr"] {
+    color: #ffffff !important;
+
+    & .text-white,
+    & span:not([class*="bg-white"] *),
+    & a:not([class*="bg-white"] *),
+    & p,
+    & h1,
+    & h2,
+    & h3,
+    & h4,
+    & svg {
+      color: #ffffff !important;
+    }
+  }
+
+  & [class*="bg-blue-600"] button.bg-white,
+  & [class*="bg-blue-600"] button.bg-white span,
+  & [class*="bg-blue-600"] a.bg-white,
+  & [class*="bg-blue-600"] a.bg-white span {
+    color: #1e3a8a !important;
+  }
+
+  & .bg-linear-to-r {
+    background: linear-gradient(to right, #1d4ed8, #4338ca, #0284c7) !important;
     color: #ffffff !important;
   }
 
-  /* Form controls in light mode */
+  & .bg-linear-to-r a {
+    color: #e0f2fe !important;
+  }
+
+  /* 7. Floating Action Bars */
+  & .fixed.bottom-4 .text-white,
+  & .fixed.bottom-4 span:not(.bg-white *),
+  & .fixed.bottom-6.bg-emerald-600,
+  & .fixed.bottom-6.bg-emerald-600 span {
+    color: #ffffff !important;
+  }
+
+  /* 8. Form Controls with Clear Readable Bounds */
   & input,
   & select,
   & textarea {
     background-color: #ffffff !important;
-    color: #0f172a !important;
-    border-color: #cbd5e1 !important;
+    color: #090d16 !important;
+    border-color: #94a3b8 !important;
+    font-weight: 600 !important;
   }
   & input::placeholder,
   & textarea::placeholder {
-    color: #94a3b8 !important;
+    color: #64748b !important;
+    font-weight: 500 !important;
+  }
+  & input:focus,
+  & select:focus,
+  & textarea:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
   }
 
-  /* Soft shadows for elevated cards in light mode */
+  /* 9. Data Tables (High Contrast) */
+  & thead {
+    background-color: #f1f5f9 !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+    & th {
+      color: #0f172a !important;
+      font-weight: 800 !important;
+    }
+  }
+  & tbody tr {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+  & tbody tr:hover {
+    background-color: #f8fafc !important;
+  }
+
+  /* 10. Admin Navigation & Sidebar Accessibility */
+  & aside {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+  }
+  & aside a:not([class*="bg-blue-600"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]) {
+    color: #1e293b !important;
+    font-weight: 700 !important;
+  }
+  & aside a:not([class*="bg-blue-600"]):hover {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+  }
+
+  /* 11. Senior-Friendly Soft Elevated Shadows */
+  & .shadow-md,
+  & .shadow-lg,
   & .shadow-xl,
   & .shadow-2xl {
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.03) !important;
+  }
+
+  /* 12. Modal Backdrop */
+  & .bg-black\/80,
+  & .bg-black\/85 {
+    background-color: rgba(15, 23, 42, 0.7) !important;
   }
 }
 

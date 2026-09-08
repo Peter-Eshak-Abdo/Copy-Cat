@@ -259,23 +259,38 @@ export function resolveSafeImages(name: string, category: string): string[] {
 }
 
 export function sanitizeItem(item: InventoryItem): InventoryItem {
-  const isGenericOrBroken =
-    item.image?.includes("wikimedia.org") ||
-    item.image?.includes("unsplash.com") ||
-    item.image?.includes("undefined") ||
-    item.image?.includes("null");
+  const isInvalidUrl = (url?: string): boolean => {
+    if (!url || typeof url !== "string") return true;
+    const u = url.toLowerCase();
+    return (
+      u.includes("wikimedia.org") ||
+      u.includes("unsplash.com") ||
+      u.includes("undefined") ||
+      u.includes("null") ||
+      u.trim() === ""
+    );
+  };
 
-  if (isGenericOrBroken) {
+  const cleanImages = (item.images || []).filter((img) => !isInvalidUrl(img));
+  const mainIsInvalid = isInvalidUrl(item.image);
+
+  if (mainIsInvalid) {
     const safe = resolveSafeImages(item.name, item.category);
+    const validFallback = safe[0] || (cleanImages.length > 0 ? cleanImages[0] : "");
     return {
       ...item,
-      image: safe[0] || "",
-      images: safe,
+      image: validFallback,
+      images: safe.length > 0 ? safe : (cleanImages.length > 0 ? cleanImages : (validFallback ? [validFallback] : [])),
     };
   }
 
-  return item;
+  return {
+    ...item,
+    image: item.image,
+    images: cleanImages.length > 0 ? cleanImages : [item.image!],
+  };
 }
+
 
 export const INITIAL_PRODUCTS: InventoryItem[] = [
   {

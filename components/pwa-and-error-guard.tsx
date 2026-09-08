@@ -43,16 +43,36 @@ export function PwaAndErrorGuard() {
 
     window.addEventListener("unhandledrejection", handleUnhandledRejection);
 
-    // 2. Register PWA Service Worker in production / supported environments
-    if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then((reg) => {
-          console.log("Copy-Cat PWA Service Worker active", reg.scope);
-        })
-        .catch(() => {
-          // SW registration failed silently
+    // 2. Service Worker handling: unregister on localhost to avoid stale cache hydration errors
+    if ("serviceWorker" in navigator && typeof window !== "undefined") {
+      const isLocalhost =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname.includes("192.168.");
+
+      if (isLocalhost) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister();
+          }
         });
+        if ("caches" in window) {
+          caches.keys().then((keys) => {
+            for (const key of keys) {
+              caches.delete(key);
+            }
+          });
+        }
+      } else if (window.location.protocol.startsWith("http")) {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((reg) => {
+            console.log("Copy-Cat PWA Service Worker active", reg.scope);
+          })
+          .catch(() => {
+            // SW registration failed silently
+          });
+      }
     }
 
     return () => {
