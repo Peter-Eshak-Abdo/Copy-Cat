@@ -156,6 +156,12 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        {process.env.GOOGLE_SITE_VERIFICATION && (
+          <meta
+            name="google-site-verification"
+            content={process.env.GOOGLE_SITE_VERIFICATION}
+          />
+        )}
       </head>
       <body
         className="font-sans min-h-screen selection:bg-blue-600 selection:text-white antialiased"
