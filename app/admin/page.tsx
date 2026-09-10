@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useSyncExternalStore } from "react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/toast-provider";
@@ -21,38 +21,23 @@ interface PrintTask {
 
 const STORAGE_KEY = "copycat_tasks_v1";
 
-const DEFAULT_TASKS: PrintTask[] = [
-  {
-    id: "ORD-9421",
-    title: "مذكرة ليلة الامتحان 1 ث - وش وظهر + غلاف كوشيه سلوفان",
-    customerName: "أ. محمود عبد العال (فيزياء)",
-    phone: "01012345678",
-    totalCopies: 80,
-    completedCopies: 48,
-    status: "in_progress",
-    createdAt: Date.now() - 1000 * 60 * 120,
-  },
-  {
-    id: "ORD-9420",
-    title: "شهادات تقدير أوائل الطلبة A4 ورق مقوى 250g ألوان",
-    customerName: "مدرسة النصر الإعدادية",
-    phone: "01198765432",
-    totalCopies: 150,
-    completedCopies: 150,
-    status: "ready",
-    createdAt: Date.now() - 1000 * 60 * 240,
-  },
-  {
-    id: "ORD-9419",
-    title: "سحب سكانر وتجهيز بطاقات رقم قومي A5 وش وظهر",
-    customerName: "عميل نقدي (مكتب توثيق)",
-    phone: "01210571251",
-    totalCopies: 12,
-    completedCopies: 12,
-    status: "completed",
-    createdAt: Date.now() - 1000 * 60 * 360,
-  },
-];
+const DEFAULT_TASKS: PrintTask[] = [];
+
+// Helper for InstaPay summary
+function getPendingInstaPaySummary(): { count: number; total: number } {
+  if (typeof window === "undefined") return { count: 0, total: 0 };
+  try {
+    const raw = localStorage.getItem("copycat_instapay_v1");
+    if (!raw) return { count: 0, total: 0 };
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list)) return { count: 0, total: 0 };
+    const pending = list.filter((r: { status?: string }) => r.status === "pending");
+    const total = pending.reduce((sum: number, r: { amount?: number }) => sum + (Number(r.amount) || 0), 0);
+    return { count: pending.length, total };
+  } catch {
+    return { count: 0, total: 0 };
+  }
+}
 
 // Cache for useSyncExternalStore snapshot to avoid infinite render loops
 let cachedRaw: string | null = null;
@@ -123,11 +108,11 @@ function getCurrentShift(date: Date = new Date()): {
     };
   }
 
-  // من 4:00 عصراً حتى 12:00 منتصف الليل / الفجر حتى 8:30 صباحاً = شفت مسائي
+  // من 4:00 عصراً حتى 11:30 مساءً = شفت مسائي
   return {
     id: "evening",
     label: "شفت مسائي",
-    timeRange: "04:00 م - 12:00 ص",
+    timeRange: "04:00 م - 11:30 م",
   };
 }
 
@@ -163,10 +148,72 @@ export default function AdminDashboardPage() {
   const cashAmount = Math.round(totalRevenueVal * 0.75).toLocaleString("ar-EG");
   const walletAmount = Math.round(totalRevenueVal * 0.25).toLocaleString("ar-EG");
 
+  const [bannerText, setBannerText] = useState(
+    "خصم خاص وتجهيز فوري لكروت الرقم القومي والشهادات وطباعة الأبحاث وسحب المستندات"
+  );
+  const [isEditingBanner, setIsEditingBanner] = useState(false);
+  const [bannerInput, setBannerInput] = useState("");
+
+  // WhatsApp QR Stand & Direct Contact
+  const WHATSAPP_LINK = "https://wa.me/qr/MA4E2HELDOY7F1";
+  const [printQrModal, setPrintQrModal] = useState<"stand" | "poster" | null>(null);
+
+  // Desktop PWA Installation Hook for Library PC
+  const [pwaPrompt, setPwaPrompt] = useState<any>(null);
+  const [isPwaInstalled, setIsPwaInstalled] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("copycat_announcement_banner");
+      if (saved && saved.trim()) setBannerText(saved.trim());
+    } catch {}
+
+    const handleBeforeInstall = (e: any) => {
+      e.preventDefault();
+      setPwaPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    if (typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches) {
+      setIsPwaInstalled(true);
+    }
+    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+  }, []);
+
+  const handleInstallPwa = async () => {
+    if (pwaPrompt) {
+      pwaPrompt.prompt();
+      const choice = await pwaPrompt.userChoice;
+      if (choice.outcome === "accepted") {
+        toast.success("تم تثبيت التطبيق بنجاح!", "لوحة إدارة مكتبة كوبي كات تعمل الآن كتطبيق مستقل على سطح المكتب.");
+        setPwaPrompt(null);
+      }
+    } else {
+      toast.info(
+        "تثبيت نسخة الأدمن PWA على كمبيوتر المكتبة",
+        "يمكنك الضغط على أيقونة التثبيت (⊕ في شريط عنوان المتصفح Chrome/Edge) لتثبيت لوحة الإدارة مباشرة وتفتح تلقائياً على /admin."
+      );
+    }
+  };
+
+  const handleCopyWhatsappLink = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(WHATSAPP_LINK);
+      toast.success("تم نسخ رابط الواتساب بنجاح!", WHATSAPP_LINK);
+    }
+  };
+
+  const handleSaveBanner = () => {
+    if (!bannerInput.trim()) return;
+    localStorage.setItem("copycat_announcement_banner", bannerInput.trim());
+    setBannerText(bannerInput.trim());
+    setIsEditingBanner(false);
+    toast.success("تم تحديث إعلان المتجر", "تم حفظ النص الجديد وسيطبق فوراً على شريط المتجر العلوي.");
+  };
+
   return (
     <div className="flex flex-col w-full" dir="rtl">
       {/* Top Ambient Glow & Welcome Operations Banner */}
-      <div className="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg mb-space-lg shadow-xl border border-surface-container-high/40">
+      <div className="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg mb-space-md shadow-xl border border-surface-container-high/40">
         <div className="absolute -top-24 -left-20 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute -bottom-20 right-1/4 w-72 h-72 bg-tertiary-container/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
@@ -178,22 +225,29 @@ export default function AdminDashboardPage() {
               </span>
               <span className="inline-flex items-center gap-1.5 px-space-sm py-space-2xs rounded-full bg-surface-container-high text-on-surface-variant font-label-code text-label-code border border-surface-container-highest">
                 <span className="material-symbols-outlined text-sm text-tertiary">bolt</span>
-                نسخة ERP v2.4 الذكية
-              </span>
-              <span className="inline-flex items-center gap-1 px-space-xs py-space-2xs rounded-lg bg-surface-container text-on-surface-variant font-label-code text-label-code">
-                LAN 192.168.1.120:8080
+                معدل الاستجابة: 0.12 ثانية
               </span>
             </div>
-            <h1 className="font-headline-lg text-headline-lg text-on-surface mt-space-2xs font-extrabold">
-              مرحباً بك {user?.name ? `يا ${user.name}` : "يا مدير كوبي كات"} في مركز العمليات المتقدم 🖨️
+            <h1 className="font-display-sm text-display-sm text-on-surface font-extrabold tracking-tight">
+              مركز العمليات ومطبعة كوبي كات
             </h1>
-            <p className="font-body-md text-body-md text-on-surface-variant max-w-3xl leading-relaxed">
-              تم تحديث النظام بالكامل ليشمل حاسبة الملازم المتطورة، إدارة أوردرات الشفت، الماسح الضوئي الذكي (OCR)، واستوديو تعديل الـ PDF، ومولد شيتات المدارس لخدمة زبائن المطبعة بأقصى سرعة وكفاءة.
+            <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl leading-relaxed">
+              منصة إدارة أوردرات الطباعة وتسليم الشفت، استخراج النصوص، حاسبة الملازم، وأدوات المستندات الذكية.
             </p>
           </div>
 
           {/* Quick Header Action Buttons */}
           <div className="flex flex-wrap items-center gap-space-sm self-start lg:self-center">
+            {/* Direct PWA Install for Library Computer */}
+            <button
+              onClick={handleInstallPwa}
+              className="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-gradient-to-r from-emerald-600/20 to-teal-600/20 hover:from-emerald-600/30 hover:to-teal-600/30 text-emerald-300 border border-emerald-500/40 font-bold text-xs transition-all shadow-sm active:scale-95 cursor-pointer"
+              title="تثبيت لوحة الأدمن كتطبيق مستقل على كمبيوتر المكتبة (PWA) يفتح مباشرة على /admin"
+            >
+              <span className="material-symbols-outlined text-lg text-emerald-400">desktop_windows</span>
+              <span>{isPwaInstalled ? "تطبيق الأدمن مثبت ✓" : "تثبيت أدمن المكتبة PWA 💻"}</span>
+            </button>
+
             <Link
               href="/admin/calculator"
               className="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-primary-container text-on-primary-container font-headline-sm text-headline-sm hover:bg-primary transition-all shadow-md active:scale-95 font-bold"
@@ -217,6 +271,59 @@ export default function AdminDashboardPage() {
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* Announcement Banner Management Card */}
+      <div className="rounded-xl bg-surface-container-low p-space-sm mb-space-lg border border-cyan-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-space-sm shadow-md">
+        <div className="flex items-center gap-space-xs flex-1 w-full">
+          <div className="w-9 h-9 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-lg">campaign</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-body-xs font-bold text-cyan-400">شريط إعلان وخصم المتجر العلوي (تحكم المدير):</span>
+              <span className="text-[10px] text-on-surface-variant">يظهر أعلى متجر الزبائن مباشرة</span>
+            </div>
+            {isEditingBanner ? (
+              <div className="flex items-center gap-2 mt-1 w-full">
+                <input
+                  type="text"
+                  value={bannerInput}
+                  onChange={(e) => setBannerInput(e.target.value)}
+                  className="flex-1 bg-surface-container border border-surface-container-high rounded-lg px-2.5 py-1 text-xs text-on-surface focus:outline-none focus:border-cyan-500"
+                />
+                <button
+                  onClick={handleSaveBanner}
+                  className="px-3 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shrink-0 cursor-pointer"
+                >
+                  حفظ التعديل ✓
+                </button>
+                <button
+                  onClick={() => setIsEditingBanner(false)}
+                  className="px-2 py-1 rounded-lg text-xs text-on-surface-variant hover:text-on-surface cursor-pointer"
+                >
+                  إلغاء
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-on-surface font-medium truncate mt-0.5">
+                {bannerText}
+              </p>
+            )}
+          </div>
+        </div>
+        {!isEditingBanner && (
+          <button
+            onClick={() => {
+              setBannerInput(bannerText);
+              setIsEditingBanner(true);
+            }}
+            className="flex items-center gap-1 px-3 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-cyan-400 text-xs font-bold shrink-0 transition cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-sm">edit</span>
+            <span>تعديل جملة الخصم</span>
+          </button>
+        )}
       </div>
 
       {/* KPI Operational Metrics Grid (4 Top Metric Cards) */}
@@ -278,29 +385,33 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Card 3: Shift Revenue */}
-        <div className="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low shadow-md relative overflow-hidden border border-surface-container-high/40">
+        {/* Card 3: InstaPay Pending Transfers */}
+        <Link
+          href="/admin/instapay"
+          className="group flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low shadow-md relative overflow-hidden border border-surface-container-high/40 hover:border-purple-500/50 transition-all cursor-pointer"
+        >
           <div className="flex items-center justify-between mb-space-sm">
-            <span className="font-body-sm text-body-sm text-on-surface-variant font-semibold">دخل الوردية الحالية</span>
-            <div className="w-10 h-10 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary">
-              <span className="material-symbols-outlined text-xl">point_of_sale</span>
+            <span className="font-body-sm text-body-sm text-on-surface-variant font-semibold">تحويلات إنستا باي المعلقة</span>
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+              <span className="material-symbols-outlined text-xl">credit_card</span>
             </div>
           </div>
           <div className="flex items-baseline gap-space-xs mb-space-xs">
-            <span className="font-display-hero text-display-hero text-tertiary font-extrabold tracking-tight">
-              {shiftRevenue}
+            <span className="font-display-hero text-display-hero text-purple-400 font-extrabold tracking-tight">
+              {getPendingInstaPaySummary().total.toLocaleString("ar-EG")}
             </span>
             <span className="font-headline-sm text-headline-sm text-on-surface">ج.م</span>
           </div>
           <div className="flex items-center justify-between pt-space-xs">
-            <span className="font-label-tag text-label-tag text-on-surface-variant">
-              {totalRevenueVal > 0 ? `نقدي: ${cashAmount} | محفظة: ${walletAmount}` : "لم تسجل عمليات دفع بعد"}
+            <span className="font-label-tag text-label-tag text-amber-400 font-bold">
+              {getPendingInstaPaySummary().count > 0 ? `${getPendingInstaPaySummary().count} بانتظار تأكيد الباشمهندس` : "لا توجد مبالغ معلقة"}
             </span>
-            <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded bg-surface-container-high text-tertiary">
-              درج الكاش
+            <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded bg-surface-container-high text-purple-400 font-bold flex items-center gap-0.5">
+              <span>فتح السجل</span>
+              <span className="material-symbols-outlined text-xs">arrow_forward</span>
             </span>
           </div>
-        </div>
+        </Link>
 
         {/* Card 4: Hardware & CMYK Health */}
         <div className="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low shadow-md relative overflow-hidden border border-surface-container-high/40">
@@ -322,6 +433,99 @@ export default function AdminDashboardPage() {
               <div className="h-1.5 rounded-full bg-surface-bright" title="Black/Key 88%"></div>
             </div>
             <span className="font-label-code text-label-code text-on-surface-variant text-[10px]">4 طابعات ليزر وريزو متصلة بالشبكة</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Featured WhatsApp Print Hub & Store Counter Stand Card */}
+      <div className="rounded-2xl bg-gradient-to-r from-emerald-950/40 via-surface-container-low to-teal-950/30 p-space-md lg:p-space-lg mb-space-lg border border-emerald-500/30 shadow-xl flex flex-col lg:flex-row items-stretch gap-space-lg">
+        {/* QR Code Graphic & Quick Actions */}
+        <div className="flex flex-col sm:flex-row lg:flex-col items-center justify-center gap-space-md p-space-md bg-surface-container/60 rounded-xl border border-surface-container-high/60 shrink-0">
+          <div className="relative w-36 h-36 sm:w-40 sm:h-40 rounded-xl overflow-hidden shadow-lg border-2 border-emerald-500/40 bg-white p-1">
+            <img
+              src="/images/whatsapp-qr.jpg"
+              alt="QR Code واتساب مكتبة كوبي كات"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5 w-full">
+            <button
+              onClick={handleCopyWhatsappLink}
+              className="w-full py-1.5 px-3 rounded-lg bg-surface-container-high hover:bg-surface-bright text-xs font-bold text-on-surface flex items-center justify-center gap-1.5 transition cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm text-emerald-400">content_copy</span>
+              <span>نسخ الرابط المباشر</span>
+            </button>
+            <a
+              href={WHATSAPP_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition text-center"
+            >
+              <span className="material-symbols-outlined text-sm">chat</span>
+              <span>فتح المحادثة ↗</span>
+            </a>
+          </div>
+        </div>
+
+        {/* Content & Printing Actions */}
+        <div className="flex-1 flex flex-col justify-between gap-space-md">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-xs border border-emerald-500/30 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                قناة استقبال ملفات وملازم الطباعة الرسمية
+              </span>
+              <span className="text-[11px] text-on-surface-variant font-mono">
+                wa.me/qr/MA4E2HELDOY7F1
+              </span>
+            </div>
+            <h2 className="font-headline-md text-lg sm:text-xl font-bold text-on-surface flex items-center gap-2">
+              <span>كيو آر واستندات واتساب المكتبة (جاهزة للطباعة الفورية)</span>
+            </h2>
+            <p className="text-body-sm text-on-surface-variant leading-relaxed">
+              شغل المكتبة الروتيني اليومي معتمد بنسبة 100% على واتساب لتلقي ملفات الـ PDF، الملازم، تصوير الكتب، وتلقي المستندات من الزبائن والطلبة.
+              وفرنا لك تصميمات رسمية جاهزة للطباعة فوراً بتفاصيل فرع الإسماعيلية ومواعيد العمل لتسهيل مسح الكود من كاميرا موبايل العميل فور دخوله المكتبة.
+            </p>
+          </div>
+
+          {/* Quick Print Buttons */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-surface-container-high/40">
+            <button
+              onClick={() => setPrintQrModal("stand")}
+              className="p-3 rounded-xl bg-surface-container-high/80 hover:bg-emerald-600/20 hover:border-emerald-500/50 border border-surface-container-highest transition-all flex items-center gap-3 cursor-pointer text-right group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                <span className="material-symbols-outlined text-xl">table_restaurant</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-xs text-on-surface group-hover:text-emerald-300 transition-colors">
+                  طباعة استند طاولة الكاشير (مقاس A5)
+                </div>
+                <div className="text-[11px] text-on-surface-variant">
+                  تصميم عمودي أنيق مناسب للحوامل البلاستيكية على مكتب الاستقبال
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-sm text-on-surface-variant group-hover:text-emerald-400">print</span>
+            </button>
+
+            <button
+              onClick={() => setPrintQrModal("poster")}
+              className="p-3 rounded-xl bg-surface-container-high/80 hover:bg-emerald-600/20 hover:border-emerald-500/50 border border-surface-container-highest transition-all flex items-center gap-3 cursor-pointer text-right group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0 group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                <span className="material-symbols-outlined text-xl">wallpaper</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-xs text-on-surface group-hover:text-teal-300 transition-colors">
+                  طباعة بوستر حائط المحل (مقاس A4)
+                </div>
+                <div className="text-[11px] text-on-surface-variant">
+                  بوستر ملفت لمدخل المكتبة مع إرشادات إرسال الملفات والخدمات
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-sm text-on-surface-variant group-hover:text-teal-400">print</span>
+            </button>
           </div>
         </div>
       </div>
@@ -676,6 +880,90 @@ export default function AdminDashboardPage() {
             <span className="font-label-tag text-label-tag text-on-surface-variant">تحديث الأسعار والموردين</span>
           </div>
         </Link>
+
+        {/* Tool 13 */}
+        <Link
+          href="/admin/photos"
+          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-emerald-500/40"
+        >
+          <div>
+            <div className="flex items-center justify-between mb-space-md">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                <span className="material-symbols-outlined text-2xl">photo_library</span>
+              </div>
+              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-emerald-500">150+ صورة بالبنك</span>
+            </div>
+            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-emerald-500 transition-colors mb-space-xs font-bold">
+              بنك ومكتبة صور المنتجات (Photo Pool)
+            </h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+              مستودع يجمع صور صفحة فيسبوك والصور الملتقطة بكاميرا الهاتف لربط وتخصيص صور المنتجات والكتالوج في أي وقت بضغطة واحدة.
+            </p>
+          </div>
+          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
+            <span className="font-label-code text-label-code text-emerald-500 flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
+              فتح بنك الصور
+              <span className="material-symbols-outlined text-base">arrow_forward</span>
+            </span>
+            <span className="font-label-tag text-label-tag text-on-surface-variant">تصوير & ربط بالكتالوج</span>
+          </div>
+        </Link>
+
+        {/* Tool 14: InstaPay Tracker */}
+        <Link
+          href="/admin/instapay"
+          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-purple-500/40"
+        >
+          <div>
+            <div className="flex items-center justify-between mb-space-md">
+              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                <span className="material-symbols-outlined text-2xl">credit_card</span>
+              </div>
+              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-purple-400">تأكيد فوري للتحويلات</span>
+            </div>
+            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-purple-400 transition-colors mb-space-xs font-bold">
+              سجل وتحويلات إنستا باي (InstaPay)
+            </h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+              تسجيل تحويلات الزبائن بالاسم والهاتف والمبلغ لحين وصول الباشمهندس للمكتبة وتأكيد استلام المبالغ بحساب البنك بنقرة واحدة.
+            </p>
+          </div>
+          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
+            <span className="font-label-code text-label-code text-purple-400 flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
+              فتح سجل إنستا باي
+              <span className="material-symbols-outlined text-base">arrow_forward</span>
+            </span>
+            <span className="font-label-tag text-label-tag text-on-surface-variant">تسجيل وتأكيد</span>
+          </div>
+        </Link>
+
+        {/* Tool 15: Facebook Post to PDF Downloader */}
+        <Link
+          href="/admin/fb-post-tools"
+          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-blue-500/40"
+        >
+          <div>
+            <div className="flex items-center justify-between mb-space-md">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                <span className="material-symbols-outlined text-2xl">picture_as_pdf</span>
+              </div>
+              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-blue-400">سحب بوستات كاملة</span>
+            </div>
+            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-blue-400 transition-colors mb-space-xs font-bold">
+              سحب بوستات وملازم فيسبوك PDF
+            </h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+              ضع رابط أي منشور فيسبوك (مثلاً 80 صورة ملزمة أو مذكرة) لسحب كافة الصور بالترتيب ودمجها فوراً في ملف PDF عالي الدقة جاهز للطباعة.
+            </p>
+          </div>
+          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
+            <span className="font-label-code text-label-code text-blue-400 flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
+              سحب وتحويل PDF
+              <span className="material-symbols-outlined text-base">arrow_forward</span>
+            </span>
+            <span className="font-label-tag text-label-tag text-on-surface-variant">دمج صفحات بالترتيب</span>
+          </div>
+        </Link>
       </div>
 
       {/* Recent Shift Activity & Active Print Queue Table */}
@@ -797,9 +1085,167 @@ export default function AdminDashboardPage() {
           <span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-primary font-bold">
             Shift: {currentShift.label} ({currentShift.timeRange}) — {user?.name || "المشرف العام"}
           </span>
-          <span className="text-on-surface-variant">الفرع الرئيسي - ميت غمر</span>
+          <span className="text-on-surface-variant font-medium">
+            شارع الدقهلية بالقرب من مسجد المطافي أمام مركز نور الحياة - عرايشية مصر - الإسماعيلية
+          </span>
         </div>
       </div>
+
+      {/* Modal: Printable WhatsApp QR Stand / Wall Poster */}
+      {printQrModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in">
+          <div className="w-full max-w-2xl my-auto flex flex-col items-center">
+            {/* Control Bar (Screen Only) */}
+            <div className="w-full flex items-center justify-between p-3 mb-3 bg-surface-container-low border border-surface-container-high rounded-xl text-on-surface shadow-xl print:hidden">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-emerald-400 text-xl">print</span>
+                <span className="font-bold text-xs">
+                  {printQrModal === "stand" ? "معاينة استند طاولة الكاشير (A5)" : "معاينة بوستر حائط المحل (A4)"}
+                </span>
+                <div className="flex items-center bg-surface-container rounded-lg p-0.5 border border-surface-container-high mr-2">
+                  <button
+                    onClick={() => setPrintQrModal("stand")}
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition ${
+                      printQrModal === "stand" ? "bg-primary text-on-primary" : "text-on-surface-variant hover:text-on-surface"
+                    }`}
+                  >
+                    استند طاولة (A5)
+                  </button>
+                  <button
+                    onClick={() => setPrintQrModal("poster")}
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition ${
+                      printQrModal === "poster" ? "bg-primary text-on-primary" : "text-on-surface-variant hover:text-on-surface"
+                    }`}
+                  >
+                    بوستر حائط (A4)
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition shadow cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">print</span>
+                  <span>طباعة فورية (Ctrl+P)</span>
+                </button>
+                <button
+                  onClick={() => setPrintQrModal(null)}
+                  className="p-1.5 rounded-lg hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface"
+                >
+                  <span className="material-symbols-outlined text-base">close</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Paper Document */}
+            <div
+              id="printable-whatsapp-poster"
+              className={`w-full bg-white text-slate-900 rounded-2xl shadow-2xl p-6 sm:p-8 flex flex-col justify-between items-center text-center border-4 border-emerald-600 relative overflow-hidden ${
+                printQrModal === "stand" ? "max-w-md min-h-[580px]" : "max-w-xl min-h-[720px]"
+              }`}
+              dir="rtl"
+            >
+              {/* Header */}
+              <div className="w-full flex flex-col items-center border-b-2 border-dashed border-emerald-500/40 pb-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="flex gap-1 items-center">
+                    <span className="w-3.5 h-3.5 rounded bg-cyan-500 inline-block"></span>
+                    <span className="w-3.5 h-3.5 rounded bg-pink-500 inline-block"></span>
+                    <span className="w-3.5 h-3.5 rounded bg-amber-400 inline-block"></span>
+                    <span className="w-3.5 h-3.5 rounded bg-slate-900 inline-block"></span>
+                  </div>
+                  <span className="font-extrabold text-xl sm:text-2xl text-slate-900 tracking-tight">
+                    مكتبة كوبي كات بالاسماعيلية
+                  </span>
+                </div>
+                <div className="text-xs font-bold text-emerald-700 tracking-wide font-mono">
+                  COPY CAT — PROFESSIONAL PRINTING & STATIONERY
+                </div>
+                <div className="mt-2 inline-block bg-emerald-100 text-emerald-900 px-3 py-1 rounded-full text-xs font-bold">
+                  📱 أرسل ملفاتك ومذكراتك على واتساب لتجهيزها فوراً
+                </div>
+              </div>
+
+              {/* Center: QR Code Display */}
+              <div className="my-4 flex flex-col items-center">
+                <div className="p-3 bg-white rounded-2xl border-4 border-slate-900 shadow-lg inline-block">
+                  <img
+                    src="/images/whatsapp-qr.jpg"
+                    alt="WhatsApp QR Code Copy Cat"
+                    className={printQrModal === "stand" ? "w-48 h-48 object-contain" : "w-60 h-60 object-contain"}
+                  />
+                </div>
+                <div className="mt-3 font-bold text-slate-900 text-sm flex items-center justify-center gap-1">
+                  <span>امسح الكود بكاميرا الموبايل أو كاميرا واتساب</span>
+                </div>
+                <div className="text-xs text-slate-600 font-mono mt-0.5" dir="ltr">
+                  https://wa.me/qr/MA4E2HELDOY7F1
+                </div>
+              </div>
+
+              {/* Services List */}
+              <div className="w-full grid grid-cols-2 gap-2 my-2 text-right text-xs">
+                <div className="p-2 rounded-lg bg-slate-100 border border-slate-200 flex items-center gap-1.5 font-bold text-slate-800">
+                  <span className="text-emerald-600 text-sm">✓</span>
+                  <span>طباعة أبحاث وملازم ليزر وألوان</span>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-100 border border-slate-200 flex items-center gap-1.5 font-bold text-slate-800">
+                  <span className="text-emerald-600 text-sm">✓</span>
+                  <span>تجليد وسلك وحماية المستندات</span>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-100 border border-slate-200 flex items-center gap-1.5 font-bold text-slate-800">
+                  <span className="text-emerald-600 text-sm">✓</span>
+                  <span>تصوير فوري للشهادات وبطاقات الرقم القومي</span>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-100 border border-slate-200 flex items-center gap-1.5 font-bold text-slate-800">
+                  <span className="text-emerald-600 text-sm">✓</span>
+                  <span>أرقى تشكيلة كشاكيل وأدوات مكتبية</span>
+                </div>
+              </div>
+
+              {/* Footer Branch & Timing Info */}
+              <div className="w-full pt-3 border-t-2 border-dashed border-emerald-500/40 text-[11px] text-slate-700 flex flex-col gap-1">
+                <div className="font-bold text-slate-900 flex items-center justify-center gap-1">
+                  <span>📍 الفرع:</span>
+                  <span>عرايشية مصر - شارع الدقهلية بالقرب من مسجد المطافي أمام مركز نور الحياة - الإسماعيلية</span>
+                </div>
+                <div className="text-emerald-700 font-bold flex items-center justify-center gap-1">
+                  <span>⏰ مواعيد العمل:</span>
+                  <span>نستقبلكم يومياً حتى 11:30 مساءً</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global CSS for Clean Printing of Poster */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #printable-whatsapp-poster,
+          #printable-whatsapp-poster * {
+            visibility: visible !important;
+          }
+          #printable-whatsapp-poster {
+            position: fixed !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 92vw !important;
+            max-width: 780px !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            z-index: 999999 !important;
+            background: white !important;
+            color: #0f172a !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

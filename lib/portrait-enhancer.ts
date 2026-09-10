@@ -327,3 +327,46 @@ export async function enhanceAndFramePassportPhoto(
 
   return finalCanvas.toDataURL("image/jpeg", 0.96);
 }
+
+/**
+ * Manually Renders Biometric Framed Passport Photo:
+ * Takes custom pan, zoom, and rotation adjustments and renders onto the standard
+ * 400x520px canvas with solid white background and 1.5pt solid black border.
+ */
+export function renderFramedPassportCanvas(
+  img: HTMLImageElement,
+  panX: number,
+  panY: number,
+  zoom: number,
+  rotation: number,
+  targetW = 400,
+  targetH = 520
+): string {
+  const canvas = document.createElement("canvas");
+  canvas.width = targetW;
+  canvas.height = targetH;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return img.src;
+
+  // Pure studio white background
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, targetW, targetH);
+
+  ctx.save();
+  // Move to center of canvas + pan
+  ctx.translate(targetW / 2 + panX, targetH / 2 + panY);
+  ctx.rotate((rotation * Math.PI) / 180);
+  ctx.scale(zoom, zoom);
+
+  const iw = img.naturalWidth || img.width;
+  const ih = img.naturalHeight || img.height;
+  ctx.drawImage(img, -iw / 2, -ih / 2, iw, ih);
+  ctx.restore();
+
+  // 1.5pt crisp solid black border
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(1.5, 1.5, targetW - 3, targetH - 3);
+
+  return canvas.toDataURL("image/jpeg", 0.96);
+}

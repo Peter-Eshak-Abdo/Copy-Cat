@@ -8,6 +8,18 @@
  *  - Fine-angle rotation & edge-preserving unsharp sharpening
  */
 
+export interface Point2D {
+  x: number; // 0 to 1 normalized
+  y: number; // 0 to 1 normalized
+}
+
+export interface QuadCorners {
+  tl: Point2D; // Top-Left
+  tr: Point2D; // Top-Right
+  br: Point2D; // Bottom-Right
+  bl: Point2D; // Bottom-Left
+}
+
 export interface CropRect {
   x: number;      // 0 to 1 (percentage)
   y: number;      // 0 to 1 (percentage)
@@ -20,12 +32,13 @@ export interface ProcessImageOptions {
   brightness?: number;          // 0 to 200 (100 is default, 115-130 for ID cards)
   contrast?: number;            // 0 to 200 (100 is default)
   sharpness?: number;           // 0 to 100 (0 is off, 50 is medium, 100 is max)
-  camScannerMode?: boolean;
+  camScannerMode?: boolean;     // CamScanner Magic Color & Document Whitening
   screenClarifierMode?: boolean;// Anti-Moire & computer screen photo text clarifier
   grayscale?: boolean;
   fineAngle?: number;           // Rotation in degrees (-45 to +45 or 0-360)
   preserveColors?: boolean;     // 100% Color-safe HSL mode (Fix for requirement #4)
-  crop?: CropRect;              // Crop box
+  crop?: CropRect;              // Axis-aligned crop box
+  quad?: QuadCorners;           // 4-corner perspective quad
 }
 
 /**
@@ -115,6 +128,203 @@ export function cropImageCanvas(
 }
 
 /**
+ * Warps a 4-corner quadrilateral (TL, TR, BR, BL) into a planar standard rectangle
+ * Perfectly rectifies angled or skewed photos of ID cards and documents (CamScanner style)
+ */
+export function warpPerspectiveQuad(
+  sourceCanvas: HTMLCanvasElement,
+  quad: QuadCorners,
+  targetWidth?: number,
+  targetHeight?: number
+): HTMLCanvasElement {
+  const sw = sourceCanvas.width;
+  const sh = sourceCanvas.height;
+  const sCtx = sourceCanvas.getContext("2d");
+  if (!sCtx) return sourceCanvas;
+
+  // Calculate actual pixel points on source image
+  const p0 = { x: quad.tl.x * sw, y: quad.tl.y * sh }; // Top-Left
+  const p1 = { x: quad.tr.x * sw, y: quad.tr.y * sh }; // Top-Right
+  const p2 = { x: quad.br.x * sw, y: quad.br.y * sh }; // Bottom-Right
+  const p3 = { x: quad.bl.x * sw, y: quad.bl.y * sh }; // Bottom-Left
+
+  // Standard ID Card (ID-1) aspect ratio = 85.60mm / 53.98mm = 1.58577
+  const topEdge = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+  const bottomEdge = Math.hypot(p2.x - p3.x, p2.y - p3.y);
+  const leftEdge = Math.hypot(p3.x - p0.x, p3.y - p0.y);
+  const rightEdge = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+
+  const calcW = Math.round(Math.max(topEdge, bottomEdge, 800));
+  const destW = targetWidth || calcW;
+  const destH = targetHeight || Math.round(destW / 1.58577);
+
+  const outCanvas = document.createElement("canvas");
+  outCanvas.width = destW;
+  outCanvas.height = destH;
+  const outCtx = outCanvas.getContext("2d");
+  if (!outCtx) return sourceCanvas;
+
+  // Extract source pixels
+  const srcImgData = sCtx.getImageData(0, 0, sw, sh);
+  const srcData = srcImgData.data;
+
+  const outImgData = outCtx.createImageData(destW, destH);
+  const outData = outImgData.data;
+
+  // Compute Projective Homography from Unit Square [0, 1]^2 to Quad (p0, p1, p2, p3)
+  const x0 = p0.x, y0 = p0.y;
+  const x1 = p1.x, y1 = p1.y;
+  const x2 = p2.x, y2 = p2.y;
+  const x3 = p3.x, y3 = p3.y;
+
+  const dx1 = x1 - x2;
+  const dx2 = x3 - x2;
+  const sx = x0 - x1 + x2 - x3;
+  const dy1 = y1 - y2;
+  const dy2 = y3 - y2;
+  const sy = y0 - y1 + y2 - y3;
+
+  let a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number;
+
+  if (Math.abs(sx) < 1e-4 && Math.abs(sy) < 1e-4) {
+    // Parallelogram / Affine
+    a = x1 - x0;
+    b = x2 - x1;
+    c = x0;
+    d = y1 - y0;
+    e = y2 - y1;
+    f = y0;
+    g = 0;
+    h = 0;
+  } else {
+    const det = dx1 * dy2 - dy1 * dx2;
+    if (Math.abs(det) < 1e-7) {
+      // Degenerate, fallback
+      a = x1 - x0;
+      b = x3 - x0;
+      c = x0;
+      d = y1 - y0;
+      e = y3 - y0;
+      f = y0;
+      g = 0;
+      h = 0;
+    } else {
+      g = (sx * dy2 - sy * dx2) / det;
+      h = (dx1 * sy - dy1 * sx) / det;
+      a = x1 - x0 + g * x1;
+      b = x3 - x0 + h * x3;
+      c = x0;
+      d = y1 - y0 + g * y1;
+      e = y3 - y0 + h * y3;
+      f = y0;
+    }
+  }
+
+  // Map destination pixels using backward projective mapping with bilinear interpolation
+  for (let dy = 0; dy < destH; dy++) {
+    const v = dy / (destH - 1);
+    for (let dx = 0; dx < destW; dx++) {
+      const u = dx / (destW - 1);
+      const denom = g * u + h * v + 1;
+      const srcX = (a * u + b * v + c) / denom;
+      const srcY = (d * u + e * v + f) / denom;
+
+      const destIdx = (dy * destW + dx) * 4;
+
+      if (srcX >= 0 && srcX < sw - 1 && srcY >= 0 && srcY < sh - 1) {
+        const xf = Math.floor(srcX);
+        const yf = Math.floor(srcY);
+        const xc = xf + 1;
+        const yc = yf + 1;
+
+        const uFrac = srcX - xf;
+        const vFrac = srcY - yf;
+
+        const w00 = (1 - uFrac) * (1 - vFrac);
+        const w10 = uFrac * (1 - vFrac);
+        const w01 = (1 - uFrac) * vFrac;
+        const w11 = uFrac * vFrac;
+
+        const idx00 = (yf * sw + xf) * 4;
+        const idx10 = (yf * sw + xc) * 4;
+        const idx01 = (yc * sw + xf) * 4;
+        const idx11 = (yc * sw + xc) * 4;
+
+        outData[destIdx] = Math.round(
+          srcData[idx00] * w00 + srcData[idx10] * w10 + srcData[idx01] * w01 + srcData[idx11] * w11
+        );
+        outData[destIdx + 1] = Math.round(
+          srcData[idx00 + 1] * w00 + srcData[idx10 + 1] * w10 + srcData[idx01 + 1] * w01 + srcData[idx11 + 1] * w11
+        );
+        outData[destIdx + 2] = Math.round(
+          srcData[idx00 + 2] * w00 + srcData[idx10 + 2] * w10 + srcData[idx01 + 2] * w01 + srcData[idx11 + 2] * w11
+        );
+        outData[destIdx + 3] = 255;
+      } else {
+        // Transparent or white border outside bounds
+        outData[destIdx] = 255;
+        outData[destIdx + 1] = 255;
+        outData[destIdx + 2] = 255;
+        outData[destIdx + 3] = 255;
+      }
+    }
+  }
+
+  outCtx.putImageData(outImgData, 0, 0);
+  return outCanvas;
+}
+
+/**
+ * CamScanner Pro Magic Color Filter:
+ * Automatically whitens document backgrounds, removes phone shadows,
+ * deepens national ID typography and black ink, and keeps stamps/eagle saturated!
+ */
+export function applyCamScannerMagicColor(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+
+  const w = canvas.width;
+  const h = canvas.height;
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const d = imgData.data;
+
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i];
+    const g = d[i + 1];
+    const b = d[i + 2];
+    const [hue, sat, lum] = rgbToHsl(r, g, b);
+
+    let newLum = lum;
+    let newSat = sat;
+
+    // Document background lightening curve
+    if (lum > 0.58) {
+      const ratio = (lum - 0.58) / 0.42;
+      newLum = Math.min(1.0, lum + 0.38 * Math.pow(ratio, 0.7));
+      // Desaturate mild yellow/grey cast in background
+      if (sat < 0.28) {
+        newSat = Math.max(0, sat * (1 - ratio * 0.75));
+      }
+    } else if (lum < 0.26) {
+      // National ID digits and ink deepening
+      newLum = Math.max(0, lum * 0.82);
+      newSat = Math.min(1.0, sat * 1.15);
+    } else {
+      // Midtones (eagle, colors, portrait)
+      newSat = Math.min(1.0, sat * 1.08);
+    }
+
+    const [nr, ng, nb] = hslToRgb(hue, newSat, newLum);
+    d[i] = nr;
+    d[i + 1] = ng;
+    d[i + 2] = nb;
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+  return canvas;
+}
+
+/**
  * Rotates an image by an exact angle in degrees (fine-angle rotation)
  */
 export function rotateImageCanvas(
@@ -160,6 +370,7 @@ export function processImageOnCanvas(
     fineAngle = 0,
     preserveColors = true, // Default to true for authentic ID card & photo colors
     crop,
+    quad,
   } = options;
 
   // 1. Initial draw or rotated draw
@@ -176,9 +387,17 @@ export function processImageOnCanvas(
     }
   }
 
-  // 2. Apply Crop if specified
-  if (crop && crop.width > 0 && crop.height > 0) {
+  // 2. Apply 4-corner Quad Perspective Warp (CamScanner Style) if provided
+  if (quad) {
+    workingCanvas = warpPerspectiveQuad(workingCanvas, quad);
+  } else if (crop && crop.width > 0 && crop.height > 0) {
+    // Or fallback to axis-aligned crop
     workingCanvas = cropImageCanvas(workingCanvas, crop);
+  }
+
+  // If CamScanner magic mode is requested, run background whitening & ink enhancement
+  if (camScannerMode) {
+    workingCanvas = applyCamScannerMagicColor(workingCanvas);
   }
 
   const ctx = workingCanvas.getContext("2d", { willReadFrequently: true });

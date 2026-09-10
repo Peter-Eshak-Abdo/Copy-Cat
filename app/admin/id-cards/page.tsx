@@ -19,9 +19,12 @@ import {
   Scissors,
   ShieldCheck,
   Maximize2,
+  Wand2,
+  Scan,
+  Compass,
 } from "lucide-react";
 import { generateIdCardsDocx } from "@/lib/docx/id-cards-docx";
-import { processImageOnCanvas, CropRect } from "@/lib/canvas-filters";
+import { processImageOnCanvas, CropRect, QuadCorners, Point2D } from "@/lib/canvas-filters";
 import { useToast } from "@/components/toast-provider";
 import { readFileAsDataURL, getFriendlyErrorMessage } from "@/lib/utils";
 
@@ -36,6 +39,8 @@ interface CardSide {
   sharpness: number;
   sideType: "front" | "back";
   crop?: CropRect;
+  quad?: QuadCorners;
+  camScannerMode?: boolean;
 }
 
 interface CardPair {
@@ -61,22 +66,60 @@ export default function IdCardsPage() {
   } | null>(null);
   const [fineAngle, setFineAngle] = useState(0);
 
-  // Modal for interactive card cropping (Point 4 in edits2.0.md)
+  // Modal for CamScanner Pro 4-Corner Quad Cropping & Perspective Warp
   const [cropTarget, setCropTarget] = useState<{
     pairId: string;
     side: "front" | "back";
     cardSide: CardSide;
   } | null>(null);
 
-  const [cropRect, setCropRect] = useState<CropRect>({
-    x: 0.05,
-    y: 0.05,
-    width: 0.9,
-    height: 0.9,
+  const [quadCorners, setQuadCorners] = useState<QuadCorners>({
+    tl: { x: 0.05, y: 0.08 },
+    tr: { x: 0.95, y: 0.08 },
+    br: { x: 0.95, y: 0.92 },
+    bl: { x: 0.05, y: 0.92 },
   });
-  const [cropRatioLocked, setCropRatioLocked] = useState<boolean>(true);
+  const [cropCamScannerMode, setCropCamScannerMode] = useState<boolean>(true);
+  const [activeCornerDrag, setActiveCornerDrag] = useState<"tl" | "tr" | "br" | "bl" | null>(null);
+  const [loupePoint, setLoupePoint] = useState<Point2D | null>(null);
+  const cropContainerRef = useRef<HTMLDivElement>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCornerPointerDown = (
+    corner: "tl" | "tr" | "br" | "bl",
+    e: React.PointerEvent
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // fallback
+    }
+    setActiveCornerDrag(corner);
+    setLoupePoint(quadCorners[corner]);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!activeCornerDrag || !cropContainerRef.current) return;
+    const rect = cropContainerRef.current.getBoundingClientRect();
+    const rawX = (e.clientX - rect.left) / rect.width;
+    const rawY = (e.clientY - rect.top) / rect.height;
+    const clampedX = Math.max(0, Math.min(1, Math.round(rawX * 1000) / 1000));
+    const clampedY = Math.max(0, Math.min(1, Math.round(rawY * 1000) / 1000));
+
+    const newPt = { x: clampedX, y: clampedY };
+    setQuadCorners((prev) => ({ ...prev, [activeCornerDrag]: newPt }));
+    setLoupePoint(newPt);
+  };
+
+  const handlePointerUp = () => {
+    if (activeCornerDrag) {
+      setActiveCornerDrag(null);
+      setLoupePoint(null);
+    }
+  };
 
   const processSideImage = (
     src: string,
@@ -84,7 +127,9 @@ export default function IdCardsPage() {
     c = 105,
     sh = globalSharpness,
     rot = 0,
-    crop?: CropRect
+    crop?: CropRect,
+    quad?: QuadCorners,
+    camScannerMode?: boolean
   ): Promise<string> => {
     return new Promise((resolve) => {
       const img = new Image();
@@ -97,6 +142,8 @@ export default function IdCardsPage() {
           fineAngle: rot,
           preserveColors: true, // 100% Color-Safe HSL lightening
           crop,
+          quad,
+          camScannerMode,
         });
         resolve(res);
       };
@@ -257,7 +304,9 @@ export default function IdCardsPage() {
       newC,
       target.sharpness,
       target.rotation,
-      target.crop
+      target.crop,
+      target.quad,
+      target.camScannerMode
     );
 
     setPairs((curr) =>
@@ -282,7 +331,7 @@ export default function IdCardsPage() {
     const target = pair ? pair[side] : null;
     if (!target) return;
 
-    const newSrc = await processSideImage(target.originalSrc, 100, 100, 0, 0);
+    const newSrc = await processSideImage(target.originalSrc, 100, 100, 0, 0, undefined, undefined, false);
 
     setPairs((curr) =>
       curr.map((p) => {
@@ -296,10 +345,49 @@ export default function IdCardsPage() {
             sharpness: 0,
             rotation: 0,
             crop: undefined,
+            quad: undefined,
+            camScannerMode: false,
             processedSrc: newSrc,
           },
         };
       })
+    );
+  };
+
+  // 1-Click CamScanner Magic Mode toggle
+  const toggleSideCamScanner = async (pairId: string, side: "front" | "back") => {
+    const pair = pairs.find((p) => p.pairId === pairId);
+    const target = pair ? pair[side] : null;
+    if (!target) return;
+
+    const newMode = !target.camScannerMode;
+    const newSrc = await processSideImage(
+      target.originalSrc,
+      target.brightness,
+      target.contrast,
+      target.sharpness,
+      target.rotation,
+      target.crop,
+      target.quad,
+      newMode
+    );
+
+    setPairs((curr) =>
+      curr.map((p) => {
+        if (p.pairId !== pairId) return p;
+        return {
+          ...p,
+          [side]: {
+            ...target,
+            camScannerMode: newMode,
+            processedSrc: newSrc,
+          },
+        };
+      })
+    );
+    toast.success(
+      newMode ? "تم تفعيل سحر كام سكانر ✨" : "تم إلغاء سحر كام سكانر",
+      newMode ? "تم تبييض أرضية البطاقة وإبراز سواد الأرقام والحبر بوضوح تام." : "تمت العودة للألوان الطبيعية."
     );
   };
 
@@ -320,7 +408,9 @@ export default function IdCardsPage() {
             105,
             sh,
             p.front.rotation,
-            p.front.crop
+            p.front.crop,
+            p.front.quad,
+            p.front.camScannerMode
           );
           newFront = { ...p.front, processedSrc: frontSrc, sharpness: sh, brightness: b };
         }
@@ -331,7 +421,9 @@ export default function IdCardsPage() {
             105,
             sh,
             p.back.rotation,
-            p.back.crop
+            p.back.crop,
+            p.back.quad,
+            p.back.camScannerMode
           );
           newBack = { ...p.back, processedSrc: backSrc, sharpness: sh, brightness: b };
         }
@@ -355,7 +447,9 @@ export default function IdCardsPage() {
       cardSide.contrast,
       cardSide.sharpness,
       fineAngle,
-      cardSide.crop
+      cardSide.crop,
+      cardSide.quad,
+      cardSide.camScannerMode
     );
 
     setPairs((curr) =>
@@ -371,7 +465,7 @@ export default function IdCardsPage() {
     setEditingTarget(null);
   };
 
-  // Apply crop from crop modal (Requirement #4)
+  // Apply CamScanner Pro 4-Corner Quad Crop & Warp
   const handleApplyCrop = async () => {
     if (!cropTarget) return;
     const { pairId, side, cardSide } = cropTarget;
@@ -382,7 +476,9 @@ export default function IdCardsPage() {
       cardSide.contrast,
       cardSide.sharpness,
       cardSide.rotation,
-      cropRect
+      undefined,
+      quadCorners,
+      cropCamScannerMode
     );
 
     setPairs((curr) =>
@@ -390,13 +486,18 @@ export default function IdCardsPage() {
         if (item.pairId !== pairId) return item;
         return {
           ...item,
-          [side]: { ...cardSide, crop: cropRect, processedSrc: newSrc },
+          [side]: {
+            ...cardSide,
+            quad: quadCorners,
+            camScannerMode: cropCamScannerMode,
+            processedSrc: newSrc,
+          },
         };
       })
     );
 
     setCropTarget(null);
-    toast.success("تم قص البطاقة بنجاح", "تم قص حواف البطاقة بدقة وحفظ ألوانها الأصلية بدون بهتان.");
+    toast.success("تم قص وتعديل المنظور بنجاح", "تمت محاذاة أركان البطاقة الأربعة وتحويلها لكادر مستوي قياسي بجودة فائقة.");
   };
 
   const handleExportWord = async () => {
@@ -635,7 +736,21 @@ export default function IdCardsPage() {
 
                       {pair.front && (
                         <div className="flex items-center gap-1.5">
-                          {/* Crop Button (Point 4 in edits2.0.md) */}
+                          {/* CamScanner Magic Mode Button */}
+                          <button
+                            onClick={() => toggleSideCamScanner(pair.pairId, "front")}
+                            className={`px-2 py-1 text-[11px] rounded-lg transition flex items-center gap-1 cursor-pointer font-bold ${
+                              pair.front?.camScannerMode
+                                ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20"
+                                : "bg-slate-800 text-amber-300 hover:bg-slate-700"
+                            }`}
+                            title="سحر كام سكانر: تبييض الأرضية وإبراز سواد أرقام البطاقة"
+                          >
+                            <Wand2 className="w-3 h-3" />
+                            <span>سحر كام سكانر</span>
+                          </button>
+
+                          {/* 4-Corner Quad Crop Button */}
                           <button
                             onClick={() => {
                               setCropTarget({
@@ -643,13 +758,21 @@ export default function IdCardsPage() {
                                 side: "front",
                                 cardSide: pair.front!,
                               });
-                              setCropRect(pair.front?.crop || { x: 0.05, y: 0.05, width: 0.9, height: 0.9 });
+                              setQuadCorners(
+                                pair.front?.quad || {
+                                  tl: { x: 0.05, y: 0.08 },
+                                  tr: { x: 0.95, y: 0.08 },
+                                  br: { x: 0.95, y: 0.92 },
+                                  bl: { x: 0.05, y: 0.92 },
+                                }
+                              );
+                              setCropCamScannerMode(pair.front?.camScannerMode ?? true);
                             }}
-                            className="px-2.5 py-1 text-[11px] text-amber-400 hover:text-white rounded-lg bg-slate-800 hover:bg-amber-600 transition flex items-center gap-1 cursor-pointer font-bold"
-                            title="قص وتحديد أطراف البطاقة"
+                            className="px-2.5 py-1 text-[11px] text-blue-400 hover:text-white rounded-lg bg-slate-800 hover:bg-blue-600 transition flex items-center gap-1 cursor-pointer font-bold"
+                            title="قص وتعديل منظور الأركان الأربعة (CamScanner Pro)"
                           >
-                            <Scissors className="w-3 h-3" />
-                            <span>قص البطاقة</span>
+                            <Scan className="w-3 h-3" />
+                            <span>قص 4 أركان</span>
                           </button>
 
                           {/* Fine Rotation Button */}
@@ -662,7 +785,7 @@ export default function IdCardsPage() {
                               });
                               setFineAngle(pair.front?.rotation || 0);
                             }}
-                            className="px-2 py-1 text-[11px] text-blue-400 hover:text-white rounded-lg bg-slate-800 hover:bg-blue-600 transition flex items-center gap-1 cursor-pointer font-bold"
+                            className="px-2 py-1 text-[11px] text-slate-400 hover:text-white rounded-lg bg-slate-800 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer font-bold"
                             title="تدوير وضبط بزوايا دقيقة"
                           >
                             <RotateCw className="w-3 h-3" />
@@ -728,7 +851,21 @@ export default function IdCardsPage() {
 
                       {pair.back && (
                         <div className="flex items-center gap-1.5">
-                          {/* Crop Button (Point 4 in edits2.0.md) */}
+                          {/* CamScanner Magic Mode Button */}
+                          <button
+                            onClick={() => toggleSideCamScanner(pair.pairId, "back")}
+                            className={`px-2 py-1 text-[11px] rounded-lg transition flex items-center gap-1 cursor-pointer font-bold ${
+                              pair.back?.camScannerMode
+                                ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
+                                : "bg-slate-800 text-emerald-300 hover:bg-slate-700"
+                            }`}
+                            title="سحر كام سكانر: تبييض الأرضية وإبراز سواد أرقام البطاقة"
+                          >
+                            <Wand2 className="w-3 h-3" />
+                            <span>سحر كام سكانر</span>
+                          </button>
+
+                          {/* 4-Corner Quad Crop Button */}
                           <button
                             onClick={() => {
                               setCropTarget({
@@ -736,13 +873,21 @@ export default function IdCardsPage() {
                                 side: "back",
                                 cardSide: pair.back!,
                               });
-                              setCropRect(pair.back?.crop || { x: 0.05, y: 0.05, width: 0.9, height: 0.9 });
+                              setQuadCorners(
+                                pair.back?.quad || {
+                                  tl: { x: 0.05, y: 0.08 },
+                                  tr: { x: 0.95, y: 0.08 },
+                                  br: { x: 0.95, y: 0.92 },
+                                  bl: { x: 0.05, y: 0.92 },
+                                }
+                              );
+                              setCropCamScannerMode(pair.back?.camScannerMode ?? true);
                             }}
-                            className="px-2.5 py-1 text-[11px] text-amber-400 hover:text-white rounded-lg bg-slate-800 hover:bg-amber-600 transition flex items-center gap-1 cursor-pointer font-bold"
-                            title="قص وتحديد أطراف البطاقة"
+                            className="px-2.5 py-1 text-[11px] text-blue-400 hover:text-white rounded-lg bg-slate-800 hover:bg-blue-600 transition flex items-center gap-1 cursor-pointer font-bold"
+                            title="قص وتعديل منظور الأركان الأربعة (CamScanner Pro)"
                           >
-                            <Scissors className="w-3 h-3" />
-                            <span>قص البطاقة</span>
+                            <Scan className="w-3 h-3" />
+                            <span>قص 4 أركان</span>
                           </button>
 
                           {/* Fine Rotation Button */}
@@ -755,7 +900,7 @@ export default function IdCardsPage() {
                               });
                               setFineAngle(pair.back?.rotation || 0);
                             }}
-                            className="px-2 py-1 text-[11px] text-emerald-400 hover:text-white rounded-lg bg-slate-800 hover:bg-emerald-600 transition flex items-center gap-1 cursor-pointer font-bold"
+                            className="px-2 py-1 text-[11px] text-slate-400 hover:text-white rounded-lg bg-slate-800 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer font-bold"
                             title="تدوير وضبط بزوايا دقيقة"
                           >
                             <RotateCw className="w-3 h-3" />
@@ -821,118 +966,188 @@ export default function IdCardsPage() {
         </div>
       )}
 
-      {/* Interactive ID Card Cropper Modal (Point 4 in edits2.0.md) */}
+      {/* CamScanner Pro 4-Corner Quad Perspective Modal */}
       {cropTarget && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-4">
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 max-w-2xl w-full shadow-2xl space-y-4 max-h-[95vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <Scissors className="w-5 h-5 text-amber-400" />
-                <h3 className="text-base font-black text-white">
-                  أداة قص حواف البطاقة ({cropTarget.side === "front" ? "الوش" : "الضهر"})
-                </h3>
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <Scan className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">
+                    قص وضبط منظور البطاقة (CamScanner Pro)
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    اسحب الأركان الأربعة لتطابق زوايا البطاقة الأصلية بدقة، وسيتم تعديل المنظور وتبييض الأرضية
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setCropTarget(null)}
-                className="text-slate-400 hover:text-white cursor-pointer p-1"
+                className="text-slate-400 hover:text-white cursor-pointer p-1.5 rounded-lg hover:bg-slate-800 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Visual Crop Preview Container */}
-            <div className="relative aspect-[8.6/5.4] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center p-2">
-              <NextImage
+            {/* Interactive Quad Viewport */}
+            <div
+              ref={cropContainerRef}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              className="relative aspect-[8.6/5.4] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 select-none touch-none cursor-crosshair flex items-center justify-center p-1"
+            >
+              {/* Card Original Image */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={cropTarget.cardSide.originalSrc}
-                alt="Original for crop"
-                width={480}
-                height={300}
-                unoptimized
-                className="max-w-full max-h-full object-contain"
+                alt="Original for quad warp"
+                className="max-w-full max-h-full object-contain pointer-events-none select-none"
               />
 
-              {/* Crop Frame Box Overlay */}
-              <div
-                style={{
-                  position: "absolute",
-                  left: `${cropRect.x * 100}%`,
-                  top: `${cropRect.y * 100}%`,
-                  width: `${cropRect.width * 100}%`,
-                  height: `${cropRect.height * 100}%`,
-                }}
-                className="border-2 border-amber-400 bg-amber-500/15 pointer-events-none rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.65)]"
-              >
-                <span className="absolute top-1 right-2 text-[10px] font-black bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded">
-                  منطقة البطاقة
-                </span>
-              </div>
+              {/* SVG Mask and Quad Lines */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                {/* Quad polygon */}
+                <polygon
+                  points={`${quadCorners.tl.x * 100}%,${quadCorners.tl.y * 100}% ${quadCorners.tr.x * 100}%,${quadCorners.tr.y * 100}% ${quadCorners.br.x * 100}%,${quadCorners.br.y * 100}% ${quadCorners.bl.x * 100}%,${quadCorners.bl.y * 100}%`}
+                  fill="rgba(245, 158, 11, 0.15)"
+                  stroke="#f59e0b"
+                  strokeWidth="2.5"
+                  strokeDasharray="4 2"
+                />
+                {/* Connecting Cross diagonals for center alignment */}
+                <line
+                  x1={`${quadCorners.tl.x * 100}%`}
+                  y1={`${quadCorners.tl.y * 100}%`}
+                  x2={`${quadCorners.br.x * 100}%`}
+                  y2={`${quadCorners.br.y * 100}%`}
+                  stroke="rgba(245, 158, 11, 0.25)"
+                  strokeWidth="1"
+                />
+                <line
+                  x1={`${quadCorners.tr.x * 100}%`}
+                  y1={`${quadCorners.tr.y * 100}%`}
+                  x2={`${quadCorners.bl.x * 100}%`}
+                  y2={`${quadCorners.bl.y * 100}%`}
+                  stroke="rgba(245, 158, 11, 0.25)"
+                  strokeWidth="1"
+                />
+              </svg>
+
+              {/* 4 Interactive Corner Pins */}
+              {(["tl", "tr", "br", "bl"] as const).map((key) => {
+                const pt = quadCorners[key];
+                const label =
+                  key === "tl"
+                    ? "أعلى يسار"
+                    : key === "tr"
+                    ? "أعلى يمين"
+                    : key === "br"
+                    ? "أسفل يمين"
+                    : "أسفل يسار";
+                return (
+                  <div
+                    key={key}
+                    style={{ left: `${pt.x * 100}%`, top: `${pt.y * 100}%` }}
+                    onPointerDown={(e) => handleCornerPointerDown(key, e)}
+                    className="absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full border-2 border-white bg-amber-500 shadow-xl cursor-grab active:cursor-grabbing flex items-center justify-center hover:scale-125 transition-transform z-20 group touch-none"
+                    title={`اسحب زاوية ${label}`}
+                  >
+                    <div className="w-2.5 h-2.5 rounded-full bg-slate-950" />
+                    <span className="absolute -bottom-6 px-1.5 py-0.5 rounded bg-slate-900/90 text-[10px] font-bold text-amber-400 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      {label}
+                    </span>
+                  </div>
+                );
+              })}
+
+              {/* Loupe / Magnifying Lens Preview when dragging a corner */}
+              {activeCornerDrag && loupePoint && (
+                <div className="absolute top-3 left-3 w-28 h-28 rounded-full border-2 border-amber-400 shadow-2xl overflow-hidden bg-slate-900 z-30 pointer-events-none">
+                  <div
+                    style={{
+                      position: "absolute",
+                      width: "350%",
+                      height: "350%",
+                      left: `${-loupePoint.x * 350 + 50}%`,
+                      top: `${-loupePoint.y * 350 + 50}%`,
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={cropTarget.cardSide.originalSrc}
+                      alt="Loupe Zoom"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  {/* Loupe Crosshairs */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-5 h-0.5 bg-amber-400" />
+                    <div className="h-5 w-0.5 bg-amber-400 absolute" />
+                  </div>
+                  <div className="absolute bottom-1 inset-x-0 text-center">
+                    <span className="text-[9px] font-black bg-slate-950/90 text-amber-400 px-1.5 py-0.5 rounded-full">
+                      مكبرة دقيقة 3.5x
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Crop Sliders & Ratio Controls */}
-            <div className="space-y-3 bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-300">التحكم في أبعاد وموقع كادر القص:</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCropRect({ x: 0.05, y: 0.08, width: 0.9, height: 0.84 });
-                  }}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-[11px] cursor-pointer"
-                >
-                  إعادة تعيين الكادر
-                </button>
+            {/* Presets & CamScanner Magic Mode Switch */}
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-300">خيارات ضبط الكادر السريعة:</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuadCorners({
+                        tl: { x: 0.05, y: 0.08 },
+                        tr: { x: 0.95, y: 0.08 },
+                        br: { x: 0.95, y: 0.92 },
+                        bl: { x: 0.05, y: 0.92 },
+                      });
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-[11px] cursor-pointer"
+                  >
+                    كادر بطاقة قياسي
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuadCorners({
+                        tl: { x: 0, y: 0 },
+                        tr: { x: 1, y: 0 },
+                        br: { x: 1, y: 1 },
+                        bl: { x: 0, y: 1 },
+                      });
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[11px] cursor-pointer"
+                  >
+                    تحديد كامل الصورة
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">الموقع الأفقي (يمين / يسار):</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="0.4"
-                    step="0.01"
-                    value={cropRect.x}
-                    onChange={(e) => setCropRect((prev) => ({ ...prev, x: Number(e.target.value) }))}
-                    className="w-full accent-amber-500 cursor-pointer"
-                  />
+              {/* CamScanner Magic Color Whitening Toggle */}
+              <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800 cursor-pointer hover:border-amber-500/40 transition">
+                <div className="flex items-center gap-2">
+                  <Wand2 className="w-4 h-4 text-amber-400" />
+                  <div>
+                    <span className="text-xs font-bold text-white block">سحر كام سكانر (Magic Color)</span>
+                    <span className="text-[10px] text-slate-400 block">تبييض الأرضية وإزالة الظلال مع إبراز سواد أرقام البطاقة</span>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">الموقع الرأسي (أعلى / أسفل):</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="0.4"
-                    step="0.01"
-                    value={cropRect.y}
-                    onChange={(e) => setCropRect((prev) => ({ ...prev, y: Number(e.target.value) }))}
-                    className="w-full accent-amber-500 cursor-pointer"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">عرض القص (Width):</label>
-                  <input
-                    type="range"
-                    min="0.4"
-                    max="1.0"
-                    step="0.01"
-                    value={cropRect.width}
-                    onChange={(e) => setCropRect((prev) => ({ ...prev, width: Number(e.target.value) }))}
-                    className="w-full accent-amber-500 cursor-pointer"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">ارتفاع القص (Height):</label>
-                  <input
-                    type="range"
-                    min="0.4"
-                    max="1.0"
-                    step="0.01"
-                    value={cropRect.height}
-                    onChange={(e) => setCropRect((prev) => ({ ...prev, height: Number(e.target.value) }))}
-                    className="w-full accent-amber-500 cursor-pointer"
-                  />
-                </div>
-              </div>
+                <input
+                  type="checkbox"
+                  checked={cropCamScannerMode}
+                  onChange={(e) => setCropCamScannerMode(e.target.checked)}
+                  className="w-4 h-4 accent-amber-500 cursor-pointer"
+                />
+              </label>
             </div>
 
             {/* Actions */}
@@ -947,9 +1162,10 @@ export default function IdCardsPage() {
               <button
                 type="button"
                 onClick={handleApplyCrop}
-                className="flex-1 py-2.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 transition cursor-pointer shadow-lg shadow-amber-500/20"
+                className="flex-1 py-2.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center gap-1.5"
               >
-                تطبيق وحفظ القص
+                <Scan className="w-4 h-4" />
+                <span>تطبيق وقص المنظور (CamScanner Warp)</span>
               </button>
             </div>
           </div>

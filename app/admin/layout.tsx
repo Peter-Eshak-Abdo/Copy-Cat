@@ -3,6 +3,7 @@ import { AdminClientWrapper } from "./admin-client-wrapper";
 
 export const metadata: Metadata = {
   title: "لوحة التحكم | Copy Cat",
+  manifest: "/manifest-admin.json",
   robots: {
     index: false,
     follow: false,

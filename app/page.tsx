@@ -89,6 +89,20 @@ export default function StorefrontPage() {
   const [selectedProductModal, setSelectedProductModal] = useState<InventoryItem | null>(null);
   const [activeModalImageIndex, setActiveModalImageIndex] = useState<number>(0);
 
+  // Dynamic Announcement Banner from Manager Settings
+  const [announcementText, setAnnouncementText] = useState(
+    "خصم خاص وتجهيز فوري لكروت الرقم القومي والشهادات وطباعة الأبحاث وسحب المستندات"
+  );
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("copycat_announcement_banner");
+      if (saved && saved.trim()) {
+        setAnnouncementText(saved.trim());
+      }
+    } catch {}
+  }, []);
+
   // Load products from Supabase or localStorage cache with custom image support
   useEffect(() => {
     async function loadProducts() {
@@ -371,7 +385,7 @@ export default function StorefrontPage() {
       <div className="bg-linear-to-r from-blue-700 via-indigo-700 to-cyan-600 text-white py-1.5 sm:py-2 px-3 sm:px-4 text-center font-bold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 shadow-md text-[11px] sm:text-xs">
         <span className="inline-flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 animate-spin shrink-0" />
-          <span className="line-clamp-1 sm:line-clamp-none">خصم خاص وتجهيز فوري لكروت الرقم القومي والشهادات وطباعة الأبحاث!</span>
+          <span className="line-clamp-1 sm:line-clamp-none">{announcementText}</span>
         </span>
         <a
           href={`https://wa.me/${WHATSAPP_INTERNATIONAL}`}
@@ -576,13 +590,13 @@ export default function StorefrontPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
           {filteredProducts.slice(0, visibleCount).map((item) => {
             const inCart = cart.find((c) => c.product.id === item.id);
             return (
               <div
                 key={item.id}
-                className="group bg-slate-900/80 dark:bg-slate-900/80 light:bg-white border border-slate-800 dark:border-slate-800 light:border-slate-200 rounded-3xl p-5 flex flex-col justify-between hover:border-blue-500/60 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10 relative overflow-hidden"
+                className="group bg-slate-900/80 dark:bg-slate-900/80 light:bg-white border border-slate-800 dark:border-slate-800 light:border-slate-200 rounded-2xl sm:rounded-3xl p-3 sm:p-5 flex flex-col justify-between hover:border-blue-500/60 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10 relative overflow-hidden"
               >
                 <div>
                   {/* Main Product Image Thumbnail (Point 8 in edits2.0.md) */}
@@ -633,13 +647,13 @@ export default function StorefrontPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  <div className="flex items-center justify-between gap-1 sm:gap-2 mb-2 sm:mb-3">
+                    <span className="text-[9px] sm:text-[11px] font-bold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 truncate max-w-[100px] sm:max-w-none">
                       {item.category}
                     </span>
-                    <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                    <span className="hidden sm:flex text-[11px] font-semibold text-emerald-400 items-center gap-1">
                       <CheckCircle2 className="w-3 h-3" />
-                      <span>متوفر للتنفيذ</span>
+                      <span>متوفر</span>
                     </span>
                   </div>
 
@@ -648,7 +662,7 @@ export default function StorefrontPage() {
                       setSelectedProductModal(item);
                       setActiveModalImageIndex(0);
                     }}
-                    className="font-extrabold text-white dark:text-white light:text-slate-900 text-base mb-2 group-hover:text-blue-400 transition-colors line-clamp-2 cursor-pointer"
+                    className="font-bold sm:font-extrabold text-white dark:text-white light:text-slate-950 text-xs sm:text-base mb-1.5 sm:mb-2 group-hover:text-blue-400 transition-colors line-clamp-2 cursor-pointer leading-snug"
                   >
                     {item.name}
                   </h3>
@@ -660,10 +674,10 @@ export default function StorefrontPage() {
                   )}
                 </div>
 
-                <div className="pt-4 border-t border-slate-800/80 dark:border-slate-800/80 light:border-slate-200 flex items-center justify-between gap-2">
+                <div className="pt-2 sm:pt-4 border-t border-slate-800/80 dark:border-slate-800/80 light:border-slate-200 flex items-center justify-between gap-1.5 sm:gap-2">
                   <div>
-                    <span className="text-[10px] text-slate-500 font-bold block">السعر</span>
-                    <span className="text-lg font-black text-emerald-400 dark:text-emerald-400 light:text-emerald-600">
+                    <span className="text-[9px] sm:text-[10px] text-slate-500 font-bold block">السعر</span>
+                    <span className="text-sm sm:text-lg font-black text-emerald-400 dark:text-emerald-400 light:text-emerald-600">
                       {formatCurrency(item.price)}
                     </span>
                   </div>
@@ -689,10 +703,11 @@ export default function StorefrontPage() {
                   ) : (
                     <button
                       onClick={() => addToCart(item)}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/30 transition cursor-pointer hover:scale-105"
+                      className="flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[11px] sm:text-xs font-bold shadow-md shadow-blue-600/30 transition cursor-pointer hover:scale-105"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>إضافة للطلب</span>
+                      <span className="hidden sm:inline">إضافة للطلب</span>
+                      <span className="sm:hidden">أضف</span>
                     </button>
                   )}
                 </div>
@@ -1043,12 +1058,12 @@ export default function StorefrontPage() {
         </div>
       )}
 
-      {/* Permanent Floating WhatsApp Quick Contact Button */}
+      {/* Permanent Floating WhatsApp Quick Contact Button (Hidden on mobile) */}
       <a
         href={`https://wa.me/${WHATSAPP_INTERNATIONAL}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-6 left-6 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs sm:text-sm shadow-2xl shadow-emerald-600/50 transition-all hover:scale-105 border border-emerald-400/40 group cursor-pointer"
+        className="hidden md:flex fixed bottom-6 left-6 z-40 items-center gap-2.5 px-4 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs sm:text-sm shadow-2xl shadow-emerald-600/50 transition-all hover:scale-105 border border-emerald-400/40 group cursor-pointer"
         title="تواصل معنا فوراً عبر الواتساب"
       >
         <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
@@ -1131,6 +1146,12 @@ export default function StorefrontPage() {
                   <Share2 className="w-4 h-4" />
                   <span>صفحتنا الرسمية على فيسبوك</span>
                 </a>
+              </li>
+              <li className="flex items-start gap-2 text-slate-300 font-medium pt-2 border-t border-slate-800/80">
+                <MapPin className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
+                  شارع الدقهلية بالقرب من مسجد المطافي أمام مركز نور الحياة - عرايشية مصر - الإسماعيلية
+                </span>
               </li>
             </ul>
           </div>
@@ -1325,6 +1346,34 @@ export default function StorefrontPage() {
                 حسناً، فهمت
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky Mobile Cart Bar - Appears when cart has items */}
+      {totalCartCount > 0 && !isCartOpen && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-blue-500/40 p-3 shadow-2xl animate-in slide-in-from-bottom duration-300 pb-safe">
+          <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
+            <div className="flex flex-col">
+              <span className="text-[11px] text-slate-400 font-bold flex items-center gap-1">
+                <span>سلة طلباتك:</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[10px] font-black">
+                  {totalCartCount} صنف
+                </span>
+              </span>
+              <span className="text-base font-black text-emerald-400">
+                {formatCurrency(totalCartPrice)}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 active:scale-95 transition cursor-pointer"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>مراجعة السلة وإتمام الطلب 🛒</span>
+            </button>
           </div>
         </div>
       )}

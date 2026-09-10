@@ -232,7 +232,7 @@ export default function SmartCalculatorPage() {
     text += `• إجمالي سعر النسخة الواحدة: ${singleCopyTotalCost.toFixed(2)} ج.م\n`;
     text += `━━━━━━━━━━━━━━━━━━━━━\n`;
     text += `💰 *الإجمالي النهائي المطلوب: ${grandTotalCost.toLocaleString("ar-EG")} ج.م*\n`;
-    text += `📍 الفرع الرئيسي - ميت غمر | هاتف: 01012345678\n`;
+    text += `📍 شارع الدقهلية بالقرب من مسجد المطافي أمام مركز نور الحياة - عرايشية مصر - الإسماعيلية | هاتف: 01210571251\n`;
 
     try {
       await navigator.clipboard.writeText(text);

@@ -53,3 +53,9 @@ legacy-python/
 *.sql
 
 /test/
+.venv/
+fb_profile/
+imgs/
+public/uploads/fb_posts/
+!public/uploads/fb_posts/.gitkeep
+

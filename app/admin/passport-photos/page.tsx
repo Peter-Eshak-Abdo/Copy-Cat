@@ -15,11 +15,17 @@ import {
   CheckCircle2,
   Bot,
   X,
+  Focus,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  RefreshCw,
+  Move,
 } from "lucide-react";
 import { generatePassportPhotosDocx, PhotoPerson } from "@/lib/docx/passport-docx";
 import { useToast } from "@/components/toast-provider";
-import { getFriendlyErrorMessage } from "@/lib/utils";
-import { enhanceAndFramePassportPhoto } from "@/lib/portrait-enhancer";
+import { getFriendlyErrorMessage, readFileAsDataURL } from "@/lib/utils";
+import { enhanceAndFramePassportPhoto, renderFramedPassportCanvas } from "@/lib/portrait-enhancer";
 
 export default function PassportPhotosPage() {
   const { toast } = useToast();
@@ -41,6 +47,20 @@ export default function PassportPhotosPage() {
   const [aiAdvice, setAiAdvice] = useState<string | null>(null);
   const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
 
+  // 4x6 Biometric Framing Modal State
+  const [framingTarget, setFramingTarget] = useState<PhotoPerson | null>(null);
+  const [panX, setPanX] = useState<number>(0);
+  const [panY, setPanY] = useState<number>(0);
+  const [zoom, setZoom] = useState<number>(1.0);
+  const [framingRotation, setFramingRotation] = useState<number>(0);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef<{ x: number; y: number; initialPanX: number; initialPanY: number }>({
+    x: 0,
+    y: 0,
+    initialPanX: 0,
+    initialPanY: 0,
+  });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processFiles = async (fileList: File[]) => {
@@ -59,6 +79,7 @@ export default function PassportPhotosPage() {
 
         // Process directly in the browser using WASM
         const blob = await removeBackground(file);
+        const originalDataUrl = await readFileAsDataURL(file);
 
         // Frame to 4x5.2 ratio with smart outpainting & chroma-preserving super resolution
         const framedDataUrl = await enhanceAndFramePassportPhoto(blob, {
@@ -73,6 +94,7 @@ export default function PassportPhotosPage() {
             id: Math.random().toString(36).substring(2, 9),
             name: file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " "),
             imageDataUrl: framedDataUrl,
+            originalDataUrl,
             includeName: globalIncludeName,
           },
         ]);
@@ -90,6 +112,7 @@ export default function PassportPhotosPage() {
       // Fallback: Frame and enhance without background removal
       for (let i = 0; i < fileList.length; i++) {
         const file = fileList[i];
+        const originalDataUrl = await readFileAsDataURL(file);
         const framedDataUrl = await enhanceAndFramePassportPhoto(file, {
           autoCompleteCropped,
           superResolution,
@@ -101,6 +124,7 @@ export default function PassportPhotosPage() {
             id: Math.random().toString(36).substring(2, 9),
             name: file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " "),
             imageDataUrl: framedDataUrl,
+            originalDataUrl,
             includeName: globalIncludeName,
           },
         ]);
@@ -158,6 +182,67 @@ export default function PassportPhotosPage() {
 
   const removePerson = (id: string) => {
     setPersons((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const openFramingModal = (person: PhotoPerson) => {
+    setFramingTarget(person);
+    setPanX(0);
+    setPanY(0);
+    setZoom(1.0);
+    setFramingRotation(0);
+  };
+
+  const handlePointerDownFraming = (e: React.PointerEvent) => {
+    e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {}
+    setIsPanning(true);
+    panStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      initialPanX: panX,
+      initialPanY: panY,
+    };
+  };
+
+  const handlePointerMoveFraming = (e: React.PointerEvent) => {
+    if (!isPanning) return;
+    const dx = e.clientX - panStartRef.current.x;
+    const dy = e.clientY - panStartRef.current.y;
+    setPanX(panStartRef.current.initialPanX + dx);
+    setPanY(panStartRef.current.initialPanY + dy);
+  };
+
+  const handlePointerUpFraming = () => {
+    setIsPanning(false);
+  };
+
+  const handleApplyFraming = () => {
+    if (!framingTarget) return;
+
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = framingTarget.originalDataUrl || framingTarget.imageDataUrl;
+    img.onload = () => {
+      const newFramed = renderFramedPassportCanvas(
+        img,
+        panX,
+        panY,
+        zoom,
+        framingRotation,
+        400,
+        520
+      );
+
+      setPersons((prev) =>
+        prev.map((p) =>
+          p.id === framingTarget.id ? { ...p, imageDataUrl: newFramed } : p
+        )
+      );
+      toast.success("تم تأطير وحفظ الكادر بنجاح", "تمت محاذاة أبعاد الرأس والأكتاف وفق المواصفات القياسية للاستوديو.");
+      setFramingTarget(null);
+    };
   };
 
   const handleConsultGemini = async (person: PhotoPerson) => {
@@ -489,12 +574,23 @@ export default function PassportPhotosPage() {
                     />
                   </div>
 
-                  {/* Gemini Quality Consultation Button */}
-                  <button
-                    onClick={() => handleConsultGemini(person)}
-                    disabled={consultingPersonId === person.id}
-                    className="mt-2.5 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-blue-400 hover:text-blue-300 text-[11px] font-bold border border-slate-700/50 transition cursor-pointer disabled:opacity-50"
-                  >
+                    {/* 4x6 Biometric Framing Button */}
+                    <button
+                      type="button"
+                      onClick={() => openFramingModal(person)}
+                      className="mt-2.5 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white text-xs font-black border border-emerald-500/30 transition cursor-pointer shadow-sm"
+                      title="ضبط وتوسيط الرأس والأكتاف بالمعايير البيومترية 4×6"
+                    >
+                      <Focus className="w-3.5 h-3.5" />
+                      <span>تأطير ومحاذاة 4×6 (Biometric Guide)</span>
+                    </button>
+
+                    {/* Gemini Quality Consultation Button */}
+                    <button
+                      onClick={() => handleConsultGemini(person)}
+                      disabled={consultingPersonId === person.id}
+                      className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-blue-400 hover:text-blue-300 text-[11px] font-bold border border-slate-700/50 transition cursor-pointer disabled:opacity-50"
+                    >
                     {consultingPersonId === person.id ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
@@ -542,6 +638,225 @@ export default function PassportPhotosPage() {
             >
               إغلاق الملاحظات
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 4x6 Biometric Framing Modal */}
+      {framingTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 max-w-xl w-full space-y-4 shadow-2xl relative max-h-[95vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <Focus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">
+                    تأطير ومحاذاة الصورة 4×6 (Biometric Studio Guide)
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    اسحب الصورة بالماوس لتوسيط الوجه بدقة، واضبط التكبير وميلان الرأس
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setFramingTarget(null)}
+                className="text-slate-400 hover:text-white cursor-pointer p-1.5 rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Framing Viewport with Biometric Overlay */}
+            <div className="flex flex-col items-center">
+              <div
+                onPointerDown={handlePointerDownFraming}
+                onPointerMove={handlePointerMoveFraming}
+                onPointerUp={handlePointerUpFraming}
+                className="w-64 sm:w-72 aspect-[4/5.2] bg-white border-2 border-slate-950 rounded-xl overflow-hidden shadow-2xl relative select-none touch-none cursor-grab active:cursor-grabbing flex items-center justify-center"
+              >
+                {/* Scaled & Panned Photo */}
+                <div
+                  style={{
+                    transform: `translate(${panX}px, ${panY}px) rotate(${framingRotation}deg) scale(${zoom})`,
+                    transformOrigin: "center center",
+                  }}
+                  className="w-full h-full flex items-center justify-center pointer-events-none"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={framingTarget.originalDataUrl || framingTarget.imageDataUrl}
+                    alt="Framing Target"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
+
+                {/* SVG Biometric Guideline Grid */}
+                <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                  {/* Vertical Center Symmetry Line */}
+                  <line
+                    x1="50%"
+                    y1="0%"
+                    x2="50%"
+                    y2="100%"
+                    stroke="rgba(6, 182, 212, 0.7)"
+                    strokeWidth="1.5"
+                    strokeDasharray="4 3"
+                  />
+
+                  {/* Head Oval Silhouette Guide */}
+                  <ellipse
+                    cx="50%"
+                    cy="40%"
+                    rx="33%"
+                    ry="31%"
+                    fill="none"
+                    stroke="rgba(16, 185, 129, 0.75)"
+                    strokeWidth="2"
+                    strokeDasharray="5 3"
+                  />
+
+                  {/* Crown guideline (8% from top) */}
+                  <line
+                    x1="15%"
+                    y1="9%"
+                    x2="85%"
+                    y2="9%"
+                    stroke="rgba(16, 185, 129, 0.85)"
+                    strokeWidth="1.5"
+                  />
+
+                  {/* Eye line (42% from top) */}
+                  <line
+                    x1="20%"
+                    y1="42%"
+                    x2="80%"
+                    y2="42%"
+                    stroke="rgba(245, 158, 11, 0.85)"
+                    strokeWidth="1.5"
+                  />
+
+                  {/* Chin line (70% from top) */}
+                  <line
+                    x1="25%"
+                    y1="70%"
+                    x2="75%"
+                    y2="70%"
+                    stroke="rgba(245, 158, 11, 0.85)"
+                    strokeWidth="1.5"
+                  />
+
+                  {/* Upper shoulder guideline (86% from top) */}
+                  <line
+                    x1="5%"
+                    y1="86%"
+                    x2="95%"
+                    y2="86%"
+                    stroke="rgba(59, 130, 246, 0.85)"
+                    strokeWidth="1.5"
+                  />
+                </svg>
+
+                {/* Biometric labels inside viewport */}
+                <span className="absolute top-1 right-2 text-[9px] font-bold text-emerald-700 bg-emerald-100/90 px-1 rounded pointer-events-none">
+                  قمة شعر الرأس
+                </span>
+                <span className="absolute top-[39%] right-2 text-[9px] font-bold text-amber-800 bg-amber-100/90 px-1 rounded pointer-events-none">
+                  مستوى العينين
+                </span>
+                <span className="absolute top-[67%] right-2 text-[9px] font-bold text-amber-800 bg-amber-100/90 px-1 rounded pointer-events-none">
+                  أسفل الذقن
+                </span>
+                <span className="absolute top-[83%] right-2 text-[9px] font-bold text-blue-800 bg-blue-100/90 px-1 rounded pointer-events-none">
+                  بداية الأكتاف
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2 text-center">
+                💡 اضغط واسحب الصورة لتحريكها • النسبة المعتمدة للوجه 70% إلى 80% من مساحة الكادر
+              </p>
+            </div>
+
+            {/* Adjustments: Zoom & Rotate */}
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-300">التحكم في التكبير والدوران:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPanX(0);
+                    setPanY(0);
+                    setZoom(1.0);
+                    setFramingRotation(0);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>إعادة ضبط</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {/* Zoom */}
+                <div>
+                  <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                    <span className="flex items-center gap-1">
+                      <ZoomIn className="w-3 h-3" /> نسبة التكبير:
+                    </span>
+                    <span className="text-emerald-400 font-mono font-bold">{Math.round(zoom * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.6"
+                    max="2.2"
+                    step="0.02"
+                    value={zoom}
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    className="w-full accent-emerald-500 cursor-pointer"
+                  />
+                </div>
+
+                {/* Rotation */}
+                <div>
+                  <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                    <span className="flex items-center gap-1">
+                      <RotateCw className="w-3 h-3" /> ميلان الرأس:
+                    </span>
+                    <span className="text-emerald-400 font-mono font-bold">
+                      {framingRotation > 0 ? `+${framingRotation}` : framingRotation}°
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-25"
+                    max="25"
+                    step="1"
+                    value={framingRotation}
+                    onChange={(e) => setFramingRotation(Number(e.target.value))}
+                    className="w-full accent-emerald-500 cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setFramingTarget(null)}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyFraming}
+                className="flex-1 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white transition cursor-pointer shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5"
+              >
+                <Focus className="w-4 h-4" />
+                <span>تطبيق وتثبيت الكادر 4×6</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Boxes,
   Plus,
@@ -22,6 +23,7 @@ import {
   Sparkles,
   RefreshCw,
   Camera,
+  ExternalLink,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { formatCurrency, safeOpenUrl, compressImageToWebP } from "@/lib/utils";
@@ -80,6 +82,28 @@ export default function InventoryPage() {
   const [aiDiscoveredImages, setAiDiscoveredImages] = useState<string[]>([]);
   const [showAiPrompt, setShowAiPrompt] = useState(false);
   const [aiDetectedName, setAiDetectedName] = useState("");
+
+  // Photo Pool Picker State
+  const [showPoolPicker, setShowPoolPicker] = useState(false);
+  const [poolPhotos, setPoolPhotos] = useState<{ id: string; filename: string; url: string; source: string }[]>([]);
+  const [poolSearch, setPoolSearch] = useState("");
+  const [isLoadingPool, setIsLoadingPool] = useState(false);
+
+  const openPoolPicker = async () => {
+    setShowPoolPicker(true);
+    setIsLoadingPool(true);
+    try {
+      const res = await fetch("/api/admin/photos");
+      const data = await res.json();
+      if (data.success && Array.isArray(data.photos)) {
+        setPoolPhotos(data.photos);
+      }
+    } catch {
+      toast.error("خطأ", "تعذر جلب الصور من بنك الصور");
+    } finally {
+      setIsLoadingPool(false);
+    }
+  };
 
   const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1225,6 +1249,16 @@ export default function InventoryPage() {
                   )}
                 </div>
 
+                {/* Photo Pool Button */}
+                <button
+                  type="button"
+                  onClick={openPoolPicker}
+                  className="w-full py-2 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  <span>اختيار من بنك صور فيسبوك والكاميرا ({poolPhotos.length || "150+"} صورة)</span>
+                </button>
+
                 {/* Main Image */}
                 <div>
                   <label className="text-[11px] text-slate-400 block mb-1">الصورة الرئيسية للكارت:</label>
@@ -1563,6 +1597,16 @@ export default function InventoryPage() {
                   )}
                 </div>
 
+                {/* Photo Pool Button */}
+                <button
+                  type="button"
+                  onClick={openPoolPicker}
+                  className="w-full py-2 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  <span>اختيار من بنك صور فيسبوك والكاميرا ({poolPhotos.length || "150+"} صورة)</span>
+                </button>
+
                 {/* Main Image */}
                 <div>
                   <label className="text-[11px] text-slate-400 block mb-1">الصورة الرئيسية للكارت:</label>
@@ -1664,6 +1708,123 @@ export default function InventoryPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Pool Selector Modal */}
+      {showPoolPicker && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                  <ImageIcon className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">بنك ومكتبة صور المنتجات</h3>
+                  <p className="text-xs text-slate-400">اختر أي صورة لتعيينها للصنف أو إضافتها للمعرض بنقرة واحدة</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/admin/photos"
+                  target="_blank"
+                  className="text-xs font-bold text-emerald-400 hover:underline flex items-center gap-1"
+                >
+                  <span>إدارة البنك</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowPoolPicker(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="p-3 border-b border-slate-800 bg-slate-950/50">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="ابحث باسم الصورة..."
+                  value={poolSearch}
+                  onChange={(e) => setPoolSearch(e.target.value)}
+                  className="w-full pl-3 pr-9 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* Photos Grid */}
+            <div className="p-4 flex-1 overflow-y-auto">
+              {isLoadingPool ? (
+                <div className="py-12 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+                  <span>جاري تحميل الصور من البنك...</span>
+                </div>
+              ) : poolPhotos.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 text-xs">
+                  لا توجد صور في البنك حالياً. يمكنك رفع صور من صفحة إدارة الصور.
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                  {poolPhotos
+                    .filter((p) => !poolSearch.trim() || p.filename.toLowerCase().includes(poolSearch.toLowerCase().trim()))
+                    .map((p) => (
+                      <div
+                        key={p.id || p.filename}
+                        className="group relative aspect-square rounded-xl overflow-hidden border border-slate-800 bg-slate-950 flex flex-col"
+                      >
+                        <Image
+                          src={p.url}
+                          alt={p.filename}
+                          fill
+                          sizes="120px"
+                          className="object-cover transition-transform group-hover:scale-105"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-1.5 p-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setImage(p.url);
+                              toast.success("تم تعيين الصورة كرئيسية");
+                              setShowPoolPicker(false);
+                            }}
+                            className="w-full py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold shadow cursor-pointer"
+                          >
+                            ✓ كصورة رئيسية
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setImages((prev) => [...prev, p.url]);
+                              toast.success("تمت الإضافة لمعرض الصور");
+                            }}
+                            className="w-full py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold border border-slate-700 cursor-pointer"
+                          >
+                            + للمعرض
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 border-t border-slate-800 flex justify-end bg-slate-950">
+              <button
+                type="button"
+                onClick={() => setShowPoolPicker(false)}
+                className="px-4 py-1.5 text-xs rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold"
+              >
+                إغلاق
+              </button>
+            </div>
           </div>
         </div>
       )}

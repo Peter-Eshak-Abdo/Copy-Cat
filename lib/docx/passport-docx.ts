@@ -29,6 +29,7 @@ export interface PhotoPerson {
   id: string;
   name: string;
   imageDataUrl: string; // Base64 with white bg & 1.5pt black border
+  originalDataUrl?: string; // Original uploaded/cutout image for biometric reframing
   includeName?: boolean;
 }
 
