@@ -6,6 +6,7 @@ import { AuthProvider } from "@/lib/auth";
 import { ToastProvider } from "@/components/toast-provider";
 import { PwaAndErrorGuard } from "@/components/pwa-and-error-guard";
 import { SITE_CONFIG } from "@/lib/site-config";
+import { Analytics } from "@vercel/analytics/next"
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
@@ -195,6 +196,7 @@ export default function RootLayout({
         className="font-sans min-h-screen selection:bg-blue-600 selection:text-white antialiased"
         suppressHydrationWarning
       >
+        <Analytics />
         <PwaAndErrorGuard />
         <ThemeProvider>
           <AuthProvider>
