@@ -125,6 +125,7 @@ export async function POST(req: NextRequest) {
       includeIntro = true,
       includeConclusion = true,
       includeRefs = true,
+      customDetails = "",
     } = body;
 
     if (!topic || typeof topic !== "string" || !topic.trim()) {
@@ -132,29 +133,36 @@ export async function POST(req: NextRequest) {
     }
 
     const sanitizedTopic = topic.trim().slice(0, 300);
+    const numPages = Math.max(1, Math.min(60, Number(targetPages) || 5));
+    const targetWords = numPages * 320;
 
-    const prompt = `أنت باحث وأستاذ أكاديمي متخصص. اكتب بحثاً دراسياً وأكاديمياً شاملاً ومفصلاً جداً باللغة العربية حول: (${sanitizedTopic}).
-المطلوب أن يكون البحث مكافئاً لحجم (${targetPages}) صفحات وورد مطبوعة، ويتميز بأسلوب بشري طبيعي ورصين، بعيداً تماماً عن الصياغات الآلية أو عبارات الذكاء الاصطناعي النمطية.
+    const prompt = `أنت باحث وأستاذ أكاديمي متخصص. اكتب بحثاً دراسياً وأكاديمياً شاملاً ومفصلاً وضخماً جداً باللغة العربية حول: (${sanitizedTopic}).
+الحجم المستهدف المطلوب:
+يجب أن يحتوي البحث على لا يقل عن (${targetWords}) كلمة باللغة العربية الفصحى الرصينة لكي يغطي بالكامل (${numPages}) صفحات وورد مطبوعة A4 (بمعدل ~320 كلمة غنية لكل صفحة).
+يجب كتابة فقرات طويلة، غزيرة بالمعلومات والتحليلات، بدون أي تلخيص مخل، بحيث يتدفق المحتوى بشكل مستمر وواقعي.
 
-يرجى كتابة البحث في فقرات غنية بالمعلومات والتحليلات المقسمة إلى المباحث التالية:
-${includeIntro ? "- مقدمة البحث: تسلط الضوء على الأهمية البالغة لموضوع البحث وأبعاده العامة وخلفيته وتأثيره." : ""}
-- المبحث الأول: الإطار المفاهيمي والنشأة والأبعاد التاريخية لموضوع (${sanitizedTopic}) بتفصيل دقيق وشامل.
-- المبحث الثاني: العناصر الأساسية والركائز والأدوات والآليات العملية المرتبطة بالموضوع بعمق تحليلي واقعي.
-- المبحث الثالث: التطبيقات العملية، والأثر الملموس، وأبرز التحديات والحلول المعاصرة.
-- المبحث الرابع: الرؤى والتحليلات المستقبلية والدروس المستفادة.
-${includeConclusion ? "- خاتمة البحث: تلخيص وافٍ لأهم النتائج المستخلصة والتوصيات العملية المقترحة." : ""}
-${includeRefs ? "- المصادر والمراجع: تضم موسوعات، دوريات، ومراجع علمية عربية معاصرة." : ""}
+${customDetails && customDetails.trim() ? `شروط وملاحظات وتفاصيل خاصة مطلوبة في البحث:\n${customDetails.trim()}\n(يجب تغطية كل هذه الشروط والنقاط بدقة واستفاضة داخل أقسام البحث).\n` : ""}
+
+هيكل البحث المطلوب بالتفصيل:
+${includeIntro ? "- مقدمة البحث: مدخل تمهيدي عميق ومفصل يبرز أهمية الموضوع، دوافعه، وإشكاليته، وأهدافه في 3 فقرات مطولة على الأقل." : ""}
+- المبحث الأول: الإطار المفاهيمي والنشأة والأبعاد التاريخية لموضوع (${sanitizedTopic}) بشرح وافٍ وتأصيل نظري عميق.
+- المبحث الثاني: العناصر الأساسية والركائز والأدوات والآليات العملية المرتبطة بالموضوع بعمق تحليلي وتفصيل دقيق.
+- المبحث الثالث: التطبيقات الواقعية، والأثر الملموس، وأبرز التحديات والمعالجات المعاصرة مع دراسات حالة وأمثلة.
+- المبحث الرابع: الرؤى والتحليلات المستقبلية والدروس المستفادة ومقترحات التطوير.
+${includeConclusion ? "- خاتمة البحث: خلاصة وافية واستنتاجات محورية وتوصيات عملية محددة وقابلة للتنفيذ." : ""}
+${includeRefs ? "- المصادر والمراجع: قائمة بالمراجع الأكاديمية والكتب والدوريات العلمية الموثقة." : ""}
 
 قواعد حاسمة:
-1. ابدأ بنص البحث فوراً دون أي تحيات أو تعليقات جانبية من الذكاء الاصطناعي.
-2. اجعل العناوين الرئيسية تبدأ بكلمات واضحة مثل: (مقدمة البحث، المبحث الأول: ...، المبحث الثاني: ...، خاتمة البحث، المصادر والمراجع).
-3. اكتب فقرات سردية متماسكة ومفصلة لكي تملأ الصفحات بالشكل الأكاديمي المطلوب.`;
+1. ابدأ بنص البحث فوراً دون أي مقدمات أو تحيات أو اعتذارات من الذكاء الاصطناعي.
+2. اجعل العناوين الرئيسية تبدأ بأسماء واضحة (مقدمة البحث، المبحث الأول: ...، المبحث الثاني: ...، المبحث الثالث: ...، المبحث الرابع: ...، خاتمة البحث، المصادر والمراجع).
+3. اكتب سرداً علمياً ثرياً جداً ومفصلاً، وافرد لكل عنصر شرحاً مطولاً لضمان تغطية الحجم المستهدف (${targetWords} كلمة على الأقل).
+4. لا تستخدم علامات ماركداون معقدة (# أو ***).`;
 
     let contentText: string | null = null;
     let usedProvider = "";
 
     // Helper for fetch with timeout
-    const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs = 8000) => {
+    const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs = 25000) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       try {
@@ -168,11 +176,23 @@ ${includeRefs ? "- المصادر والمراجع: تضم موسوعات، دو
     };
 
     // =========================================================================
-    // TIER 1: Google Gemini API (Multiple Models)
+    // TIER 1: Google Gemini API (Active Models)
     // =========================================================================
-    const geminiKey = process.env.GEMINI_API_KEY;
+    let geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) {
+      try {
+        const fs = await import("fs");
+        const path = await import("path");
+        const envPath = path.join(process.cwd(), ".env.local");
+        if (fs.existsSync(envPath)) {
+          const match = fs.readFileSync(envPath, "utf-8").match(/GEMINI_API_KEY=([^\r\n]+)/);
+          if (match) geminiKey = match[1].trim();
+        }
+      } catch {}
+    }
+
     if (geminiKey && geminiKey.length > 10 && !geminiKey.includes("placeholder")) {
-      const geminiModels = ["gemini-1.5-flash", "gemini-2.0-flash"];
+      const geminiModels = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-2.5-flash"];
       for (const model of geminiModels) {
         if (contentText) break;
         try {
@@ -184,10 +204,10 @@ ${includeRefs ? "- المصادر والمراجع: تضم موسوعات، دو
               contents: [{ parts: [{ text: prompt }] }],
               generationConfig: {
                 temperature: 0.6,
-                maxOutputTokens: 8192,
+                maxOutputTokens: 16384,
               },
             }),
-          }, 9000);
+          }, 35000);
 
           if (resp.ok) {
             const data = await resp.json();

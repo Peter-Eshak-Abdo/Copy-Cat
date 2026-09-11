@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+import { verifySessionTokenEdge } from "@/lib/edge-auth";
+
 const POOL_DIR = path.join(process.cwd(), "public", "uploads", "pool");
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15MB max
 
 function ensurePoolDir() {
   if (!fs.existsSync(POOL_DIR)) {
@@ -10,14 +13,36 @@ function ensurePoolDir() {
   }
 }
 
+async function checkAuth(req: NextRequest): Promise<boolean> {
+  const token =
+    req.cookies.get("copycat_session_token")?.value ||
+    req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+
+  const auth = await verifySessionTokenEdge(token);
+  return auth.isValid;
+}
+
 export async function POST(req: NextRequest) {
   try {
+    const isAuthed = await checkAuth(req);
+    if (!isAuthed) {
+      return NextResponse.json({ success: false, error: "وصول غير مصرح به" }, { status: 401 });
+    }
+
     ensurePoolDir();
     const { imageBase64, filename, customTitle } = await req.json();
 
-    if (!imageBase64) {
+    if (!imageBase64 || typeof imageBase64 !== "string") {
       return NextResponse.json(
         { success: false, error: "يرجى تقديم بيانات الصورة لتنفيذ التحسين." },
+        { status: 400 }
+      );
+    }
+
+    // Enforce base64 length limit
+    if (imageBase64.length > MAX_IMAGE_BYTES * 1.4) {
+      return NextResponse.json(
+        { success: false, error: "حجم الصورة يتجاوز الحد الأقصى المسموح (15 ميجابايت)." },
         { status: 400 }
       );
     }
@@ -109,8 +134,9 @@ export async function POST(req: NextRequest) {
       sizeBytes: buffer.length,
       ...aiInfo,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Enhance product error:", err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    const message = err instanceof Error ? err.message : "حدث خطأ غير متوقع أثناء معالجة المنتج";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

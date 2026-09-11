@@ -1,22 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import fs from "fs";
+import path from "path";
+
+function getApiKey(): string | undefined {
+  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+  if (process.env.GOOGLE_API_KEY) return process.env.GOOGLE_API_KEY;
+  try {
+    const envPath = path.join(process.cwd(), ".env.local");
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, "utf-8");
+      const match = content.match(/GEMINI_API_KEY=([^\r\n]+)/);
+      if (match && match[1].trim()) {
+        return match[1].trim();
+      }
+    }
+  } catch {}
+  return undefined;
+}
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { action, imageBase64, mimeType = "image/jpeg", textToRefine } = body;
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = getApiKey();
     if (!apiKey) {
       return NextResponse.json(
-        { error: "مفتاح الذكاء الاصطناعي (GEMINI_API_KEY) غير مهيأ في الخادم." },
+        { error: "مفتاح الذكاء الاصطناعي (GEMINI_API_KEY) غير مهيأ في الخادم. يرجى التأكد من إضافته في ملف .env.local" },
         { status: 500 }
       );
     }
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // Action 1: Extract text from image (Vision OCR)
+    // Action 1: Extract text from image (Vision OCR - Printed & Handwritten)
     if (action === "extract") {
       if (!imageBase64) {
         return NextResponse.json({ error: "لم يتم إرسال بيانات الصورة." }, { status: 400 });
@@ -26,36 +44,60 @@ export async function POST(req: NextRequest) {
       const cleanBase64 = imageBase64.replace(/^data:[a-zA-Z0-9/+-]+;base64,/, "");
 
       const prompt = `
-أنت خبير محترف في استخراج النصوص والتعرف الضوئي على الحروف (Arabic OCR Expert).
+أنت خبير فائق الدقة في استخراج النصوص والتعرف الضوئي على خط اليد العربي (Arabic Handwritten & Printed OCR Specialist).
 المهمة:
-اقرأ هذه الصورة بعناية فائقة واستخرج كل النصوص المكتوبة فيها بدقة تامة (سواء كانت مطبوعة أو مكتوبة بخط اليد).
-الشروط:
-1. استخرج النص كلمة بكلمة كما هو مكتوب باللغة العربية أو الإنجليزية.
-2. حافظ على تسلسل السطور والفقرات كما هي في الورقة الأصلية.
-3. لا تضف أي تعليقات أو مقدمات من عندك، أخرج فقط النص المستخرج الصافي.
+اقرأ هذه الوثيقة بعناية واستخرج كل النصوص المكتوبة فيها بدقة تامة وبنسبة 100%، سواء كانت:
+- نصوصاً مطبوعة رسمية
+- بيانات وملاحظات مكتوبة بخط اليد (مثل: عقود الإيجار، عقود الزواج، وصولات الأمانة، التواريخ، الأسماء، والأرقام)
+- بنود تعاقدية وشروط وتوقيعات
+
+القواعد الصارمة:
+1. استخرج النص كلمة بكلمة كما هو مكتوب، مع التدقيق في قراءة خط اليد والحروف والنقاط.
+2. إذا كان المستند عقداً به فراغات تم ملؤها بخط اليد، ادمج النصوص المطبوعة مع المكتوبة بخط اليد بسلاسة وفي أماكنها الصحيحة تماماً.
+3. حافظ على ترتيب البنود (البند الأول، الثاني...)، والجداول، والأرقام بدقة.
+4. لا تضف أي تعليقات أو مقدمات أو تنويهات من عندك، أخرج فقط النص المستخرج الصافي كاملاً.
 `;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                inlineData: {
-                  mimeType,
-                  data: cleanBase64,
-                },
-              },
-              { text: prompt },
-            ],
-          },
-        ],
-      });
+      let extractedText = "";
+      const modelsToTry = [
+        "gemini-3.5-flash",
+        "gemini-3.6-flash",
+        "gemini-2.5-flash",
+        "gemini-flash-latest",
+        "gemini-2.5-flash-lite",
+      ];
+      let lastError: unknown = null;
 
-      const extractedText = response.text ? response.text.trim() : "";
+      for (const model of modelsToTry) {
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    inlineData: {
+                      mimeType,
+                      data: cleanBase64,
+                    },
+                  },
+                  { text: prompt },
+                ],
+              },
+            ],
+          });
+          extractedText = response.text ? response.text.trim() : "";
+          if (extractedText) break;
+        } catch (e) {
+          lastError = e;
+          // brief pause before fallback
+          await new Promise((r) => setTimeout(r, 1200));
+        }
+      }
+
       if (!extractedText) {
-        throw new Error("لم يتمكن الذكاء الاصطناعي من قراءة أي نص في هذه الصورة.");
+        throw lastError || new Error("لم يتمكن الذكاء الاصطناعي من قراءة أي نص في هذه الصورة.");
       }
 
       return NextResponse.json({
@@ -88,12 +130,19 @@ ${textToRefine}
 """
 `;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [{ role: "user", parts: [{ text: refinePrompt }] }],
-      });
-
-      const refinedText = response.text ? response.text.trim() : textToRefine;
+      let refinedText = textToRefine;
+      for (const model of ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-2.5-flash"]) {
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: [{ role: "user", parts: [{ text: refinePrompt }] }],
+          });
+          if (response.text && response.text.trim()) {
+            refinedText = response.text.trim();
+            break;
+          }
+        } catch {}
+      }
 
       return NextResponse.json({
         success: true,

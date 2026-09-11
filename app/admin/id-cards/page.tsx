@@ -24,7 +24,7 @@ import {
   Compass,
 } from "lucide-react";
 import { generateIdCardsDocx } from "@/lib/docx/id-cards-docx";
-import { processImageOnCanvas, CropRect, QuadCorners, Point2D } from "@/lib/canvas-filters";
+import { processImageOnCanvas, CropRect, QuadCorners, Point2D, detectCardCorners } from "@/lib/canvas-filters";
 import { useToast } from "@/components/toast-provider";
 import { readFileAsDataURL, getFriendlyErrorMessage } from "@/lib/utils";
 
@@ -498,6 +498,28 @@ export default function IdCardsPage() {
 
     setCropTarget(null);
     toast.success("تم قص وتعديل المنظور بنجاح", "تمت محاذاة أركان البطاقة الأربعة وتحويلها لكادر مستوي قياسي بجودة فائقة.");
+  };
+
+  const handleAutoDetectCorners = () => {
+    if (!cropTarget) return;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = cropTarget.cardSide.originalSrc;
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth || img.width;
+      c.height = img.naturalHeight || img.height;
+      const ctx = c.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        const detected = detectCardCorners(c);
+        setQuadCorners(detected);
+        toast.success(
+          "تم كشف زوايا البطاقة تلقائياً ✨",
+          "تم رصد أركان البطاقة الأربعة بنجاح، يمكنك تعديل أي نقطة يدوياً للمزيد من الدقة."
+        );
+      }
+    };
   };
 
   const handleExportWord = async () => {
@@ -1148,6 +1170,19 @@ export default function IdCardsPage() {
                   className="w-4 h-4 accent-amber-500 cursor-pointer"
                 />
               </label>
+
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[11px] text-slate-400">ضبط مواضع الأركان الأربعة:</span>
+                <button
+                  type="button"
+                  onClick={handleAutoDetectCorners}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border border-amber-500/20"
+                  title="كشف حدود البطاقة وتوجيه الأركان الأربعة آلياً"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>كشف الزوايا الذكي (Auto-Detect)</span>
+                </button>
+              </div>
             </div>
 
             {/* Actions */}

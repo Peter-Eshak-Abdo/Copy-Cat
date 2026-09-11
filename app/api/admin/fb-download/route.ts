@@ -16,9 +16,26 @@ function ensureDirs() {
   }
 }
 
+import { verifySessionTokenEdge } from "@/lib/edge-auth";
+import { isAllowedFacebookUrl } from "@/lib/security";
+
+async function checkAuth(req: NextRequest): Promise<boolean> {
+  const token =
+    req.cookies.get("copycat_session_token")?.value ||
+    req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+
+  const auth = await verifySessionTokenEdge(token);
+  return auth.isValid;
+}
+
 // GET: list past generated Facebook PDFs
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const isAuthed = await checkAuth(req);
+    if (!isAuthed) {
+      return NextResponse.json({ success: false, error: "وصول غير مصرح به" }, { status: 401 });
+    }
+
     ensureDirs();
     const entries = fs.readdirSync(FB_POSTS_ROOT, { withFileTypes: true });
     const documents = [];
@@ -53,20 +70,37 @@ export async function GET() {
     documents.sort((a, b) => b.createdAt - a.createdAt);
 
     return NextResponse.json({ success: true, documents });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "تعذر جلب المستندات السابقة";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 
 // POST: Trigger download script and stream events via Server-Sent Events (SSE)
 export async function POST(req: NextRequest) {
   try {
+    const isAuthed = await checkAuth(req);
+    if (!isAuthed) {
+      return NextResponse.json({ success: false, error: "وصول غير مصرح به" }, { status: 401 });
+    }
+
     ensureDirs();
     const body = await req.json();
     const { url, title, saveToPool = true, maxPhotos = 120 } = body;
 
     if (!url || typeof url !== "string") {
       return NextResponse.json({ success: false, error: "رابط المنشور مطلوب." }, { status: 400 });
+    }
+
+    // SSRF Defense: strictly validate URL belongs to legitimate Facebook domains
+    if (!isAllowedFacebookUrl(url)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "الرابط غير صالح. يرجى التأكد من إدخال رابط فيسبوك صحيح (facebook.com).",
+        },
+        { status: 400 }
+      );
     }
 
     const timestamp = Date.now();
@@ -177,7 +211,8 @@ export async function POST(req: NextRequest) {
         Connection: "keep-alive",
       },
     });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "حدث خطأ غير متوقع أثناء معالجة الطلب";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

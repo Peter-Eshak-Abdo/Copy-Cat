@@ -29,9 +29,10 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { formatCurrency, safeOpenUrl, compressImageToWebP } from "@/lib/utils";
 import { useToast } from "@/components/toast-provider";
 import { type InventoryItem, INITIAL_PRODUCTS, sanitizeItem } from "@/lib/inventory";
+import { SITE_CONFIG } from "@/lib/site-config";
 
-const ENGINEER_PHONE_INTL = "201206385464";
-const ENGINEER_PHONE_LOCAL = "01206385464";
+const ENGINEER_PHONE_INTL = SITE_CONFIG.engineer.phoneIntl;
+const ENGINEER_PHONE_LOCAL = SITE_CONFIG.engineer.phone;
 
 export function isItemIncomplete(item: InventoryItem): boolean {
   return (
@@ -1140,7 +1141,7 @@ export default function InventoryPage() {
                 </div>
 
                 {/* AI Image Assistant Banner & Discovered Results */}
-                <div className="bg-gradient-to-r from-blue-950/70 via-indigo-950/60 to-purple-950/70 border border-blue-500/30 rounded-2xl p-3 space-y-2.5 shadow-sm">
+                <div className="bg-linear-to-r from-blue-950/70 via-indigo-950/60 to-purple-950/70 border border-blue-500/30 rounded-2xl p-3 space-y-2.5 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />
@@ -1488,7 +1489,7 @@ export default function InventoryPage() {
                 </div>
 
                 {/* AI Image Assistant Banner & Discovered Results */}
-                <div className="bg-gradient-to-r from-blue-950/70 via-indigo-950/60 to-purple-950/70 border border-blue-500/30 rounded-2xl p-3 space-y-2.5 shadow-sm">
+                <div className="bg-linear-to-r from-blue-950/70 via-indigo-950/60 to-purple-950/70 border border-blue-500/30 rounded-2xl p-3 space-y-2.5 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />

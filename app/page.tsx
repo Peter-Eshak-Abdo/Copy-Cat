@@ -25,7 +25,6 @@ import {
   Package,
   Image as ImageIcon,
   WifiOff,
-  Wifi,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -33,12 +32,14 @@ import { formatCurrency, safeOpenUrl } from "@/lib/utils";
 import { useToast } from "@/components/toast-provider";
 import { ThemeToggle } from "@/components/theme-provider";
 import { INITIAL_PRODUCTS, sanitizeItem, type InventoryItem } from "@/lib/inventory";
+import { SITE_CONFIG } from "@/lib/site-config";
 
-const WHATSAPP_NUMBER = "01210571251";
-const WHATSAPP_INTERNATIONAL = "201210571251";
+const WHATSAPP_NUMBER = SITE_CONFIG.store.phone;
+const WHATSAPP_INTERNATIONAL = SITE_CONFIG.store.phoneIntl;
 const GOOGLE_MAPS_URL = "https://maps.app.goo.gl/iF1ZN3oPdknx53mt9";
-const FACEBOOK_PAGE_URL =
-  "https://www.facebook.com/p/%D9%83%D9%88%D8%A8%D9%89-%D9%83%D8%A7%D8%AA-100090709554990/";
+const FACEBOOK_PAGE_URL = SITE_CONFIG.store.facebookUrl;
+const DEFAULT_ANNOUNCEMENT =
+  "خصم خاص وتجهيز فوري لكروت الرقم القومي والشهادات وطباعة الأبحاث وسحب المستندات";
 
 interface CartItem {
   product: InventoryItem;
@@ -46,6 +47,27 @@ interface CartItem {
 }
 
 const emptySubscribe = () => () => {};
+
+function subscribeAnnouncement(callback: () => void) {
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function getAnnouncementSnapshot(): string {
+  try {
+    const saved = localStorage.getItem("copycat_announcement_banner");
+    if (saved && saved.trim()) {
+      return saved.trim();
+    }
+  } catch {}
+  return DEFAULT_ANNOUNCEMENT;
+}
+
+function getAnnouncementServerSnapshot(): string {
+  return DEFAULT_ANNOUNCEMENT;
+}
 
 function subscribeOnline(callback: () => void) {
   window.addEventListener("online", callback);
@@ -62,6 +84,24 @@ function getOnlineSnapshot() {
 
 function getOnlineServerSnapshot() {
   return true;
+}
+
+function saveOfflineOrder(order: {
+  date: string;
+  customerName: string;
+  customerNotes: string;
+  cart: CartItem[];
+  totalPrice: number;
+  message: string;
+}) {
+  try {
+    const existing = JSON.parse(localStorage.getItem("copycat_offline_orders") || "[]");
+    existing.push({
+      id: Date.now(),
+      ...order,
+    });
+    localStorage.setItem("copycat_offline_orders", JSON.stringify(existing));
+  } catch {}
 }
 
 export default function StorefrontPage() {
@@ -90,18 +130,11 @@ export default function StorefrontPage() {
   const [activeModalImageIndex, setActiveModalImageIndex] = useState<number>(0);
 
   // Dynamic Announcement Banner from Manager Settings
-  const [announcementText, setAnnouncementText] = useState(
-    "خصم خاص وتجهيز فوري لكروت الرقم القومي والشهادات وطباعة الأبحاث وسحب المستندات"
+  const announcementText = useSyncExternalStore(
+    subscribeAnnouncement,
+    getAnnouncementSnapshot,
+    getAnnouncementServerSnapshot
   );
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("copycat_announcement_banner");
-      if (saved && saved.trim()) {
-        setAnnouncementText(saved.trim());
-      }
-    } catch {}
-  }, []);
 
   // Load products from Supabase or localStorage cache with custom image support
   useEffect(() => {
@@ -286,7 +319,7 @@ export default function StorefrontPage() {
   );
 
   // Send WhatsApp Order with Offline support & guidance
-  const handleSendWhatsAppOrder = () => {
+  function handleSendWhatsAppOrder() {
     if (cart.length === 0) return;
 
     // Confetti celebration effect!
@@ -319,24 +352,19 @@ export default function StorefrontPage() {
 
     const opened = safeOpenUrl(waUrl);
     if (!opened) {
-      window.location.href = waUrl;
+      window.location.assign(waUrl);
     }
 
     // If customer is offline, persist order in local queue and display modal guidance
     if (typeof navigator !== "undefined" && !navigator.onLine) {
-      try {
-        const existing = JSON.parse(localStorage.getItem("copycat_offline_orders") || "[]");
-        existing.push({
-          id: Date.now(),
-          date: new Date().toISOString(),
-          customerName: customerName.trim() || "طلب مباشر",
-          customerNotes: customerNotes.trim(),
-          cart,
-          totalPrice: totalCartPrice,
-          message,
-        });
-        localStorage.setItem("copycat_offline_orders", JSON.stringify(existing));
-      } catch {}
+      saveOfflineOrder({
+        date: new Date().toISOString(),
+        customerName: customerName.trim() || "طلب مباشر",
+        customerNotes: customerNotes.trim(),
+        cart,
+        totalPrice: totalCartPrice,
+        message,
+      });
 
       setOfflineNoticeModal(true);
       toast.info(
@@ -360,7 +388,7 @@ export default function StorefrontPage() {
     const waUrl = `https://wa.me/${WHATSAPP_INTERNATIONAL}?text=${encodeURIComponent(text)}`;
     const opened = safeOpenUrl(waUrl);
     if (!opened) {
-      window.location.href = waUrl;
+      window.location.assign(waUrl);
     }
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       try {
@@ -487,7 +515,7 @@ export default function StorefrontPage() {
 
         <h1 className="text-2xl sm:text-5xl md:text-6xl font-black leading-tight mb-4 sm:mb-6 max-w-4xl mx-auto text-white dark:text-white light:text-slate-950">
           كل ما تحتاجه في عالم{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-indigo-400">
+          <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-400 via-cyan-400 to-indigo-400">
             الطباعة، البطاقات، والمستلزمات المكتبية
           </span>
         </h1>
@@ -1369,7 +1397,7 @@ export default function StorefrontPage() {
             <button
               type="button"
               onClick={() => setIsCartOpen(true)}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 active:scale-95 transition cursor-pointer"
+              className="flex-1 py-2.5 px-4 rounded-xl bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 active:scale-95 transition cursor-pointer"
             >
               <ShoppingBag className="w-4 h-4" />
               <span>مراجعة السلة وإتمام الطلب 🛒</span>

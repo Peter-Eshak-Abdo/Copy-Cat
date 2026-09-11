@@ -14,7 +14,6 @@ const PRECACHE_ASSETS = [
   "/admin/research",
   "/admin/shortcuts",
   "/admin/ocr",
-  "/admin/school-sheets",
   "/admin/tasks",
   "/admin/calculator",
   "/admin/lan-transfer",

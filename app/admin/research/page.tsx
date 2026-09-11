@@ -25,6 +25,9 @@ export default function ResearchPage() {
   const { toast } = useToast();
   const [topic, setTopic] = useState("");
   const [targetPages, setTargetPages] = useState(5);
+  const [customPages, setCustomPages] = useState("");
+  const [isCustomPages, setIsCustomPages] = useState(false);
+  const [customDetails, setCustomDetails] = useState("");
   const includeIntro = true;
   const [includeIndex, setIncludeIndex] = useState(true);
   const includeConclusion = true;
@@ -35,7 +38,7 @@ export default function ResearchPage() {
   const [teacherName, setTeacherName] = useState("");
   const [gradeOrClass, setGradeOrClass] = useState("");
   const [schoolOrUniversity, setSchoolOrUniversity] = useState("");
-  const [academicYear, setAcademicYear] = useState("2025 - 2026");
+  const [academicYear, setAcademicYear] = useState("2026 / 2027");
 
   const [isLoading, setIsLoading] = useState(false);
   const [generatedText, setGeneratedText] = useState<string | null>(null);
@@ -59,16 +62,22 @@ export default function ResearchPage() {
     setGeneratedText(null);
     setActiveProvider(null);
 
+    const effectivePages = isCustomPages
+      ? Math.max(1, Math.min(60, parseInt(customPages) || 5))
+      : targetPages;
+
     try {
       const resp = await fetch("/api/research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topic,
-          targetPages,
+          targetPages: effectivePages,
           includeIntro,
+          includeIndex,
           includeConclusion,
           includeRefs,
+          customDetails,
         }),
       });
 
@@ -94,6 +103,10 @@ export default function ResearchPage() {
     if (!generatedText || !topic) return;
     setIsExportingDocx(true);
 
+    const effectivePages = isCustomPages
+      ? Math.max(1, Math.min(60, parseInt(customPages) || 5))
+      : targetPages;
+
     const coverInfo: ResearchCoverInfo = {
       studentName: studentName.trim() || undefined,
       teacherName: teacherName.trim() || undefined,
@@ -109,7 +122,7 @@ export default function ResearchPage() {
         includeIndex,
         includeReferences: includeRefs,
         coverInfo,
-        targetPages,
+        targetPages: effectivePages,
       });
       toast.success(
         "تم تنزيل ملف الوورد بنجاح",
@@ -137,7 +150,7 @@ export default function ResearchPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-purple-950/40 via-slate-900 to-slate-900 p-6 rounded-3xl border border-purple-500/20 shadow-xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-linear-to-r from-purple-950/40 via-slate-900 to-slate-900 p-6 rounded-3xl border border-purple-500/20 shadow-xl">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-bold mb-2">
             <Zap className="w-3.5 h-3.5 text-amber-400" /> صياغة أبحاث بأسلوب أكاديمي طبيعي وتنسيق Word A4 ضيق الهوامش
@@ -171,25 +184,68 @@ export default function ResearchPage() {
             />
           </div>
 
+          {/* Custom Requirements / Details */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-300 block">
+              شروط وتفاصيل خاصة وملاحظات بالبحث (اختياري):
+            </label>
+            <textarea
+              rows={2}
+              value={customDetails}
+              onChange={(e) => setCustomDetails(e.target.value)}
+              placeholder="مثال: التركيز على 5 نقاط معينة، إضافة مقارنة أو إحصائيات، الالتزام بشروط الدكتور..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-white focus:border-purple-500 focus:outline-none transition resize-none leading-relaxed"
+            />
+          </div>
+
           {/* Target Pages */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-300 block">الحجم التقديري للبحث المطبوع:</label>
-            <div className="grid grid-cols-4 gap-2">
-              {[5, 8, 10, 15].map((pages) => (
+            <div className="grid grid-cols-5 gap-1.5">
+              {[5, 10, 15, 20].map((pages) => (
                 <button
                   key={pages}
                   type="button"
-                  onClick={() => setTargetPages(pages)}
+                  onClick={() => {
+                    setTargetPages(pages);
+                    setIsCustomPages(false);
+                  }}
                   className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition cursor-pointer border ${
-                    targetPages === pages
+                    !isCustomPages && targetPages === pages
                       ? "bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-600/20"
                       : "bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700"
                   }`}
                 >
-                  {pages} صفحات
+                  {pages} صفحة
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => setIsCustomPages(true)}
+                className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition cursor-pointer border ${
+                  isCustomPages
+                    ? "bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-600/20"
+                    : "bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700"
+                }`}
+              >
+                أخرى
+              </button>
             </div>
+
+            {isCustomPages && (
+              <div className="mt-2 flex items-center gap-2 p-2 rounded-xl bg-purple-950/20 border border-purple-500/30">
+                <input
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={customPages}
+                  onChange={(e) => setCustomPages(e.target.value)}
+                  placeholder="اكتب عدد الصفحات (مثلاً 25 أو 30)"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-purple-400 focus:outline-none"
+                />
+                <span className="text-xs text-purple-300 whitespace-nowrap font-bold">صفحة</span>
+              </div>
+            )}
           </div>
 
           {/* Cover Page Metadata Box (Item #13) */}
@@ -244,7 +300,7 @@ export default function ResearchPage() {
                     type="text"
                     value={academicYear}
                     onChange={(e) => setAcademicYear(e.target.value)}
-                    placeholder="2025 - 2026"
+                    placeholder="2026 / 2027"
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:border-purple-500 focus:outline-none"
                   />
                 </div>

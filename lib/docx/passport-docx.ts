@@ -55,9 +55,9 @@ export async function generatePassportPhotosDocx(
   const imgWidth = 151;
   const imgHeight = 196;
 
-  // ~1cm white margin under photo = 567 twips
-  const bottomCuttingMarginTwips = 567; // 10mm = 1cm
-  const horizontalCellMarginTwips = 220; // ~4mm between photos
+  // Exact 1.5 cm white cutting gap between photos (15mm = 850 twips)
+  const cuttingMargin1_5cmTwips = 850; // 15mm = 1.5cm
+  const halfCuttingMarginTwips = 425; // 7.5mm for cell sides (total 15mm between adjacent cells)
 
   const noBorders = {
     top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
@@ -113,9 +113,9 @@ export async function generatePassportPhotosDocx(
           borders: noBorders,
           margins: {
             top: 60,
-            bottom: bottomCuttingMarginTwips, // 1cm white gap at the bottom for easy cutting
-            left: horizontalCellMarginTwips,
-            right: horizontalCellMarginTwips,
+            bottom: cuttingMargin1_5cmTwips, // 1.5 cm white gap at the bottom for easy cutting
+            left: halfCuttingMarginTwips,
+            right: halfCuttingMarginTwips,
           },
           children: cellChildren,
         })

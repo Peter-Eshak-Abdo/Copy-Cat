@@ -223,7 +223,7 @@ export default function PassportPhotosPage() {
 
     const img = new Image();
     img.crossOrigin = "anonymous";
-    img.src = framingTarget.originalDataUrl || framingTarget.imageDataUrl;
+    img.src = framingTarget.imageDataUrl || framingTarget.originalDataUrl || "";
     img.onload = () => {
       const newFramed = renderFramedPassportCanvas(
         img,
@@ -686,7 +686,7 @@ export default function PassportPhotosPage() {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={framingTarget.originalDataUrl || framingTarget.imageDataUrl}
+                    src={framingTarget.imageDataUrl || framingTarget.originalDataUrl}
                     alt="Framing Target"
                     className="max-w-full max-h-full object-contain"
                   />

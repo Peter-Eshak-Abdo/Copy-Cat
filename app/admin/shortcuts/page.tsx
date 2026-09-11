@@ -143,7 +143,7 @@ export default function ShortcutsPage() {
   const handleOpenLink = (urlToOpen: string) => {
     const success = safeOpenUrl(urlToOpen);
     if (!success) {
-      window.location.href = urlToOpen;
+      window.location.assign(urlToOpen);
     }
   };
 

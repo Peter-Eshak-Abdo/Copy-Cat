@@ -2,6 +2,25 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useToast } from "@/components/toast-provider";
+import { SITE_CONFIG } from "@/lib/site-config";
+
+export interface QuickPricingButton {
+  id: string;
+  label: string;
+  price: number;
+  colorDot?: string;
+}
+
+const DEFAULT_QUICK_BUTTONS: QuickPricingButton[] = [
+  { id: "bw-single", label: "أبيض وأسود (وجه)", price: 0.8, colorDot: "bg-slate-400" },
+  { id: "bw-duplex", label: "أبيض وأسود (وش وظهر)", price: 0.9, colorDot: "bg-cyan-400 animate-pulse" },
+  { id: "color-light", label: "ألوان خفيف / هيدر", price: 1.25, colorDot: "bg-amber-400" },
+  { id: "color-med", label: "ألوان متوسط (ملازم)", price: 1.5, colorDot: "bg-blue-400" },
+  { id: "color-heavy", label: "ألوان ثقيل / تغطية", price: 2.5, colorDot: "bg-pink-400" },
+  { id: "glossy", label: "كوشيه / جلوسي", price: 10.0, colorDot: "bg-emerald-400" },
+];
+
+const BUTTONS_STORAGE_KEY = "copycat_custom_pricing_buttons_v1";
 
 interface PricingConfig {
   bwSingle: number;
@@ -53,6 +72,27 @@ export default function SmartCalculatorPage() {
   // Mode: print calculator or quick numpad
   const [activeTab, setActiveTab] = useState<"print" | "numpad">("print");
 
+  // Dynamic quick buttons state
+  const [quickButtons, setQuickButtons] = useState<QuickPricingButton[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(BUTTONS_STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch {}
+      }
+    }
+    return DEFAULT_QUICK_BUTTONS;
+  });
+
+  const [isManageButtonsOpen, setIsManageButtonsOpen] = useState(false);
+  const [newBtnLabel, setNewBtnLabel] = useState("");
+  const [newBtnPrice, setNewBtnPrice] = useState("");
+  const [editingBtnId, setEditingBtnId] = useState<string | null>(null);
+  const [editBtnLabel, setEditBtnLabel] = useState("");
+  const [editBtnPrice, setEditBtnPrice] = useState("");
+
   // Pricing configuration loaded from localStorage
   const [pricing, setPricing] = useState<PricingConfig>(() => {
     if (typeof window !== "undefined") {
@@ -69,18 +109,15 @@ export default function SmartCalculatorPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempPricing, setTempPricing] = useState<PricingConfig>(pricing);
 
-  // Core Job Inputs
-  const [pageCount, setPageCount] = useState<number>(120);
-  const [copiesCount, setCopiesCount] = useState<number>(50);
+  // Core Job Inputs - Default to 0 as requested
+  const [pageCount, setPageCount] = useState<number>(0);
+  const [copiesCount, setCopiesCount] = useState<number>(0);
   const [isDuplex, setIsDuplex] = useState<boolean>(true);
-  const [paperRate, setPaperRate] = useState<number>(DEFAULT_PRICING.bwDuplex);
+  const [paperRate, setPaperRate] = useState<number>(0.9);
   const [rateLabel, setRateLabel] = useState<string>("أبيض وأسود (وش وظهر)");
 
-  // Binding selections
-  const [selectedBinding, setSelectedBinding] = useState<{ name: string; price: number } | null>({
-    name: "سلك معدني وسط (حتى 120 ورقة)",
-    price: DEFAULT_PRICING.wireBindingMed,
-  });
+  // Binding selections - Default to null
+  const [selectedBinding, setSelectedBinding] = useState<{ name: string; price: number } | null>(null);
 
   // Extras toggles
   const [extraCellophane, setExtraCellophane] = useState<boolean>(false);
@@ -232,7 +269,7 @@ export default function SmartCalculatorPage() {
     text += `• إجمالي سعر النسخة الواحدة: ${singleCopyTotalCost.toFixed(2)} ج.م\n`;
     text += `━━━━━━━━━━━━━━━━━━━━━\n`;
     text += `💰 *الإجمالي النهائي المطلوب: ${grandTotalCost.toLocaleString("ar-EG")} ج.م*\n`;
-    text += `📍 شارع الدقهلية بالقرب من مسجد المطافي أمام مركز نور الحياة - عرايشية مصر - الإسماعيلية | هاتف: 01210571251\n`;
+    text += `📍 ${SITE_CONFIG.store.address} | هاتف: ${SITE_CONFIG.store.phone}\n`;
 
     try {
       await navigator.clipboard.writeText(text);
@@ -293,20 +330,76 @@ export default function SmartCalculatorPage() {
     }
   };
 
-  // Reset Calculator
+  // Reset Calculator - Zeroes out all page and copy numbers
   const handleReset = () => {
-    setPageCount(120);
-    setCopiesCount(50);
+    setPageCount(0);
+    setCopiesCount(0);
     setIsDuplex(true);
     setPaperRate(pricing.bwDuplex);
     setRateLabel("أبيض وأسود (وش وظهر)");
-    setSelectedBinding({
-      name: "سلك معدني وسط (حتى 120 ورقة)",
-      price: pricing.wireBindingMed,
-    });
+    setSelectedBinding(null);
     setExtraCellophane(false);
     setExtraGlue(false);
-    toast.info("تم التصفير", "تمت استعادة الإعدادات الافتراضية للحاسبة");
+    toast.info("تم التصفير", "تم تصفير جميع القيم والبدء من جديد (0 صفحة / 0 نسخة)");
+  };
+
+  // Custom Quick Buttons Management
+  const handleAddButton = () => {
+    if (!newBtnLabel.trim() || isNaN(parseFloat(newBtnPrice)) || parseFloat(newBtnPrice) <= 0) {
+      toast.warning("بيانات غير مكتملة", "يرجى كتابة اسم الزر وسعر الورقة بصيغة صحيحة");
+      return;
+    }
+    const newBtn: QuickPricingButton = {
+      id: `btn-${Date.now()}`,
+      label: newBtnLabel.trim(),
+      price: parseFloat(newBtnPrice),
+      colorDot: "bg-primary",
+    };
+    const updated = [...quickButtons, newBtn];
+    setQuickButtons(updated);
+    try {
+      localStorage.setItem(BUTTONS_STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+    setNewBtnLabel("");
+    setNewBtnPrice("");
+    toast.success("تمت الإضافة", `تمت إضافة زر التسعير "${newBtn.label}" بنجاح`);
+  };
+
+  const handleSaveEditButton = (id: string) => {
+    if (!editBtnLabel.trim() || isNaN(parseFloat(editBtnPrice)) || parseFloat(editBtnPrice) <= 0) {
+      toast.warning("بيانات غير مكتملة", "يرجى التحقق من الاسم والسعر");
+      return;
+    }
+    const updated = quickButtons.map((b) =>
+      b.id === id ? { ...b, label: editBtnLabel.trim(), price: parseFloat(editBtnPrice) } : b
+    );
+    setQuickButtons(updated);
+    try {
+      localStorage.setItem(BUTTONS_STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+    setEditingBtnId(null);
+    toast.success("تم التعديل", "تم حفظ تعديل زر التسعير");
+  };
+
+  const handleDeleteButton = (id: string) => {
+    if (quickButtons.length <= 1) {
+      toast.warning("تنبيه", "يجب الإبقاء على زر تسعير واحد على الأقل");
+      return;
+    }
+    const updated = quickButtons.filter((b) => b.id !== id);
+    setQuickButtons(updated);
+    try {
+      localStorage.setItem(BUTTONS_STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+    toast.info("تم الحذف", "تم حذف زر التسعير");
+  };
+
+  const handleResetButtons = () => {
+    setQuickButtons(DEFAULT_QUICK_BUTTONS);
+    try {
+      localStorage.setItem(BUTTONS_STORAGE_KEY, JSON.stringify(DEFAULT_QUICK_BUTTONS));
+    } catch {}
+    toast.success("تم الاسترجاع", "تمت استعادة أزرار التسعير الافتراضية");
   };
 
   // Save Settings
@@ -574,12 +667,15 @@ export default function SmartCalculatorPage() {
                     <input
                       className="w-full h-11 px-space-md pr-space-md pl-12 rounded-xl bg-surface-container-lowest text-on-surface font-label-code text-body-lg text-left focus:outline-none focus:ring-2 focus:ring-primary shadow-inner border border-surface-container-high/50"
                       id="input-pages"
-                      min="1"
-                      onChange={(e) => setPageCount(Math.max(1, parseInt(e.target.value) || 1))}
-                      placeholder="120"
+                      min="0"
+                      onChange={(e) => {
+                        const val = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
+                        setPageCount(isNaN(val) ? 0 : Math.max(0, val));
+                      }}
+                      placeholder="0"
                       step="1"
                       type="number"
-                      value={pageCount}
+                      value={pageCount === 0 ? "" : pageCount}
                     />
                     <span className="absolute left-3 text-on-surface-variant font-body-sm text-body-sm pointer-events-none">
                       صفحة
@@ -602,12 +698,15 @@ export default function SmartCalculatorPage() {
                     <input
                       className="w-full h-11 px-space-md pr-space-md pl-12 rounded-xl bg-surface-container-lowest text-on-surface font-label-code text-body-lg text-left focus:outline-none focus:ring-2 focus:ring-primary shadow-inner border border-surface-container-high/50"
                       id="input-copies"
-                      min="1"
-                      onChange={(e) => setCopiesCount(Math.max(1, parseInt(e.target.value) || 1))}
-                      placeholder="50"
+                      min="0"
+                      onChange={(e) => {
+                        const val = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
+                        setCopiesCount(isNaN(val) ? 0 : Math.max(0, val));
+                      }}
+                      placeholder="0"
                       step="1"
                       type="number"
-                      value={copiesCount}
+                      value={copiesCount === 0 ? "" : copiesCount}
                     />
                     <span className="absolute left-3 text-on-surface-variant font-body-sm text-body-sm pointer-events-none">
                       نسخة
@@ -717,150 +816,49 @@ export default function SmartCalculatorPage() {
                     أزرار تسعير الورقة والطباعة السريعة
                   </span>
                 </div>
-                <div className="flex items-center gap-space-xs font-label-code text-label-code text-on-surface-variant">
-                  <span>المحدد حالياً:</span>
-                  <span className="px-space-xs py-space-2xs rounded bg-primary/15 text-primary font-semibold">
-                    {rateLabel} {paperRate.toFixed(2)} ج.م
-                  </span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-space-xs font-label-code text-label-code text-on-surface-variant">
+                    <span>المحدد:</span>
+                    <span className="px-space-xs py-space-2xs rounded bg-primary/15 text-primary font-semibold">
+                      {rateLabel} {paperRate.toFixed(2)} ج.م
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsManageButtonsOpen(true)}
+                    className="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs text-primary font-bold flex items-center gap-1 cursor-pointer transition border border-primary/20"
+                  >
+                    <span className="material-symbols-outlined text-sm">tune</span>
+                    <span>إدارة وتعديل الأزرار</span>
+                  </button>
                 </div>
               </div>
 
-              {/* 6 Quick Presets Grid */}
+              {/* Dynamic Quick Presets Grid */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-space-sm" id="preset-grid">
-                {/* Preset 1 */}
-                <button
-                  className={`p-space-sm rounded-xl text-right flex flex-col justify-between h-20 transition-all cursor-pointer border ${
-                    paperRate === pricing.bwSingle
-                      ? "bg-primary/10 border-primary/40 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
-                      : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
-                  }`}
-                  onClick={() => handlePresetSelect(pricing.bwSingle, "أبيض وأسود (وجه)")}
-                  type="button"
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="font-body-sm text-body-sm font-semibold">أبيض وأسود (وجه)</span>
-                    <span className="w-2 h-2 rounded-full bg-on-surface-variant"></span>
-                  </div>
-                  <div className="font-label-code text-headline-sm font-bold">
-                    {pricing.bwSingle.toFixed(2)}{" "}
-                    <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">ج.م</span>
-                  </div>
-                </button>
-
-                {/* Preset 2 */}
-                <button
-                  className={`p-space-sm rounded-xl text-right flex flex-col justify-between h-20 transition-all cursor-pointer border ${
-                    paperRate === pricing.bwDuplex
-                      ? "bg-primary/10 border-primary/40 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
-                      : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
-                  }`}
-                  onClick={() => handlePresetSelect(pricing.bwDuplex, "أبيض وأسود (وش وظهر)")}
-                  type="button"
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="font-body-sm text-body-sm font-semibold">أبيض وأسود (وش وظهر)</span>
-                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                  </div>
-                  <div className="font-label-code text-headline-sm font-bold">
-                    {pricing.bwDuplex.toFixed(2)}{" "}
-                    <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">ج.م</span>
-                  </div>
-                </button>
-
-                {/* Preset 3 */}
-                <button
-                  className={`p-space-sm rounded-xl text-right flex flex-col justify-between h-20 transition-all cursor-pointer border ${
-                    paperRate === (isDuplex ? pricing.colorLightDuplex : pricing.colorLightSingle)
-                      ? "bg-primary/10 border-primary/40 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
-                      : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
-                  }`}
-                  onClick={() =>
-                    handlePresetSelect(
-                      isDuplex ? pricing.colorLightDuplex : pricing.colorLightSingle,
-                      "ألوان خفيف / هيدر"
-                    )
-                  }
-                  type="button"
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="font-body-sm text-body-sm font-semibold">ألوان خفيف / هيدر</span>
-                    <span className="w-2 h-2 rounded-full bg-tertiary"></span>
-                  </div>
-                  <div className="font-label-code text-headline-sm font-bold">
-                    {(isDuplex ? pricing.colorLightDuplex : pricing.colorLightSingle).toFixed(2)}{" "}
-                    <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">ج.م</span>
-                  </div>
-                </button>
-
-                {/* Preset 4 */}
-                <button
-                  className={`p-space-sm rounded-xl text-right flex flex-col justify-between h-20 transition-all cursor-pointer border ${
-                    paperRate === (isDuplex ? pricing.colorMediumDuplex : pricing.colorMediumSingle)
-                      ? "bg-primary/10 border-primary/40 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
-                      : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
-                  }`}
-                  onClick={() =>
-                    handlePresetSelect(
-                      isDuplex ? pricing.colorMediumDuplex : pricing.colorMediumSingle,
-                      "ألوان متوسط (ملازم)"
-                    )
-                  }
-                  type="button"
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="font-body-sm text-body-sm font-semibold">ألوان متوسط (ملازم)</span>
-                    <span className="w-2 h-2 rounded-full bg-tertiary"></span>
-                  </div>
-                  <div className="font-label-code text-headline-sm font-bold">
-                    {(isDuplex ? pricing.colorMediumDuplex : pricing.colorMediumSingle).toFixed(2)}{" "}
-                    <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">ج.م</span>
-                  </div>
-                </button>
-
-                {/* Preset 5 */}
-                <button
-                  className={`p-space-sm rounded-xl text-right flex flex-col justify-between h-20 transition-all cursor-pointer border ${
-                    paperRate === (isDuplex ? pricing.colorHeavyDuplex : pricing.colorHeavySingle)
-                      ? "bg-primary/10 border-primary/40 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
-                      : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
-                  }`}
-                  onClick={() =>
-                    handlePresetSelect(
-                      isDuplex ? pricing.colorHeavyDuplex : pricing.colorHeavySingle,
-                      "ألوان ثقيل / تغطية"
-                    )
-                  }
-                  type="button"
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="font-body-sm text-body-sm font-semibold">ألوان ثقيل / تغطية</span>
-                    <span className="w-2 h-2 rounded-full bg-secondary"></span>
-                  </div>
-                  <div className="font-label-code text-headline-sm font-bold">
-                    {(isDuplex ? pricing.colorHeavyDuplex : pricing.colorHeavySingle).toFixed(2)}{" "}
-                    <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">ج.م</span>
-                  </div>
-                </button>
-
-                {/* Preset 6 */}
-                <button
-                  className={`p-space-sm rounded-xl text-right flex flex-col justify-between h-20 transition-all cursor-pointer border ${
-                    paperRate === pricing.glossy
-                      ? "bg-primary/10 border-primary/40 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
-                      : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
-                  }`}
-                  onClick={() => handlePresetSelect(pricing.glossy, "كوشيه / جلوسي")}
-                  type="button"
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="font-body-sm text-body-sm font-semibold">كوشيه / جلوسي</span>
-                    <span className="w-2 h-2 rounded-full bg-primary-container"></span>
-                  </div>
-                  <div className="font-label-code text-headline-sm font-bold">
-                    {pricing.glossy.toFixed(2)}{" "}
-                    <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">ج.م</span>
-                  </div>
-                </button>
+                {quickButtons.map((btn) => (
+                  <button
+                    key={btn.id}
+                    className={`p-space-sm rounded-xl text-right flex flex-col justify-between h-20 transition-all cursor-pointer border relative group ${
+                      paperRate === btn.price && rateLabel === btn.label
+                        ? "bg-primary/10 border-primary/40 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
+                        : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
+                    }`}
+                    onClick={() => handlePresetSelect(btn.price, btn.label)}
+                    type="button"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="font-body-sm text-body-sm font-semibold truncate max-w-[140px]">
+                        {btn.label}
+                      </span>
+                      <span className={`w-2 h-2 rounded-full ${btn.colorDot || "bg-primary"}`}></span>
+                    </div>
+                    <div className="font-label-code text-headline-sm font-bold">
+                      {btn.price.toFixed(2)}{" "}
+                      <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">ج.م</span>
+                    </div>
+                  </button>
+                ))}
               </div>
 
               {/* Custom Price Inline Input */}
@@ -1031,7 +1029,7 @@ export default function SmartCalculatorPage() {
           <div className="xl:col-span-4 sticky top-20 flex flex-col gap-space-md">
             <div className="bg-surface-container-low rounded-xl p-space-lg shadow-2xl relative overflow-hidden flex flex-col gap-space-md border border-surface-container-high/50">
               {/* Glow top edge */}
-              <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-primary via-primary-container to-tertiary"></div>
+                <div className="absolute top-0 right-0 left-0 h-1 bg-linear-to-r from-primary via-primary-container to-tertiary"></div>
 
               {/* Invoice Header */}
               <div className="flex items-center justify-between pb-space-sm border-b-0">
@@ -1124,7 +1122,7 @@ export default function SmartCalculatorPage() {
 
               {/* Big Highlight Grand Total Box */}
               <div className="p-space-md rounded-xl bg-surface-container-lowest flex flex-col items-center justify-center gap-space-2xs text-center shadow-inner relative overflow-hidden border border-surface-container-high/40">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none"></div>
+                  <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-transparent pointer-events-none"></div>
                 <span className="font-label-tag text-label-tag text-on-surface-variant uppercase tracking-wider">
                   الإجمالي النهائي المطلوب
                 </span>
@@ -1136,10 +1134,7 @@ export default function SmartCalculatorPage() {
                 </div>
                 <div className="flex items-center gap-space-xs mt-1">
                   <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant">
-                    تكلفة الإنتاج: ~{estProductionCost.toLocaleString("ar-EG")} ج.م
-                  </span>
-                  <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded bg-primary-container/20 text-primary font-bold">
-                    هامش الربح: ~{profitMarginPercent}%
+                    تكلفة الإنتاج التقديرية: ~{estProductionCost.toLocaleString("ar-EG")} ج.م
                   </span>
                 </div>
               </div>
@@ -1183,7 +1178,7 @@ export default function SmartCalculatorPage() {
                   ملاحظة تسعير الملازم:
                 </span>
                 <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-                  الطباعة 'وش وظهر' تحسب سعر الورقة كاملة متضمنة وجهي الطباعة. إذا كانت المذكرة فردية الصفحات (مثلاً 121 صفحة)، تُجبر آخر ورقة تلقائياً لضمان حساب التكلفة الصحيح.
+                  الطباعة &apos;وش وظهر&apos; تحسب سعر الورقة كاملة متضمنة وجهي الطباعة. إذا كانت المذكرة فردية الصفحات (مثلاً 121 صفحة)، تُجبر آخر ورقة تلقائياً لضمان حساب التكلفة الصحيح.
                 </p>
               </div>
             </div>
@@ -1324,6 +1319,169 @@ export default function SmartCalculatorPage() {
                 className="px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-sm shadow-md"
               >
                 حفظ الأسعار
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Custom Quick Buttons Modal */}
+      {isManageButtonsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-surface-container-low border border-surface-container-high rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-surface-container-high">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-xl">tune</span>
+                <h3 className="font-bold text-lg text-on-surface">إدارة وتعديل أزرار التسعير السريعة</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setIsManageButtonsOpen(false);
+                  setEditingBtnId(null);
+                }}
+                className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container-high cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Add New Button Form */}
+            <div className="p-3.5 rounded-xl bg-surface-container border border-surface-container-high/60 space-y-2.5">
+              <div className="font-semibold text-sm text-primary flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-base">add_circle</span>
+                <span>إضافة زر تسعير جديد</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                <input
+                  type="text"
+                  placeholder="اسم الزر (مثلاً: ألوان خفيف)"
+                  value={newBtnLabel}
+                  onChange={(e) => setNewBtnLabel(e.target.value)}
+                  className="sm:col-span-3 px-3 py-2 rounded-lg bg-surface-container-lowest text-on-surface border border-surface-container-high text-xs"
+                />
+                <input
+                  type="number"
+                  step="0.05"
+                  placeholder="السعر ج.م"
+                  value={newBtnPrice}
+                  onChange={(e) => setNewBtnPrice(e.target.value)}
+                  className="sm:col-span-2 px-3 py-2 rounded-lg bg-surface-container-lowest text-on-surface border border-surface-container-high text-xs"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleAddButton}
+                className="w-full py-2 rounded-lg bg-primary text-on-primary font-bold text-xs flex items-center justify-center gap-1.5 hover:brightness-110 cursor-pointer shadow-sm"
+              >
+                <span className="material-symbols-outlined text-sm">add</span>
+                <span>إضافة إلى شاشة الحاسبة</span>
+              </button>
+            </div>
+
+            {/* Existing Buttons List */}
+            <div className="space-y-2">
+              <span className="font-semibold text-xs text-on-surface-variant block">
+                الأزرار المتاحة حالياً ({quickButtons.length}):
+              </span>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                {quickButtons.map((btn) => (
+                  <div
+                    key={btn.id}
+                    className="p-2.5 rounded-xl bg-surface-container-lowest border border-surface-container-high flex items-center justify-between gap-2"
+                  >
+                    {editingBtnId === btn.id ? (
+                      <div className="flex-1 grid grid-cols-5 gap-2 items-center">
+                        <input
+                          type="text"
+                          value={editBtnLabel}
+                          onChange={(e) => setEditBtnLabel(e.target.value)}
+                          className="col-span-3 px-2 py-1.5 rounded-lg bg-surface-container text-on-surface border border-surface-container-high text-xs"
+                        />
+                        <input
+                          type="number"
+                          step="0.05"
+                          value={editBtnPrice}
+                          onChange={(e) => setEditBtnPrice(e.target.value)}
+                          className="col-span-2 px-2 py-1.5 rounded-lg bg-surface-container text-on-surface border border-surface-container-high text-xs"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${btn.colorDot || "bg-primary"}`}></span>
+                        <span className="text-xs font-semibold truncate text-on-surface">{btn.label}</span>
+                        <span className="font-label-code text-xs font-bold text-primary mr-auto shrink-0">
+                          {btn.price.toFixed(2)} ج.م
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {editingBtnId === btn.id ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEditButton(btn.id)}
+                            className="p-1 rounded-lg text-primary hover:bg-surface-container text-xs cursor-pointer"
+                            title="حفظ"
+                          >
+                            <span className="material-symbols-outlined text-base">check</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingBtnId(null)}
+                            className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container text-xs cursor-pointer"
+                            title="إلغاء"
+                          >
+                            <span className="material-symbols-outlined text-base">close</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingBtnId(btn.id);
+                              setEditBtnLabel(btn.label);
+                              setEditBtnPrice(btn.price.toString());
+                            }}
+                            className="p-1 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container text-xs cursor-pointer"
+                            title="تعديل"
+                          >
+                            <span className="material-symbols-outlined text-base">edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteButton(btn.id)}
+                            className="p-1 rounded-lg text-on-surface-variant hover:text-error hover:bg-surface-container text-xs cursor-pointer"
+                            title="حذف"
+                          >
+                            <span className="material-symbols-outlined text-base">delete</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-surface-container-high">
+              <button
+                type="button"
+                onClick={handleResetButtons}
+                className="px-3 py-1.5 rounded-lg text-xs text-on-surface-variant hover:text-error hover:bg-surface-container transition-colors cursor-pointer"
+              >
+                استعادة الأزرار الافتراضية
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsManageButtonsOpen(false);
+                  setEditingBtnId(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-xs shadow-md cursor-pointer"
+              >
+                تم والعودة للحاسبة
               </button>
             </div>
           </div>

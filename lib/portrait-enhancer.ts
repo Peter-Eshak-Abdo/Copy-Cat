@@ -109,7 +109,6 @@ export function reconstructPortraitSubject(
   const outData = outCtx.getImageData(0, 0, outCanvas.width, outCanvas.height);
   const d = outData.data;
   const ow = outCanvas.width;
-  const oh = outCanvas.height;
 
   // Reconstruct missing left shoulder by symmetric sampling if left is cut and right is full
   if (bounds.isLeftCut && !bounds.isRightCut) {
@@ -237,12 +236,153 @@ export function applyFaceSafeSuperResolution(
 }
 
 /**
+ * Detects optimal Biometric Passport Crop (Head & Shoulders)
+ * Standard: Head occupies 70%-78% of vertical frame height, with 7-8% headroom above hair.
+ * Ensures full-body photos are cropped directly to head & shoulders just like official studio photos.
+ */
+export async function detectBiometricCrop(canvas: HTMLCanvasElement): Promise<{
+  cropX: number;
+  cropY: number;
+  cropW: number;
+  cropH: number;
+}> {
+  const cw = canvas.width;
+  const ch = canvas.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return { cropX: 0, cropY: 0, cropW: cw, cropH: ch };
+
+  // Strategy 1: Browser Native FaceDetector if supported
+  if (typeof window !== "undefined" && "FaceDetector" in window) {
+    try {
+      const FaceDetectorClass = (window as unknown as { FaceDetector: new (opts?: { fastMode?: boolean; maxDetectedFaces?: number }) => { detect: (c: CanvasImageSource) => Promise<Array<{ boundingBox: { x: number; y: number; width: number; height: number } }>> } }).FaceDetector;
+      const detector = new FaceDetectorClass({ fastMode: true, maxDetectedFaces: 1 });
+      const faces = await detector.detect(canvas);
+      if (faces && faces.length > 0) {
+        const box = faces[0].boundingBox;
+        const faceH = box.height;
+        const faceW = box.width;
+        const faceCenterX = box.x + faceW / 2;
+        const faceCenterY = box.y + faceH / 2;
+
+        // Biometric head is ~1.35x detected face box (including hair crown and chin)
+        const totalHeadHeight = faceH * 1.35;
+        // In 4x6 standard (400x520), head height should be ~72% of photo height
+        const targetFrameH = totalHeadHeight / 0.72;
+        const targetFrameW = targetFrameH * (400 / 520);
+
+        // Position head: crown at ~8% from top, chin at ~68%
+        const cropY = Math.max(0, Math.min(ch - targetFrameH, faceCenterY - targetFrameH * 0.42));
+        const cropX = Math.max(0, Math.min(cw - targetFrameW, faceCenterX - targetFrameW / 2));
+
+        return {
+          cropX: Math.round(cropX),
+          cropY: Math.round(cropY),
+          cropW: Math.round(Math.min(cw, targetFrameW)),
+          cropH: Math.round(Math.min(ch, targetFrameH)),
+        };
+      }
+    } catch {
+      // Fallback to silhouette analysis
+    }
+  }
+
+  // Strategy 2: Silhouette & Profile Analysis
+  const imgData = ctx.getImageData(0, 0, cw, ch);
+  const data = imgData.data;
+
+  let topY = ch;
+  let bottomY = 0;
+  const rowLeft: number[] = new Array(ch).fill(cw);
+  const rowRight: number[] = new Array(ch).fill(0);
+  const rowWidth: number[] = new Array(ch).fill(0);
+
+  for (let y = 0; y < ch; y++) {
+    for (let x = 0; x < cw; x++) {
+      const idx = (y * cw + x) * 4;
+      const a = data[idx + 3];
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+      const isForeground = a > 40 && (r < 248 || g < 248 || b < 248);
+
+      if (isForeground) {
+        if (y < topY) topY = y;
+        if (y > bottomY) bottomY = y;
+        if (x < rowLeft[y]) rowLeft[y] = x;
+        if (x > rowRight[y]) rowRight[y] = x;
+      }
+    }
+    if (rowRight[y] >= rowLeft[y]) {
+      rowWidth[y] = rowRight[y] - rowLeft[y] + 1;
+    }
+  }
+
+  const subjectHeight = bottomY - topY + 1;
+  if (subjectHeight < 40) {
+    return { cropX: 0, cropY: 0, cropW: cw, cropH: ch };
+  }
+
+  // Find max width in upper 35% of subject (head region)
+  const scanLimit = Math.min(ch - 1, topY + Math.round(subjectHeight * 0.35));
+  let maxHeadW = 0;
+  let headCenterSum = 0;
+  let headCenterCount = 0;
+
+  for (let y = topY; y <= scanLimit; y++) {
+    if (rowWidth[y] > maxHeadW) {
+      maxHeadW = rowWidth[y];
+    }
+    if (rowWidth[y] > 20) {
+      headCenterSum += (rowLeft[y] + rowRight[y]) / 2;
+      headCenterCount++;
+    }
+  }
+
+  const headCenterX = headCenterCount > 0 ? headCenterSum / headCenterCount : cw / 2;
+
+  // Determine if full-body or half-body: subject height is disproportionately tall relative to head width
+  // Adult/child proportions: total standing height is 5x to 7.5x head height
+  const estimatedHeadH = maxHeadW > 0 ? maxHeadW * 1.25 : subjectHeight * 0.25;
+
+  if (subjectHeight > estimatedHeadH * 1.8) {
+    // Standing or half-body detected! Crop to head & shoulders
+    const targetCropH = Math.min(ch, estimatedHeadH / 0.72);
+    const targetCropW = Math.min(cw, targetCropH * (400 / 520));
+
+    // Allow 8% headroom above top of hair
+    const cropY = Math.max(0, Math.min(ch - targetCropH, topY - targetCropH * 0.08));
+    const cropX = Math.max(0, Math.min(cw - targetCropW, headCenterX - targetCropW / 2));
+
+    return {
+      cropX: Math.round(cropX),
+      cropY: Math.round(cropY),
+      cropW: Math.round(targetCropW),
+      cropH: Math.round(targetCropH),
+    };
+  }
+
+  // Already a portrait/headshot: return natural bounds with slight headroom
+  const naturalH = subjectHeight / (1 - 0.08);
+  const naturalW = naturalH * (400 / 520);
+  const cropY = Math.max(0, topY - naturalH * 0.08);
+  const cropX = Math.max(0, Math.min(cw - naturalW, headCenterX - naturalW / 2));
+
+  return {
+    cropX: Math.round(cropX),
+    cropY: Math.round(cropY),
+    cropW: Math.round(Math.min(cw, naturalW)),
+    cropH: Math.round(Math.min(ch, naturalH)),
+  };
+}
+
+/**
  * Creates the Final Studio Framed Photo:
  * 1. Executes Portrait Outpainting & Reconstructs any cut shoulders/hair
- * 2. Applies Chroma-Preserving Super Resolution
- * 3. Frames onto 4.0cm x 5.2cm proportion (400x520px)
- * 4. Fills with Pure White Background (#ffffff)
- * 5. Draws 1.5pt crisp solid black border
+ * 2. Biometrically crops full-body/half-body images to head & shoulders (ICAO 4x6 standard)
+ * 3. Applies Chroma-Preserving Super Resolution
+ * 4. Frames onto 4.0cm x 5.2cm proportion (400x520px)
+ * 5. Fills with Pure White Background (#ffffff)
+ * 6. Draws 1.5pt crisp solid black border
  */
 export async function enhanceAndFramePassportPhoto(
   imgSource: Blob | string | HTMLImageElement,
@@ -252,8 +392,6 @@ export async function enhanceAndFramePassportPhoto(
     autoCompleteCropped = true,
     superResolution = true,
     preserveIdentity = true,
-    headroomMargin = 0.08,
-    shoulderMargin = 0.06,
   } = options;
 
   let img: HTMLImageElement;
@@ -281,15 +419,39 @@ export async function enhanceAndFramePassportPhoto(
   if (!srcCtx) return img.src;
   srcCtx.drawImage(img, 0, 0);
 
-  // 1. Reconstruct cropped shoulders and head if needed
-  const reconstructedCanvas = reconstructPortraitSubject(srcCanvas, { autoCompleteCropped });
+  // 1. Biometric head & shoulders detection (handles full-body photos like standing kids)
+  const bioCrop = await detectBiometricCrop(srcCanvas);
 
-  // 2. Apply Face-Safe Chroma-Preserving Super Resolution
+  const croppedCanvas = document.createElement("canvas");
+  croppedCanvas.width = bioCrop.cropW;
+  croppedCanvas.height = bioCrop.cropH;
+  const croppedCtx = croppedCanvas.getContext("2d");
+  if (croppedCtx) {
+    croppedCtx.drawImage(
+      srcCanvas,
+      bioCrop.cropX,
+      bioCrop.cropY,
+      bioCrop.cropW,
+      bioCrop.cropH,
+      0,
+      0,
+      bioCrop.cropW,
+      bioCrop.cropH
+    );
+  }
+
+  // 2. Reconstruct cropped shoulders and head if needed
+  const reconstructedCanvas = reconstructPortraitSubject(
+    croppedCtx ? croppedCanvas : srcCanvas,
+    { autoCompleteCropped }
+  );
+
+  // 3. Apply Face-Safe Chroma-Preserving Super Resolution
   if (superResolution) {
     applyFaceSafeSuperResolution(reconstructedCanvas, preserveIdentity ? 0.45 : 0.65);
   }
 
-  // 3. Official 4.0cm x 5.2cm Frame (400 x 520 px)
+  // 4. Official 4.0cm x 5.2cm Frame (400 x 520 px)
   const targetW = 400;
   const targetH = 520;
 
@@ -303,22 +465,8 @@ export async function enhanceAndFramePassportPhoto(
   finalCtx.fillStyle = "#ffffff";
   finalCtx.fillRect(0, 0, targetW, targetH);
 
-  // B. Calculate optimal shoulder-width containment and headroom
-  const rW = reconstructedCanvas.width;
-  const rH = reconstructedCanvas.height;
-
-  const availableWidth = targetW * (1 - shoulderMargin * 2);
-  const availableHeight = targetH * (1 - headroomMargin);
-
-  const scale = Math.min(availableWidth / rW, availableHeight / rH);
-  const drawW = rW * scale;
-  const drawH = rH * scale;
-
-  // Center horizontally, anchor shoulders to bottom
-  const drawX = (targetW - drawW) / 2;
-  const drawY = targetH - drawH;
-
-  finalCtx.drawImage(reconstructedCanvas, drawX, drawY, drawW, drawH);
+  // B. Draw onto target frame
+  finalCtx.drawImage(reconstructedCanvas, 0, 0, targetW, targetH);
 
   // C. 1.5pt crisp solid black border (Requirement #8)
   finalCtx.strokeStyle = "#000000";

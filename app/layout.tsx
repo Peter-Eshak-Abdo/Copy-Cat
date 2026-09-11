@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/lib/auth";
 import { ToastProvider } from "@/components/toast-provider";
 import { PwaAndErrorGuard } from "@/components/pwa-and-error-guard";
+import { SITE_CONFIG } from "@/lib/site-config";
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
@@ -40,7 +41,9 @@ export const metadata: Metadata = {
     "مكتبة كوبي كات بالإسماعيلية",
     "كوبي كات بالإسماعيلية",
     "مكتبة كوبي كات الاسماعيلية",
+    "مكتبة كوبي كات بالاسماعيلية",
     "كوبي كات الإسماعيلية",
+    "كوبي كات بالإسماعيلية",
     "مكتبة كوبي كات",
     "كوبي كات",
     "عرايشية مصر الاسماعيلية",
@@ -116,11 +119,11 @@ export const metadata: Metadata = {
   },
   verification: {
     google:
-      process.env.GOOGLE_SITE_VERIFICATION ||
-      "45CwlQo0Fk1QKL796kCc0ZRO2Kd-n9cq2m1JHmzNjnk",
+      process.env.GOOGLE_SITE_VERIFICATION
   },
 };
 
+// Structured Data (JSON-LD) for LocalBusiness SEO
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
@@ -129,12 +132,12 @@ const jsonLd = {
   "image": `${baseUrl}/logo.jpg`,
   "logo": `${baseUrl}/logo.jpg`,
   "url": baseUrl,
-  "telephone": "+201210571251",
+  "telephone": `+${SITE_CONFIG.store.phoneIntl}`,
   "priceRange": "$$",
   "description": "مركز متكامل لخدمات التصوير والطباعة الرقمية، استوديو الصور الشخصية 4x6، تجهيز بطاقات الرقم القومي A5، تجليد الأبحاث، والمستلزمات المكتبية والمدرسية بالإسماعيلية.",
   "address": {
     "@type": "PostalAddress",
-    "streetAddress": "شارع الدقهلية بالقرب من مسجد المطافي أمام مركز نور الحياة - عرايشية مصر",
+    "streetAddress": SITE_CONFIG.store.address,
     "addressLocality": "الإسماعيلية",
     "addressRegion": "الإسماعيلية",
     "addressCountry": "EG"
@@ -154,12 +157,12 @@ const jsonLd = {
       "Saturday",
       "Sunday"
     ],
-    "opens": "08:30",
-    "closes": "23:30"
+    "opens": "09:00",
+    "closes": "22:00"
   },
   "sameAs": [
-    "https://wa.me/201210571251",
-    "https://www.facebook.com/p/%D9%83%D9%88%D8%A8%D9%89-%D9%83%D8%A7%D8%AA-100090709554990/"
+    `https://wa.me/${SITE_CONFIG.store.phoneIntl}`,
+    SITE_CONFIG.store.facebookUrl
   ]
 };
 

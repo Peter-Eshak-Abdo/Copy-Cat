@@ -19,6 +19,15 @@ interface PrintTask {
   createdAt: number;
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms?: string[];
+  readonly userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
 const STORAGE_KEY = "copycat_tasks_v1";
 
 const DEFAULT_TASKS: PrintTask[] = [];
@@ -132,7 +141,7 @@ export default function AdminDashboardPage() {
   const inProgressCount = tasks.filter((t) => t.status === "in_progress").length;
   const readyCount = tasks.filter((t) => t.status === "ready").length;
   const completedCount = tasks.filter((t) => t.status === "completed").length;
-  
+
   // إجمالي النسخ المطبوعة الفعلي من مهام اليوم الحقيقية
   const totalCopiesToday = tasks.reduce(
     (sum, t) => sum + (Number(t.completedCopies) || Number(t.totalCopies) || 0),
@@ -148,9 +157,15 @@ export default function AdminDashboardPage() {
   const cashAmount = Math.round(totalRevenueVal * 0.75).toLocaleString("ar-EG");
   const walletAmount = Math.round(totalRevenueVal * 0.25).toLocaleString("ar-EG");
 
-  const [bannerText, setBannerText] = useState(
-    "خصم خاص وتجهيز فوري لكروت الرقم القومي والشهادات وطباعة الأبحاث وسحب المستندات"
-  );
+  const [bannerText, setBannerText] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("copycat_announcement_banner");
+        if (saved && saved.trim()) return saved.trim();
+      } catch {}
+    }
+    return "خصم خاص وتجهيز فوري لكروت الرقم القومي والشهادات وطباعة الأبحاث وسحب المستندات";
+  });
   const [isEditingBanner, setIsEditingBanner] = useState(false);
   const [bannerInput, setBannerInput] = useState("");
 
@@ -159,23 +174,20 @@ export default function AdminDashboardPage() {
   const [printQrModal, setPrintQrModal] = useState<"stand" | "poster" | null>(null);
 
   // Desktop PWA Installation Hook for Library PC
-  const [pwaPrompt, setPwaPrompt] = useState<any>(null);
-  const [isPwaInstalled, setIsPwaInstalled] = useState(false);
+  const [pwaPrompt, setPwaPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isPwaInstalled, setIsPwaInstalled] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia("(display-mode: standalone)").matches;
+    }
+    return false;
+  });
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("copycat_announcement_banner");
-      if (saved && saved.trim()) setBannerText(saved.trim());
-    } catch {}
-
-    const handleBeforeInstall = (e: any) => {
+    const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
-      setPwaPrompt(e);
+      setPwaPrompt(e as BeforeInstallPromptEvent);
     };
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
-    if (typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches) {
-      setIsPwaInstalled(true);
-    }
     return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
   }, []);
 
@@ -186,6 +198,7 @@ export default function AdminDashboardPage() {
       if (choice.outcome === "accepted") {
         toast.success("تم تثبيت التطبيق بنجاح!", "لوحة إدارة مكتبة كوبي كات تعمل الآن كتطبيق مستقل على سطح المكتب.");
         setPwaPrompt(null);
+        setIsPwaInstalled(true);
       }
     } else {
       toast.info(
@@ -241,7 +254,7 @@ export default function AdminDashboardPage() {
             {/* Direct PWA Install for Library Computer */}
             <button
               onClick={handleInstallPwa}
-              className="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-gradient-to-r from-emerald-600/20 to-teal-600/20 hover:from-emerald-600/30 hover:to-teal-600/30 text-emerald-300 border border-emerald-500/40 font-bold text-xs transition-all shadow-sm active:scale-95 cursor-pointer"
+              className="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-linear-to-r from-emerald-600/20 to-teal-600/20 hover:from-emerald-600/30 hover:to-teal-600/30 text-emerald-300 border border-emerald-500/40 font-bold text-xs transition-all shadow-sm active:scale-95 cursor-pointer"
               title="تثبيت لوحة الأدمن كتطبيق مستقل على كمبيوتر المكتبة (PWA) يفتح مباشرة على /admin"
             >
               <span className="material-symbols-outlined text-lg text-emerald-400">desktop_windows</span>
@@ -438,7 +451,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Featured WhatsApp Print Hub & Store Counter Stand Card */}
-      <div className="rounded-2xl bg-gradient-to-r from-emerald-950/40 via-surface-container-low to-teal-950/30 p-space-md lg:p-space-lg mb-space-lg border border-emerald-500/30 shadow-xl flex flex-col lg:flex-row items-stretch gap-space-lg">
+      <div className="rounded-2xl bg-linear-to-r from-emerald-950/40 via-surface-container-low to-teal-950/30 p-space-md lg:p-space-lg mb-space-lg border border-emerald-500/30 shadow-xl flex flex-col lg:flex-row items-stretch gap-space-lg">
         {/* QR Code Graphic & Quick Actions */}
         <div className="flex flex-col sm:flex-row lg:flex-col items-center justify-center gap-space-md p-space-md bg-surface-container/60 rounded-xl border border-surface-container-high/60 shrink-0">
           <div className="relative w-36 h-36 sm:w-40 sm:h-40 rounded-xl overflow-hidden shadow-lg border-2 border-emerald-500/40 bg-white p-1">
@@ -657,33 +670,6 @@ export default function AdminDashboardPage() {
           </div>
         </Link>
 
-        {/* Tool 5 */}
-        <Link
-          href="/admin/school-sheets"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-primary/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                <span className="material-symbols-outlined text-2xl">school</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-primary">خلط عشوائي للمفردات</span>
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs font-bold">
-              مولد شيتات المفردات المدرسية
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              استخراج معاني الكلمات من كتب المدرسين، وتوليد نموذجين امتحانيين (نموذج أ / نموذج ب) بترتيب عشوائي وتصدير Word فوري.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              تشغيل الأداة
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">نموذج أ + نموذج ب</span>
-          </div>
-        </Link>
 
         {/* Tool 6 */}
         <Link

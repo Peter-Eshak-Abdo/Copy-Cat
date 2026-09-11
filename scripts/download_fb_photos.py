@@ -4,6 +4,7 @@ import time
 import argparse
 import hashlib
 import re
+import shutil
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -31,7 +32,8 @@ def is_likely_content_photo(url: str) -> bool:
     url_lower = url.lower()
     if any(blocked in url_lower for blocked in [
         "rsrc.php", "emoji.php", "static.xx.fbcdn.net",
-        "interncache", "/badges/", "/icons/", "favicon"
+        "interncache", "/badges/", "/icons/", "favicon",
+        "p50x50", "s50x50", "p32x32", "s32x32", "p100x100"
     ]):
         return False
 
@@ -50,7 +52,7 @@ def is_authenticated(context) -> bool:
 
 
 def setup_browser(playwright_instance, headless=False):
-    """Launches isolated Chromium with persistent session storage."""
+    """Launches Chromium with persistent session storage."""
     profile_path = os.path.abspath(USER_DATA_DIR)
     os.makedirs(profile_path, exist_ok=True)
 
@@ -67,13 +69,13 @@ def setup_browser(playwright_instance, headless=False):
     }
 
     try:
-        print("[+] جاري تشغيل متصفح Chromium المخصص...")
+        print("[+] جاري تشغيل متصفح Chromium المخصص لحفظ جلسة فيسبوك...")
         context = playwright_instance.chromium.launch_persistent_context(**kwargs)
         print("[✓] تم تشغيل المتصفح بنجاح!")
         return context
     except Exception as e:
-        print(f"[!] حدث خطأ أثناء تشغيل Chromium: {e}")
-        print("[+] محاولة تشغيل متصفح Edge كخيار بديل...")
+        print(f"[!] تنبيه تشغيل Chromium: {e}")
+        print("[+] محاولة استخدام متصفح Edge كبديل...")
         kwargs["channel"] = "msedge"
         return playwright_instance.chromium.launch_persistent_context(**kwargs)
 
@@ -88,15 +90,16 @@ def dismiss_cookie_popups(page):
         'button:has-text("السماح بجميع ملفات تعريف الارتباط")',
         'button:has-text("قبول الكل")',
         'button:has-text("Allow all cookies")',
-        'button:has-text("Only allow essential cookies")'
+        'button:has-text("Only allow essential cookies")',
+        'div[aria-label="إغلاق"]',
+        'div[aria-label="Close"]'
     ]
     for sel in cookie_buttons:
         try:
             loc = page.locator(sel).first
-            if loc.is_visible(timeout=1500):
+            if loc.is_visible(timeout=1000):
                 loc.click()
-                print("[+] تم إغلاق نافذة ملفات تعريف الارتباط (Cookies)")
-                time.sleep(1)
+                time.sleep(0.5)
                 break
         except Exception:
             pass
@@ -106,99 +109,113 @@ def check_and_login(page, context, email, password):
     """Navigates to Facebook, logs in, and verifies session."""
     print("[+] فتح موقع فيسبوك للتحقق من حالة الحساب...")
     page.goto("https://www.facebook.com/", wait_until="domcontentloaded", timeout=60000)
-    time.sleep(3)
+    time.sleep(2)
     dismiss_cookie_popups(page)
 
-    # Check if already authenticated
     if is_authenticated(context):
-        print("[✓] الحساب مسجل الدخول بالفعل وجاهز للاستخدام!")
+        print("[✓] جلسة فيسبوك نشطة ومسجلة الدخول مسبقاً!")
         return
 
-    if not email:
-        email = input("[?] يرجى إدخال بريد فيسبوك: ").strip()
-    if not password:
-        import getpass
-        password = getpass.getpass("[?] يرجى إدخال كلمة المرور: ").strip()
+    if email and password:
+        print(f"[+] محاولة تسجيل الدخول التلقائي للحساب: {email}...")
+        try:
+            email_field = page.locator('#email, input[name="email"]').first
+            if email_field.is_visible(timeout=2500):
+                email_field.fill(email)
+                time.sleep(0.5)
 
-    print(f"\n[+] محاولة تسجيل الدخول بالحساب...")
-    try:
-        # Fill email
-        email_field = page.locator('#email, input[name="email"]').first
-        if email_field.is_visible(timeout=3000):
-            email_field.fill(email)
-            time.sleep(0.8)
+            pass_field = page.locator('#pass, input[name="pass"]').first
+            if pass_field.is_visible(timeout=2500):
+                pass_field.fill(password)
+                time.sleep(0.5)
 
-        # Fill password (try primary password)
-        pass_field = page.locator('#pass, input[name="pass"]').first
-        if pass_field.is_visible(timeout=3000):
-            pass_field.fill(password)
-            time.sleep(0.8)
+            login_btn = page.locator('button[name="login"], #loginbutton, button[type="submit"]').first
+            if login_btn.is_visible(timeout=2000):
+                login_btn.click()
+            else:
+                page.keyboard.press("Enter")
 
-        # Submit
-        login_btn = page.locator('button[name="login"], #loginbutton, button[type="submit"]').first
-        if login_btn.is_visible(timeout=2000):
-            login_btn.click()
-        else:
-            page.keyboard.press("Enter")
+            time.sleep(4)
+            dismiss_cookie_popups(page)
+        except Exception as e:
+            print(f"[!] ملاحظة الملء التلقائي: {e}")
 
-        print("[+] تم إرسال بيانات الدخول، جاري انتظار استجابة فيسبوك...")
-        time.sleep(5)
-        dismiss_cookie_popups(page)
-
-    except Exception as e:
-        print(f"[!] ملاحظة أثناء محاولة الملء التلقائي: {e}")
-
-    # Check if login succeeded or if user intervention is required
     if is_authenticated(context):
         print("[✓] تم تسجيل الدخول بنجاح تام!")
         return
 
-    # Check if Facebook shows wrong password or error
-    error_texts = []
-    for sel in ['div[role="alert"]', '#error_box', '.login_error_box', '_9ay7']:
-        try:
-            loc = page.locator(sel).first
-            if loc.is_visible(timeout=1000):
-                txt = loc.inner_text().strip()
-                if txt:
-                    error_texts.append(txt)
-        except Exception:
-            pass
+    print("\n" + "=" * 70)
+    print("👉 نافذة المتصفح مفتوحة أمامك الآن على شاشة الكمبيوتر:")
+    print("   1. يمكنك مراجعة الإيميل والباسورد أو إدخال كود الأمان داخل المتصفح مباشرة.")
+    print("   2. بمجرد فتح الصفحة الرئيسية، سيكتشف الاسكربت الجلسة ويكمل السحب آلياً.")
+    print("=" * 70)
 
-    print("\n" + "="*75)
-    if error_texts:
-        print(f"⚠️ رسالة فيسبوك: {error_texts[0]}")
-    else:
-        print("⚠️ لم يتم إتمام تسجيل الدخول تلقائياً (قد يتطلب فيسبوك كود تحقق 2FA أو تصحيح كلمة المرور).")
-
-    print("\n👉 نافذة المتصفح مفتوحة أمامك الآن على شاشة الكمبيوتر:")
-    print("   1. يمكنك مراجعة كتابة الإيميل والباسورد أو إدخال كود الأمان داخل نافذة المتصفح مباشرة.")
-    print("   2. بمجرد تسجيل الدخول وظهور صفحة فيسبوك، سيكتشف الاسكربت ذلك تلقائياً ويكمل العمل فوراً!")
-    print("="*75)
-
-    # Live polling until user finishes login
-    print("[*] بانتظار إتمام تسجيل الدخول داخل المتصفح...", end="", flush=True)
     wait_time = 0
-    max_wait = 300 # wait up to 5 minutes
-    while wait_time < max_wait:
+    while wait_time < 300:
         if is_authenticated(context):
-            print("\n[✓] رائع! تم التحقق من نجاح تسجيل الدخول وحفظ الجلسة!")
-            time.sleep(2)
+            print("\n[✓] تم تأكيد نجاح تسجيل الدخول وحفظ الجلسة!")
+            time.sleep(1.5)
             return
         time.sleep(2)
         wait_time += 2
         print(".", end="", flush=True)
 
-    print("\n[!] انتهى وقت الانتظار. سيستمر الاسكربت في محاولة سحب الصور المتاحة.")
+    print("\n[!] متابعة العمل ومحاولة سحب الصور المتاحة علنياً...")
 
 
-def collect_images_from_page(page, context, target_url, output_dir, max_scrolls=60):
-    """Visits page sections, scrolls continuously, intercepts and downloads photos."""
+def extract_all_album_links(page):
+    """Scrapes the photos_albums tab and returns unique album URLs."""
+    album_urls = set()
+    print("[+] جاري فحص واكتشاف كافة ألبومات صور المكتبة...")
+    try:
+        page.goto("https://www.facebook.com/100090709554990/photos_albums", wait_until="domcontentloaded", timeout=45000)
+        time.sleep(3)
+        dismiss_cookie_popups(page)
+
+        # Scroll albums list
+        for _ in range(8):
+            page.evaluate("window.scrollBy(0, 1000);")
+            time.sleep(1.2)
+
+        links = page.eval_on_selector_all(
+            'a[href*="/media/set/"], a[href*="set=a."]',
+            'elements => elements.map(e => e.href)'
+        )
+        for l in links:
+            if l and "facebook.com" in l:
+                album_urls.add(l)
+
+        print(f"[✓] تم اكتشاف {len(album_urls)} ألبوم مستقل للصور!")
+    except Exception as e:
+        print(f"[!] ملاحظة عند استخراج الألبومات: {e}")
+
+    return list(album_urls)
+
+
+def collect_images_from_page(page, context, target_url, output_dir, max_scrolls=80, wipe_first=False):
+    """Visits page sections, scrolls continuously, intercepts and downloads photos without duplicates."""
     os.makedirs(output_dir, exist_ok=True)
+
+    if wipe_first:
+        print("\n" + "=" * 70)
+        print("⚠️ تم تفعيل خيار المسح النظيف (--wipe-first):")
+        print(f"   جاري تفريغ المجلد '{output_dir}' للبدء على نضافة كاملة بدون أي تكرارات...")
+        deleted_count = 0
+        for item in os.listdir(output_dir):
+            item_path = os.path.join(output_dir, item)
+            try:
+                if os.path.isfile(item_path):
+                    os.unlink(item_path)
+                    deleted_count += 1
+            except Exception:
+                pass
+        print(f"[✓] تم مسح {deleted_count} ملف قديم بنجاح.")
+        print("=" * 70)
+
     captured_urls = set()
     downloaded_hashes = set()
 
-    # Pre-index existing files to avoid re-downloading
+    # Pre-index existing files to prevent duplicates
     for f in os.listdir(output_dir):
         fp = os.path.join(output_dir, f)
         if os.path.isfile(fp) and f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
@@ -208,95 +225,111 @@ def collect_images_from_page(page, context, target_url, output_dir, max_scrolls=
             except Exception:
                 pass
 
-    print(f"[+] الصور الموجودة مسبقاً في المجلد: {len(downloaded_hashes)} صورة")
+    print(f"[+] الصور المعتمدة مسبقاً في المجلد: {len(downloaded_hashes)} صورة")
 
-    # Hook network responses to catch full-res images directly from CDN
+    # 1. Hook Network Responses: Listen to CDN images AND GraphQL payloads
     def handle_response(response):
         try:
             url = response.url
             content_type = response.headers.get("content-type", "")
+
+            # Direct high-res CDN images
             if ("image" in content_type or ".fbcdn.net" in url) and is_likely_content_photo(url):
-                if not any(size_tag in url for size_tag in ["/p50x50/", "/s50x50/", "/p32x32/", "/s32x32/", "/p100x100/"]):
-                    captured_urls.add(url)
+                captured_urls.add(url)
+
+            # Deep GraphQL interception: extracts high-res image URLs from JSON stream
+            if "/api/graphql/" in url or "graphql" in url:
+                try:
+                    body_text = response.text()
+                    matches = re.findall(r'https:[^"\\\s]+fbcdn\.net[^"\\\s]+', body_text)
+                    for m in matches:
+                        clean_m = m.replace('\\/', '/').replace('&amp;', '&')
+                        if is_likely_content_photo(clean_m):
+                            captured_urls.add(clean_m)
+                except Exception:
+                    pass
         except Exception:
             pass
 
     page.on("response", handle_response)
 
-    # Sections to visit for comprehensive photo scraping
-    urls_to_visit = [
+    # 2. Discover all individual albums
+    discovered_albums = extract_all_album_links(page)
+
+    # 3. Core sections to crawl
+    core_urls = [
         target_url,
         "https://www.facebook.com/100090709554990/photos",
         "https://www.facebook.com/100090709554990/photos_by",
-        "https://www.facebook.com/100090709554990/photos_albums"
     ]
 
-    for section_url in urls_to_visit:
-        print("\n" + "-"*65)
-        print(f"[+] جاري تصفح وسحب الصور من: {section_url}")
-        print("-"*65)
+    all_targets = core_urls + discovered_albums
+
+    for section_idx, section_url in enumerate(all_targets, 1):
+        print("\n" + "-" * 70)
+        print(f"[+] [{section_idx}/{len(all_targets)}] جاري سحب الصور من: {section_url}")
+        print("-" * 70)
         try:
             page.goto(section_url, wait_until="domcontentloaded", timeout=60000)
-            time.sleep(3)
+            time.sleep(2.5)
+            dismiss_cookie_popups(page)
         except Exception as e:
             print(f"[!] ملاحظة عند فتح {section_url}: {e}")
             continue
 
         last_height = 0
         consecutive_no_change = 0
+        scroll_limit = max_scrolls if section_idx <= 3 else 30
 
-        for scroll_idx in range(1, max_scrolls + 1):
+        for scroll_idx in range(1, scroll_limit + 1):
             try:
-                img_elements = page.eval_on_selector_all(
+                # Capture current DOM images before virtualization unmounts them
+                dom_images = page.eval_on_selector_all(
                     'img',
                     '''elements => elements.map(el => ({
                         src: el.src,
                         currentSrc: el.currentSrc,
                         srcset: el.srcset,
-                        width: el.naturalWidth || el.width,
-                        height: el.naturalHeight || el.height
+                        w: el.naturalWidth || el.width,
+                        h: el.naturalHeight || el.height
                     }))'''
                 )
-                for item in img_elements:
-                    for src in [item.get('src'), item.get('currentSrc')]:
-                        if src and is_likely_content_photo(src):
-                            w = item.get('width', 0)
-                            h = item.get('height', 0)
-                            if w >= 150 or h >= 150 or (w == 0 and h == 0):
-                                captured_urls.add(src)
+                for item in dom_images:
+                    for s in [item.get('src'), item.get('currentSrc')]:
+                        if s and is_likely_content_photo(s):
+                            captured_urls.add(s)
 
                     srcset = item.get('srcset')
                     if srcset:
-                        parts = [p.strip().split(' ') for p in srcset.split(',') if p.strip()]
-                        for part in parts:
-                            if len(part) > 0 and is_likely_content_photo(part[0]):
-                                captured_urls.add(part[0])
-
+                        for chunk in srcset.split(','):
+                            parts = chunk.strip().split(' ')
+                            if len(parts) > 0 and is_likely_content_photo(parts[0]):
+                                captured_urls.add(parts[0])
             except Exception:
                 pass
 
-            # Scroll smoothly
-            page.evaluate("window.scrollBy(0, 1200);")
-            time.sleep(1.8)
+            # Smooth scroll down
+            page.evaluate("window.scrollBy(0, 1100);")
+            time.sleep(1.4)
 
             current_height = page.evaluate("document.body.scrollHeight")
-            print(f"  [تمرير {scroll_idx}/{max_scrolls}] - تم رصد {len(captured_urls)} رابط صورة حتى الآن...", end="\r")
+            print(f"  [تمرير {scroll_idx}/{scroll_limit}] - تم التقاط {len(captured_urls)} رابط صورة حتى الآن...", end="\r")
 
             if current_height == last_height:
                 consecutive_no_change += 1
-                if consecutive_no_change >= 4:
-                    print(f"\n[✓] تم الوصول لنهاية محتوى هذا القسم.")
+                if consecutive_no_change >= 5:
+                    print(f"\n[✓] اكتمل تصفح كامل محتوى هذا القسم.")
                     break
             else:
                 consecutive_no_change = 0
                 last_height = current_height
 
-        print(f"\n[+] إجمالي روابط الصور الملتقطة بعد القسم: {len(captured_urls)}")
+        print(f"\n[+] إجمالي الروابط المرصودة حتى الآن: {len(captured_urls)}")
 
-    # Download high-res images
-    print("\n" + "="*65)
-    print(f"[+] بدء تحميل الصور وفحص دقتها وجودتها في المجلد: '{output_dir}'...")
-    print("="*65)
+    # 4. High-Res Filter, Download & Strict Content Deduplication
+    print("\n" + "=" * 70)
+    print(f"[+] بدء تحميل وفحص جودة {len(captured_urls)} صورة في المجلد: '{output_dir}'...")
+    print("=" * 70)
 
     session = requests.Session()
     session.headers.update({
@@ -312,7 +345,7 @@ def collect_images_from_page(page, context, target_url, output_dir, max_scrolls=
     for img_url in captured_urls:
         try:
             res = session.get(img_url, timeout=20)
-            if res.status_code != 200 or len(res.content) < 15000:
+            if res.status_code != 200 or len(res.content) < 14000:
                 continue
 
             # Check dimensions with PIL
@@ -321,9 +354,11 @@ def collect_images_from_page(page, context, target_url, output_dir, max_scrolls=
                 img = Image.open(img_io)
                 width, height = img.size
 
+                # Discard thumbnails or icons
                 if width < 220 and height < 220:
                     continue
 
+                # Strict byte-level deduplication
                 content_hash = hashlib.md5(res.content).hexdigest()
                 if content_hash in downloaded_hashes:
                     continue
@@ -340,7 +375,7 @@ def collect_images_from_page(page, context, target_url, output_dir, max_scrolls=
                 downloaded_hashes.add(content_hash)
                 counter += 1
                 new_saved += 1
-                print(f"[{counter-1}] تم حفظ صورة: {filename} ({width}x{height} بكسل - {len(res.content)//1024} KB)")
+                print(f"[{counter-1}] ✓ تم حفظ: {filename} ({width}x{height} بكسل - {len(res.content)//1024} KB)")
 
             except Exception:
                 continue
@@ -348,32 +383,33 @@ def collect_images_from_page(page, context, target_url, output_dir, max_scrolls=
         except Exception:
             continue
 
-    print("\n" + "="*65)
-    print(f"[✓] اكتملت المهمة!")
-    print(f"  • صور جديدة تم تحميلها: {new_saved}")
-    print(f"  • إجمالي الصور في المجلد '{output_dir}': {len(downloaded_hashes)}")
-    print(f"  • مسار المجلد: {os.path.abspath(output_dir)}")
-    print("="*65)
+    print("\n" + "=" * 70)
+    print(f"[✓] اكتملت المهمة بنجاح تام وبدون أي تكرارات!")
+    print(f"  • صور جديدة تم تحميلها وحفظها: {new_saved}")
+    print(f"  • إجمالي الصور المعتمدة في بنك الصور: {len(downloaded_hashes)}")
+    print(f"  • مسار المجلد على الموقع: {os.path.abspath(output_dir)}")
+    print("=" * 70)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Facebook Page Photos Downloader for Copy-Cat")
+    parser = argparse.ArgumentParser(description="Facebook Photos Scraper & Pool Uploader for Copy-Cat")
     parser.add_argument("--url", default=DEFAULT_PAGE_URL, help="Facebook page URL")
     parser.add_argument("--email", default=DEFAULT_EMAIL, help="Facebook login email")
     parser.add_argument("--password", default=DEFAULT_PASSWORD_1, help="Facebook login password")
-    parser.add_argument("--out", default=DEFAULT_OUTPUT_DIR, help="Output folder for images")
-    parser.add_argument("--scrolls", type=int, default=50, help="Max scrolls per section")
-    parser.add_argument("--headless", action="store_true", help="Run browser in headless mode")
+    parser.add_argument("--out", default=DEFAULT_OUTPUT_DIR, help="Output directory")
+    parser.add_argument("--scrolls", type=int, default=80, help="Max scrolls per section")
+    parser.add_argument("--headless", action="store_true", help="Run in headless mode")
+    parser.add_argument("--wipe-first", action="store_true", help="Wipe existing pool before downloading fresh")
 
     args = parser.parse_args()
 
-    print("="*75)
-    print("  🚀 Copy-Cat Facebook Photos Downloader | أداة سحب صور فيسبوك")
-    print("="*75)
+    print("=" * 75)
+    print("  🚀 Copy-Cat Facebook Photos Downloader | أداة سحب صور فيسبوك المطورة")
+    print("=" * 75)
     print(f"• الصفحة المستهدفة: {args.url}")
-    print(f"• الحساب: {args.email}")
-    print(f"• مجلد الحفظ: {os.path.abspath(args.out)}")
-    print("="*75)
+    print(f"• مجلد الحفظ على الموقع: {os.path.abspath(args.out)}")
+    print(f"• وضع المسح النظيف (--wipe-first): {'مفعّل' if args.wipe_first else 'غير مفعّل (دمج وتفادي التكرار)'}")
+    print("=" * 75)
 
     with sync_playwright() as playwright:
         context = setup_browser(playwright, headless=args.headless)
@@ -381,9 +417,16 @@ def main():
 
         try:
             check_and_login(page, context, args.email, args.password)
-            collect_images_from_page(page, context, args.url, args.out, max_scrolls=args.scrolls)
+            collect_images_from_page(
+                page,
+                context,
+                args.url,
+                args.out,
+                max_scrolls=args.scrolls,
+                wipe_first=args.wipe_first
+            )
         finally:
-            print("[+] جاري حفظ الجلسة وإغلاق المتصفح...")
+            print("[+] حفظ الجلسة وإغلاق المتصفح...")
             context.close()
 
 

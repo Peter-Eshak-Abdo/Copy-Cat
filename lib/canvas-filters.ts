@@ -155,8 +155,9 @@ export function warpPerspectiveQuad(
   const rightEdge = Math.hypot(p2.x - p1.x, p2.y - p1.y);
 
   const calcW = Math.round(Math.max(topEdge, bottomEdge, 800));
+  const calcH = Math.round(Math.max(leftEdge, rightEdge, calcW / 1.58577));
   const destW = targetWidth || calcW;
-  const destH = targetHeight || Math.round(destW / 1.58577);
+  const destH = targetHeight || calcH;
 
   const outCanvas = document.createElement("canvas");
   outCanvas.width = destW;
@@ -275,9 +276,129 @@ export function warpPerspectiveQuad(
 }
 
 /**
- * CamScanner Pro Magic Color Filter:
- * Automatically whitens document backgrounds, removes phone shadows,
- * deepens national ID typography and black ink, and keeps stamps/eagle saturated!
+ * Estimates local background illumination field B(x, y) using downsampled max-pooling
+ * and two-pass box blurring. This captures the smooth shadow envelope while ignoring dark text.
+ */
+function estimateIlluminationBackground(
+  lum: Float32Array,
+  w: number,
+  h: number,
+  radius = 36
+): Float32Array {
+  const step = 4;
+  const dw = Math.ceil(w / step);
+  const dh = Math.ceil(h / step);
+  const downLum = new Float32Array(dw * dh);
+
+  // Block-max to ignore high-frequency dark text and lines
+  for (let dy = 0; dy < dh; dy++) {
+    const syStart = dy * step;
+    const syEnd = Math.min(h, syStart + step);
+    for (let dx = 0; dx < dw; dx++) {
+      let maxVal = 0;
+      const sxStart = dx * step;
+      const sxEnd = Math.min(w, sxStart + step);
+      for (let sy = syStart; sy < syEnd; sy++) {
+        const rowOffset = sy * w;
+        for (let sx = sxStart; sx < sxEnd; sx++) {
+          const v = lum[rowOffset + sx];
+          if (v > maxVal) maxVal = v;
+        }
+      }
+      downLum[dy * dw + dx] = maxVal;
+    }
+  }
+
+  // Two-pass box blur on downsampled grid
+  const rDown = Math.max(2, Math.round(radius / step));
+  const pass1 = new Float32Array(dw * dh);
+
+  // Horizontal blur
+  for (let y = 0; y < dh; y++) {
+    const rowOffset = y * dw;
+    let sum = 0;
+    let count = 0;
+    for (let x = 0; x < Math.min(rDown, dw); x++) {
+      sum += downLum[rowOffset + x];
+      count++;
+    }
+    for (let x = 0; x < dw; x++) {
+      const addX = x + rDown;
+      if (addX < dw) {
+        sum += downLum[rowOffset + addX];
+        count++;
+      }
+      const remX = x - rDown - 1;
+      if (remX >= 0) {
+        sum -= downLum[rowOffset + remX];
+        count--;
+      }
+      pass1[rowOffset + x] = count > 0 ? sum / count : downLum[rowOffset + x];
+    }
+  }
+
+  // Vertical blur
+  const pass2 = new Float32Array(dw * dh);
+  for (let x = 0; x < dw; x++) {
+    let sum = 0;
+    let count = 0;
+    for (let y = 0; y < Math.min(rDown, dh); y++) {
+      sum += pass1[y * dw + x];
+      count++;
+    }
+    for (let y = 0; y < dh; y++) {
+      const addY = y + rDown;
+      if (addY < dh) {
+        sum += pass1[addY * dw + x];
+        count++;
+      }
+      const remY = y - rDown - 1;
+      if (remY >= 0) {
+        sum -= pass1[remY * dw + x];
+        count--;
+      }
+      pass2[y * dw + x] = count > 0 ? sum / count : pass1[y * dw + x];
+    }
+  }
+
+  // Upsample back to full size using bilinear interpolation
+  const bg = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const gy = y / step;
+    const y0 = Math.floor(gy);
+    const y1 = Math.min(dh - 1, y0 + 1);
+    const fy = gy - y0;
+    const rowOffset = y * w;
+
+    for (let x = 0; x < w; x++) {
+      const gx = x / step;
+      const x0 = Math.floor(gx);
+      const x1 = Math.min(dw - 1, x0 + 1);
+      const fx = gx - x0;
+
+      const v00 = pass2[y0 * dw + x0];
+      const v10 = pass2[y0 * dw + x1];
+      const v01 = pass2[y1 * dw + x0];
+      const v11 = pass2[y1 * dw + x1];
+
+      const val =
+        v00 * (1 - fx) * (1 - fy) +
+        v10 * fx * (1 - fy) +
+        v01 * (1 - fx) * fy +
+        v11 * fx * fy;
+
+      bg[rowOffset + x] = Math.max(30, val); // avoid division by zero
+    }
+  }
+
+  return bg;
+}
+
+/**
+ * CamScanner Pro Magic Color Filter (Retinex Illumination Compensation):
+ * Automatically removes phone shadows, room lighting gradients, and yellow tints.
+ * Makes paper/plastic background uniform studio white, while national numbers and text
+ * stay pitch black, and colored seals/photos maintain 100% natural vibrancy!
  */
 export function applyCamScannerMagicColor(canvas: HTMLCanvasElement): HTMLCanvasElement {
   const ctx = canvas.getContext("2d");
@@ -288,40 +409,203 @@ export function applyCamScannerMagicColor(canvas: HTMLCanvasElement): HTMLCanvas
   const imgData = ctx.getImageData(0, 0, w, h);
   const d = imgData.data;
 
-  for (let i = 0; i < d.length; i += 4) {
-    const r = d[i];
-    const g = d[i + 1];
-    const b = d[i + 2];
-    const [hue, sat, lum] = rgbToHsl(r, g, b);
+  // 1. Calculate luminance buffer
+  const lum = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    const idx = i * 4;
+    lum[i] = 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
+  }
 
-    let newLum = lum;
-    let newSat = sat;
+  // 2. Estimate background illumination field B(x, y)
+  const bg = estimateIlluminationBackground(lum, w, h, 36);
 
-    // Document background lightening curve
-    if (lum > 0.58) {
-      const ratio = (lum - 0.58) / 0.42;
-      newLum = Math.min(1.0, lum + 0.38 * Math.pow(ratio, 0.7));
-      // Desaturate mild yellow/grey cast in background
-      if (sat < 0.28) {
-        newSat = Math.max(0, sat * (1 - ratio * 0.75));
+  // 3. Normalize pixels by local background (cancels out shadows completely)
+  for (let y = 0; y < h; y++) {
+    const rowOffset = y * w;
+    for (let x = 0; x < w; x++) {
+      const pIdx = rowOffset + x;
+      const idx = pIdx * 4;
+
+      const r = d[idx];
+      const g = d[idx + 1];
+      const b = d[idx + 2];
+      const origL = lum[pIdx];
+      const localBg = bg[pIdx];
+
+      // Normalized luminance relative to local background (0 to ~1.1)
+      const ratio = localBg > 10 ? origL / localBg : origL / 255;
+
+      let targetL: number;
+      if (ratio > 0.82) {
+        // Background region: stretch to crisp pure white (#FFFFFF)
+        const whiteRatio = (ratio - 0.82) / 0.18;
+        targetL = Math.min(255, 235 + whiteRatio * 20);
+      } else if (ratio < 0.35) {
+        // Dark text, barcode, national number: deepen to crisp black
+        targetL = Math.max(0, ratio * 200 * 0.75);
+      } else {
+        // Midtones: smooth tone curve
+        targetL = Math.min(255, Math.max(0, 50 + (ratio - 0.35) * (185 / 0.47)));
       }
-    } else if (lum < 0.26) {
-      // National ID digits and ink deepening
-      newLum = Math.max(0, lum * 0.82);
-      newSat = Math.min(1.0, sat * 1.15);
-    } else {
-      // Midtones (eagle, colors, portrait)
-      newSat = Math.min(1.0, sat * 1.08);
-    }
 
-    const [nr, ng, nb] = hslToRgb(hue, newSat, newLum);
-    d[i] = nr;
-    d[i + 1] = ng;
-    d[i + 2] = nb;
+      // Preserve colors (eagle seal, stamps, face) using HSL
+      const [hue, sat] = rgbToHsl(r, g, b);
+      // Mildly desaturate near-white paper, boost colored features
+      let newSat = sat;
+      if (targetL > 220) {
+        newSat = Math.max(0, sat * 0.3); // remove yellow/gray background cast
+      } else if (sat > 0.15) {
+        newSat = Math.min(1.0, sat * 1.15); // preserve seal and photo colors
+      }
+
+      const [nr, ng, nb] = hslToRgb(hue, newSat, targetL / 255);
+      d[idx] = nr;
+      d[idx + 1] = ng;
+      d[idx + 2] = nb;
+    }
   }
 
   ctx.putImageData(imgData, 0, 0);
   return canvas;
+}
+
+/**
+ * Automatically detects the 4 corners of an ID card on a desk or background.
+ * Looks for the largest quadrilateral convex polygon with standard ~1.58:1 aspect ratio.
+ */
+export function detectCardCorners(sourceCanvas: HTMLCanvasElement): QuadCorners {
+  const sw = sourceCanvas.width;
+  const sh = sourceCanvas.height;
+
+  // Default fallback quad (inset 5%)
+  const defaultQuad: QuadCorners = {
+    tl: { x: 0.05, y: 0.08 },
+    tr: { x: 0.95, y: 0.08 },
+    br: { x: 0.95, y: 0.92 },
+    bl: { x: 0.05, y: 0.92 },
+  };
+
+  try {
+    const sCtx = sourceCanvas.getContext("2d");
+    if (!sCtx) return defaultQuad;
+
+    // Fast downsample to 240x160 for rapid boundary analysis
+    const dw = 240;
+    const dh = 160;
+    const smallCanvas = document.createElement("canvas");
+    smallCanvas.width = dw;
+    smallCanvas.height = dh;
+    const smallCtx = smallCanvas.getContext("2d");
+    if (!smallCtx) return defaultQuad;
+    smallCtx.drawImage(sourceCanvas, 0, 0, dw, dh);
+
+    const imgData = smallCtx.getImageData(0, 0, dw, dh);
+    const d = imgData.data;
+
+    // Compute luminance and edge gradient
+    const lum = new Float32Array(dw * dh);
+    for (let i = 0; i < dw * dh; i++) {
+      const idx = i * 4;
+      lum[i] = 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
+    }
+
+    // Sobel gradient magnitude
+    const grad = new Float32Array(dw * dh);
+    let maxGrad = 0;
+    for (let y = 1; y < dh - 1; y++) {
+      for (let x = 1; x < dw - 1; x++) {
+        const gx =
+          lum[(y - 1) * dw + x + 1] +
+          2 * lum[y * dw + x + 1] +
+          lum[(y + 1) * dw + x + 1] -
+          (lum[(y - 1) * dw + x - 1] +
+            2 * lum[y * dw + x - 1] +
+            lum[(y + 1) * dw + x - 1]);
+        const gy =
+          lum[(y + 1) * dw + x - 1] +
+          2 * lum[(y + 1) * dw + x] +
+          lum[(y + 1) * dw + x + 1] -
+          (lum[(y - 1) * dw + x - 1] +
+            2 * lum[(y - 1) * dw + x] +
+            lum[(y - 1) * dw + x + 1]);
+        const gMag = Math.hypot(gx, gy);
+        grad[y * dw + x] = gMag;
+        if (gMag > maxGrad) maxGrad = gMag;
+      }
+    }
+
+    const threshold = maxGrad * 0.28;
+    const edgePoints: Array<{ x: number; y: number }> = [];
+
+    for (let y = 8; y < dh - 8; y++) {
+      for (let x = 8; x < dw - 8; x++) {
+        if (grad[y * dw + x] > threshold) {
+          edgePoints.push({ x: x / dw, y: y / dh });
+        }
+      }
+    }
+
+    if (edgePoints.length < 50) {
+      return defaultQuad;
+    }
+
+    // Find 4 extreme points for the quadrilateral
+    let tl = { x: 1, y: 1 };
+    let tr = { x: 0, y: 1 };
+    let br = { x: 0, y: 0 };
+    let bl = { x: 1, y: 0 };
+
+    let minSum = Infinity;
+    let maxSum = -Infinity;
+    let minDiff = Infinity;
+    let maxDiff = -Infinity;
+
+    for (const pt of edgePoints) {
+      const sum = pt.x + pt.y;
+      const diff = pt.x - pt.y;
+
+      if (sum < minSum) {
+        minSum = sum;
+        tl = pt;
+      }
+      if (sum > maxSum) {
+        maxSum = sum;
+        br = pt;
+      }
+      if (diff > maxDiff) {
+        maxDiff = diff;
+        tr = pt;
+      }
+      if (diff < minDiff) {
+        minDiff = diff;
+        bl = pt;
+      }
+    }
+
+    // Sanity check: Ensure points form a plausible convex polygon spanning >25% area
+    const widthTop = tr.x - tl.x;
+    const widthBottom = br.x - bl.x;
+    const heightLeft = bl.y - tl.y;
+    const heightRight = br.y - tr.y;
+
+    if (
+      widthTop > 0.3 &&
+      widthBottom > 0.3 &&
+      heightLeft > 0.2 &&
+      heightRight > 0.2
+    ) {
+      return {
+        tl: { x: Math.max(0, Math.min(1, tl.x)), y: Math.max(0, Math.min(1, tl.y)) },
+        tr: { x: Math.max(0, Math.min(1, tr.x)), y: Math.max(0, Math.min(1, tr.y)) },
+        br: { x: Math.max(0, Math.min(1, br.x)), y: Math.max(0, Math.min(1, br.y)) },
+        bl: { x: Math.max(0, Math.min(1, bl.x)), y: Math.max(0, Math.min(1, bl.y)) },
+      };
+    }
+
+    return defaultQuad;
+  } catch {
+    return defaultQuad;
+  }
 }
 
 /**
@@ -365,7 +649,6 @@ export function processImageOnCanvas(
     contrast = 100,
     sharpness = 0,
     camScannerMode = false,
-    screenClarifierMode = false,
     grayscale = false,
     fineAngle = 0,
     preserveColors = true, // Default to true for authentic ID card & photo colors

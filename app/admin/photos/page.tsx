@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -14,14 +14,10 @@ import {
   RefreshCw,
   X,
   Sparkles,
-  ArrowRight,
-  Filter,
   Eye,
-  ExternalLink,
   PackageCheck,
   Check,
   Loader2,
-  Share2,
   Wand2,
   Sliders,
   Bot,
@@ -188,15 +184,15 @@ export default function PhotoPoolPage() {
       } else {
         toast.error("فشل الحفظ", data.error || "تعذر الحفظ في البنك");
       }
-    } catch (err: any) {
-      toast.error("خطأ", err.message || "فشل الاتصال");
+    } catch (err) {
+      toast.error("خطأ", (err as Error).message || "فشل الاتصال");
     } finally {
       setIsEnhancingProcess(false);
     }
   };
 
   // Fetch photos from API
-  const fetchPhotos = async () => {
+  const fetchPhotos = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await fetch("/api/admin/photos");
@@ -211,32 +207,36 @@ export default function PhotoPoolPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   // Load catalog and existing links on mount
   useEffect(() => {
-    fetchPhotos();
+    async function loadInitialData() {
+      await fetchPhotos();
 
-    // Load catalog from localStorage
-    try {
-      const CURRENT_CACHE_KEY = "copycat_inventory_v8_local_catalog";
-      const saved = localStorage.getItem(CURRENT_CACHE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setCatalogItems(parsed);
+      // Load catalog from localStorage
+      try {
+        const CURRENT_CACHE_KEY = "copycat_inventory_v8_local_catalog";
+        const saved = localStorage.getItem(CURRENT_CACHE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCatalogItems(parsed);
+          }
         }
-      }
-    } catch {}
+      } catch {}
 
-    // Load links map from localStorage
-    try {
-      const savedLinks = localStorage.getItem("copycat_photo_pool_links");
-      if (savedLinks) {
-        setLinkMap(JSON.parse(savedLinks));
-      }
-    } catch {}
-  }, []);
+      // Load links map from localStorage
+      try {
+        const savedLinks = localStorage.getItem("copycat_photo_pool_links");
+        if (savedLinks) {
+          setLinkMap(JSON.parse(savedLinks));
+        }
+      } catch {}
+    }
+
+    loadInitialData();
+  }, [fetchPhotos]);
 
   // Handle file uploads (Camera or bulk files)
   const handleUploadFiles = async (files: FileList | null) => {
@@ -760,7 +760,7 @@ export default function PhotoPoolPage() {
                     <div className="grid grid-cols-2 gap-1.5 pt-1">
                       <button
                         onClick={() => openEnhancerModal(photo)}
-                        className="py-1.5 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 bg-gradient-to-r from-violet-600/20 to-primary/20 hover:from-violet-600/30 hover:to-primary/30 text-primary border border-primary/30 transition-all cursor-pointer"
+                        className="py-1.5 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 bg-linear-to-r from-violet-600/20 to-primary/20 hover:from-violet-600/30 hover:to-primary/30 text-primary border border-primary/30 transition-all cursor-pointer"
                         title="تحسين الإضاءة وإزالة اصفرار التصوير بالموبايل وتوضيح الصنف بالذكاء الاصطناعي"
                       >
                         <Wand2 className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -966,7 +966,7 @@ export default function PhotoPoolPage() {
             {/* Modal Header */}
             <div className="p-4 border-b border-surface-container-high/40 flex items-center justify-between bg-surface-container/30">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-violet-600 flex items-center justify-center text-white shadow-md shadow-primary/20">
+                <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-primary to-violet-600 flex items-center justify-center text-white shadow-md shadow-primary/20">
                   <Wand2 className="w-5 h-5" />
                 </div>
                 <div>
@@ -1170,7 +1170,7 @@ export default function PhotoPoolPage() {
                 </div>
 
                 {/* Gemini AI Vision Card */}
-                <div className="p-3.5 rounded-xl bg-gradient-to-br from-violet-950/30 to-surface-container/50 border border-violet-500/20 flex flex-col gap-3">
+                <div className="p-3.5 rounded-xl bg-linear-to-br from-violet-950/30 to-surface-container/50 border border-violet-500/20 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-xs flex items-center gap-1.5 text-violet-300">
                       <Bot className="w-4 h-4 text-violet-400" />
@@ -1245,7 +1245,7 @@ export default function PhotoPoolPage() {
               <button
                 onClick={handleSaveEnhancedToPool}
                 disabled={isEnhancingProcess || !enhancedPreviewUrl}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary to-violet-600 text-white font-bold text-xs hover:opacity-95 transition-all shadow-md shadow-primary/20 disabled:opacity-50 cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-linear-to-r from-primary to-violet-600 text-white font-bold text-xs hover:opacity-95 transition-all shadow-md shadow-primary/20 disabled:opacity-50 cursor-pointer"
               >
                 {isEnhancingProcess ? (
                   <>

@@ -55,7 +55,6 @@ const navGroups: NavGroup[] = [
     items: [
       { name: "استوديو وأدوات الـ PDF", href: "/admin/pdf-tools", icon: FileText },
       { name: "الماسح الضوئي الذكي (OCR)", href: "/admin/ocr", icon: Sparkles },
-      { name: "شيتات المفردات المدرسية", href: "/admin/school-sheets", icon: GraduationCap },
       { name: "مولد الأبحاث الأكاديمية", href: "/admin/research", icon: FileText },
     ],
   },

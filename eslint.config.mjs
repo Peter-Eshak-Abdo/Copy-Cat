@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    ".venv/**",
+    "fb_profile/**",
+    "scratch/**",
+    "scripts/**",
+    "stitch_ocr_document_platform_redesign/**",
   ]),
 ]);
 

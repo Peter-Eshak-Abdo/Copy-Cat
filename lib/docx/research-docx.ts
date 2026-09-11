@@ -10,6 +10,10 @@ import {
   TableRow,
   TableCell,
   WidthType,
+  BorderStyle,
+  PageBorderDisplay,
+  PageBorderZOrder,
+  PageBorderOffsetFrom,
 } from "docx";
 import { saveAs } from "file-saver";
 
@@ -185,7 +189,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
             width: { size: 75, type: WidthType.PERCENTAGE },
             children: [
               new Paragraph({
-                alignment: AlignmentType.CENTER,
+                alignment: AlignmentType.RIGHT,
                 children: [
                   new TextRun({
                     text: "عنوان المبحث أو الفصل",
@@ -202,7 +206,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
             width: { size: 25, type: WidthType.PERCENTAGE },
             children: [
               new Paragraph({
-                alignment: AlignmentType.CENTER,
+                alignment: AlignmentType.RIGHT,
                 children: [
                   new TextRun({
                     text: "رقم الصفحة",
@@ -241,13 +245,14 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
                 width: { size: 25, type: WidthType.PERCENTAGE },
                 children: [
                   new Paragraph({
-                    alignment: AlignmentType.CENTER,
+                    alignment: AlignmentType.RIGHT,
                     children: [
                       new TextRun({
                         text: item.page,
                         font: "Arial",
                         size: 32,
                         bold: true,
+                        rightToLeft: true,
                       }),
                     ],
                   }),
@@ -261,6 +266,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
     children.push(
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
+        visuallyRightToLeft: true,
         rows: tableRows,
       })
     );
@@ -270,31 +276,22 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
   }
 
   // =========================================================================
-  // 3. Body Content (المقدمة، المباحث، الخاتمة)
+  // 3. Body Content (المقدمة، المباحث، الخاتمة) - Natural Continuous Flow
   // Font sizes: Main Headings = 22pt (44), Subheadings = 20pt (40), Body = 18pt (36)
+  // All text explicitly Right-to-Left and Right-Aligned
   // =========================================================================
   const mainHeadingKeywords = ["المبحث", "مقدمة", "خاتمة", "الفصل", "تمهيد", "المصادر والمراجع"];
   const subHeadingKeywords = ["أولاً", "ثانياً", "ثالثاً", "رابعاً", "خامساً", "المطلب", "الفرع"];
-
-  let isInsideIntro = false;
 
   rawLines.forEach((line) => {
     const isMainHeading = mainHeadingKeywords.some((kw) => line.includes(kw));
     const isSubHeading = !isMainHeading && subHeadingKeywords.some((kw) => line.startsWith(kw));
 
-    if (line.includes("مقدمة")) {
-      isInsideIntro = true;
-    } else if (isMainHeading && !line.includes("مقدمة")) {
-      // Add page break before each major chapter/heading so editing one section never shifts other pages!
-      children.push(new Paragraph({ children: [new PageBreak()] }));
-      isInsideIntro = false;
-    }
-
     if (isMainHeading) {
       children.push(
         new Paragraph({
           alignment: AlignmentType.RIGHT,
-          spacing: { before: 400, after: 250 },
+          spacing: { before: 400, after: 200 },
           children: [
             new TextRun({
               text: line,
@@ -311,7 +308,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
       children.push(
         new Paragraph({
           alignment: AlignmentType.RIGHT,
-          spacing: { before: 300, after: 180 },
+          spacing: { before: 280, after: 160 },
           children: [
             new TextRun({
               text: line,
@@ -324,15 +321,14 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
         })
       );
     } else {
-      // Body Text: 18pt font (36 in half-points)
-      // Expanded line spacing for Intro to fill the page as requested in #13
+      // Body Text: 18pt font (36 half-points), Right-aligned, natural continuous flow
       children.push(
         new Paragraph({
-          alignment: AlignmentType.JUSTIFIED,
+          alignment: AlignmentType.RIGHT,
           spacing: {
-            before: 120,
-            after: 160,
-            line: isInsideIntro ? 460 : 360, // 1.5 - 2.0 line spacing
+            before: 100,
+            after: 140,
+            line: 360, // 1.5 line spacing
           },
           children: [
             new TextRun({
@@ -412,6 +408,17 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
               bottom: convertMillimetersToTwip(12.7),
               left: convertMillimetersToTwip(12.7),
               right: convertMillimetersToTwip(12.7),
+            },
+            borders: {
+              pageBorders: {
+                display: PageBorderDisplay.ALL_PAGES,
+                zOrder: PageBorderZOrder.FRONT,
+                offsetFrom: PageBorderOffsetFrom.PAGE,
+              },
+              pageBorderTop: { style: BorderStyle.SINGLE, size: 12, space: 24, color: "1E3A8A" },
+              pageBorderRight: { style: BorderStyle.SINGLE, size: 12, space: 24, color: "1E3A8A" },
+              pageBorderBottom: { style: BorderStyle.SINGLE, size: 12, space: 24, color: "1E3A8A" },
+              pageBorderLeft: { style: BorderStyle.SINGLE, size: 12, space: 24, color: "1E3A8A" },
             },
           },
         },

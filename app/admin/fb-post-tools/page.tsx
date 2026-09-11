@@ -8,16 +8,12 @@ import {
   Printer,
   Sparkles,
   Loader2,
-  ExternalLink,
   CheckCircle2,
-  AlertTriangle,
   ArrowRight,
   FolderDown,
   Layers,
-  FileCheck,
   RefreshCw,
   Image as ImageIcon,
-  Copy,
 } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 
@@ -166,9 +162,9 @@ export default function FacebookPostToolsPage() {
           }
         }
       }
-    } catch (err: any) {
-      toast.error("تعذر إكمال العملية", err.message || "حدث خطأ في الاتصال.");
-      setLogs((prev) => [...prev, `❌ [استثناء] ${err.message}`]);
+    } catch (err) {
+      toast.error("تعذر إكمال العملية", (err as Error).message || "حدث خطأ في الاتصال.");
+      setLogs((prev) => [...prev, `❌ [استثناء] ${(err as Error).message}`]);
     } finally {
       setIsRunning(false);
     }
@@ -304,7 +300,7 @@ export default function FacebookPostToolsPage() {
             <button
               type="submit"
               disabled={isRunning}
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-sm transition cursor-pointer shadow-xl shadow-blue-600/30 flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-3.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-sm transition cursor-pointer shadow-xl shadow-blue-600/30 flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isRunning ? (
                 <>
@@ -336,7 +332,7 @@ export default function FacebookPostToolsPage() {
               {/* Progress bar */}
               <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-300 animate-pulse"
+                  className="h-full bg-linear-to-r from-blue-500 to-cyan-400 transition-all duration-300 animate-pulse"
                   style={{
                     width: `${Math.min(100, Math.max(10, (downloadedCount / Math.max(1, scrapedCount)) * 100))}%`,
                   }}
