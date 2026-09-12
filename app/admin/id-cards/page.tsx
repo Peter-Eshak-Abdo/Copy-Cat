@@ -54,8 +54,8 @@ export default function IdCardsPage() {
   const { toast } = useToast();
   const [pairs, setPairs] = useState<CardPair[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [globalSharpness, setGlobalSharpness] = useState(50);
-  const [globalBrightness, setGlobalBrightness] = useState(118);
+  const [globalSharpness, setGlobalSharpness] = useState(0);
+  const [globalBrightness, setGlobalBrightness] = useState(100);
   const [isDragging, setIsDragging] = useState(false);
 
   // Modal for fine-angle rotation
@@ -200,16 +200,16 @@ export default function IdCardsPage() {
           };
         });
 
-        // 2. Automatically process with quad perspective warp + CamScanner Magic Color
+        // 2. Automatically process with quad perspective warp while preserving 100% natural colors
         const processedSrc = await processSideImage(
           originalSrc,
-          globalBrightness,
-          105,
-          globalSharpness,
+          100,
+          100,
+          0,
           0,
           undefined,
           autoQuad,
-          true // CamScanner Magic Color mode enabled by default
+          false // Natural colors by default (no whitewash!)
         );
 
         loadedSides.push({
@@ -218,12 +218,12 @@ export default function IdCardsPage() {
           originalSrc,
           processedSrc,
           rotation: 0,
-          brightness: globalBrightness,
-          contrast: 105,
-          sharpness: globalSharpness,
+          brightness: 100,
+          contrast: 100,
+          sharpness: 0,
           sideType: i % 2 === 0 ? "front" : "back",
           quad: autoQuad,
-          camScannerMode: true,
+          camScannerMode: false,
         });
       } catch (err) {
         console.error(`Error reading card image ${file.name}:`, err);

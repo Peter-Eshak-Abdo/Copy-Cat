@@ -125,10 +125,198 @@ function getCurrentShift(date: Date = new Date()): {
   };
 }
 
+interface WorkstationTool {
+  id: string;
+  title: string;
+  desc: string;
+  badge: string;
+  footerTag: string;
+  icon: string;
+  href: string;
+  colorClass: string;
+  borderHoverClass: string;
+  iconBgClass: string;
+}
+
+const WORKSTATION_TOOLS: WorkstationTool[] = [
+  {
+    id: "calculator",
+    title: "حاسبة المطبعة والملازم الذكية",
+    desc: "حساب دقيق لورق الملازم (وش وضهر)، أزرار تسعير الورقة، وإضافات التجليد والسلوفان مع حاسبة عامة سريعة بنظام Numpad.",
+    badge: "حساب وش وظهر دقيق",
+    footerTag: "تسعير مخصص للمكتبة",
+    icon: "calculate",
+    href: "/admin/calculator",
+    colorClass: "text-primary",
+    borderHoverClass: "hover:border-primary/40",
+    iconBgClass: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-on-primary",
+  },
+  {
+    id: "tasks",
+    title: "أوردرات الطباعة وتسليم الشفت",
+    desc: "متابعة أوردرات وملازم المدرسين، عداد النسخ المطبوعة الحي، مراسلة واتساب فورية، وتوليد تقرير تسليم الشفت بضغطة واحدة.",
+    badge: "مراسلة واتساب فورية",
+    footerTag: "تقرير شفت متكامل",
+    icon: "task_alt",
+    href: "/admin/tasks",
+    colorClass: "text-primary",
+    borderHoverClass: "hover:border-primary/40",
+    iconBgClass: "bg-primary-container/20 text-primary group-hover:bg-primary-container group-hover:text-on-primary-container",
+  },
+  {
+    id: "pdf-tools",
+    title: "استوديو وأدوات الـ PDF المتقدمة",
+    desc: "حذف صفحات الملازم من المنتصف والأطراف، تجميع الصور في ملف PDF، وتحويل المستندات العربية إلى Word بمسافات ضيقة وخط 18pt.",
+    badge: "تعديل PDF أوفلاين",
+    footerTag: "حذف صفحات & صور لـ PDF",
+    icon: "picture_as_pdf",
+    href: "/admin/pdf-tools",
+    colorClass: "text-secondary",
+    borderHoverClass: "hover:border-secondary/40",
+    iconBgClass: "bg-secondary-container/20 text-secondary group-hover:bg-secondary-container group-hover:text-on-secondary-container",
+  },
+  {
+    id: "ocr",
+    title: "الماسح الضوئي الذكي (Multi-Page OCR)",
+    desc: "استخراج نصوص الأوراق والملازم وتدقيقها لغوياً ونحوياً بدقة عالية وتصدير ملف Word جاهز للطباعة والتحرير.",
+    badge: "تدقيق لغوي ذكي",
+    footerTag: "تصدير Word بخط 18pt",
+    icon: "psychology",
+    href: "/admin/ocr",
+    colorClass: "text-tertiary",
+    borderHoverClass: "hover:border-tertiary/40",
+    iconBgClass: "bg-tertiary/10 text-tertiary group-hover:bg-tertiary group-hover:text-on-tertiary",
+  },
+  {
+    id: "lan-transfer",
+    title: "مركز النقل السريع الداخلي (LAN Transfer)",
+    desc: "نقل فوري للملفات والملازم الكبيرة بين أجهزة المكتبة عبر كابل الشبكة المحلية أو الراوتر بدون استهلاك باقة الإنترنت وبسرعات خيالية.",
+    badge: "0 استهلاك نت",
+    footerTag: "سرعة كابل الشبكة القصوى",
+    icon: "share",
+    href: "/admin/lan-transfer",
+    colorClass: "text-primary",
+    borderHoverClass: "hover:border-primary/40",
+    iconBgClass: "bg-surface-container-high text-on-surface group-hover:bg-surface-bright",
+  },
+  {
+    id: "id-cards",
+    title: "مصنع البطاقات والمستندات (A5)",
+    desc: "قص وتجهيز بطاقات الرقم القومي، رخص القيادة، وشهادات الميلاد وش وظهر على ورقة A5 فورية بالألوان الطبيعية الأصلية 100%.",
+    badge: "تصدير Word A5",
+    footerTag: "ألوان طبيعية 100%",
+    icon: "badge",
+    href: "/admin/id-cards",
+    colorClass: "text-primary",
+    borderHoverClass: "hover:border-primary/40",
+    iconBgClass: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-on-primary",
+  },
+  {
+    id: "passport-photos",
+    title: "استوديو الصور الشخصية (4x6)",
+    desc: "عزل الخلفية تلقائياً، ضبط الرأس والكتفين بيومترياً، إزالة الظلال، ورص 8 صور بجودة عالية جاهزة للطابعة الملونة.",
+    badge: "معيار بيومتري 4x6",
+    footerTag: "رص 8 صور 4x6",
+    icon: "photo_camera",
+    href: "/admin/passport-photos",
+    colorClass: "text-primary",
+    borderHoverClass: "hover:border-primary/40",
+    iconBgClass: "bg-surface-container-high text-primary group-hover:bg-primary group-hover:text-on-primary",
+  },
+  {
+    id: "scanner",
+    title: "ماسح المستندات وتوفير الحبر",
+    desc: "قلب ألوان لقطات الشاشة الداكنة (Dark Mode Invert) وتبييض خلفية الورق الأصفر والظلال لتوفير الحبر الأسود مع نصوص عالية الحدة.",
+    badge: "توفير 70% حبر",
+    footerTag: "تبييض فوري ونقي",
+    icon: "invert_colors",
+    href: "/admin/scanner",
+    colorClass: "text-primary",
+    borderHoverClass: "hover:border-primary/40",
+    iconBgClass: "bg-primary-container/20 text-primary group-hover:bg-primary-container group-hover:text-on-primary-container",
+  },
+  {
+    id: "research",
+    title: "مولد الأبحاث المدرسية والجامعية",
+    desc: "صياغة وتنسيق الأبحاث A4 بهوامش ضيقة، فهارس ومراجع أكاديمية موثقة، غلاف رسمي للمدرسة أو الجامعة وتصدير Word جاهز فوراً.",
+    badge: "أكاديمي معتمد",
+    footerTag: "تنسيق Word A4 قياسي",
+    icon: "auto_stories",
+    href: "/admin/research",
+    colorClass: "text-tertiary",
+    borderHoverClass: "hover:border-tertiary/40",
+    iconBgClass: "bg-tertiary/10 text-tertiary group-hover:bg-tertiary group-hover:text-on-tertiary",
+  },
+  {
+    id: "shortcuts",
+    title: "روابط وسيرفرات العمل اليومية",
+    desc: "دليل الخدمات الحكومية، بوابات التنسيق والجامعات، منصات التقديم لوظائف المعلمين، ومواقع فحص وحساب التكلفة السريعة.",
+    badge: "وصول سريع بضغطة زر",
+    footerTag: "24 بوابة حكومية",
+    icon: "language",
+    href: "/admin/shortcuts",
+    colorClass: "text-primary",
+    borderHoverClass: "hover:border-primary/40",
+    iconBgClass: "bg-surface-container-high text-on-surface group-hover:bg-surface-bright",
+  },
+  {
+    id: "inventory",
+    title: "إدارة المخزن والكتالوج (حصر)",
+    desc: "متابعة رصيد باكتات الورق 70g و 80g، خراطيش الحبر، السلك الحلزوني، وتحديث فوري لأسعار التوريد والبيع للزبائن.",
+    badge: "حصر المنتجات والمخزون",
+    footerTag: "تحديث الأسعار والموردين",
+    icon: "inventory",
+    href: "/admin/inventory",
+    colorClass: "text-primary",
+    borderHoverClass: "hover:border-primary/40",
+    iconBgClass: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-on-primary",
+  },
+  {
+    id: "photos",
+    title: "بنك ومكتبة صور المنتجات (Photo Pool)",
+    desc: "مستودع يجمع صور صفحة فيسبوك والصور الملتقطة بكاميرا الهاتف لربط وتخصيص صور المنتجات والكتالوج في أي وقت بضغطة واحدة.",
+    badge: "مكتبة صور متجددة",
+    footerTag: "تصوير & ربط بالكتالوج",
+    icon: "photo_library",
+    href: "/admin/photos",
+    colorClass: "text-emerald-500",
+    borderHoverClass: "hover:border-emerald-500/40",
+    iconBgClass: "bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white",
+  },
+  {
+    id: "instapay",
+    title: "سجل وتحويلات إنستا باي (InstaPay)",
+    desc: "تسجيل تحويلات الزبائن بالاسم والهاتف والمبلغ لحين وصول الباشمهندس للمكتبة وتأكيد استلام المبالغ بحساب البنك بنقرة واحدة.",
+    badge: "تأكيد فوري للتحويلات",
+    footerTag: "تسجيل وتأكيد",
+    icon: "credit_card",
+    href: "/admin/instapay",
+    colorClass: "text-purple-400",
+    borderHoverClass: "hover:border-purple-500/40",
+    iconBgClass: "bg-purple-500/10 text-purple-400 group-hover:bg-purple-600 group-hover:text-white",
+  },
+  {
+    id: "fb-post-tools",
+    title: "سحب بوستات وملازم فيسبوك PDF",
+    desc: "ضع رابط أي منشور فيسبوك (مثلاً 80 صورة ملزمة أو مذكرة) لسحب كافة الصور بالترتيب ودمجها فوراً في ملف PDF عالي الدقة جاهز للطباعة.",
+    badge: "سحب بوستات كاملة",
+    footerTag: "دمج صفحات بالترتيب",
+    icon: "picture_as_pdf",
+    href: "/admin/fb-post-tools",
+    colorClass: "text-blue-400",
+    borderHoverClass: "hover:border-blue-500/40",
+    iconBgClass: "bg-blue-500/10 text-blue-400 group-hover:bg-blue-600 group-hover:text-white",
+  },
+];
+
 export default function AdminDashboardPage() {
   const { user } = useAuth();
   const toast = useToast();
   const tasks = useSyncExternalStore(subscribeTasks, getTasksSnapshot, getTasksServerSnapshot);
+
+  // Customer storefront preview modal
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
 
   const handleRefresh = () => {
     notifyTasksChanged();
@@ -232,13 +420,13 @@ export default function AdminDashboardPage() {
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
           <div className="flex flex-col gap-space-xs">
             <div className="flex flex-wrap items-center gap-space-xs">
-              <span className="inline-flex items-center gap-1.5 px-space-sm py-space-2xs rounded-full bg-primary/10 text-primary font-label-tag text-label-tag tracking-wider border border-primary/20">
+              <span className="inline-flex items-center gap-1.5 px-space-sm py-space-2xs rounded-full bg-primary/10 text-primary font-label-tag text-label-tag tracking-wider border border-primary/20 font-bold">
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                نظام آمن ومحمي أوفلاين
+                مكتبة ومطبعة كوبي كات
               </span>
-              <span className="inline-flex items-center gap-1.5 px-space-sm py-space-2xs rounded-full bg-surface-container-high text-on-surface-variant font-label-code text-label-code border border-surface-container-highest">
-                <span className="material-symbols-outlined text-sm text-tertiary">bolt</span>
-                معدل الاستجابة: 0.12 ثانية
+              <span className="inline-flex items-center gap-1.5 px-space-sm py-space-2xs rounded-full bg-surface-container-high text-on-surface-variant font-body-xs text-xs border border-surface-container-highest">
+                <span className="material-symbols-outlined text-sm text-primary">location_on</span>
+                فرع الإسماعيلية — شارع الدقهلية
               </span>
             </div>
             <h1 className="font-display-sm text-display-sm text-on-surface font-extrabold tracking-tight">
@@ -275,13 +463,14 @@ export default function AdminDashboardPage() {
               <span className="material-symbols-outlined text-xl">assignment_turned_in</span>
               <span>مهام وأوردرات الشفت</span>
             </Link>
-            <Link
-              href="/"
-              className="flex items-center gap-space-xs px-space-sm py-space-sm rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant font-body-sm text-body-sm transition-all"
+            <button
+              onClick={() => setIsPreviewModalOpen(true)}
+              className="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 font-bold text-xs transition-all shadow-sm active:scale-95 cursor-pointer"
+              title="معاينة واجهة المتجر كما يراها العميل"
             >
-              <span className="material-symbols-outlined text-lg">visibility</span>
-              <span>معاينة متجر الزبائن</span>
-            </Link>
+              <span className="material-symbols-outlined text-lg text-cyan-400">preview</span>
+              <span>معاينة واجهة الزبائن 👁️</span>
+            </button>
           </div>
         </div>
       </div>
@@ -458,506 +647,54 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Featured WhatsApp Print Hub & Store Counter Stand Card */}
-      <div className="rounded-2xl bg-linear-to-r from-emerald-950/40 via-surface-container-low to-teal-950/30 p-space-md lg:p-space-lg mb-space-lg border border-emerald-500/30 shadow-xl flex flex-col lg:flex-row items-stretch gap-space-lg">
-        {/* QR Code Graphic & Quick Actions */}
-        <div className="flex flex-col sm:flex-row lg:flex-col items-center justify-center gap-space-md p-space-md bg-surface-container/60 rounded-xl border border-surface-container-high/60 shrink-0">
-          <div className="relative w-36 h-36 sm:w-40 sm:h-40 rounded-xl overflow-hidden shadow-lg border-2 border-emerald-500/40 bg-white p-1">
-            <img
-              src="/images/whatsapp-qr.jpg"
-              alt="QR Code واتساب مكتبة كوبي كات"
-              className="w-full h-full object-contain"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5 w-full">
-            <button
-              onClick={handleCopyWhatsappLink}
-              className="w-full py-1.5 px-3 rounded-lg bg-surface-container-high hover:bg-surface-bright text-xs font-bold text-on-surface flex items-center justify-center gap-1.5 transition cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-sm text-emerald-400">content_copy</span>
-              <span>نسخ الرابط المباشر</span>
-            </button>
-            <a
-              href={WHATSAPP_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition text-center"
-            >
-              <span className="material-symbols-outlined text-sm">chat</span>
-              <span>فتح المحادثة ↗</span>
-            </a>
-          </div>
-        </div>
-
-        {/* Content & Printing Actions */}
-        <div className="flex-1 flex flex-col justify-between gap-space-md">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-xs border border-emerald-500/30 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                قناة استقبال ملفات وملازم الطباعة الرسمية
-              </span>
-              <span className="text-[11px] text-on-surface-variant font-mono">
-                wa.me/qr/MA4E2HELDOY7F1
-              </span>
-            </div>
-            <h2 className="font-headline-md text-lg sm:text-xl font-bold text-on-surface flex items-center gap-2">
-              <span>كيو آر واستندات واتساب المكتبة (جاهزة للطباعة الفورية)</span>
-            </h2>
-            <p className="text-body-sm text-on-surface-variant leading-relaxed">
-              شغل المكتبة الروتيني اليومي معتمد بنسبة 100% على واتساب لتلقي ملفات الـ PDF، الملازم، تصوير الكتب، وتلقي المستندات من الزبائن والطلبة.
-              وفرنا لك تصميمات رسمية جاهزة للطباعة فوراً بتفاصيل فرع الإسماعيلية ومواعيد العمل لتسهيل مسح الكود من كاميرا موبايل العميل فور دخوله المكتبة.
-            </p>
-          </div>
-
-          {/* Quick Print Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-surface-container-high/40">
-            <button
-              onClick={() => setPrintQrModal("stand")}
-              className="p-3 rounded-xl bg-surface-container-high/80 hover:bg-emerald-600/20 hover:border-emerald-500/50 border border-surface-container-highest transition-all flex items-center gap-3 cursor-pointer text-right group"
-            >
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                <span className="material-symbols-outlined text-xl">table_restaurant</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-xs text-on-surface group-hover:text-emerald-300 transition-colors">
-                  طباعة استند طاولة الكاشير (مقاس A5)
-                </div>
-                <div className="text-[11px] text-on-surface-variant">
-                  تصميم عمودي أنيق مناسب للحوامل البلاستيكية على مكتب الاستقبال
-                </div>
-              </div>
-              <span className="material-symbols-outlined text-sm text-on-surface-variant group-hover:text-emerald-400">print</span>
-            </button>
-
-            <button
-              onClick={() => setPrintQrModal("poster")}
-              className="p-3 rounded-xl bg-surface-container-high/80 hover:bg-emerald-600/20 hover:border-emerald-500/50 border border-surface-container-highest transition-all flex items-center gap-3 cursor-pointer text-right group"
-            >
-              <div className="w-10 h-10 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0 group-hover:bg-teal-500 group-hover:text-white transition-colors">
-                <span className="material-symbols-outlined text-xl">wallpaper</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-xs text-on-surface group-hover:text-teal-300 transition-colors">
-                  طباعة بوستر حائط المحل (مقاس A4)
-                </div>
-                <div className="text-[11px] text-on-surface-variant">
-                  بوستر ملفت لمدخل المكتبة مع إرشادات إرسال الملفات والخدمات
-                </div>
-              </div>
-              <span className="material-symbols-outlined text-sm text-on-surface-variant group-hover:text-teal-400">print</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Header for Workstations Section */}
       <div className="flex items-center justify-between mb-space-md">
         <div className="flex items-center gap-space-xs">
           <span className="material-symbols-outlined text-primary text-2xl">grid_view</span>
           <h2 className="font-headline-md text-headline-md text-on-surface font-bold">جميع أدوات وماكينات العمل اليومية</h2>
-          <span className="font-label-tag text-label-tag px-space-xs py-space-2xs rounded-lg bg-surface-container text-on-surface-variant">12 أداة جاهزة للتشغيل الفوري</span>
+          <span className="font-label-tag text-label-tag px-space-xs py-space-2xs rounded-lg bg-surface-container text-on-surface-variant font-bold">
+            {WORKSTATION_TOOLS.length} أداة جاهزة للتشغيل الفوري
+          </span>
         </div>
-        <div className="hidden sm:flex items-center gap-space-xs text-on-surface-variant font-label-code text-label-code">
-          <span className="w-2 h-2 rounded-full bg-primary"></span>
-          وضع الإنتاج الفائق نشط
+        <div className="hidden sm:flex items-center gap-space-xs text-on-surface-variant font-body-xs text-xs">
+          <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+          أدوات وماكينات الطباعة والتجهيز
         </div>
       </div>
 
-      {/* The 12 Smart Machinery & Workstation Cards Grid */}
+      {/* The Dynamic Workstation Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-space-md mb-space-xl">
-        {/* Tool 1 */}
-        <Link
-          href="/admin/calculator"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-primary/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                <span className="material-symbols-outlined text-2xl">calculate</span>
+        {WORKSTATION_TOOLS.map((tool) => (
+          <Link
+            key={tool.id}
+            href={tool.href}
+            className={`group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 ${tool.borderHoverClass}`}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-space-md">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${tool.iconBgClass}`}>
+                  <span className="material-symbols-outlined text-2xl">{tool.icon}</span>
+                </div>
+                <span className={`font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high ${tool.colorClass}`}>
+                  {tool.badge}
+                </span>
               </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-primary">حساب وش وظهر دقيق</span>
+              <h3 className={`font-headline-sm text-headline-sm text-on-surface group-hover:${tool.colorClass} transition-colors mb-space-xs font-bold`}>
+                {tool.title}
+              </h3>
+              <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                {tool.desc}
+              </p>
             </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs font-bold">
-              حاسبة المطبعة والملازم الذكية
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              حساب دقيق لورق الملازم (وش وضهر)، أزرار تسعير الورقة، وإضافات التجليد والسلوفان مع حاسبة عامة سريعة بنظام Numpad.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              تشغيل الأداة
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">تسعير مخصص للمكتبة</span>
-          </div>
-        </Link>
-
-        {/* Tool 2 */}
-        <Link
-          href="/admin/tasks"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-primary/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">
-                <span className="material-symbols-outlined text-2xl">task_alt</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-on-surface">مراسلة واتساب فورية</span>
+            <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
+              <span className={`font-label-code text-label-code ${tool.colorClass} flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold`}>
+                تشغيل الأداة
+                <span className="material-symbols-outlined text-base">arrow_forward</span>
+              </span>
+              <span className="font-label-tag text-label-tag text-on-surface-variant">{tool.footerTag}</span>
             </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs font-bold">
-              أوردرات الطباعة وتسليم الشفت
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              متابعة أوردرات وملازم المدرسين، عداد النسخ المطبوعة الحي، مراسلة واتساب فورية، وتوليد تقرير تسليم الشفت بضغطة واحدة.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              تشغيل الأداة
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">تقرير شفت متكامل</span>
-          </div>
-        </Link>
-
-        {/* Tool 3 */}
-        <Link
-          href="/admin/pdf-tools"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-secondary/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-secondary-container/20 flex items-center justify-center text-secondary group-hover:bg-secondary-container group-hover:text-on-secondary-container transition-colors">
-                <span className="material-symbols-outlined text-2xl">picture_as_pdf</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-secondary">تعديل PDF أوفلاين</span>
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-secondary transition-colors mb-space-xs font-bold">
-              استوديو وأدوات الـ PDF المتقدمة
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              حذف صفحات الملازم من المنتصف والأطراف، تجميع الصور في ملف PDF، وتحويل المستندات العربية إلى Word بمسافات ضيقة وخط 18pt.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-secondary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              تشغيل الأداة
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">حذف صفحات & صور لـ PDF</span>
-          </div>
-        </Link>
-
-        {/* Tool 4 */}
-        <Link
-          href="/admin/ocr"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-tertiary/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary group-hover:bg-tertiary group-hover:text-on-tertiary transition-colors">
-                <span className="material-symbols-outlined text-2xl">psychology</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-tertiary">تدقيق لغوي ذكي</span>
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-tertiary transition-colors mb-space-xs font-bold">
-              الماسح الضوئي الذكي (Multi-Stage OCR)
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              استخراج نصوص الأوراق والملازم على مرحلتين: استخراج بصري يتبعه تدقيق لغوي ونحوي عربي مع تصدير Word جاهز للطباعة.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-tertiary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              تشغيل الأداة
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">تصدير Word بخط 18pt</span>
-          </div>
-        </Link>
-
-
-        {/* Tool 6 */}
-        <Link
-          href="/admin/lan-transfer"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-primary/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center text-on-surface group-hover:bg-surface-bright transition-colors">
-                <span className="material-symbols-outlined text-2xl">share</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-on-surface-variant">0 استهلاك نت</span>
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs font-bold">
-              مركز النقل السريع الداخلي (LAN Transfer)
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              نقل فوري للملفات والملازم الكبيرة بين أجهزة المكتبة عبر كابل الشبكة المحلية أو الراوتر بدون استهلاك باقة الإنترنت وبسرعات خيالية.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              تشغيل الأداة
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">سرعة كابل الشبكة القصوى</span>
-          </div>
-        </Link>
-
-        {/* Tool 7 */}
-        <Link
-          href="/admin/id-cards"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-primary/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                <span className="material-symbols-outlined text-2xl">badge</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-primary">تصدير Word A5</span>
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs font-bold">
-              مصنع البطاقات والمستندات (A5)
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              قص وتجهيز بطاقات الرقم القومي، رخص القيادة، وشهادات الميلاد وش وظهر على ورقة A5 فورية مع معاينة حية ومحاذاة قياسية للطباعة.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              تشغيل الأداة
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">معيار رسمي 100%</span>
-          </div>
-        </Link>
-
-        {/* Tool 8 */}
-        <Link
-          href="/admin/passport-photos"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-primary/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                <span className="material-symbols-outlined text-2xl">photo_camera</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-on-surface-variant">AI بدون سيرفر</span>
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs font-bold">
-              استوديو الصور الشخصية (4x6)
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              عزل الخلفية تلقائياً، تبييض وترميم ملامح الوجه، وضبط البدلات والملابس الرسمية مع رص 8 صور بجودة عالية جاهزة للطابعة الملونة.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              تشغيل الأداة
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">رص 8 صور 4x6</span>
-          </div>
-        </Link>
-
-        {/* Tool 9 */}
-        <Link
-          href="/admin/scanner"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-primary/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">
-                <span className="material-symbols-outlined text-2xl">invert_colors</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-primary">توفير 70% حبر</span>
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs font-bold">
-              ماسح المستندات وتوفير الحبر
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              قلب ألوان لقطات الشاشة الداكنة (Dark Mode Invert) وتبييض خلفية الورق الأصفر والظلال لتوفير الحبر الأسود مع نصوص عالية الحدة.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              تشغيل الأداة
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">تبييض فوري ونقي</span>
-          </div>
-        </Link>
-
-        {/* Tool 10 */}
-        <Link
-          href="/admin/research"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-tertiary/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary group-hover:bg-tertiary group-hover:text-on-tertiary transition-colors">
-                <span className="material-symbols-outlined text-2xl">auto_stories</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-tertiary">أكاديمي معتمد</span>
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-tertiary transition-colors mb-space-xs font-bold">
-              مولد الأبحاث المدرسية والجامعية
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              صياغة وتنسيق الأبحاث A4 بهوامش ضيقة، فهارس ومراجع أكاديمية موثقة، غلاف رسمي للمدرسة أو الجامعة وتصدير Word جاهز فوراً.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-tertiary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              تشغيل الأداة
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">تنسيق Word A4 قياسي</span>
-          </div>
-        </Link>
-
-        {/* Tool 11 */}
-        <Link
-          href="/admin/shortcuts"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-primary/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center text-on-surface group-hover:bg-surface-bright transition-colors">
-                <span className="material-symbols-outlined text-2xl">language</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-on-surface-variant">وصول سريع بضغطة زر</span>
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs font-bold">
-              روابط وسيرفرات العمل اليومية
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              دليل الخدمات الحكومية، بوابات التنسيق والجامعات، منصات التقديم لوظائف المعلمين، ومواقع فحص وحساب التكلفة السريعة.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              تشغيل الأداة
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">24 بوابة حكومية</span>
-          </div>
-        </Link>
-
-        {/* Tool 12 */}
-        <Link
-          href="/admin/inventory"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-primary/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                <span className="material-symbols-outlined text-2xl">inventory</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-primary">حصر 361 صنف</span>
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors mb-space-xs font-bold">
-              إدارة المخزن والكتالوج (حصر)
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              متابعة رصيد باكتات الورق 70g و 80g، خراطيش الحبر، السلك الحلزوني، وتحديث فوري لأسعار التوريد والبيع للزبائن.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-primary flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              تشغيل الأداة
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">تحديث الأسعار والموردين</span>
-          </div>
-        </Link>
-
-        {/* Tool 13 */}
-        <Link
-          href="/admin/photos"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-emerald-500/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                <span className="material-symbols-outlined text-2xl">photo_library</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-emerald-500">150+ صورة بالبنك</span>
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-emerald-500 transition-colors mb-space-xs font-bold">
-              بنك ومكتبة صور المنتجات (Photo Pool)
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              مستودع يجمع صور صفحة فيسبوك والصور الملتقطة بكاميرا الهاتف لربط وتخصيص صور المنتجات والكتالوج في أي وقت بضغطة واحدة.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-emerald-500 flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              فتح بنك الصور
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">تصوير & ربط بالكتالوج</span>
-          </div>
-        </Link>
-
-        {/* Tool 14: InstaPay Tracker */}
-        <Link
-          href="/admin/instapay"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-purple-500/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                <span className="material-symbols-outlined text-2xl">credit_card</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-purple-400">تأكيد فوري للتحويلات</span>
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-purple-400 transition-colors mb-space-xs font-bold">
-              سجل وتحويلات إنستا باي (InstaPay)
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              تسجيل تحويلات الزبائن بالاسم والهاتف والمبلغ لحين وصول الباشمهندس للمكتبة وتأكيد استلام المبالغ بحساب البنك بنقرة واحدة.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-purple-400 flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              فتح سجل إنستا باي
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">تسجيل وتأكيد</span>
-          </div>
-        </Link>
-
-        {/* Tool 15: Facebook Post to PDF Downloader */}
-        <Link
-          href="/admin/fb-post-tools"
-          className="group flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-low hover:bg-surface-container transition-all shadow-md border border-surface-container-high/40 hover:border-blue-500/40"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-space-md">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                <span className="material-symbols-outlined text-2xl">picture_as_pdf</span>
-              </div>
-              <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-blue-400">سحب بوستات كاملة</span>
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface group-hover:text-blue-400 transition-colors mb-space-xs font-bold">
-              سحب بوستات وملازم فيسبوك PDF
-            </h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              ضع رابط أي منشور فيسبوك (مثلاً 80 صورة ملزمة أو مذكرة) لسحب كافة الصور بالترتيب ودمجها فوراً في ملف PDF عالي الدقة جاهز للطباعة.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-space-md mt-space-md border-t border-surface-container-high/40">
-            <span className="font-label-code text-label-code text-blue-400 flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform font-bold">
-              سحب وتحويل PDF
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </span>
-            <span className="font-label-tag text-label-tag text-on-surface-variant">دمج صفحات بالترتيب</span>
-          </div>
-        </Link>
+          </Link>
+        ))}
       </div>
 
       {/* Recent Shift Activity & Active Print Queue Table */}
@@ -1058,28 +795,25 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Bottom Quick Network Telemetry & Hardware Status Bar */}
-      <div className="flex flex-col md:flex-row items-center justify-between p-space-sm rounded-xl bg-surface-container-low text-on-surface-variant font-label-code text-label-code gap-space-xs border border-surface-container-high/40">
+      {/* Bottom Status Bar */}
+      <div className="flex flex-col md:flex-row items-center justify-between p-space-sm rounded-xl bg-surface-container-low text-on-surface-variant font-body-xs text-xs gap-space-xs border border-surface-container-high/40">
         <div className="flex items-center gap-space-md flex-wrap">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-primary animate-ping"></span>
-            <span className="text-on-surface font-semibold">سيرفر المحطة:</span>
-            <span>Local Machine (Offline Engine)</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-on-surface font-semibold">حالة النظام:</span>
+            <span className="text-emerald-400 font-bold">جاهز ومستعد للعمل</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-primary text-base">speed</span>
-            <span>زمن المعالجة البصرية OCR: 0.28 ثانية</span>
+            <span className="material-symbols-outlined text-primary text-base">schedule</span>
+            <span>الوردية: {currentShift.label} ({currentShift.timeRange})</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-secondary text-base">folder_open</span>
-            <span>مجلد الإخراج: D:\CopyCat_Vault_2025</span>
+            <span className="material-symbols-outlined text-secondary text-base">person</span>
+            <span>المسؤول: {user?.name || "مشرف الشفت"}</span>
           </div>
         </div>
         <div className="flex items-center gap-space-xs">
-          <span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-primary font-bold">
-            Shift: {currentShift.label} ({currentShift.timeRange}) — {user?.name || "المشرف العام"}
-          </span>
-          <span className="text-on-surface-variant font-medium">
+          <span className="text-on-surface-variant font-medium text-[11px]">
             شارع الدقهلية بالقرب من مسجد المطافي أمام مركز نور الحياة - عرايشية مصر - الإسماعيلية
           </span>
         </div>
@@ -1209,6 +943,90 @@ export default function AdminDashboardPage() {
                   <span>⏰ مواعيد العمل:</span>
                   <span>نستقبلكم يومياً حتى 11:30 مساءً</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Store Preview Modal */}
+      {isPreviewModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-2 sm:p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-6xl h-[92vh] bg-surface rounded-2xl border border-surface-container-high shadow-2xl flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 bg-surface-container-low border-b border-surface-container-high shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-2xl">storefront</span>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-on-surface">معاينة واجهة متجر الزبائن الحية</h3>
+                  <p className="text-xs text-on-surface-variant">شاهد كيف تبدو العروض والأسعار والمنتجات للعميل الآن</p>
+                </div>
+              </div>
+
+              {/* View Controls & Close */}
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex items-center bg-surface-container rounded-xl p-1 border border-surface-container-high">
+                  <button
+                    onClick={() => setPreviewDevice("desktop")}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                      previewDevice === "desktop"
+                        ? "bg-primary text-on-primary shadow-sm"
+                        : "text-on-surface-variant hover:text-on-surface"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-sm">laptop</span>
+                    <span className="hidden sm:inline">كمبيوتر</span>
+                  </button>
+                  <button
+                    onClick={() => setPreviewDevice("mobile")}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                      previewDevice === "mobile"
+                        ? "bg-primary text-on-primary shadow-sm"
+                        : "text-on-surface-variant hover:text-on-surface"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-sm">smartphone</span>
+                    <span className="hidden sm:inline">موبايل</span>
+                  </button>
+                </div>
+
+                <a
+                  href="/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-bright text-xs font-bold text-on-surface flex items-center gap-1.5 transition"
+                  title="فتح في نافذة متصفح جديدة"
+                >
+                  <span className="material-symbols-outlined text-sm">open_in_new</span>
+                  <span className="hidden sm:inline">نافذة جديدة</span>
+                </a>
+
+                <button
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="w-9 h-9 rounded-xl bg-surface-container-high hover:bg-red-500/20 hover:text-red-400 text-on-surface-variant flex items-center justify-center transition cursor-pointer"
+                  title="إغلاق المعاينة"
+                >
+                  <span className="material-symbols-outlined text-xl">close</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body / Iframe Container */}
+            <div className="flex-1 bg-neutral-900/60 p-2 sm:p-4 flex items-center justify-center overflow-auto">
+              <div
+                className={`transition-all duration-300 h-full shadow-2xl overflow-hidden rounded-xl border border-surface-container-high bg-surface ${
+                  previewDevice === "mobile"
+                    ? "w-[390px] max-w-full rounded-3xl border-4 border-neutral-700"
+                    : "w-full"
+                }`}
+              >
+                <iframe
+                  src="/"
+                  title="Customer Storefront Live Preview"
+                  className="w-full h-full border-0"
+                />
               </div>
             </div>
           </div>

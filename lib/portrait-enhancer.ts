@@ -16,6 +16,7 @@ export interface PortraitEnhanceOptions {
   headroomMargin?: number;         // Top margin (default 0.08)
   shoulderMargin?: number;         // Side margin (default 0.06)
   brightnessDelta?: number;        // Slight face fill-light (-50 to +50)
+  aiBox?: [number, number, number, number]; // Normalized [ymin, xmin, ymax, xmax] 0..1000
 }
 
 /**
@@ -240,7 +241,10 @@ export function applyFaceSafeSuperResolution(
  * Standard: Head occupies 70%-78% of vertical frame height, with 7-8% headroom above hair.
  * Ensures full-body photos are cropped directly to head & shoulders just like official studio photos.
  */
-export async function detectBiometricCrop(canvas: HTMLCanvasElement): Promise<{
+export async function detectBiometricCrop(
+  canvas: HTMLCanvasElement,
+  explicitBox?: [number, number, number, number]
+): Promise<{
   cropX: number;
   cropY: number;
   cropW: number;
@@ -248,10 +252,32 @@ export async function detectBiometricCrop(canvas: HTMLCanvasElement): Promise<{
 }> {
   const cw = canvas.width;
   const ch = canvas.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return { cropX: 0, cropY: 0, cropW: cw, cropH: ch };
 
-  // Strategy 1: Browser Native FaceDetector if supported
+  // 1. If explicit AI face box is provided from Gemini [ymin, xmin, ymax, xmax] (0..1000)
+  if (explicitBox && explicitBox.length === 4) {
+    const [ymin, xmin, ymax, xmax] = explicitBox;
+    const faceH = ((ymax - ymin) / 1000) * ch;
+    const faceW = ((xmax - xmin) / 1000) * cw;
+    const faceCenterX = ((xmin + xmax) / 2000) * cw;
+    const faceCenterY = ((ymin + ymax) / 2000) * ch;
+
+    // Standard 4x6: Face occupies ~55-60% of frame height with headroom and shoulders
+    const targetCropH = Math.min(ch, Math.max(faceH / 0.58, faceW * 1.3));
+    const targetCropW = Math.min(cw, targetCropH * (400 / 520));
+
+    // Crown / headroom top at ~10% from top
+    const cropY = Math.max(0, Math.min(ch - targetCropH, faceCenterY - targetCropH * 0.38));
+    const cropX = Math.max(0, Math.min(cw - targetCropW, faceCenterX - targetCropW / 2));
+
+    return {
+      cropX: Math.round(cropX),
+      cropY: Math.round(cropY),
+      cropW: Math.round(targetCropW),
+      cropH: Math.round(targetCropH),
+    };
+  }
+
+  // 2. Native Browser FaceDetector (if available in Chrome/Edge)
   if (typeof window !== "undefined" && "FaceDetector" in window) {
     try {
       const FaceDetectorClass = (window as unknown as { FaceDetector: new (opts?: { fastMode?: boolean; maxDetectedFaces?: number }) => { detect: (c: CanvasImageSource) => Promise<Array<{ boundingBox: { x: number; y: number; width: number; height: number } }>> } }).FaceDetector;
@@ -264,94 +290,28 @@ export async function detectBiometricCrop(canvas: HTMLCanvasElement): Promise<{
         const faceCenterX = box.x + faceW / 2;
         const faceCenterY = box.y + faceH / 2;
 
-        // Biometric head is ~1.35x detected face box (including hair crown and chin)
-        const totalHeadHeight = faceH * 1.35;
-        // In 4x6 standard (400x520), head height should be ~72% of photo height
-        const targetFrameH = totalHeadHeight / 0.72;
-        const targetFrameW = targetFrameH * (400 / 520);
-
-        // Position head: crown at ~8% from top, chin at ~68%
-        const cropY = Math.max(0, Math.min(ch - targetFrameH, faceCenterY - targetFrameH * 0.42));
-        const cropX = Math.max(0, Math.min(cw - targetFrameW, faceCenterX - targetFrameW / 2));
+        const targetCropH = Math.min(ch, Math.max(faceH / 0.58, faceW * 1.3));
+        const targetCropW = Math.min(cw, targetCropH * (400 / 520));
+        const cropY = Math.max(0, Math.min(ch - targetCropH, faceCenterY - targetCropH * 0.38));
+        const cropX = Math.max(0, Math.min(cw - targetCropW, faceCenterX - targetCropW / 2));
 
         return {
           cropX: Math.round(cropX),
           cropY: Math.round(cropY),
-          cropW: Math.round(Math.min(cw, targetFrameW)),
-          cropH: Math.round(Math.min(ch, targetFrameH)),
+          cropW: Math.round(targetCropW),
+          cropH: Math.round(targetCropH),
         };
       }
-    } catch {
-      // Fallback to silhouette analysis
-    }
+    } catch {}
   }
 
-  // Strategy 2: Silhouette & Profile Analysis
-  const imgData = ctx.getImageData(0, 0, cw, ch);
-  const data = imgData.data;
-
-  let topY = ch;
-  let bottomY = 0;
-  const rowLeft: number[] = new Array(ch).fill(cw);
-  const rowRight: number[] = new Array(ch).fill(0);
-  const rowWidth: number[] = new Array(ch).fill(0);
-
-  for (let y = 0; y < ch; y++) {
-    for (let x = 0; x < cw; x++) {
-      const idx = (y * cw + x) * 4;
-      const a = data[idx + 3];
-      const r = data[idx];
-      const g = data[idx + 1];
-      const b = data[idx + 2];
-      const isForeground = a > 40 && (r < 248 || g < 248 || b < 248);
-
-      if (isForeground) {
-        if (y < topY) topY = y;
-        if (y > bottomY) bottomY = y;
-        if (x < rowLeft[y]) rowLeft[y] = x;
-        if (x > rowRight[y]) rowRight[y] = x;
-      }
-    }
-    if (rowRight[y] >= rowLeft[y]) {
-      rowWidth[y] = rowRight[y] - rowLeft[y] + 1;
-    }
-  }
-
-  const subjectHeight = bottomY - topY + 1;
-  if (subjectHeight < 40) {
-    return { cropX: 0, cropY: 0, cropW: cw, cropH: ch };
-  }
-
-  // Find max width in upper 35% of subject (head region)
-  const scanLimit = Math.min(ch - 1, topY + Math.round(subjectHeight * 0.35));
-  let maxHeadW = 0;
-  let headCenterSum = 0;
-  let headCenterCount = 0;
-
-  for (let y = topY; y <= scanLimit; y++) {
-    if (rowWidth[y] > maxHeadW) {
-      maxHeadW = rowWidth[y];
-    }
-    if (rowWidth[y] > 20) {
-      headCenterSum += (rowLeft[y] + rowRight[y]) / 2;
-      headCenterCount++;
-    }
-  }
-
-  const headCenterX = headCenterCount > 0 ? headCenterSum / headCenterCount : cw / 2;
-
-  // Determine if full-body or half-body: subject height is disproportionately tall relative to head width
-  // Adult/child proportions: total standing height is 5x to 7.5x head height
-  const estimatedHeadH = maxHeadW > 0 ? maxHeadW * 1.25 : subjectHeight * 0.25;
-
-  if (subjectHeight > estimatedHeadH * 1.8) {
-    // Standing or half-body detected! Crop to head & shoulders
-    const targetCropH = Math.min(ch, estimatedHeadH / 0.72);
-    const targetCropW = Math.min(cw, targetCropH * (400 / 520));
-
-    // Allow 8% headroom above top of hair
-    const cropY = Math.max(0, Math.min(ch - targetCropH, topY - targetCropH * 0.08));
-    const cropX = Math.max(0, Math.min(cw - targetCropW, headCenterX - targetCropW / 2));
+  // 3. Fallback for standing / full-body / 3/4 portrait photos (like kid in street)
+  // When height > width, the head & shoulders are always located in the top portion
+  if (ch > cw * 1.1) {
+    const targetCropH = Math.min(ch, cw * 1.25);
+    const targetCropW = targetCropH * (400 / 520);
+    const cropX = Math.max(0, Math.min(cw - targetCropW, (cw - targetCropW) / 2));
+    const cropY = Math.max(0, Math.min(ch - targetCropH, Math.round(ch * 0.04)));
 
     return {
       cropX: Math.round(cropX),
@@ -361,17 +321,17 @@ export async function detectBiometricCrop(canvas: HTMLCanvasElement): Promise<{
     };
   }
 
-  // Already a portrait/headshot: return natural bounds with slight headroom
-  const naturalH = subjectHeight / (1 - 0.08);
-  const naturalW = naturalH * (400 / 520);
-  const cropY = Math.max(0, topY - naturalH * 0.08);
-  const cropX = Math.max(0, Math.min(cw - naturalW, headCenterX - naturalW / 2));
+  // 4. Default upper-center crop for wide or square photos
+  const targetCropH = Math.min(ch, ch * 0.9);
+  const targetCropW = targetCropH * (400 / 520);
+  const cropX = Math.max(0, (cw - targetCropW) / 2);
+  const cropY = Math.max(0, Math.round(ch * 0.05));
 
   return {
     cropX: Math.round(cropX),
     cropY: Math.round(cropY),
-    cropW: Math.round(Math.min(cw, naturalW)),
-    cropH: Math.round(Math.min(ch, naturalH)),
+    cropW: Math.round(targetCropW),
+    cropH: Math.round(targetCropH),
   };
 }
 
@@ -420,7 +380,7 @@ export async function enhanceAndFramePassportPhoto(
   srcCtx.drawImage(img, 0, 0);
 
   // 1. Biometric head & shoulders detection (handles full-body photos like standing kids)
-  const bioCrop = await detectBiometricCrop(srcCanvas);
+  const bioCrop = await detectBiometricCrop(srcCanvas, options.aiBox);
 
   const croppedCanvas = document.createElement("canvas");
   croppedCanvas.width = bioCrop.cropW;

@@ -411,15 +411,24 @@ export function applyCamScannerMagicColor(canvas: HTMLCanvasElement): HTMLCanvas
 
   // 1. Calculate luminance buffer
   const lum = new Float32Array(w * h);
+  let totalLum = 0;
   for (let i = 0; i < w * h; i++) {
     const idx = i * 4;
-    lum[i] = 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
+    const l = 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
+    lum[i] = l;
+    totalLum += l;
   }
+  const avgLum = totalLum / (w * h);
 
   // 2. Estimate background illumination field B(x, y)
   const bg = estimateIlluminationBackground(lum, w, h, 36);
 
-  // 3. Normalize pixels by local background (cancels out shadows completely)
+  // Target reference level (preserves natural exposure)
+  let targetRef = avgLum * 1.25;
+  if (targetRef > 240) targetRef = 240;
+  if (targetRef < 175) targetRef = 200;
+
+  // 3. Gentle shadow normalization that strictly preserves color fidelity and facial details
   for (let y = 0; y < h; y++) {
     const rowOffset = y * w;
     for (let x = 0; x < w; x++) {
@@ -430,35 +439,18 @@ export function applyCamScannerMagicColor(canvas: HTMLCanvasElement): HTMLCanvas
       const g = d[idx + 1];
       const b = d[idx + 2];
       const origL = lum[pIdx];
-      const localBg = bg[pIdx];
+      const localBg = Math.max(40, bg[pIdx]);
 
-      // Normalized luminance relative to local background (0 to ~1.1)
-      const ratio = localBg > 10 ? origL / localBg : origL / 255;
+      // Illumination compensation factor (gentle, bounded between 0.85 and 1.35)
+      const compFactor = Math.min(1.35, Math.max(0.85, targetRef / localBg));
 
-      let targetL: number;
-      if (ratio > 0.82) {
-        // Background region: stretch to crisp pure white (#FFFFFF)
-        const whiteRatio = (ratio - 0.82) / 0.18;
-        targetL = Math.min(255, 235 + whiteRatio * 20);
-      } else if (ratio < 0.35) {
-        // Dark text, barcode, national number: deepen to crisp black
-        targetL = Math.max(0, ratio * 200 * 0.75);
-      } else {
-        // Midtones: smooth tone curve
-        targetL = Math.min(255, Math.max(0, 50 + (ratio - 0.35) * (185 / 0.47)));
-      }
+      // Apply compensation smoothly
+      const newL = Math.min(255, Math.max(0, origL * (1 + (compFactor - 1) * 0.55)));
 
-      // Preserve colors (eagle seal, stamps, face) using HSL
+      // Preserve Hue & Saturation completely using HSL
       const [hue, sat] = rgbToHsl(r, g, b);
-      // Mildly desaturate near-white paper, boost colored features
-      let newSat = sat;
-      if (targetL > 220) {
-        newSat = Math.max(0, sat * 0.3); // remove yellow/gray background cast
-      } else if (sat > 0.15) {
-        newSat = Math.min(1.0, sat * 1.15); // preserve seal and photo colors
-      }
+      const [nr, ng, nb] = hslToRgb(hue, sat, newL / 255);
 
-      const [nr, ng, nb] = hslToRgb(hue, newSat, targetL / 255);
       d[idx] = nr;
       d[idx + 1] = ng;
       d[idx + 2] = nb;

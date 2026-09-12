@@ -111,7 +111,7 @@ export default function LoginPage() {
       {/* Main Card */}
       <div className="max-w-md w-full mx-auto my-auto bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden">
         {/* Glow accent */}
-        <div className="absolute top-0 right-1/2 translate-x-1/2 w-48 h-2 bg-gradient-to-r from-blue-500 via-cyan-400 to-indigo-500 rounded-full blur-sm" />
+        <div className="absolute top-0 right-1/2 translate-x-1/2 w-48 h-2 bg-linear-to-r from-blue-500 via-cyan-400 to-indigo-500 rounded-full blur-sm" />
 
         <div className="text-center space-y-3 mb-6">
           <div className="w-20 h-20 rounded-2xl bg-white mx-auto flex items-center justify-center p-2 shadow-xl shadow-blue-500/20 border border-slate-700/50 hover:scale-105 transition-transform">
@@ -166,9 +166,9 @@ export default function LoginPage() {
         </button>
 
         <div className="relative flex py-2 items-center mb-4">
-          <div className="flex-grow border-t border-slate-800"></div>
-          <span className="flex-shrink mx-4 text-xs text-slate-500 font-semibold">أو بالبريد وكلمة المرور</span>
-          <div className="flex-grow border-t border-slate-800"></div>
+          <div className="grow border-t border-slate-800"></div>
+          <span className="shrink mx-4 text-xs text-slate-500 font-semibold">أو بالبريد وكلمة المرور</span>
+          <div className="grow border-t border-slate-800"></div>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
@@ -181,7 +181,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={process.env.NEXT_PUBLIC_MASTER_EMAIL || "admin@example.com"}
+                placeholder={"admin@example.com"}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-9 pl-4 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
               />
             </div>

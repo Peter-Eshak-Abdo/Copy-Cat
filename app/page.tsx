@@ -409,48 +409,45 @@ export default function StorefrontPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-blue-600 selection:text-white transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100 light:bg-slate-50 light:text-slate-900">
-      {/* Top Notification Bar - Optimized for 360px up to 4K */}
-      <div className="bg-linear-to-r from-blue-700 via-indigo-700 to-cyan-600 text-white py-1.5 sm:py-2 px-3 sm:px-4 text-center font-bold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 shadow-md text-[11px] sm:text-xs">
-        <span className="inline-flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 animate-spin shrink-0" />
-          <span className="line-clamp-1 sm:line-clamp-none">{announcementText}</span>
-        </span>
+      {/* Top Friendly Announcement Banner */}
+      <div className="bg-emerald-600 text-white text-xs sm:text-sm font-bold py-2 px-4 text-center flex items-center justify-center gap-2 shadow-xs">
+        <span>⚡ عندك ورق أو ملازم عايز تطبعها دلوقتي؟ ابعتها واتساب وهنجهزهالك فوراً تستلمها بدون انتظار!</span>
         <a
-          href={`https://wa.me/${WHATSAPP_INTERNATIONAL}`}
+          href={`https://wa.me/${WHATSAPP_INTERNATIONAL}?text=${encodeURIComponent("مرحباً مكتبة كوبي كات، أود إرسال ملف للطباعة فوراً.")}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="underline hover:text-cyan-200 transition font-black text-cyan-100"
+          className="underline font-black hover:text-emerald-200 transition"
         >
-          اطلب واتساب الآن: {WHATSAPP_NUMBER}
+          اضغط هنا للإرسال
         </a>
       </div>
 
-      {/* Main Navbar - Compact & sleek for mobile phones */}
-      <header className="sticky top-0 z-40 bg-slate-900/90 dark:bg-slate-900/90 light:bg-white/90 backdrop-blur-md border-b border-slate-800 dark:border-slate-800 light:border-slate-200 transition-colors">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
-          {/* Brand Logo */}
-          <Link href="/" className="flex items-center gap-2 sm:gap-3 group shrink-0">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white flex items-center justify-center p-1 shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform border border-slate-700/50 shrink-0">
+      {/* Header */}
+      <header className="sticky top-0 z-30 bg-slate-950/90 dark:bg-slate-950/90 light:bg-white/95 backdrop-blur-md border-b border-slate-800 dark:border-slate-800 light:border-slate-200 py-3 px-4 sm:px-6 transition-colors">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+          {/* Logo & Identity */}
+          <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl overflow-hidden bg-white shadow-md shadow-blue-500/10 p-1 border border-slate-700/40 dark:border-slate-700/40 light:border-slate-200 group-hover:scale-105 transition-transform shrink-0 flex items-center justify-center">
               <Image
                 src="/logo.jpg"
-                alt="كوبي كات - Copy Cat"
-                width={48}
-                height={48}
+                alt="Copy Cat Logo"
+                width={44}
+                height={44}
                 priority
                 className="w-full h-full object-contain"
               />
             </div>
-            <div>
+            <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
-                <span className="font-black text-white dark:text-white light:text-slate-900 text-base sm:text-xl tracking-tight leading-tight">
+                <span className="font-black text-base sm:text-xl text-white dark:text-white light:text-slate-950 tracking-tight group-hover:text-blue-400 dark:group-hover:text-blue-400 light:group-hover:text-blue-600 transition-colors">
                   كوبي كات
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                  Copy Cat
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">
+                  مفتوح الآن
                 </span>
               </div>
               <span className="text-[11px] text-slate-400 dark:text-slate-400 light:text-slate-500 hidden sm:block">
-                للطباعة الرقمية والتصوير والحلول المكتبية
+                مكتبة ومطبعة متكاملة بالإسماعيلية - تصوير وأدوات
               </span>
             </div>
           </Link>
@@ -462,10 +459,10 @@ export default function StorefrontPage() {
               href={`https://wa.me/${WHATSAPP_INTERNATIONAL}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition shrink-0"
+              className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shrink-0 shadow-md shadow-emerald-600/20"
               title="تواصل واتساب مباشرة"
             >
-              <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+              <MessageCircle className="w-4 h-4 text-white shrink-0" />
               <span className="hidden md:inline">واتساب: {WHATSAPP_NUMBER}</span>
               <span className="md:hidden font-bold">واتساب</span>
             </a>
@@ -492,31 +489,31 @@ export default function StorefrontPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-10 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto w-full text-center">
+      <section className="relative overflow-hidden py-8 sm:py-16 px-4 sm:px-6 max-w-7xl mx-auto w-full text-center">
         {/* Glow ambient background */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-linear-to-tr from-blue-600/20 via-cyan-500/10 to-indigo-600/20 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-linear-to-tr from-blue-600/10 via-cyan-500/10 to-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10" />
 
         {/* Hero Logo Banner */}
-        <div className="w-20 h-20 sm:w-28 sm:h-28 mx-auto mb-4 sm:mb-6 rounded-3xl overflow-hidden bg-white shadow-2xl shadow-blue-500/20 p-2 border border-slate-700/50 hover:scale-105 transition-transform flex items-center justify-center">
+        <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 rounded-3xl overflow-hidden bg-white shadow-xl shadow-blue-500/10 p-2 border border-slate-700/50 flex items-center justify-center">
           <Image
             src="/logo.jpg"
             alt="Copy Cat Logo"
-            width={112}
-            height={112}
+            width={96}
+            height={96}
             priority
             className="w-full h-full object-contain"
           />
         </div>
 
-        <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] sm:text-xs font-black mb-4 sm:mb-6">
-          <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
-          <span>المركز الأول لخدمات التصوير والطباعة والمستلزمات المكتبية</span>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-4">
+          <Zap className="w-3.5 h-3.5 text-amber-400" />
+          <span>خدمات الطباعة والتصوير السريع والأدوات المدرسية والمكتبية</span>
         </div>
 
-        <h1 className="text-2xl sm:text-5xl md:text-6xl font-black leading-tight mb-4 sm:mb-6 max-w-4xl mx-auto text-white dark:text-white light:text-slate-950">
-          كل ما تحتاجه في عالم{" "}
-          <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-400 via-cyan-400 to-indigo-400">
-            الطباعة، البطاقات، والمستلزمات المكتبية
+        <h1 className="text-2xl sm:text-5xl font-black leading-tight mb-3 max-w-4xl mx-auto text-white dark:text-white light:text-slate-950">
+          مكتبة ومطبعة{" "}
+          <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-400 via-cyan-400 to-emerald-400">
+            كوبي كات Copy Cat
           </span>
         </h1>
 
@@ -554,6 +551,73 @@ export default function StorefrontPage() {
             <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400" />
             <span>موقعنا على خريطة Google</span>
           </a>
+        </div>
+
+        {/* Ultra-Simple Quick Steps for Egyptian Print Shop Customers */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-12 text-right">
+          <div className="p-5 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 hover:border-emerald-500/60 transition shadow-lg flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg">
+                📄
+              </div>
+              <h3 className="text-base font-black text-white">عايز تطبع ورق أو ملفات فوراً؟</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                ابعت الملف (PDF أو وورد أو صور) على الواتساب مع كتابة عدد النسخ وألوان ولا أسود، وهنجهزهولك تستلمه فوراً
+                بدون انتظار!
+              </p>
+            </div>
+            <a
+              href={`https://wa.me/${WHATSAPP_INTERNATIONAL}?text=${encodeURIComponent("مرحباً مكتبة كوبي كات، أود إرسال ملف للطباعة فوراً.")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs text-center flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>إرسال الملف عبر واتساب</span>
+            </a>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-blue-950/30 border border-blue-500/30 hover:border-blue-500/60 transition shadow-lg flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-lg">
+                🎒
+              </div>
+              <h3 className="text-base font-black text-white">عايز كشاكيل أو أقلام ومستلزمات؟</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                انزل تحت واختار اللي محتاجه من الكتالوج واضغط &quot;أضف للسلة&quot;، واضغط إرسال الطلب وهيتبعت جاهز على
+                الواتساب بالأسعار والإجمالي.
+              </p>
+            </div>
+            <a
+              href="#catalog"
+              className="mt-4 w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs text-center flex items-center justify-center gap-2 shadow-md shadow-blue-600/30 transition"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>تصفح الكتالوج والأسعار</span>
+            </a>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 transition shadow-lg flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-lg">
+                📍
+              </div>
+              <h3 className="text-base font-black text-white">مكان المكتبة ومواعيد العمل</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                مكتبة كوبي كات بالإسماعيلية - بنستقبلكم يومياً من الساعة 8 صباحاً حتى 11 مساءً لخدمات الطباعة، السحب،
+                والتجليد الفوري.
+              </p>
+            </div>
+            <a
+              href={GOOGLE_MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-extrabold text-xs text-center flex items-center justify-center gap-2 transition"
+            >
+              <MapPin className="w-4 h-4 text-rose-400" />
+              <span>فتح اللوكيشن على الخريطة</span>
+            </a>
+          </div>
         </div>
       </section>
 
@@ -1377,6 +1441,22 @@ export default function StorefrontPage() {
           </div>
         </div>
       )}
+
+      {/* Floating WhatsApp Action Button */}
+      <a
+        href={`https://wa.me/${WHATSAPP_INTERNATIONAL}?text=${encodeURIComponent("مرحباً مكتبة كوبي كات، أود الاستفسار أو إرسال ملف للطباعة فوراً.")}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 left-6 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-2xl shadow-emerald-600/50 hover:scale-105 active:scale-95 transition-all group"
+        title="تواصل واتساب فوراً"
+      >
+        <span className="relative flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+        </span>
+        <MessageCircle className="w-5 h-5 text-white shrink-0" />
+        <span className="hidden sm:inline">ابعت ورقك واتساب</span>
+      </a>
 
       {/* Sticky Mobile Cart Bar - Appears when cart has items */}
       {totalCartCount > 0 && !isCartOpen && (

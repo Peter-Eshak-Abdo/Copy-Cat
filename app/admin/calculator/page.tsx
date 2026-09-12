@@ -22,6 +22,27 @@ const DEFAULT_QUICK_BUTTONS: QuickPricingButton[] = [
 
 const BUTTONS_STORAGE_KEY = "copycat_custom_pricing_buttons_v1";
 
+export interface CustomAddon {
+  id: string;
+  category: "wire" | "plastic" | "finishing";
+  name: string;
+  label: string;
+  price: number;
+}
+
+const DEFAULT_ADDONS: CustomAddon[] = [
+  { id: "wire-small", category: "wire", name: "سلك معدني صغير (حتى 60 ورقة)", label: "سلك صغير (حتى 60 ورقة)", price: 15 },
+  { id: "wire-med", category: "wire", name: "سلك معدني وسط (حتى 120 ورقة)", label: "سلك وسط (حتى 120 ورقة)", price: 20 },
+  { id: "wire-large", category: "wire", name: "سلك معدني كبير (حتى 250 ورقة)", label: "سلك كبير (حتى 250 ورقة)", price: 25 },
+  { id: "plastic-small", category: "plastic", name: "تجليد بلاستيك صغير", label: "بلاستيك صغير", price: 10 },
+  { id: "plastic-med", category: "plastic", name: "تجليد بلاستيك وسط", label: "بلاستيك وسط", price: 15 },
+  { id: "plastic-large", category: "plastic", name: "تجليد بلاستيك كبير", label: "بلاستيك كبير", price: 20 },
+  { id: "finish-cellophane", category: "finishing", name: "سلوفان حراري مط/لامع", label: "سلوفان حراري مط/لامع", price: 5 },
+  { id: "finish-glue", category: "finishing", name: "كعب غراء حراري", label: "كعب غراء حراري", price: 12 },
+];
+
+const ADDONS_STORAGE_KEY = "copycat_custom_addons_v1";
+
 interface PricingConfig {
   bwSingle: number;
   bwDuplex: number;
@@ -119,9 +140,37 @@ export default function SmartCalculatorPage() {
   // Binding selections - Default to null
   const [selectedBinding, setSelectedBinding] = useState<{ name: string; price: number } | null>(null);
 
-  // Extras toggles
-  const [extraCellophane, setExtraCellophane] = useState<boolean>(false);
-  const [extraGlue, setExtraGlue] = useState<boolean>(false);
+  // Dynamic custom add-ons state
+  const [customAddons, setCustomAddons] = useState<CustomAddon[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(ADDONS_STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch {}
+      }
+    }
+    return DEFAULT_ADDONS;
+  });
+
+  const [isManageAddonsOpen, setIsManageAddonsOpen] = useState(false);
+  const [newAddonName, setNewAddonName] = useState("");
+  const [newAddonPrice, setNewAddonPrice] = useState("");
+  const [newAddonCategory, setNewAddonCategory] = useState<"wire" | "plastic" | "finishing">("wire");
+  const [editingAddonId, setEditingAddonId] = useState<string | null>(null);
+  const [editAddonName, setEditAddonName] = useState("");
+  const [editAddonPrice, setEditAddonPrice] = useState("");
+  const [editAddonCategory, setEditAddonCategory] = useState<"wire" | "plastic" | "finishing">("wire");
+
+  // Selected finishing add-ons IDs (e.g. cellophane, glue, etc.)
+  const [selectedFinishingIds, setSelectedFinishingIds] = useState<string[]>([]);
+
+  const toggleFinishing = (id: string) => {
+    setSelectedFinishingIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
 
   // Numpad Calculator State
   const [numpadDisplay, setNumpadDisplay] = useState<string>("0");
@@ -146,10 +195,13 @@ export default function SmartCalculatorPage() {
 
   const bindingCostPerCopy = useMemo(() => {
     let cost = selectedBinding ? selectedBinding.price : 0;
-    if (extraCellophane) cost += pricing.cellophane;
-    if (extraGlue) cost += pricing.glue;
+    customAddons
+      .filter((a) => a.category === "finishing" && selectedFinishingIds.includes(a.id))
+      .forEach((a) => {
+        cost += a.price;
+      });
     return cost;
-  }, [selectedBinding, extraCellophane, extraGlue, pricing.cellophane, pricing.glue]);
+  }, [selectedBinding, customAddons, selectedFinishingIds]);
 
   const singleCopyTotalCost = useMemo(() => {
     return printCostPerCopy + bindingCostPerCopy;
@@ -264,8 +316,11 @@ export default function SmartCalculatorPage() {
     if (selectedBinding) {
       text += `• التجليد والتشطيب: ${selectedBinding.name} (${selectedBinding.price} ج.م)\n`;
     }
-    if (extraCellophane) text += `• إضافة سلوفان حراري: +${pricing.cellophane} ج.م\n`;
-    if (extraGlue) text += `• إضافة غراء حراري: +${pricing.glue} ج.م\n`;
+    customAddons
+      .filter((a) => a.category === "finishing" && selectedFinishingIds.includes(a.id))
+      .forEach((a) => {
+        text += `• إضافة ${a.name}: +${a.price} ج.م\n`;
+      });
     text += `• إجمالي سعر النسخة الواحدة: ${singleCopyTotalCost.toFixed(2)} ج.م\n`;
     text += `━━━━━━━━━━━━━━━━━━━━━\n`;
     text += `💰 *الإجمالي النهائي المطلوب: ${grandTotalCost.toLocaleString("ar-EG")} ج.م*\n`;
@@ -285,6 +340,11 @@ export default function SmartCalculatorPage() {
     msg += `📄 *${pageCount} صفحة* (${isDuplex ? "وش وظهر" : "وجه واحد"})\n`;
     msg += `📦 الكمية: *${copiesCount} نسخة*\n`;
     if (selectedBinding) msg += `📚 التجليد: ${selectedBinding.name}\n`;
+    customAddons
+      .filter((a) => a.category === "finishing" && selectedFinishingIds.includes(a.id))
+      .forEach((a) => {
+        msg += `✨ إضافة ${a.name}: +${a.price} ج.م\n`;
+      });
     msg += `💵 سعر النسخة: *${singleCopyTotalCost.toFixed(2)} ج.م*\n`;
     msg += `✨ *الإجمالي الكلي: ${grandTotalCost.toLocaleString("ar-EG")} ج.م*\n\n`;
     msg += `جاهزون للطباعة الفورية والتسليم في الموعد المحدد بإذن الله.`;
@@ -297,9 +357,13 @@ export default function SmartCalculatorPage() {
   const handleTransferToShiftOrder = () => {
     try {
       const orderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+      const activeFinishingNames = customAddons
+        .filter((a) => a.category === "finishing" && selectedFinishingIds.includes(a.id))
+        .map((a) => a.name)
+        .join(" + ");
       const newTask = {
         id: orderId,
-        title: `ملزمة/مستند (${pageCount} ص - ${isDuplex ? "وش وظهر" : "وجه واحد"}) ${selectedBinding ? "+ " + selectedBinding.name : ""}`,
+        title: `ملزمة/مستند (${pageCount} ص - ${isDuplex ? "وش وظهر" : "وجه واحد"}) ${selectedBinding ? "+ " + selectedBinding.name : ""} ${activeFinishingNames ? "+ " + activeFinishingNames : ""}`,
         customerName: "عميل حاسبة الشفت",
         phone: "",
         deadline: "اليوم",
@@ -338,9 +402,80 @@ export default function SmartCalculatorPage() {
     setPaperRate(pricing.bwDuplex);
     setRateLabel("أبيض وأسود (وش وظهر)");
     setSelectedBinding(null);
-    setExtraCellophane(false);
-    setExtraGlue(false);
+    setSelectedFinishingIds([]);
     toast.info("تم التصفير", "تم تصفير جميع القيم والبدء من جديد (0 صفحة / 0 نسخة)");
+  };
+
+  // Custom Add-ons Management Handlers
+  const handleAddAddon = () => {
+    if (!newAddonName.trim() || isNaN(parseFloat(newAddonPrice)) || parseFloat(newAddonPrice) <= 0) {
+      toast.warning("بيانات غير مكتملة", "يرجى كتابة اسم الخدمة وسعرها بصيغة صحيحة");
+      return;
+    }
+    const newAddon: CustomAddon = {
+      id: `addon-${Date.now()}`,
+      category: newAddonCategory,
+      name: newAddonName.trim(),
+      label: newAddonName.trim(),
+      price: parseFloat(newAddonPrice),
+    };
+    const updated = [...customAddons, newAddon];
+    setCustomAddons(updated);
+    try {
+      localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+    setNewAddonName("");
+    setNewAddonPrice("");
+    toast.success("تمت الإضافة", `تمت إضافة خدمة التجليد "${newAddon.name}" بنجاح`);
+  };
+
+  const handleSaveEditAddon = (id: string) => {
+    if (!editAddonName.trim() || isNaN(parseFloat(editAddonPrice)) || parseFloat(editAddonPrice) <= 0) {
+      toast.warning("بيانات غير مكتملة", "يرجى التحقق من الاسم والسعر");
+      return;
+    }
+    const updated = customAddons.map((a) =>
+      a.id === id
+        ? {
+            ...a,
+            name: editAddonName.trim(),
+            label: editAddonName.trim(),
+            category: editAddonCategory,
+            price: parseFloat(editAddonPrice),
+          }
+        : a
+    );
+    setCustomAddons(updated);
+    try {
+      localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+    setEditingAddonId(null);
+    toast.success("تم التعديل", "تم حفظ تعديل خدمة التجليد بنجاح");
+  };
+
+  const handleDeleteAddon = (id: string) => {
+    if (customAddons.length <= 1) {
+      toast.warning("تنبيه", "يجب الإبقاء على خدمة تجليد واحدة على الأقل");
+      return;
+    }
+    const updated = customAddons.filter((a) => a.id !== id);
+    setCustomAddons(updated);
+    try {
+      localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+    if (selectedBinding && !updated.some((a) => a.name === selectedBinding.name)) {
+      setSelectedBinding(null);
+    }
+    setSelectedFinishingIds((prev) => prev.filter((x) => x !== id));
+    toast.info("تم الحذف", "تم حذف خدمة التجليد");
+  };
+
+  const handleResetAddons = () => {
+    setCustomAddons(DEFAULT_ADDONS);
+    try {
+      localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(DEFAULT_ADDONS));
+    } catch {}
+    toast.success("تم الاسترجاع", "تمت استعادة خدمات التجليد والتشطيب الافتراضية");
   };
 
   // Custom Quick Buttons Management
@@ -887,16 +1022,26 @@ export default function SmartCalculatorPage() {
 
             {/* Module 3: Binding & Add-ons Finishes */}
             <div className="bg-surface-container-low rounded-xl p-space-lg shadow-xl flex flex-col gap-space-md border border-surface-container-high/40">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-space-xs">
                 <div className="flex items-center gap-space-xs">
                   <span className="material-symbols-outlined text-primary text-headline-sm">book_online</span>
                   <h2 className="font-headline-sm text-headline-sm font-semibold text-on-surface">
                     خدمات التجليد والتشطيب (Add-ons)
                   </h2>
                 </div>
-                <span className="font-label-tag text-label-tag px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface-variant">
-                  سعر مضاف للنسخة
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-label-tag text-label-tag px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface-variant">
+                    سعر مضاف للنسخة
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsManageAddonsOpen(true)}
+                    className="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs text-primary font-bold flex items-center gap-1 cursor-pointer transition border border-primary/20"
+                  >
+                    <span className="material-symbols-outlined text-sm">tune</span>
+                    <span>إدارة وتعديل خدمات التجليد</span>
+                  </button>
+                </div>
               </div>
 
               {/* Spiral Wire Binding Options */}
@@ -904,16 +1049,12 @@ export default function SmartCalculatorPage() {
                 <span className="font-body-sm text-body-sm font-medium text-on-surface-variant">
                   تجليد السلك المعدني (Spiral Wire Binding):
                 </span>
-                <div className="grid grid-cols-3 gap-space-sm">
-                  {[
-                    { name: "سلك معدني صغير (حتى 60 ورقة)", label: "سلك صغير (حتى 60 ورقة)", price: pricing.wireBindingSmall },
-                    { name: "سلك معدني وسط (حتى 120 ورقة)", label: "سلك وسط (حتى 120 ورقة)", price: pricing.wireBindingMed },
-                    { name: "سلك معدني كبير (حتى 250 ورقة)", label: "سلك كبير (حتى 250 ورقة)", price: pricing.wireBindingLarge },
-                  ].map((item) => {
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-space-sm">
+                  {customAddons.filter((a) => a.category === "wire").map((item) => {
                     const isSelected = selectedBinding?.name === item.name;
                     return (
                       <button
-                        key={item.name}
+                        key={item.id}
                         className={`p-space-sm rounded-xl text-right flex flex-col justify-between transition-all cursor-pointer border ${
                           isSelected
                             ? "bg-primary/10 border-primary/40 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
@@ -922,7 +1063,7 @@ export default function SmartCalculatorPage() {
                         onClick={() => setSelectedBinding(isSelected ? null : { name: item.name, price: item.price })}
                         type="button"
                       >
-                        <span className="font-body-sm text-body-sm">{item.label}</span>
+                        <span className="font-body-sm text-body-sm font-semibold">{item.label}</span>
                         <span className="font-label-code text-headline-sm mt-space-2xs font-bold">
                           {item.price}{" "}
                           <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">ج.م</span>
@@ -938,16 +1079,12 @@ export default function SmartCalculatorPage() {
                 <span className="font-body-sm text-body-sm font-medium text-on-surface-variant">
                   تجليد المشط البلاستيكي (Plastic Comb):
                 </span>
-                <div className="grid grid-cols-3 gap-space-sm">
-                  {[
-                    { name: "تجليد بلاستيك صغير", label: "بلاستيك صغير", price: pricing.plasticBindingSmall },
-                    { name: "تجليد بلاستيك وسط", label: "بلاستيك وسط", price: pricing.plasticBindingMed },
-                    { name: "تجليد بلاستيك كبير", label: "بلاستيك كبير", price: pricing.plasticBindingLarge },
-                  ].map((item) => {
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-space-sm">
+                  {customAddons.filter((a) => a.category === "plastic").map((item) => {
                     const isSelected = selectedBinding?.name === item.name;
                     return (
                       <button
-                        key={item.name}
+                        key={item.id}
                         className={`p-space-sm rounded-xl text-right flex flex-col justify-between transition-all cursor-pointer border ${
                           isSelected
                             ? "bg-primary/10 border-primary/40 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
@@ -956,7 +1093,7 @@ export default function SmartCalculatorPage() {
                         onClick={() => setSelectedBinding(isSelected ? null : { name: item.name, price: item.price })}
                         type="button"
                       >
-                        <span className="font-body-sm text-body-sm">{item.label}</span>
+                        <span className="font-body-sm text-body-sm font-semibold">{item.label}</span>
                         <span className="font-label-code text-headline-sm mt-space-2xs font-bold">
                           {item.price}{" "}
                           <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">ج.م</span>
@@ -967,60 +1104,49 @@ export default function SmartCalculatorPage() {
                 </div>
               </div>
 
-              {/* Extras: Cellophane, Glue, Clear */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-space-sm pt-space-xs">
-                <button
-                  className={`p-space-sm rounded-xl flex items-center justify-between text-right transition-all cursor-pointer border ${
-                    extraCellophane
-                      ? "bg-primary/10 border-primary/40 text-primary shadow-sm"
-                      : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
-                  }`}
-                  onClick={() => setExtraCellophane(!extraCellophane)}
-                  type="button"
-                >
-                  <div className="flex items-center gap-space-xs">
-                    <span className="material-symbols-outlined text-primary">
-                      {extraCellophane ? "check_box" : "check_box_outline_blank"}
-                    </span>
-                    <span className="font-body-sm text-body-sm">سلوفان حراري مط/لامع</span>
-                  </div>
-                  <span className="font-label-code text-body-sm text-tertiary font-bold">
-                    +{pricing.cellophane} ج.م
-                  </span>
-                </button>
-
-                <button
-                  className={`p-space-sm rounded-xl flex items-center justify-between text-right transition-all cursor-pointer border ${
-                    extraGlue
-                      ? "bg-primary/10 border-primary/40 text-primary shadow-sm"
-                      : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
-                  }`}
-                  onClick={() => setExtraGlue(!extraGlue)}
-                  type="button"
-                >
-                  <div className="flex items-center gap-space-xs">
-                    <span className="material-symbols-outlined text-primary">
-                      {extraGlue ? "check_box" : "check_box_outline_blank"}
-                    </span>
-                    <span className="font-body-sm text-body-sm">كعب حراري غراء فوري</span>
-                  </div>
-                  <span className="font-label-code text-body-sm text-tertiary font-bold">
-                    +{pricing.glue} ج.م
-                  </span>
-                </button>
-
-                <button
-                  className="p-space-sm rounded-xl bg-surface-container-highest hover:bg-surface-container-high text-on-surface-variant hover:text-error flex items-center justify-center gap-space-2xs transition-colors cursor-pointer border border-surface-container-high"
-                  onClick={() => {
-                    setSelectedBinding(null);
-                    setExtraCellophane(false);
-                    setExtraGlue(false);
-                  }}
-                  type="button"
-                >
-                  <span className="material-symbols-outlined text-base">close</span>
-                  <span className="font-body-sm text-body-sm">بدون تجليد (ورق فرط)</span>
-                </button>
+              {/* Extras: Finishing & Coatings */}
+              <div className="flex flex-col gap-space-sm mt-space-xs">
+                <span className="font-body-sm text-body-sm font-medium text-on-surface-variant">
+                  خدمات التشطيب والسلوفان الإضافية:
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-sm">
+                  {customAddons.filter((a) => a.category === "finishing").map((item) => {
+                    const isChecked = selectedFinishingIds.includes(item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        className={`p-space-sm rounded-xl flex items-center justify-between text-right transition-all cursor-pointer border ${
+                          isChecked
+                            ? "bg-primary/10 border-primary/40 text-primary shadow-sm"
+                            : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
+                        }`}
+                        onClick={() => toggleFinishing(item.id)}
+                        type="button"
+                      >
+                        <div className="flex items-center gap-space-xs">
+                          <span className="material-symbols-outlined text-primary">
+                            {isChecked ? "check_box" : "check_box_outline_blank"}
+                          </span>
+                          <span className="font-body-sm text-body-sm font-semibold">{item.label}</span>
+                        </div>
+                        <span className="font-label-code text-body-sm text-tertiary font-bold">
+                          +{item.price} ج.م
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <button
+                    className="p-space-sm rounded-xl bg-surface-container-highest hover:bg-surface-container-high text-on-surface-variant hover:text-error flex items-center justify-center gap-space-2xs transition-colors cursor-pointer border border-surface-container-high"
+                    onClick={() => {
+                      setSelectedBinding(null);
+                      setSelectedFinishingIds([]);
+                    }}
+                    type="button"
+                  >
+                    <span className="material-symbols-outlined text-base">close</span>
+                    <span className="font-body-sm text-body-sm">إلغاء التجليد والتشطيب</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1478,6 +1604,198 @@ export default function SmartCalculatorPage() {
                 onClick={() => {
                   setIsManageButtonsOpen(false);
                   setEditingBtnId(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-xs shadow-md cursor-pointer"
+              >
+                تم والعودة للحاسبة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Custom Add-ons Modal */}
+      {isManageAddonsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-surface-container-low border border-surface-container-high rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-surface-container-high">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-xl">tune</span>
+                <h3 className="font-bold text-lg text-on-surface">إدارة وتعديل خدمات التجليد والتشطيب</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setIsManageAddonsOpen(false);
+                  setEditingAddonId(null);
+                }}
+                className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container-high cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Add New Add-on Form */}
+            <div className="p-3.5 rounded-xl bg-surface-container border border-surface-container-high/60 space-y-2.5">
+              <div className="font-semibold text-sm text-primary flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-base">add_circle</span>
+                <span>إضافة خدمة تجليد أو تشطيب جديدة</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                <select
+                  value={newAddonCategory}
+                  onChange={(e) => setNewAddonCategory(e.target.value as "wire" | "plastic" | "finishing")}
+                  className="sm:col-span-4 px-2 py-2 rounded-lg bg-surface-container-lowest text-on-surface border border-surface-container-high text-xs font-bold"
+                >
+                  <option value="wire">سلك معدني</option>
+                  <option value="plastic">مشط بلاستيكي</option>
+                  <option value="finishing">تشطيب وسلوفان</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="اسم الخدمة (مثلاً: سلك سوبر كينج)"
+                  value={newAddonName}
+                  onChange={(e) => setNewAddonName(e.target.value)}
+                  className="sm:col-span-5 px-3 py-2 rounded-lg bg-surface-container-lowest text-on-surface border border-surface-container-high text-xs"
+                />
+                <input
+                  type="number"
+                  step="0.5"
+                  placeholder="السعر ج.م"
+                  value={newAddonPrice}
+                  onChange={(e) => setNewAddonPrice(e.target.value)}
+                  className="sm:col-span-3 px-3 py-2 rounded-lg bg-surface-container-lowest text-on-surface border border-surface-container-high text-xs"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleAddAddon}
+                className="w-full py-2 rounded-lg bg-primary text-on-primary font-bold text-xs flex items-center justify-center gap-1.5 hover:brightness-110 cursor-pointer shadow-sm"
+              >
+                <span className="material-symbols-outlined text-sm">add</span>
+                <span>إضافة الخدمة للحاسبة</span>
+              </button>
+            </div>
+
+            {/* Existing Add-ons List */}
+            <div className="space-y-2">
+              <span className="font-semibold text-xs text-on-surface-variant block">
+                الخدمات المتاحة حالياً ({customAddons.length}):
+              </span>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                {customAddons.map((addon) => (
+                  <div
+                    key={addon.id}
+                    className="p-2.5 rounded-xl bg-surface-container-lowest border border-surface-container-high flex items-center justify-between gap-2"
+                  >
+                    {editingAddonId === addon.id ? (
+                      <div className="flex-1 grid grid-cols-12 gap-1.5 items-center">
+                        <select
+                          value={editAddonCategory}
+                          onChange={(e) => setEditAddonCategory(e.target.value as "wire" | "plastic" | "finishing")}
+                          className="col-span-4 px-1.5 py-1 rounded-lg bg-surface-container text-on-surface border border-surface-container-high text-xs"
+                        >
+                          <option value="wire">سلك معدني</option>
+                          <option value="plastic">مشط بلاستيك</option>
+                          <option value="finishing">تشطيب وسلوفان</option>
+                        </select>
+                        <input
+                          type="text"
+                          value={editAddonName}
+                          onChange={(e) => setEditAddonName(e.target.value)}
+                          className="col-span-5 px-2 py-1 rounded-lg bg-surface-container text-on-surface border border-surface-container-high text-xs"
+                        />
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={editAddonPrice}
+                          onChange={(e) => setEditAddonPrice(e.target.value)}
+                          className="col-span-3 px-1.5 py-1 rounded-lg bg-surface-container text-on-surface border border-surface-container-high text-xs"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            addon.category === "wire"
+                              ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
+                              : addon.category === "plastic"
+                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                              : "bg-purple-500/10 text-purple-400 border border-purple-500/30"
+                          }`}
+                        >
+                          {addon.category === "wire" ? "سلك" : addon.category === "plastic" ? "بلاستيك" : "تشطيب"}
+                        </span>
+                        <span className="text-xs font-semibold truncate text-on-surface">{addon.name}</span>
+                        <span className="font-label-code text-xs font-bold text-primary mr-auto shrink-0">
+                          {addon.price.toFixed(2)} ج.م
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {editingAddonId === addon.id ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEditAddon(addon.id)}
+                            className="p-1 rounded-lg text-primary hover:bg-surface-container text-xs cursor-pointer"
+                            title="حفظ"
+                          >
+                            <span className="material-symbols-outlined text-base">check</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingAddonId(null)}
+                            className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container text-xs cursor-pointer"
+                            title="إلغاء"
+                          >
+                            <span className="material-symbols-outlined text-base">close</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingAddonId(addon.id);
+                              setEditAddonName(addon.name);
+                              setEditAddonPrice(addon.price.toString());
+                              setEditAddonCategory(addon.category);
+                            }}
+                            className="p-1 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container text-xs cursor-pointer"
+                            title="تعديل"
+                          >
+                            <span className="material-symbols-outlined text-base">edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAddon(addon.id)}
+                            className="p-1 rounded-lg text-on-surface-variant hover:text-error hover:bg-surface-container text-xs cursor-pointer"
+                            title="حذف"
+                          >
+                            <span className="material-symbols-outlined text-base">delete</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-surface-container-high">
+              <button
+                type="button"
+                onClick={handleResetAddons}
+                className="px-3 py-1.5 rounded-lg text-xs text-on-surface-variant hover:text-error hover:bg-surface-container transition-colors cursor-pointer"
+              >
+                استعادة الخدمات الافتراضية
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsManageAddonsOpen(false);
+                  setEditingAddonId(null);
                 }}
                 className="px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-xs shadow-md cursor-pointer"
               >

@@ -109,10 +109,7 @@ export default function TasksHandoverPage() {
     () => tasks.reduce((sum, t) => sum + (t.completedCopies || 0), 0),
     [tasks]
   );
-  const shiftCashVal = useMemo(
-    () => tasks.reduce((sum, t) => sum + (t.completedCopies || 0) * 1.5, 0),
-    [tasks]
-  );
+
 
   const openAddModal = () => {
     setEditingTask(null);
@@ -292,7 +289,7 @@ export default function TasksHandoverPage() {
     report += `🕒 التاريخ والوقت: ${nowStr}\n`;
     report += `🏢 الوردية: ${currentShift.label} (${currentShift.timeRange})\n`;
     report += `📄 إجمالي النسخ المطبوعة: ${totalCompletedCopies.toLocaleString("ar-EG")} ورقة\n`;
-    report += `💵 نقدية الدرج المحصلة: ${shiftCashVal.toLocaleString("ar-EG")} ج.م\n`;
+
     report += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     report += `✅ *الطلبات المنجزة والجاهزة للتسليم (${completedList.length}):*\n`;
@@ -342,41 +339,39 @@ export default function TasksHandoverPage() {
 
   return (
     <div className="flex flex-col w-full pb-space-3xl gap-space-lg text-right" dir="rtl">
-      {/* Breadcrumbs & Quick Telemetry Header */}
+      {/* Breadcrumbs & Quick Header */}
       <div className="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs">
         <div className="flex items-center gap-space-xs font-label-code text-label-code text-on-surface-variant">
-          <span className="material-symbols-outlined text-sm text-primary">precision_manufacturing</span>
-          <span>وحدة الإنتاج والتشغيل السريع</span>
+          <span className="material-symbols-outlined text-sm text-primary">print</span>
+          <span>متابعة طلبات الطباعة</span>
           <span>/</span>
           <span className="text-primary font-semibold">{currentShift.label}</span>
           <span className="inline-flex items-center px-space-xs py-0.5 rounded-full bg-surface-container-high text-tertiary text-label-tag">
             <span className="w-1.5 h-1.5 rounded-full bg-tertiary ml-1.5 animate-pulse"></span>
-            الإنتاج نشط ({currentShift.timeRange})
+            الشفت شغال ({currentShift.timeRange})
           </span>
         </div>
         <div className="flex items-center gap-space-sm">
           <span className="font-label-code text-label-code text-on-surface-variant">
-            إجمالي الأوردرات المسجلة: <strong className="text-on-surface font-mono">{tasks.length} أوردر</strong>
+            إجمالي أوردرات اليوم: <strong className="text-on-surface font-mono">{tasks.length} أوردر</strong>
           </span>
         </div>
       </div>
 
       {/* Main Hero Card: Page Title & Global Shift Actions */}
-      <section className="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg shadow-xl border border-surface-container-high/40">
-        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-primary/5 blur-3xl pointer-events-none"></div>
-        <div className="absolute -bottom-24 right-1/3 w-80 h-80 rounded-full bg-primary-container/10 blur-3xl pointer-events-none"></div>
+      <section className="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg shadow-md border border-surface-container-high/40">
         <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-space-lg">
           <div className="flex flex-col gap-space-2xs max-w-2xl">
             <div className="flex items-center gap-space-sm">
               <div className="p-space-xs rounded-xl bg-primary-container/15 text-primary">
-                <span className="material-symbols-outlined text-2xl">assignment_turned_in</span>
+                <span className="material-symbols-outlined text-2xl">receipt_long</span>
               </div>
               <h1 className="font-headline-lg text-headline-lg text-on-surface font-extrabold tracking-tight">
-                مهام وأوردرات الشفت وتسليم الورديات
+                أوردرات الطباعة وتسليم الشفت
               </h1>
             </div>
             <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-              إدارة أوردرات وملازم المدرسين والعملاء، عداد النسخ المطبوعة الحي، إرسال تنبيهات واتساب بنقرة واحدة، وتوليد تقرير استلام وتسليم الشفت بالكامل لعهدة الكاشير والماكينات.
+              سجل واستلم ملازم وورق المدرسين والطلبة، تابع النسخ المطبوعة أولاً بأول، وابعث رسالة جاهزة للزبون على الواتساب أول ما حاجته تخلص.
             </p>
           </div>
 
@@ -403,7 +398,7 @@ export default function TasksHandoverPage() {
       </section>
 
       {/* Live Shift Telemetry Metric Bar */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-space-md">
+      <section className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
         <div className="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between relative overflow-hidden border border-surface-container-high/40">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="font-label-tag text-label-tag tracking-wider uppercase">الأوردرات الجارية</span>
@@ -443,40 +438,6 @@ export default function TasksHandoverPage() {
           </div>
         </div>
 
-        <div className="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between relative overflow-hidden border border-surface-container-high/40">
-          <div className="flex items-center justify-between text-on-surface-variant">
-            <span className="font-label-tag text-label-tag tracking-wider uppercase">نقدية الدرج المحصلة</span>
-            <span className="material-symbols-outlined text-primary text-xl">payments</span>
-          </div>
-          <div className="mt-space-sm flex items-baseline justify-between">
-            <span className="font-headline-lg text-headline-lg text-on-surface font-bold font-mono">
-              {shiftCashVal.toLocaleString("ar-EG")}{" "}
-              <span className="text-body-sm font-normal text-on-surface-variant">ج.م</span>
-            </span>
-            <span className="font-label-code text-label-code text-primary bg-primary/10 px-space-xs py-0.5 rounded-lg">
-              مطابق للنسخ
-            </span>
-          </div>
-          <div className="w-full bg-surface-container h-1 rounded-full mt-space-sm overflow-hidden">
-            <div className="bg-primary h-full rounded-full" style={{ width: "100%" }}></div>
-          </div>
-        </div>
-
-        <div className="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between relative overflow-hidden border border-surface-container-high/40">
-          <div className="flex items-center justify-between text-on-surface-variant">
-            <span className="font-label-tag text-label-tag tracking-wider uppercase">كفاءة تشغيل الماكينات</span>
-            <span className="material-symbols-outlined text-secondary text-xl">speed</span>
-          </div>
-          <div className="mt-space-sm flex items-baseline justify-between">
-            <span className="font-headline-lg text-headline-lg text-on-surface font-bold font-mono">98.4%</span>
-            <span className="font-label-code text-label-code text-secondary bg-secondary-container/20 px-space-xs py-0.5 rounded-lg">
-              4 ماكينات جاهزة
-            </span>
-          </div>
-          <div className="w-full bg-surface-container h-1 rounded-full mt-space-sm overflow-hidden">
-            <div className="bg-secondary-container h-full rounded-full" style={{ width: "98%" }}></div>
-          </div>
-        </div>
       </section>
 
       {/* Filter and Search Bar */}
@@ -877,17 +838,11 @@ export default function TasksHandoverPage() {
             </div>
 
             {/* Shift Stats Card */}
-            <div className="grid grid-cols-2 gap-space-sm">
+            <div className="grid grid-cols-1 gap-space-sm">
               <div className="p-space-sm rounded-xl bg-surface-container">
                 <span className="text-xs text-on-surface-variant block">النسخ المطبوعة بالشفت:</span>
                 <span className="text-xl font-bold font-mono text-tertiary">
                   {totalCompletedCopies.toLocaleString("ar-EG")} ورقة
-                </span>
-              </div>
-              <div className="p-space-sm rounded-xl bg-surface-container">
-                <span className="text-xs text-on-surface-variant block">عهدة النقدية بالدرج:</span>
-                <span className="text-xl font-bold font-mono text-primary">
-                  {shiftCashVal.toLocaleString("ar-EG")} ج.م
                 </span>
               </div>
             </div>

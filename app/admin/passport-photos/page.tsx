@@ -98,11 +98,30 @@ export default function PassportPhotosPage() {
 
         const originalDataUrl = await readFileAsDataURL(file);
 
+        // Biometric AI face detection (locates head & shoulders even on full-body photos)
+        let aiBox: [number, number, number, number] | undefined = undefined;
+        try {
+          const detectRes = await fetch("/api/enhance-portrait", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "detect_face", imageBase64: originalDataUrl }),
+          });
+          if (detectRes.ok) {
+            const d = await detectRes.json();
+            if (Array.isArray(d.box_2d) && d.box_2d.length === 4) {
+              aiBox = d.box_2d;
+            }
+          }
+        } catch {
+          // Fallback to internal heuristic
+        }
+
         // Frame to 4x5.2 studio standard with proportional scale & identity preservation
         const framedDataUrl = await enhanceAndFramePassportPhoto(processedBlob, {
           autoCompleteCropped,
           superResolution,
           preserveIdentity,
+          aiBox,
         });
 
         setPersons((prev) => [

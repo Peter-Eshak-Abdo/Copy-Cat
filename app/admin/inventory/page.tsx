@@ -560,16 +560,26 @@ export default function InventoryPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            resetForm();
-            setIsAddingModal(true);
-          }}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 transition cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>إضافة صنف أو خدمة جديدة</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/admin/photos"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 shadow-sm transition"
+          >
+            <Camera className="w-4 h-4 text-emerald-400" />
+            <span>بنك ومكتبة صور المنتجات (Photo Pool)</span>
+          </Link>
+
+          <button
+            onClick={() => {
+              resetForm();
+              setIsAddingModal(true);
+            }}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>إضافة صنف أو خدمة جديدة</span>
+          </button>
+        </div>
       </div>
 
       {statusNotice && (

@@ -86,7 +86,7 @@ export async function generatePassportPhotosDocx(
                 width: imgWidth,
                 height: imgHeight,
               },
-              type: "jpg",
+              type: person.imageDataUrl.includes("image/png") ? "png" : "jpg",
             }),
           ],
         }),
