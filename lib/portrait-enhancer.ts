@@ -465,8 +465,17 @@ export async function enhanceAndFramePassportPhoto(
   finalCtx.fillStyle = "#ffffff";
   finalCtx.fillRect(0, 0, targetW, targetH);
 
-  // B. Draw onto target frame
-  finalCtx.drawImage(reconstructedCanvas, 0, 0, targetW, targetH);
+  // B. Draw onto target frame with PROPORTIONAL ASPECT RATIO (NEVER STRETCH)
+  const rw = reconstructedCanvas.width;
+  const rh = reconstructedCanvas.height;
+  const scale = Math.max(targetW / rw, targetH / rh);
+  const dw = Math.round(rw * scale);
+  const dh = Math.round(rh * scale);
+  const dx = Math.round((targetW - dw) / 2);
+  // Position head with natural headroom near the top
+  const dy = Math.max(targetH - dh, Math.min(0, Math.round(targetH * 0.05)));
+
+  finalCtx.drawImage(reconstructedCanvas, dx, dy, dw, dh);
 
   // C. 1.5pt crisp solid black border (Requirement #8)
   finalCtx.strokeStyle = "#000000";
@@ -504,10 +513,15 @@ export function renderFramedPassportCanvas(
   // Move to center of canvas + pan
   ctx.translate(targetW / 2 + panX, targetH / 2 + panY);
   ctx.rotate((rotation * Math.PI) / 180);
-  ctx.scale(zoom, zoom);
 
-  const iw = img.naturalWidth || img.width;
-  const ih = img.naturalHeight || img.height;
+  const iw = img.naturalWidth || img.width || targetW;
+  const ih = img.naturalHeight || img.height || targetH;
+
+  // Calculate base scale so image fills the 400x520 frame proportionally at zoom = 1.0
+  const baseScale = Math.max(targetW / iw, targetH / ih);
+  const effectiveScale = baseScale * Math.max(0.2, zoom);
+
+  ctx.scale(effectiveScale, effectiveScale);
   ctx.drawImage(img, -iw / 2, -ih / 2, iw, ih);
   ctx.restore();
 

@@ -429,5 +429,8 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
 
   const blob = await Packer.toBlob(doc);
   const safeTopic = topic.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, "_").slice(0, 25);
-  saveAs(blob, `CopyCat_Research_${safeTopic}.docx`);
+  if (typeof window !== "undefined") {
+    saveAs(blob, `CopyCat_Research_${safeTopic}.docx`);
+  }
+  return blob;
 }

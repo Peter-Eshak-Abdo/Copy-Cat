@@ -50,23 +50,27 @@ export function PwaAndErrorGuard() {
         window.location.hostname === "127.0.0.1" ||
         window.location.hostname.includes("192.168.");
 
+      if ("caches" in window) {
+        caches.keys().then((keys) => {
+          for (const key of keys) {
+            if (key !== "copycat-cache-v5.0") {
+              caches.delete(key);
+            }
+          }
+        });
+      }
+
       if (isLocalhost) {
         navigator.serviceWorker.getRegistrations().then((registrations) => {
           for (const reg of registrations) {
             reg.unregister();
           }
         });
-        if ("caches" in window) {
-          caches.keys().then((keys) => {
-            for (const key of keys) {
-              caches.delete(key);
-            }
-          });
-        }
       } else if (window.location.protocol.startsWith("http")) {
         navigator.serviceWorker
           .register("/sw.js")
           .then((reg) => {
+            reg.update();
             console.log("Copy-Cat PWA Service Worker active", reg.scope);
           })
           .catch(() => {

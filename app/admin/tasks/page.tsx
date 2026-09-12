@@ -21,49 +21,7 @@ export interface PrintTask {
 
 const STORAGE_KEY = "copycat_tasks_v1";
 
-const INITIAL_TASKS: PrintTask[] = [
-  {
-    id: "ORD-9421",
-    title: "مذكرة ليلة الامتحان 1 ث - وش وظهر + غلاف كوشيه سلوفان",
-    customerName: "أ. محمود عبد العال (فيزياء)",
-    phone: "01012345678",
-    deadline: "اليوم 6:00 م",
-    totalCopies: 80,
-    completedCopies: 48,
-    bindingType: "تجليد سلك حلزوني 20مم + غلاف كريستال",
-    notes: "طباعة وجهين، الغلاف ملون 250 جرام",
-    status: "in_progress",
-    createdAt: Date.now() - 1000 * 60 * 180,
-  },
-  {
-    id: "ORD-9420",
-    title: "شهادات تقدير أوائل الطلبة A4 ورق مقوى 250g ألوان",
-    customerName: "مدرسة النصر الإعدادية",
-    phone: "01198765432",
-    deadline: "غداً 10:00 ص",
-    totalCopies: 150,
-    completedCopies: 150,
-    bindingType: "سلوفان حراري لامع A4",
-    notes: "ورق كوشيه 250 جرام ألوان عالي الجودة",
-    status: "ready",
-    createdAt: Date.now() - 1000 * 60 * 240,
-    completedAt: Date.now() - 1000 * 60 * 30,
-  },
-  {
-    id: "ORD-9419",
-    title: "سحب سكانر وتجهيز بطاقات رقم قومي A5 وش وظهر",
-    customerName: "عميل نقدي (مكتب توثيق)",
-    phone: "01210571251",
-    deadline: "اليوم 3:00 م",
-    totalCopies: 12,
-    completedCopies: 12,
-    bindingType: "بدون تجليد (فرط)",
-    notes: "تجهيز وقص وتسليف فوري",
-    status: "completed",
-    createdAt: Date.now() - 1000 * 60 * 360,
-    completedAt: Date.now() - 1000 * 60 * 60,
-  },
-];
+const INITIAL_TASKS: PrintTask[] = [];
 
 function getCurrentShift(date: Date = new Date()): {
   id: "morning" | "evening";
@@ -840,7 +798,6 @@ export default function TasksHandoverPage() {
                     <option value="سلك حلزوني + غلاف شفاف">سلك حلزوني + غلاف شفاف</option>
                     <option value="تجليد سلك معدني 20مم">تجليد سلك معدني 20مم</option>
                     <option value="دبوسين نصف (ملازم)">دبوسين نصف (ملازم)</option>
-                    <option value="تجليد حراري (غراء كعب)">تجليد حراري (غراء كعب)</option>
                     <option value="سلوفان حراري لامع A4">سلوفان حراري لامع A4</option>
                     <option value="سلوفان حراري مط A4">سلوفان حراري مط A4</option>
                     <option value="بدون تجليد (فرط)">بدون تجليد (فرط)</option>

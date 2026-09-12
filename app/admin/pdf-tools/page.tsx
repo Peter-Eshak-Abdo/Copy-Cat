@@ -81,7 +81,9 @@ export default function PdfToolsPage() {
     try {
       setIsGeneratingThumbs(true);
       const pdfjs = await import("pdfjs-dist");
-      pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
+      if (typeof window !== "undefined") {
+        pdfjs.GlobalWorkerOptions.workerSrc = `${window.location.origin}/pdf.worker.min.js`;
+      }
 
       // Use a slice copy to avoid detached ArrayBuffer
       const loadingTask = pdfjs.getDocument({ data: new Uint8Array(docBuffer.slice(0)) });

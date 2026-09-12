@@ -165,7 +165,52 @@ export default function IdCardsPage() {
 
       try {
         const originalSrc = await readFileAsDataURL(file);
-        const processedSrc = await processSideImage(originalSrc);
+
+        // 1. Auto-detect corners from image using lightweight canvas
+        const autoQuad = await new Promise<QuadCorners>((resolve) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = originalSrc;
+          img.onload = () => {
+            try {
+              const c = document.createElement("canvas");
+              c.width = img.naturalWidth || img.width;
+              c.height = img.naturalHeight || img.height;
+              const ctx = c.getContext("2d");
+              if (ctx) {
+                ctx.drawImage(img, 0, 0);
+                resolve(detectCardCorners(c));
+                return;
+              }
+            } catch {}
+            resolve({
+              tl: { x: 0.05, y: 0.08 },
+              tr: { x: 0.95, y: 0.08 },
+              br: { x: 0.95, y: 0.92 },
+              bl: { x: 0.05, y: 0.92 },
+            });
+          };
+          img.onerror = () => {
+            resolve({
+              tl: { x: 0.05, y: 0.08 },
+              tr: { x: 0.95, y: 0.08 },
+              br: { x: 0.95, y: 0.92 },
+              bl: { x: 0.05, y: 0.92 },
+            });
+          };
+        });
+
+        // 2. Automatically process with quad perspective warp + CamScanner Magic Color
+        const processedSrc = await processSideImage(
+          originalSrc,
+          globalBrightness,
+          105,
+          globalSharpness,
+          0,
+          undefined,
+          autoQuad,
+          true // CamScanner Magic Color mode enabled by default
+        );
 
         loadedSides.push({
           id: Math.random().toString(36).substring(2, 9),
@@ -177,6 +222,8 @@ export default function IdCardsPage() {
           contrast: 105,
           sharpness: globalSharpness,
           sideType: i % 2 === 0 ? "front" : "back",
+          quad: autoQuad,
+          camScannerMode: true,
         });
       } catch (err) {
         console.error(`Error reading card image ${file.name}:`, err);
@@ -526,17 +573,16 @@ export default function IdCardsPage() {
     if (pairs.length === 0) return;
     setIsGenerating(true);
     try {
-      const imagesInOrder: string[] = [];
+      const docxPairs = pairs.map((p) => ({
+        front: p.front?.processedSrc || null,
+        back: p.back?.processedSrc || null,
+        name: p.cardName,
+      }));
 
-      pairs.forEach((p) => {
-        if (p.front) imagesInOrder.push(p.front.processedSrc);
-        if (p.back) imagesInOrder.push(p.back.processedSrc);
-      });
-
-      await generateIdCardsDocx(imagesInOrder, "CopyCat_ID_Cards_A5.docx");
+      await generateIdCardsDocx(docxPairs, "CopyCat_ID_Cards_A5.docx", "single_sheet");
       toast.success(
-        "تم تصدير ملف الوورد بنجاح",
-        `تم تجهيز ${imagesInOrder.length} وجه في ملف CopyCat_ID_Cards_A5.docx جاهز للطباعة فوراً.`
+        "تم تصدير ملف الوورد بنجاح (A5)",
+        `تم تجهيز ${pairs.length} بطاقة (الوش والظهر معاً في نفس الورقة القياسية) جاهزة للطباعة فوراً.`
       );
     } catch (err) {
       console.error("Error generating docx:", err);

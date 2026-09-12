@@ -426,26 +426,34 @@ export default function AdminDashboardPage() {
           </div>
         </Link>
 
-        {/* Card 4: Hardware & CMYK Health */}
+        {/* Card 4: Shift Completion & Progress */}
         <div className="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low shadow-md relative overflow-hidden border border-surface-container-high/40">
           <div className="flex items-center justify-between mb-space-sm">
-            <span className="font-body-sm text-body-sm text-on-surface-variant font-semibold">كفاءة الماكينات وخراطيش الحبر</span>
+            <span className="font-body-sm text-body-sm text-on-surface-variant font-semibold">معدل إنجاز أوردرات الشفت</span>
             <div className="w-10 h-10 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined text-xl">hub</span>
+              <span className="material-symbols-outlined text-xl">donut_large</span>
             </div>
           </div>
           <div className="flex items-baseline gap-space-xs mb-space-xs">
-            <span className="font-display-hero text-display-hero text-on-surface font-extrabold tracking-tight">98.2%</span>
-            <span className="font-label-code text-label-code text-primary">جاهزية 100%</span>
+            <span className="font-display-hero text-display-hero text-on-surface font-extrabold tracking-tight">
+              {tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0}%
+            </span>
+            <span className="font-label-code text-label-code text-primary">
+              {tasks.length > 0 ? `${completedCount} من ${tasks.length}` : "0 أوردر"}
+            </span>
           </div>
           <div className="flex flex-col gap-1 pt-space-xs">
-            <div className="grid grid-cols-4 gap-1">
-              <div className="h-1.5 rounded-full bg-primary" title="Cyan 84%"></div>
-              <div className="h-1.5 rounded-full bg-secondary-container" title="Magenta 76%"></div>
-              <div className="h-1.5 rounded-full bg-tertiary" title="Yellow 92%"></div>
-              <div className="h-1.5 rounded-full bg-surface-bright" title="Black/Key 88%"></div>
+            <div className="w-full h-1.5 rounded-full bg-surface-container-high overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all duration-500 rounded-full"
+                style={{ width: `${tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0}%` }}
+              ></div>
             </div>
-            <span className="font-label-code text-label-code text-on-surface-variant text-[10px]">4 طابعات ليزر وريزو متصلة بالشبكة</span>
+            <span className="font-label-code text-label-code text-on-surface-variant text-[10px]">
+              {tasks.length > 0
+                ? `${inProgressCount} أوردر جاري تنفيذه حالياً`
+                : "جاهز لبدء استقبال أوردرات الشفت الجديدة"}
+            </span>
           </div>
         </div>
       </div>

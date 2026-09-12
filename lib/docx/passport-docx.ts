@@ -16,6 +16,9 @@ import { saveAs } from "file-saver";
 
 function base64ToUint8Array(base64: string): Uint8Array {
   const pureBase64 = base64.includes(",") ? base64.split(",")[1] : base64;
+  if (typeof Buffer !== "undefined") {
+    return new Uint8Array(Buffer.from(pureBase64, "base64"));
+  }
   const binaryString = window.atob(pureBase64);
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
@@ -162,5 +165,8 @@ export async function generatePassportPhotosDocx(
   });
 
   const blob = await Packer.toBlob(doc);
-  saveAs(blob, defaultFilename);
+  if (typeof window !== "undefined") {
+    saveAs(blob, defaultFilename);
+  }
+  return blob;
 }

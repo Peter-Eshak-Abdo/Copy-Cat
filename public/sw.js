@@ -1,23 +1,11 @@
-// Copy-Cat Service Worker v3.0 - High Performance Offline First
-const CACHE_NAME = "copycat-cache-v3.0";
+// Copy-Cat Service Worker v5.0 - High Performance & Dynamic Admin Bypass
+const CACHE_NAME = "copycat-cache-v5.0";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
   "/",
   "/offline.html",
   "/login",
-  "/admin",
-  "/admin/id-cards",
-  "/admin/passport-photos",
-  "/admin/scanner",
-  "/admin/inventory",
-  "/admin/research",
-  "/admin/shortcuts",
-  "/admin/ocr",
-  "/admin/tasks",
-  "/admin/calculator",
-  "/admin/lan-transfer",
-  "/admin/pdf-tools",
   "/logo.jpg",
   "/image.png",
   "/manifest.json",
@@ -27,9 +15,8 @@ const PRECACHE_ASSETS = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Pre-cache core shell and offline page defensively
       return cache.addAll(PRECACHE_ASSETS).catch((err) => {
-        console.warn("Some precache assets failed to load:", err);
+        console.warn("Precache failed:", err);
       });
     })
   );
@@ -55,15 +42,15 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip localhost / development completely to prevent HMR chunk caching and hydration mismatches
+  // Skip localhost / development
   if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
     return;
   }
 
-  // 1. Skip non-GET, non-HTTP, and Next.js /api/ routes
-  if (request.method !== "GET") return;
-  if (!url.protocol.startsWith("http")) return;
-  if (url.pathname.startsWith("/api/")) return;
+  // CRITICAL: NEVER cache admin pages or API routes in Service Worker
+  if (url.pathname.startsWith("/admin") || url.pathname.startsWith("/api/")) {
+    return;
+  }
 
   // 2. Static Assets (Next.js JS/CSS chunks, fonts, images) -> Cache First with background update
   if (
