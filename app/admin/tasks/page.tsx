@@ -338,47 +338,47 @@ export default function TasksHandoverPage() {
   };
 
   return (
-    <div className="flex flex-col w-full pb-space-3xl gap-space-lg text-right" dir="rtl">
+    <div className="flex flex-col w-full pb-12 space-y-6 text-right" dir="rtl">
       {/* Breadcrumbs & Quick Header */}
-      <div className="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs">
-        <div className="flex items-center gap-space-xs font-label-code text-label-code text-on-surface-variant">
-          <span className="material-symbols-outlined text-sm text-primary">print</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+          <span className="material-symbols-outlined text-sm text-blue-600">print</span>
           <span>متابعة طلبات الطباعة</span>
           <span>/</span>
-          <span className="text-primary font-semibold">{currentShift.label}</span>
-          <span className="inline-flex items-center px-space-xs py-0.5 rounded-full bg-surface-container-high text-tertiary text-label-tag">
-            <span className="w-1.5 h-1.5 rounded-full bg-tertiary ml-1.5 animate-pulse"></span>
+          <span className="text-blue-600 font-bold">{currentShift.label}</span>
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs border border-slate-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-1.5 animate-pulse"></span>
             الشفت شغال ({currentShift.timeRange})
           </span>
         </div>
-        <div className="flex items-center gap-space-sm">
-          <span className="font-label-code text-label-code text-on-surface-variant">
-            إجمالي أوردرات اليوم: <strong className="text-on-surface font-mono">{tasks.length} أوردر</strong>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500">
+            إجمالي أوردرات اليوم: <strong className="text-slate-900 font-mono">{tasks.length} أوردر</strong>
           </span>
         </div>
       </div>
 
       {/* Main Hero Card: Page Title & Global Shift Actions */}
-      <section className="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg shadow-md border border-surface-container-high/40">
-        <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-space-lg">
-          <div className="flex flex-col gap-space-2xs max-w-2xl">
-            <div className="flex items-center gap-space-sm">
-              <div className="p-space-xs rounded-xl bg-primary-container/15 text-primary">
+      <section className="rounded-2xl bg-white p-6 shadow-xs border border-slate-200">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+          <div className="flex flex-col gap-1.5 max-w-2xl">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
                 <span className="material-symbols-outlined text-2xl">receipt_long</span>
               </div>
-              <h1 className="font-headline-lg text-headline-lg text-on-surface font-extrabold tracking-tight">
+              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
                 أوردرات الطباعة وتسليم الشفت
               </h1>
             </div>
-            <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
               سجل واستلم ملازم وورق المدرسين والطلبة، تابع النسخ المطبوعة أولاً بأول، وابعث رسالة جاهزة للزبون على الواتساب أول ما حاجته تخلص.
             </p>
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center gap-space-sm">
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
-              className="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-surface-container-highest hover:bg-surface-bright text-primary font-body-sm text-body-sm font-semibold transition-all shadow-md active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition border border-slate-200 cursor-pointer"
               onClick={() => setIsHandoverModalOpen(true)}
               type="button"
             >
@@ -386,7 +386,7 @@ export default function TasksHandoverPage() {
               <span>تقرير تسليم الشفت</span>
             </button>
             <button
-              className="flex items-center gap-space-xs px-space-lg py-space-sm rounded-xl bg-primary hover:bg-primary-fixed text-on-primary font-body-sm text-body-sm font-bold shadow-lg shadow-primary/20 transition-all hover:shadow-primary/30 active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
               onClick={openAddModal}
               type="button"
             >
@@ -398,53 +398,52 @@ export default function TasksHandoverPage() {
       </section>
 
       {/* Live Shift Telemetry Metric Bar */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
-        <div className="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between relative overflow-hidden border border-surface-container-high/40">
-          <div className="flex items-center justify-between text-on-surface-variant">
-            <span className="font-label-tag text-label-tag tracking-wider uppercase">الأوردرات الجارية</span>
-            <span className="material-symbols-outlined text-primary text-xl">print</span>
+      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="rounded-2xl bg-white p-5 shadow-xs flex flex-col justify-between border border-slate-200">
+          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
+            <span>الأوردرات الجارية</span>
+            <span className="material-symbols-outlined text-blue-600 text-xl">print</span>
           </div>
-          <div className="mt-space-sm flex items-baseline justify-between">
-            <span className="font-headline-lg text-headline-lg text-on-surface font-bold font-mono">
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-3xl font-extrabold text-slate-900 font-mono">
               {activeTasksCount}
             </span>
-            <span className="font-label-code text-label-code text-primary bg-primary/10 px-space-xs py-0.5 rounded-lg">
+            <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg">
               {inProgressCount} قيد التنفيذ
             </span>
           </div>
-          <div className="w-full bg-surface-container h-1 rounded-full mt-space-sm overflow-hidden">
+          <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
             <div
-              className="bg-primary h-full rounded-full transition-all"
+              className="bg-blue-600 h-full rounded-full transition-all"
               style={{ width: `${tasks.length ? (activeTasksCount / tasks.length) * 100 : 0}%` }}
             ></div>
           </div>
         </div>
 
-        <div className="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between relative overflow-hidden border border-surface-container-high/40">
-          <div className="flex items-center justify-between text-on-surface-variant">
-            <span className="font-label-tag text-label-tag tracking-wider uppercase">النسخ المنجزة بالشفت</span>
-            <span className="material-symbols-outlined text-tertiary text-xl">layers</span>
+        <div className="rounded-2xl bg-white p-5 shadow-xs flex flex-col justify-between border border-slate-200">
+          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
+            <span>النسخ المنجزة بالشفت</span>
+            <span className="material-symbols-outlined text-indigo-600 text-xl">layers</span>
           </div>
-          <div className="mt-space-sm flex items-baseline justify-between">
-            <span className="font-headline-lg text-headline-lg text-on-surface font-bold font-mono">
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-3xl font-extrabold text-slate-900 font-mono">
               {totalCompletedCopies.toLocaleString("ar-EG")}
             </span>
-            <span className="font-label-code text-label-code text-tertiary bg-tertiary/10 px-space-xs py-0.5 rounded-lg">
+            <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg">
               {currentShift.label}
             </span>
           </div>
-          <div className="w-full bg-surface-container h-1 rounded-full mt-space-sm overflow-hidden">
-            <div className="bg-tertiary h-full rounded-full" style={{ width: "85%" }}></div>
+          <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
+            <div className="bg-indigo-600 h-full rounded-full" style={{ width: "85%" }}></div>
           </div>
         </div>
-
       </section>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-space-sm bg-surface-container-low p-space-sm rounded-xl border border-surface-container-high/40 shadow-sm">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
         {/* Search */}
         <div className="relative w-full md:w-80">
-          <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">
+          <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
             search
           </span>
           <input
@@ -452,12 +451,12 @@ export default function TasksHandoverPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="بحث باسم العمل، العميل، رقم الأوردر..."
-            className="w-full pr-9 pl-4 py-2 rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none focus:ring-2 focus:ring-primary border border-surface-container-high"
+            className="w-full pr-9 pl-4 py-2 rounded-xl bg-slate-50 text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-blue-500 border border-slate-200 transition"
           />
         </div>
 
         {/* Status Filter Tabs */}
-        <div className="flex items-center gap-1 p-1 bg-surface-container-lowest rounded-xl overflow-x-auto w-full md:w-auto border border-surface-container-high/50">
+        <div className="flex items-center gap-1 p-1 bg-slate-50 rounded-xl overflow-x-auto w-full md:w-auto border border-slate-200">
           {[
             { key: "all", label: "الكل" },
             { key: "active", label: "الطلبات الجارية" },
@@ -470,10 +469,10 @@ export default function TasksHandoverPage() {
               key={tab.key}
               onClick={() => setStatusFilter(tab.key)}
               type="button"
-              className={`px-space-md py-space-xs rounded-lg font-body-sm text-body-sm whitespace-nowrap transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition cursor-pointer font-bold ${
                 statusFilter === tab.key
-                  ? "bg-surface-container-highest text-primary font-bold shadow-xs"
-                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container"
+                  ? "bg-white text-blue-700 shadow-xs border border-slate-200"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               }`}
             >
               {tab.label}
@@ -483,14 +482,14 @@ export default function TasksHandoverPage() {
       </div>
 
       {/* Orders List / Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-space-md">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredTasks.length === 0 ? (
-          <div className="col-span-full p-space-3xl rounded-xl bg-surface-container-low border border-dashed border-surface-container-high text-center text-on-surface-variant flex flex-col items-center justify-center gap-space-xs">
-            <span className="material-symbols-outlined text-4xl opacity-40">inventory_2</span>
-            <p className="font-headline-sm text-headline-sm font-semibold text-on-surface">
+          <div className="col-span-full p-12 rounded-2xl bg-white border border-dashed border-slate-200 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
+            <span className="material-symbols-outlined text-4xl text-slate-300">inventory_2</span>
+            <p className="text-base font-bold text-slate-900">
               لا توجد طلبات تطابق هذا البحث
             </p>
-            <p className="font-body-sm text-body-sm">أضف أوردرات جديدة أو قم بتغيير خيارات التصفية بالأعلى</p>
+            <p className="text-xs text-slate-500">أضف أوردرات جديدة أو قم بتغيير خيارات التصفية بالأعلى</p>
           </div>
         ) : (
           filteredTasks.map((task) => {
@@ -498,33 +497,33 @@ export default function TasksHandoverPage() {
             return (
               <div
                 key={task.id}
-                className="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-low border border-surface-container-high/40 shadow-md hover:border-primary/40 transition-all gap-space-sm"
+                className="flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 transition-all gap-3"
               >
                 {/* Card Header */}
-                <div className="flex items-start justify-between gap-space-xs">
-                  <div className="flex flex-col gap-1">
-                    <span className="font-label-code text-label-code text-primary font-bold">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-mono text-xs text-blue-600 font-bold">
                       #{task.id}
                     </span>
-                    <h3 className="font-headline-sm text-body-lg font-bold text-on-surface line-clamp-2 leading-snug">
+                    <h3 className="text-base font-bold text-slate-900 line-clamp-2 leading-snug">
                       {task.title}
                     </h3>
                   </div>
                   <span
                     onClick={() => handleToggleStatus(task.id)}
-                    className={`inline-flex items-center gap-1 px-space-xs py-space-2xs rounded-full font-label-tag text-label-tag cursor-pointer select-none transition-all ${
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold cursor-pointer select-none transition ${
                       task.status === "in_progress"
-                        ? "bg-primary/15 text-primary border border-primary/30"
+                        ? "bg-blue-50 text-blue-700 border border-blue-200"
                         : task.status === "ready"
-                        ? "bg-secondary-container/20 text-secondary border border-secondary-container/40"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                         : task.status === "completed"
-                        ? "bg-surface-container-highest text-on-surface-variant"
-                        : "bg-surface-container text-tertiary border border-tertiary/30"
+                        ? "bg-slate-100 text-slate-600 border border-slate-200"
+                        : "bg-amber-50 text-amber-700 border border-amber-200"
                     }`}
                     title="اضغط لتغيير الحالة فورياً"
                   >
                     {task.status === "in_progress" && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping"></span>
                     )}
                     {task.status === "in_progress"
                       ? "جاري الطباعة"
@@ -537,41 +536,41 @@ export default function TasksHandoverPage() {
                 </div>
 
                 {/* Details Meta */}
-                <div className="flex flex-col gap-1 text-on-surface-variant font-body-sm text-body-sm py-1 border-y border-surface-container-high/40">
+                <div className="flex flex-col gap-1.5 text-slate-500 text-xs py-2 border-y border-slate-100">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-on-surface">العميل / المدرس:</span>
-                    <span className="font-semibold text-primary">{task.customerName}</span>
+                    <span className="font-medium text-slate-700">العميل / المدرس:</span>
+                    <span className="font-bold text-slate-900">{task.customerName}</span>
                   </div>
                   {task.deadline && (
                     <div className="flex items-center justify-between text-xs">
                       <span>موعد التسليم:</span>
-                      <span className="font-label-code">{task.deadline}</span>
+                      <span className="font-mono font-medium text-slate-700">{task.deadline}</span>
                     </div>
                   )}
                   {task.bindingType && (
                     <div className="flex items-center justify-between text-xs">
                       <span>التجليد والتشطيب:</span>
-                      <span className="text-on-surface">{task.bindingType}</span>
+                      <span className="text-slate-800 font-medium">{task.bindingType}</span>
                     </div>
                   )}
                   {task.notes && (
-                    <p className="text-xs text-on-surface-variant bg-surface-container p-1.5 rounded-lg mt-1 italic line-clamp-2">
+                    <p className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-xl mt-1 italic line-clamp-2 border border-slate-100">
                       {task.notes}
                     </p>
                   )}
                 </div>
 
                 {/* Progress bar & Counter Adjuster */}
-                <div className="flex flex-col gap-space-2xs">
-                  <div className="flex items-center justify-between text-xs font-label-code">
-                    <span className="text-on-surface-variant">
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-slate-500">
                       تم طباعة: {task.completedCopies} / {task.totalCopies} نسخة
                     </span>
-                    <span className="font-bold text-primary">{progress}%</span>
+                    <span className="font-bold text-blue-600">{progress}%</span>
                   </div>
-                  <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                     <div
-                      className="bg-primary h-full rounded-full transition-all duration-300"
+                      className="bg-blue-600 h-full rounded-full transition-all duration-300"
                       style={{ width: `${progress}%` }}
                     ></div>
                   </div>
@@ -581,28 +580,28 @@ export default function TasksHandoverPage() {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleUpdateCopies(task.id, -5)}
-                        className="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-xs font-bold"
+                        className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 cursor-pointer"
                         title="-5 نسخ"
                       >
                         -5
                       </button>
                       <button
                         onClick={() => handleUpdateCopies(task.id, -1)}
-                        className="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-xs font-bold"
+                        className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 cursor-pointer"
                         title="-1 نسخة"
                       >
                         -1
                       </button>
                       <button
                         onClick={() => handleUpdateCopies(task.id, 1)}
-                        className="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-xs font-bold text-primary"
+                        className="px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-xs font-bold text-blue-700 border border-blue-200 cursor-pointer"
                         title="+1 نسخة"
                       >
                         +1
                       </button>
                       <button
                         onClick={() => handleUpdateCopies(task.id, 5)}
-                        className="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-xs font-bold text-primary"
+                        className="px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-xs font-bold text-blue-700 border border-blue-200 cursor-pointer"
                         title="+5 نسخ"
                       >
                         +5
@@ -614,7 +613,7 @@ export default function TasksHandoverPage() {
                       {task.phone && (
                         <button
                           onClick={() => handleWhatsAppNotify(task)}
-                          className="p-1.5 rounded-lg bg-surface-container hover:bg-surface-bright text-primary transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition cursor-pointer"
                           title="إرسال إشعار واتساب للعميل"
                         >
                           <span className="material-symbols-outlined text-base">chat</span>
@@ -622,14 +621,14 @@ export default function TasksHandoverPage() {
                       )}
                       <button
                         onClick={() => openEditModal(task)}
-                        className="p-1.5 rounded-lg bg-surface-container hover:bg-surface-bright text-on-surface transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer"
                         title="تعديل تفاصيل الأوردر"
                       >
                         <span className="material-symbols-outlined text-base">edit</span>
                       </button>
                       <button
                         onClick={() => handleDeleteTask(task.id)}
-                        className="p-1.5 rounded-lg bg-surface-container hover:bg-error/20 text-on-surface-variant hover:text-error transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition cursor-pointer"
                         title="حذف الأوردر"
                       >
                         <span className="material-symbols-outlined text-base">delete</span>
@@ -645,26 +644,26 @@ export default function TasksHandoverPage() {
 
       {/* Modal: New / Edit Task */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-low border border-surface-container-high rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-surface-container-high">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-xl">assignment</span>
-                <h3 className="font-bold text-lg text-on-surface">
+                <span className="material-symbols-outlined text-blue-600 text-xl">assignment</span>
+                <h3 className="font-bold text-base text-slate-900">
                   {editingTask ? "تعديل أوردر الطباعة" : "تسجيل أوردر طباعة جديد للشفت"}
                 </h3>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container-high"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            <form onSubmit={handleSaveTask} className="flex flex-col gap-space-sm">
+            <form onSubmit={handleSaveTask} className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
-                <label className="font-label-tag text-label-tag text-on-surface-variant">
+                <label className="text-xs font-bold text-slate-700">
                   عنوان المذكرة أو العمل *
                 </label>
                 <input
@@ -673,13 +672,13 @@ export default function TasksHandoverPage() {
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
                   placeholder="مثال: مذكرة كيمياء تانية ثانوي أ/ عاطف"
-                  className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none focus:ring-2 focus:ring-primary border border-surface-container-high"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-blue-500 border border-slate-200 transition"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="font-label-tag text-label-tag text-on-surface-variant">
+                  <label className="text-xs font-bold text-slate-700">
                     اسم العميل / المدرس *
                   </label>
                   <input
@@ -688,11 +687,11 @@ export default function TasksHandoverPage() {
                     value={formCustomerName}
                     onChange={(e) => setFormCustomerName(e.target.value)}
                     placeholder="أ/ عاطف النجار"
-                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none focus:ring-2 focus:ring-primary border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-blue-500 border border-slate-200 transition"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-label-tag text-label-tag text-on-surface-variant">
+                  <label className="text-xs font-bold text-slate-700">
                     رقم هاتف الواتساب
                   </label>
                   <input
@@ -701,14 +700,14 @@ export default function TasksHandoverPage() {
                     value={formPhone}
                     onChange={(e) => setFormPhone(e.target.value)}
                     placeholder="010XXXXXXXX"
-                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm font-mono text-left focus:outline-none focus:ring-2 focus:ring-primary border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 text-xs font-mono text-left focus:outline-none focus:bg-white focus:border-blue-500 border border-slate-200 transition"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-space-sm">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="font-label-tag text-label-tag text-on-surface-variant">
+                  <label className="text-xs font-bold text-slate-700">
                     عدد النسخ المطلوب
                   </label>
                   <input
@@ -717,23 +716,23 @@ export default function TasksHandoverPage() {
                     required
                     value={formTotalCopies}
                     onChange={(e) => setFormTotalCopies(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm font-mono focus:outline-none border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 text-xs font-mono focus:outline-none focus:bg-white focus:border-blue-500 border border-slate-200 transition"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-label-tag text-label-tag text-on-surface-variant">
-                    النسخ المكتملة حالياً
+                  <label className="text-xs font-bold text-slate-700">
+                    النسخ المكتملة
                   </label>
                   <input
                     type="number"
                     min="0"
                     value={formCompletedCopies}
                     onChange={(e) => setFormCompletedCopies(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm font-mono focus:outline-none border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 text-xs font-mono focus:outline-none focus:bg-white focus:border-blue-500 border border-slate-200 transition"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-label-tag text-label-tag text-on-surface-variant">
+                  <label className="text-xs font-bold text-slate-700">
                     موعد التسليم المتوقع
                   </label>
                   <input
@@ -741,20 +740,20 @@ export default function TasksHandoverPage() {
                     value={formDeadline}
                     onChange={(e) => setFormDeadline(e.target.value)}
                     placeholder="اليوم 8:00 م"
-                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-blue-500 border border-slate-200 transition"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="font-label-tag text-label-tag text-on-surface-variant">
+                  <label className="text-xs font-bold text-slate-700">
                     نوع التجليد والتشطيب
                   </label>
                   <select
                     value={formBindingType}
                     onChange={(e) => setFormBindingType(e.target.value)}
-                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-blue-500 border border-slate-200 transition cursor-pointer"
                   >
                     <option value="سلك حلزوني + غلاف شفاف">سلك حلزوني + غلاف شفاف</option>
                     <option value="تجليد سلك معدني 20مم">تجليد سلك معدني 20مم</option>
@@ -765,13 +764,13 @@ export default function TasksHandoverPage() {
                   </select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-label-tag text-label-tag text-on-surface-variant">
+                  <label className="text-xs font-bold text-slate-700">
                     حالة المهمة
                   </label>
                   <select
                     value={formStatus}
                     onChange={(e) => setFormStatus(e.target.value as PrintTask["status"])}
-                    className="w-full px-space-sm py-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-blue-500 border border-slate-200 transition cursor-pointer"
                   >
                     <option value="pending">في الانتظار (لم تبدأ)</option>
                     <option value="in_progress">جاري الطباعة والتنفيذ</option>
@@ -782,7 +781,7 @@ export default function TasksHandoverPage() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="font-label-tag text-label-tag text-on-surface-variant">
+                <label className="text-xs font-bold text-slate-700">
                   الملاحظات الفنية للطباعة
                 </label>
                 <textarea
@@ -790,21 +789,21 @@ export default function TasksHandoverPage() {
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
                   placeholder="نوع الورق، طباعة ملونة أم أبيض وأسود، خامة الغلاف..."
-                  className="w-full p-space-xs rounded-xl bg-surface-container text-on-surface font-body-sm focus:outline-none border border-surface-container-high"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-blue-500 border border-slate-200 transition"
                 ></textarea>
               </div>
 
-              <div className="flex items-center justify-end gap-space-sm pt-space-xs mt-2 border-t border-surface-container-high">
+              <div className="flex items-center justify-end gap-2 pt-2 mt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-space-md py-space-xs rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 cursor-pointer"
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center gap-1 px-space-lg py-space-xs rounded-xl bg-primary hover:bg-primary-fixed text-on-primary font-body-sm font-bold shadow-lg shadow-primary/25 cursor-pointer"
+                  className="flex items-center gap-1 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-base">save</span>
                   <span>{editingTask ? "حفظ التعديلات" : "حفظ وإرسال للماكينة"}</span>
@@ -817,47 +816,45 @@ export default function TasksHandoverPage() {
 
       {/* Modal: Shift Handover Report */}
       {isHandoverModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-low border border-surface-container-high rounded-2xl p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-surface-container-high">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-2xl">fact_check</span>
+                <span className="material-symbols-outlined text-blue-600 text-2xl">fact_check</span>
                 <div>
-                  <h3 className="font-bold text-lg text-on-surface">تقرير تسليم واستلام الشفت</h3>
-                  <span className="text-xs text-on-surface-variant font-label-code">
+                  <h3 className="font-bold text-base text-slate-900">تقرير تسليم واستلام الشفت</h3>
+                  <span className="text-xs text-slate-500 font-mono">
                     {currentShift.label} ({currentShift.timeRange})
                   </span>
                 </div>
               </div>
               <button
                 onClick={() => setIsHandoverModalOpen(false)}
-                className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container-high"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
             {/* Shift Stats Card */}
-            <div className="grid grid-cols-1 gap-space-sm">
-              <div className="p-space-sm rounded-xl bg-surface-container">
-                <span className="text-xs text-on-surface-variant block">النسخ المطبوعة بالشفت:</span>
-                <span className="text-xl font-bold font-mono text-tertiary">
-                  {totalCompletedCopies.toLocaleString("ar-EG")} ورقة
-                </span>
-              </div>
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+              <span className="text-xs text-slate-500 block mb-1">النسخ المطبوعة بالشفت:</span>
+              <span className="text-xl font-bold font-mono text-indigo-700">
+                {totalCompletedCopies.toLocaleString("ar-EG")} ورقة
+              </span>
             </div>
 
             {/* Generated Text View */}
-            <div className="p-space-sm rounded-xl bg-surface-container-lowest border border-surface-container-high/60 font-mono text-xs text-on-surface max-h-60 overflow-y-auto whitespace-pre-wrap leading-relaxed select-all">
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs text-slate-800 max-h-60 overflow-y-auto whitespace-pre-wrap leading-relaxed select-all">
               {generateHandoverReport()}
             </div>
 
             {/* Actions */}
-            <div className="flex flex-wrap items-center justify-between gap-space-sm pt-2 border-t border-surface-container-high">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={copyHandoverReport}
-                className="flex items-center gap-1.5 px-space-md py-space-xs rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm font-semibold cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer border border-slate-200"
               >
                 <span className="material-symbols-outlined text-base">content_copy</span>
                 <span>نسخ التقرير</span>
@@ -867,7 +864,7 @@ export default function TasksHandoverPage() {
                 <button
                   type="button"
                   onClick={sendWhatsappHandover}
-                  className="flex items-center gap-1.5 px-space-md py-space-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-body-sm font-semibold cursor-pointer shadow-md"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer shadow-xs"
                 >
                   <span className="material-symbols-outlined text-base">send</span>
                   <span>إرسال للشفت القادم واتساب</span>
@@ -878,7 +875,7 @@ export default function TasksHandoverPage() {
                     setIsHandoverModalOpen(false);
                     toast.success("تم توثيق الشفت", "تم اعتماد تقرير تسليم الوردية بنجاح");
                   }}
-                  className="px-space-md py-space-xs rounded-xl bg-primary text-on-primary font-body-sm font-bold shadow-md cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer"
                 >
                   اعتماد وإغلاق
                 </button>

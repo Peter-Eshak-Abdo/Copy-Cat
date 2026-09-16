@@ -12,7 +12,8 @@ import {
   WidthType,
   BorderStyle,
 } from "docx";
-import { saveAs } from "file-saver";
+import fileSaver from "file-saver";
+const saveAs = (fileSaver)?.saveAs || fileSaver;
 
 function base64ToUint8Array(base64: string): Uint8Array {
   const pureBase64 = base64.includes(",") ? base64.split(",")[1] : base64;
@@ -58,9 +59,9 @@ export async function generatePassportPhotosDocx(
   const imgWidth = 151;
   const imgHeight = 196;
 
-  // Exact 1.5 cm white cutting gap between photos (15mm = 850 twips)
-  const cuttingMargin1_5cmTwips = 850; // 15mm = 1.5cm
-  const halfCuttingMarginTwips = 425; // 7.5mm for cell sides (total 15mm between adjacent cells)
+  // Exact 18mm cutting gap between photos for easy scissor cutting
+  const cuttingMargin18mmTwips = convertMillimetersToTwip(18); // 18mm = 1020 twips
+  const halfCuttingMarginTwips = Math.round(cuttingMargin18mmTwips / 2); // 9mm for cell sides
 
   const noBorders = {
     top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
@@ -116,7 +117,7 @@ export async function generatePassportPhotosDocx(
           borders: noBorders,
           margins: {
             top: 60,
-            bottom: cuttingMargin1_5cmTwips, // 1.5 cm white gap at the bottom for easy cutting
+            bottom: cuttingMargin18mmTwips, // 18mm white gap at the bottom for easy scissor cutting
             left: halfCuttingMarginTwips,
             right: halfCuttingMarginTwips,
           },

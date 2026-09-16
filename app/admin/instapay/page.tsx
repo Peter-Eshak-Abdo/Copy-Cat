@@ -293,7 +293,7 @@ export default function InstaPayAdminPage() {
               onClick={() => setFilterStatus("pending")}
               className={`px-space-md py-1.5 rounded-lg text-body-sm font-bold transition-all cursor-pointer ${
                 filterStatus === "pending"
-                  ? "bg-amber-500 text-white shadow-sm"
+                  ? "bg-amber-500 text-slate-900 shadow-sm"
                   : "bg-surface-container hover:bg-surface-container-high text-on-surface"
               }`}
             >
@@ -354,7 +354,7 @@ export default function InstaPayAdminPage() {
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl bg-surface-container-low border border-surface-container-high/40 shadow-xl">
+          <div className="overflow-x-auto rounded-xl bg-surface-container-low border border-surface-container-high/40 shadow-xs">
             <table className="w-full text-right border-collapse">
               <thead>
                 <tr className="bg-surface-container text-on-surface-variant font-label-code text-label-code">

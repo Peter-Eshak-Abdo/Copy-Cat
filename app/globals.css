@@ -1,44 +1,44 @@
 @import "tailwindcss";
 
 @theme {
-  --color-surface: #0f131d;
-  --color-surface-dim: #0f131d;
-  --color-surface-bright: #353944;
-  --color-surface-container-lowest: #0a0e18;
-  --color-surface-container-low: #171b26;
-  --color-surface-container: #1c1f2a;
-  --color-surface-container-high: #262a35;
-  --color-surface-container-highest: #313540;
-  --color-on-surface: #dfe2f1;
-  --color-on-surface-variant: #bcc9cd;
-  --color-inverse-surface: #dfe2f1;
-  --color-inverse-on-surface: #2c303b;
-  --color-outline: #869397;
-  --color-outline-variant: #3d494c;
-  --color-surface-tint: #4cd7f6;
-  --color-primary: #4cd7f6;
-  --color-on-primary: #003640;
-  --color-primary-container: #06b6d4;
-  --color-on-primary-container: #00424f;
-  --color-inverse-primary: #00687a;
-  --color-secondary: #ffb2b7;
-  --color-on-secondary: #67001b;
-  --color-secondary-container: #b50036;
-  --color-on-secondary-container: #ffc2c4;
-  --color-tertiary: #ffb95f;
-  --color-on-tertiary: #472a00;
-  --color-tertiary-container: #e79400;
-  --color-on-tertiary-container: #563400;
-  --color-error: #ffb4ab;
-  --color-on-error: #690005;
-  --color-error-container: #93000a;
-  --color-on-error-container: #ffdad6;
-  --color-primary-fixed: #acedff;
-  --color-primary-fixed-dim: #4cd7f6;
-  --color-secondary-fixed: #ffdadb;
-  --color-secondary-fixed-dim: #ffb2b7;
-  --color-tertiary-fixed: #ffddb8;
-  --color-tertiary-fixed-dim: #ffb95f;
+  --color-surface: #ffffff;
+  --color-surface-dim: #f8fafc;
+  --color-surface-bright: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f8fafc;
+  --color-surface-container: #ffffff;
+  --color-surface-container-high: #f1f5f9;
+  --color-surface-container-highest: #e2e8f0;
+  --color-on-surface: #0f172a;
+  --color-on-surface-variant: #475569;
+  --color-inverse-surface: #0f172a;
+  --color-inverse-on-surface: #f8fafc;
+  --color-outline: #cbd5e1;
+  --color-outline-variant: #e2e8f0;
+  --color-surface-tint: #2563eb;
+  --color-primary: #2563eb;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #dbeafe;
+  --color-on-primary-container: #1e40af;
+  --color-inverse-primary: #93c5fd;
+  --color-secondary: #0284c7;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #e0f2fe;
+  --color-on-secondary-container: #0369a1;
+  --color-tertiary: #059669;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #d1fae5;
+  --color-on-tertiary-container: #047857;
+  --color-error: #dc2626;
+  --color-on-error: #ffffff;
+  --color-error-container: #fee2e2;
+  --color-on-error-container: #991b1b;
+  --color-primary-fixed: #dbeafe;
+  --color-primary-fixed-dim: #bfdbfe;
+  --color-secondary-fixed: #e0f2fe;
+  --color-secondary-fixed-dim: #bae6fd;
+  --color-tertiary-fixed: #d1fae5;
+  --color-tertiary-fixed-dim: #a7f3d0;
 
   --spacing-space-3xs: 0.125rem;
   --spacing-space-2xs: 0.25rem;
@@ -65,287 +65,57 @@
   --font-display-hero: "Inter", sans-serif;
 }
 
-@variant light (&:where(.light, .light *));
-@variant dark (&:where(.dark, .dark *));
-
 :root {
-  --background: #020617;
-  --foreground: #f8fafc;
-  --card-bg: #0f172a;
-  --card-border: #1e293b;
-  --muted-text: #94a3b8;
-}
-
-html.light,
-[data-theme="light"] {
   --background: #f8fafc;
   --foreground: #0f172a;
   --card-bg: #ffffff;
   --card-border: #e2e8f0;
-  --muted-text: #475569;
-}
-
-html.light body {
-  background-color: #f8fafc;
-  color: #0f172a;
-}
-
-html.dark body {
-  background-color: #020617;
-  color: #f8fafc;
+  --muted-text: #64748b;
+  color-scheme: light;
 }
 
 body {
   font-family: var(--font-cairo), system-ui, -apple-system, sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
   text-rendering: optimizeSpeed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* -------------------------------------------------------------
-   COMPREHENSIVE SENIOR-ACCESSIBLE LIGHT MODE (وضع فاتح عالي التباين)
-   Meets WCAG AAA contrast standards for seniors and vision comfort
-------------------------------------------------------------- */
-html.light {
-  /* 1. Surfaces & Backgrounds */
-  &,
-  & body {
-    background-color: #f8fafc !important;
-    color: #090d16 !important;
-  }
-  & .bg-slate-950 {
-    background-color: #f8fafc !important;
-  }
-  & .bg-slate-950\/60,
-  & .bg-slate-950\/80,
-  & .bg-slate-950\/90 {
-    background-color: rgba(241, 245, 249, 0.96) !important;
-  }
-  & .bg-slate-900 {
-    background-color: #ffffff !important;
-  }
-  & .bg-slate-900\/95,
-  & .bg-slate-900\/90,
-  & .bg-slate-900\/80,
-  & .bg-slate-900\/70,
-  & .bg-slate-900\/50,
-  & .bg-slate-900\/40 {
-    background-color: rgba(255, 255, 255, 0.98) !important;
-  }
-  & .bg-slate-800 {
-    background-color: #f1f5f9 !important;
-  }
-  & .bg-slate-800\/80,
-  & .bg-slate-800\/60,
-  & .bg-slate-800\/40 {
-    background-color: #e2e8f0 !important;
-  }
+/* Base Light UI Styling */
+input,
+select,
+textarea {
+  background-color: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
 
-  /* 2. Defined, High-Contrast Borders (محددة بوضوح لكبار السن) */
-  & .border-slate-800,
-  & .border-slate-800\/80,
-  & .border-slate-800\/60,
-  & .border-slate-800\/50,
-  & .border-slate-700,
-  & .border-slate-700\/50 {
-    border-color: #cbd5e1 !important;
-  }
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
 
-  /* 3. High-Contrast Typography for Seniors (خط عالي الوضوح والتباين) */
-  & .text-white {
-    color: #090d16 !important;
-  }
-  & .text-slate-100 {
-    color: #0f172a !important;
-  }
-  & .text-slate-200 {
-    color: #1e293b !important;
-  }
-  & .text-slate-300 {
-    color: #334155 !important;
-  }
-  & .text-slate-400 {
-    color: #475569 !important;
-  }
-  & .text-slate-500 {
-    color: #64748b !important;
-  }
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
 
-  /* 4. High-Contrast Accents (بدلاً من الألوان الفاتحة غير المقروءة) */
-  & .text-blue-400,
-  & .text-blue-300 {
-    color: #1d4ed8 !important;
-    font-weight: 700;
-  }
-  & .text-emerald-400,
-  & .text-emerald-300,
-  & .text-green-400 {
-    color: #047857 !important;
-    font-weight: 800;
-  }
-  & .text-amber-400,
-  & .text-amber-300,
-  & .text-amber-200 {
-    color: #9a3412 !important;
-    font-weight: 700;
-  }
-  & .text-rose-400,
-  & .text-red-400 {
-    color: #b91c1c !important;
-    font-weight: 700;
-  }
-  & .text-cyan-400,
-  & .text-cyan-300 {
-    color: #0369a1 !important;
-    font-weight: 700;
-  }
-  & .text-purple-400,
-  & .text-purple-300 {
-    color: #6b21a8 !important;
-    font-weight: 700;
-  }
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
 
-  /* 5. Soft Tint Badges & Pills */
-  & .bg-blue-500\/10,
-  & .bg-blue-600\/10 {
-    background-color: #eff6ff !important;
-    border-color: #bfdbfe !important;
-    color: #1d4ed8 !important;
-  }
-  & .bg-emerald-500\/10,
-  & .bg-emerald-600\/10 {
-    background-color: #ecfdf5 !important;
-    border-color: #a7f3d0 !important;
-    color: #047857 !important;
-  }
-  & .bg-amber-500\/10,
-  & .bg-amber-500\/15 {
-    background-color: #fffbeb !important;
-    border-color: #fde68a !important;
-    color: #9a3412 !important;
-  }
-  & .bg-rose-500\/10,
-  & .bg-red-500\/10 {
-    background-color: #fff1f2 !important;
-    border-color: #fecdd3 !important;
-    color: #b91c1c !important;
-  }
-  & .bg-cyan-500\/10 {
-    background-color: #f0f9ff !important;
-    border-color: #bae6fd !important;
-    color: #0369a1 !important;
-  }
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
 
-  /* 6. PRESERVE PURE WHITE TEXT ON PRIMARY BUTTONS & SOLID COLORED CONTROLS ONLY */
-  & button.bg-blue-600,
-  & a.bg-blue-600,
-  & button.bg-blue-700,
-  & a.bg-blue-700,
-  & button.bg-emerald-600,
-  & a.bg-emerald-600,
-  & button.bg-emerald-700,
-  & a.bg-emerald-700,
-  & button.bg-red-600,
-  & a.bg-red-600,
-  & button.bg-amber-600,
-  & a.bg-amber-600,
-  & button.bg-purple-600,
-  & a.bg-purple-600,
-  & .btn-primary,
-  & .btn-success,
-  & .btn-danger {
-    color: #ffffff !important;
-
-    & span,
-    & svg {
-      color: #ffffff !important;
-    }
-  }
-
-  /* Dark hero banners (preserve contrast in light mode) */
-  & .admin-dark-banner,
-  & .admin-dark-banner h1,
-  & .admin-dark-banner h2,
-  & .admin-dark-banner h3 {
-    color: #ffffff !important;
-  }
-  & .admin-dark-banner p {
-    color: #cbd5e1 !important;
-  }
-
-  /* 7. Floating Action Bars */
-  & .fixed.bottom-4 .text-white,
-  & .fixed.bottom-4 span:not(.bg-white *),
-  & .fixed.bottom-6.bg-emerald-600,
-  & .fixed.bottom-6.bg-emerald-600 span {
-    color: #ffffff !important;
-  }
-
-  /* 8. Form Controls with Clear Readable Bounds */
-  & input,
-  & select,
-  & textarea {
-    background-color: #ffffff !important;
-    color: #090d16 !important;
-    border-color: #94a3b8 !important;
-    font-weight: 600 !important;
-  }
-  & input::placeholder,
-  & textarea::placeholder {
-    color: #64748b !important;
-    font-weight: 500 !important;
-  }
-  & input:focus,
-  & select:focus,
-  & textarea:focus {
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
-  }
-
-  /* 9. Data Tables (High Contrast) */
-  & thead {
-    background-color: #f1f5f9 !important;
-    border-bottom: 2px solid #cbd5e1 !important;
-    & th {
-      color: #0f172a !important;
-      font-weight: 800 !important;
-    }
-  }
-  & tbody tr {
-    background-color: #ffffff !important;
-    border-bottom: 1px solid #e2e8f0 !important;
-  }
-  & tbody tr:hover {
-    background-color: #f8fafc !important;
-  }
-
-  /* 10. Admin Navigation & Sidebar Accessibility */
-  & aside {
-    background-color: #ffffff !important;
-    border-color: #cbd5e1 !important;
-  }
-  & aside a:not([class*="bg-blue-600"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]) {
-    color: #1e293b !important;
-    font-weight: 700 !important;
-  }
-  & aside a:not([class*="bg-blue-600"]):hover {
-    background-color: #f1f5f9 !important;
-    color: #0f172a !important;
-  }
-
-  /* 11. Senior-Friendly Soft Elevated Shadows */
-  & .shadow-md,
-  & .shadow-lg,
-  & .shadow-xl,
-  & .shadow-2xl {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.03) !important;
-  }
-
-  /* 12. Modal Backdrop */
-  & .bg-black\/80,
-  & .bg-black\/85 {
-    background-color: rgba(15, 23, 42, 0.7) !important;
-  }
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Hardware performance boost for weak devices & low-end GPUs */
@@ -354,74 +124,12 @@ table, .product-grid, .doc-grid {
   contain-intrinsic-size: 1px 250px;
 }
 
-/* Custom scrollbars */
-::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
-}
-
-::-webkit-scrollbar-track {
-  background: #0f172a;
-}
-
-html.light ::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
-}
-
-html.light ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
-
-html.light ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Animations & Effects with hardware acceleration */
+/* Clean micro-animations */
 @keyframes float {
-  0%, 100% { transform: translateY(0px) translateZ(0); }
-  50% { transform: translateY(-6px) translateZ(0); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.35; transform: scale(1) translateZ(0); }
-  50% { opacity: 0.75; transform: scale(1.04) translateZ(0); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
 }
 
 .animate-float {
   animation: float 4s ease-in-out infinite;
-  will-change: transform;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
-  will-change: transform, opacity;
-}
-
-.glass-panel {
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-}
-
-/* Respect low-power & reduced-motion settings on weak devices */
-@media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
 }

@@ -150,13 +150,13 @@ export default function ShortcutsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-linear-to-r from-blue-950/40 via-slate-900 to-indigo-950/40 p-6 rounded-3xl border border-blue-500/20 shadow-xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-linear-to-r bg-white p-6 rounded-2xl border border-blue-200 shadow-xs">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-200 text-blue-400 text-xs font-bold mb-2">
             <Bookmark className="w-3.5 h-3.5" /> مركز اختصارات ومواقع العمل السريعة
           </div>
-          <h1 className="text-2xl font-black text-white">دليل وروابط المواقع اليومية</h1>
-          <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl">
+          <h1 className="text-2xl font-black text-slate-900">دليل وروابط المواقع اليومية</h1>
+          <p className="text-slate-500 text-xs sm:text-sm mt-1 max-w-2xl">
             مواقع التقديمات والجامعات، الخدمات الحكومية، أدوات التصميم وعزل الصور، ومواقع المذكرات
             المحفوظة لسرعة الوصول إليها وتوفير وقت البحث.
           </p>
@@ -164,7 +164,7 @@ export default function ShortcutsPage() {
 
         <button
           onClick={openAddModal}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-xl shadow-blue-600/30 transition cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-xs shadow-blue-600/30 transition cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>إضافة موقع جديد</span>
@@ -172,7 +172,7 @@ export default function ShortcutsPage() {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-lg">
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
           <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 text-slate-500 absolute right-3 top-3" />
@@ -181,17 +181,17 @@ export default function ShortcutsPage() {
               placeholder="بحث باسم الموقع أو الوصف..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-9 pl-4 py-2 text-xs sm:text-sm text-white focus:border-blue-500 focus:outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pr-9 pl-4 py-2 text-xs sm:text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
             />
           </div>
 
-          <span className="text-xs text-slate-400 font-bold">
+          <span className="text-xs text-slate-500 font-bold">
             عدد المواقع: {filteredShortcuts.length}
           </span>
         </div>
 
         {/* Categories Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-800/80">
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200">
           {categories.map((cat) => (
             <button
               key={cat}
@@ -199,7 +199,7 @@ export default function ShortcutsPage() {
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
                 selectedCategory === cat
                   ? "bg-blue-600 text-white shadow"
-                  : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
+                  : "bg-slate-50 text-slate-500 hover:text-slate-900 border border-slate-200"
               }`}
             >
               {cat}
@@ -213,19 +213,19 @@ export default function ShortcutsPage() {
         {filteredShortcuts.map((sc) => (
           <div
             key={sc.id}
-            className="group bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-blue-500/40 rounded-2xl p-5 shadow-lg transition-all flex flex-col justify-between gap-4"
+            className="group bg-white hover:bg-white border border-slate-200 hover:border-blue-500/40 rounded-2xl p-5 shadow-lg transition-all flex flex-col justify-between gap-4"
           >
             <div className="space-y-2.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-200 text-blue-400 flex items-center justify-center shrink-0">
                     <Globe className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-white text-sm group-hover:text-blue-400 transition">
+                    <h3 className="font-extrabold text-slate-900 text-sm group-hover:text-blue-400 transition">
                       {sc.title}
                     </h3>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 border border-slate-700 block w-fit mt-1">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200 block w-fit mt-1">
                       {sc.category}
                     </span>
                   </div>
@@ -234,14 +234,14 @@ export default function ShortcutsPage() {
                 <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition">
                   <button
                     onClick={() => openEditModal(sc)}
-                    className="p-1.5 text-slate-400 hover:text-blue-400 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                    className="p-1.5 text-slate-500 hover:text-blue-400 rounded-lg hover:bg-slate-100 transition cursor-pointer"
                     title="تعديل الموقع"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => handleDelete(sc.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                    className="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-100 transition cursor-pointer"
                     title="حذف الموقع"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -250,7 +250,7 @@ export default function ShortcutsPage() {
               </div>
 
               {sc.description && (
-                <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
+                <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">
                   {sc.description}
                 </p>
               )}
@@ -258,7 +258,7 @@ export default function ShortcutsPage() {
 
             <button
               onClick={() => handleOpenLink(sc.url)}
-              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-950 hover:bg-blue-600 text-slate-300 hover:text-white border border-slate-800 hover:border-blue-500 text-xs font-bold transition cursor-pointer group/btn"
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-50 hover:bg-blue-600 text-slate-700 hover:text-white border border-slate-200 hover:border-blue-500 text-xs font-bold transition cursor-pointer group/btn"
             >
               <span>فتح الموقع الآن</span>
               <ExternalLink className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
@@ -267,7 +267,7 @@ export default function ShortcutsPage() {
         ))}
 
         {filteredShortcuts.length === 0 && (
-          <div className="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-500">
+          <div className="col-span-full bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500">
             لا توجد مواقع تطابق عملية البحث الحالية
           </div>
         )}
@@ -275,15 +275,15 @@ export default function ShortcutsPage() {
 
       {/* Add / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-black text-white">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="text-base font-black text-slate-900">
                 {editingShortcut ? "تعديل بيانات الموقع" : "إضافة موقع جديد إلى الاختصارات"}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="text-slate-500 hover:text-slate-900 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -291,57 +291,57 @@ export default function ShortcutsPage() {
 
             <form onSubmit={handleSave} className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-slate-400 block mb-1">اسم الموقع:</label>
+                <label className="text-xs font-bold text-slate-500 block mb-1">اسم الموقع:</label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="مثال: منصة التنسيق الإلكتروني"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:border-blue-500 focus:outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-400 block mb-1">رابط الموقع (URL):</label>
+                <label className="text-xs font-bold text-slate-500 block mb-1">رابط الموقع (URL):</label>
                 <input
                   type="text"
                   required
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://example.com"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:border-blue-500 focus:outline-none font-mono"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none font-mono"
                   dir="ltr"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-400 block mb-1">التصنيف:</label>
+                <label className="text-xs font-bold text-slate-500 block mb-1">التصنيف:</label>
                 <input
                   type="text"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   placeholder="مثال: خدمات حكومية، تقديمات، تصميم"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:border-blue-500 focus:outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-400 block mb-1">وصف أو ملاحظات:</label>
+                <label className="text-xs font-bold text-slate-500 block mb-1">وصف أو ملاحظات:</label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="اكتب ملاحظة تفيد زملاء العمل عند فتح هذا الموقع..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:border-blue-500 focus:outline-none resize-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none resize-none"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white bg-slate-800 cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-100 cursor-pointer"
                 >
                   إلغاء
                 </button>

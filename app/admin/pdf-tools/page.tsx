@@ -648,27 +648,27 @@ export default function PdfToolsPage() {
   return (
     <div className="space-y-6" dir="rtl">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-200 text-blue-400 text-xs font-bold mb-2">
             <FileText className="w-3.5 h-3.5" /> استوديو إدارة وتفكيك صفحات الـ PDF الاحترافي
           </div>
-          <h1 className="text-2xl font-black text-white">
+          <h1 className="text-2xl font-black text-slate-900">
             منظم ومفكك صفحات PDF (معاينة صور حية، نقل مباشر، ضغط وتصدير صور)
           </h1>
-          <p className="text-slate-400 text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl">
+          <p className="text-slate-500 text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl">
             فكك الـ PDF مع معاينة صور الصفحات الحقيقية، اكتب رقم الصفحة لنقلها مباشرة، حدد صفحات معينة لتصديرها أو تحويلها لصور ZIP، واضغط حجم الملف بنقرة واحدة!
           </p>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center p-1 bg-slate-950/80 border border-slate-800 rounded-2xl text-xs font-bold shrink-0">
+        <div className="flex items-center p-1 bg-slate-900/40 border border-slate-200 rounded-2xl text-xs font-bold shrink-0">
           <button
             onClick={() => setActiveTab("pages")}
             className={`px-4 py-2 rounded-xl transition cursor-pointer ${
               activeTab === "pages"
                 ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                : "text-slate-400 hover:text-white"
+                : "text-slate-500 hover:text-slate-900"
             }`}
           >
             تفكيك وتنظيم الصفحات
@@ -678,7 +678,7 @@ export default function PdfToolsPage() {
             className={`px-4 py-2 rounded-xl transition cursor-pointer ${
               activeTab === "images_to_pdf"
                 ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                : "text-slate-400 hover:text-white"
+                : "text-slate-500 hover:text-slate-900"
             }`}
           >
             تحويل صور إلى PDF
@@ -688,7 +688,7 @@ export default function PdfToolsPage() {
             className={`px-4 py-2 rounded-xl transition cursor-pointer ${
               activeTab === "pdf_to_word"
                 ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                : "text-slate-400 hover:text-white"
+                : "text-slate-500 hover:text-slate-900"
             }`}
           >
             تحويل PDF إلى Word ذكي
@@ -700,8 +700,8 @@ export default function PdfToolsPage() {
       {activeTab === "pages" && (
         <div className="space-y-6">
           {/* Action Bar & Controls */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
               <div className="flex flex-wrap items-center gap-2.5">
                 <input
                   ref={pdfInputRef}
@@ -740,7 +740,7 @@ export default function PdfToolsPage() {
                   <>
                     <button
                       onClick={rotateAllPages}
-                      className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-slate-700/50"
+                      className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-slate-200/50"
                       title="تدوير كافة الصفحات 90 درجة"
                     >
                       <RotateCw className="w-3.5 h-3.5" />
@@ -749,7 +749,7 @@ export default function PdfToolsPage() {
 
                     <button
                       onClick={toggleSelectAll}
-                      className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-purple-500/30"
+                      className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-purple-300 hover:text-slate-900 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-purple-500/30"
                     >
                       {selectedPageIds.size === pages.length ? (
                         <>
@@ -795,7 +795,7 @@ export default function PdfToolsPage() {
                   <button
                     onClick={() => handleExportArrangedPdf(false)}
                     disabled={isProcessingPdf}
-                    className="px-5 py-2.5 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer shadow-xl shadow-emerald-600/30 disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer shadow-xs shadow-emerald-600/30 disabled:opacity-50"
                   >
                     <FileDown className="w-4 h-4" />
                     <span>{isProcessingPdf ? "جاري المعالجة..." : "تنزيل الـ PDF المرتب"}</span>
@@ -809,7 +809,7 @@ export default function PdfToolsPage() {
               <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-purple-950/40 border border-purple-500/40 text-xs animate-fade-in">
                 <div className="flex items-center gap-2 text-purple-200 font-bold">
                   <CheckCircle2 className="w-4 h-4 text-purple-400" />
-                  <span>تم تحديد <strong className="text-white">{selectedPageIds.size}</strong> صفحة</span>
+                  <span>تم تحديد <strong className="text-slate-900">{selectedPageIds.size}</strong> صفحة</span>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -838,17 +838,17 @@ export default function PdfToolsPage() {
             {pages.length > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-300">حذف سريع بنطاق الأرقام:</span>
+                  <span className="font-bold text-slate-700">حذف سريع بنطاق الأرقام:</span>
                   <input
                     type="text"
                     value={pagesToDeleteInput}
                     onChange={(e) => setPagesToDeleteInput(e.target.value)}
                     placeholder="مثال: 1, 3, 5-8"
-                    className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:border-blue-500 focus:outline-none w-44"
+                    className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none w-44"
                   />
                   <button
                     onClick={handleBatchDelete}
-                    className="px-3 py-1.5 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-400 hover:text-red-300 font-bold border border-red-900/50 transition cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-red-900/60 text-rose-600 hover:text-rose-700 font-bold border border-rose-200 transition cursor-pointer"
                   >
                     حذف النطاق
                   </button>
@@ -870,16 +870,16 @@ export default function PdfToolsPage() {
           {pages.length === 0 ? (
             <div
               onClick={() => pdfInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-800 hover:border-blue-500/60 transition cursor-pointer rounded-3xl p-12 text-center bg-slate-900/40 hover:bg-slate-900 flex flex-col items-center justify-center gap-3 min-h-[300px]"
+              className="border-2 border-dashed border-slate-200 hover:border-blue-500/60 transition cursor-pointer rounded-2xl p-12 text-center bg-slate-50 hover:bg-white flex flex-col items-center justify-center gap-3 min-h-[300px]"
             >
-              <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-200 text-blue-400 flex items-center justify-center">
                 <FileText className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-base font-black text-white mb-1">
+                <h3 className="text-base font-black text-slate-900 mb-1">
                   اضغط لاختيار ملف PDF لتفكيكه مع عرض صور الصفحات
                 </h3>
-                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
                   ستظهر صور الصفحات الحقيقية لتتعرف عليها فوراً، مع إمكانية كتابة رقم الصفحة لنقلها، تحديد صفحات معينة لتصديرها PDF أو صور ZIP، وضغط حجم الملف!
                 </p>
               </div>
@@ -892,10 +892,10 @@ export default function PdfToolsPage() {
                 return (
                   <div
                     key={page.id}
-                    className={`bg-slate-900 border rounded-2xl p-3 flex flex-col justify-between shadow-xl relative transition group ${
+                    className={`bg-white border rounded-2xl p-3 flex flex-col justify-between shadow-xs relative transition group ${
                       isSelected
                         ? "border-purple-500 shadow-purple-500/10 ring-1 ring-purple-500/30"
-                        : "border-slate-800 hover:border-slate-700"
+                        : "border-slate-200 hover:border-slate-200"
                     }`}
                   >
                     {/* Top Page Header & Selection Checkbox */}
@@ -904,7 +904,7 @@ export default function PdfToolsPage() {
                         <button
                           type="button"
                           onClick={() => togglePageSelection(page.id)}
-                          className="text-slate-400 hover:text-purple-400 transition cursor-pointer"
+                          className="text-slate-500 hover:text-purple-400 transition cursor-pointer"
                           title="تحديد هذه الصفحة"
                         >
                           {isSelected ? (
@@ -923,7 +923,7 @@ export default function PdfToolsPage() {
                     </div>
 
                     {/* Visual Sheet Card: Real Thumbnail Image or Fallback */}
-                    <div className="aspect-[1/1.414] bg-slate-950 rounded-xl shadow-inner border border-slate-800 flex flex-col items-center justify-center relative overflow-hidden my-1">
+                    <div className="aspect-[1/1.414] bg-slate-50 rounded-xl shadow-inner border border-slate-200 flex flex-col items-center justify-center relative overflow-hidden my-1">
                       {page.thumbnail ? (
                         <div
                           style={{
@@ -944,7 +944,7 @@ export default function PdfToolsPage() {
                             transform: `rotate(${page.rotation}deg)`,
                             transition: "transform 0.2s ease-in-out",
                           }}
-                          className="w-full h-full flex flex-col items-center justify-center text-slate-300 text-center select-none bg-slate-900/50 p-2"
+                          className="w-full h-full flex flex-col items-center justify-center text-slate-700 text-center select-none bg-slate-50 p-2"
                         >
                           <FileText className="w-8 h-8 text-slate-500 mb-1" />
                           <span className="text-xs font-bold text-slate-200">
@@ -962,8 +962,8 @@ export default function PdfToolsPage() {
                     </div>
 
                     {/* Direct Jump / Move to Page Number */}
-                    <div className="flex items-center justify-between gap-1 py-1.5 px-2 my-1 rounded-xl bg-slate-950/70 border border-slate-800 text-[11px]">
-                      <span className="text-slate-400">انقل لـ #</span>
+                    <div className="flex items-center justify-between gap-1 py-1.5 px-2 my-1 rounded-xl bg-slate-50 border border-slate-200 text-[11px]">
+                      <span className="text-slate-500">انقل لـ #</span>
                       <input
                         type="number"
                         min="1"
@@ -980,18 +980,18 @@ export default function PdfToolsPage() {
                           const val = parseInt(e.target.value, 10);
                           if (!isNaN(val) && val !== index + 1) handleJumpPage(index, val);
                         }}
-                        className="w-12 bg-slate-900 border border-slate-700 rounded-md px-1 py-0.5 text-center text-xs text-white font-bold focus:border-blue-500 focus:outline-none"
+                        className="w-12 bg-white border border-slate-200 rounded-md px-1 py-0.5 text-center text-xs text-slate-900 font-bold focus:border-blue-500 focus:outline-none"
                       />
                     </div>
 
                     {/* Page Interactive Action Buttons */}
-                    <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+                    <div className="pt-2 border-t border-slate-200 space-y-1.5">
                       <div className="flex items-center justify-between gap-1">
                         {/* Move Right / Left in Arabic RTL */}
                         <button
                           onClick={() => movePage(index, "right")}
                           disabled={index === 0}
-                          className="p-1 rounded-lg bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white transition disabled:opacity-25 cursor-pointer"
+                          className="p-1 rounded-lg bg-slate-100 hover:bg-blue-600 text-slate-700 hover:text-white transition disabled:opacity-25 cursor-pointer"
                           title="نقل لليمين (سابقاً)"
                         >
                           <ArrowRight className="w-3.5 h-3.5" />
@@ -1000,7 +1000,7 @@ export default function PdfToolsPage() {
                         {/* Rotate 90° */}
                         <button
                           onClick={() => rotatePage(index)}
-                          className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-white transition cursor-pointer"
+                          className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-blue-400 hover:text-slate-900 transition cursor-pointer"
                           title="تدوير 90°"
                         >
                           <RotateCw className="w-3.5 h-3.5" />
@@ -1009,7 +1009,7 @@ export default function PdfToolsPage() {
                         {/* Duplicate Page */}
                         <button
                           onClick={() => duplicatePage(index)}
-                          className="p-1 rounded-lg bg-slate-800 hover:bg-emerald-600 text-emerald-400 hover:text-white transition cursor-pointer"
+                          className="p-1 rounded-lg bg-slate-100 hover:bg-emerald-600 text-emerald-400 hover:text-white transition cursor-pointer"
                           title="تكرار هذه الصفحة (Duplicate)"
                         >
                           <Copy className="w-3.5 h-3.5" />
@@ -1019,7 +1019,7 @@ export default function PdfToolsPage() {
                         <button
                           onClick={() => movePage(index, "left")}
                           disabled={index === pages.length - 1}
-                          className="p-1 rounded-lg bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white transition disabled:opacity-25 cursor-pointer"
+                          className="p-1 rounded-lg bg-slate-100 hover:bg-blue-600 text-slate-700 hover:text-white transition disabled:opacity-25 cursor-pointer"
                           title="نقل لليسار (لاحقاً)"
                         >
                           <ArrowLeft className="w-3.5 h-3.5" />
@@ -1028,7 +1028,7 @@ export default function PdfToolsPage() {
                         {/* Delete Page */}
                         <button
                           onClick={() => deletePage(index)}
-                          className="p-1 rounded-lg bg-slate-800 hover:bg-red-600 text-red-400 hover:text-white transition cursor-pointer"
+                          className="p-1 rounded-lg bg-slate-100 hover:bg-red-600 text-rose-600 hover:text-white transition cursor-pointer"
                           title="حذف هذه الصفحة نهائياً"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1045,11 +1045,11 @@ export default function PdfToolsPage() {
 
       {/* Tab 2: Images to PDF */}
       {activeTab === "images_to_pdf" && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
             <div>
-              <h2 className="text-lg font-black text-white">تجميع الصور في ملف PDF واحد</h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <h2 className="text-lg font-black text-slate-900">تجميع الصور في ملف PDF واحد</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
                 اختر عدة صور (JPG, PNG) ورتبها ليتم دمجها في ملف PDF عالي الجودة بنظام ورقة A4.
               </p>
             </div>
@@ -1092,15 +1092,15 @@ export default function PdfToolsPage() {
           {imageFiles.length === 0 ? (
             <div
               onClick={() => imageInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-800 hover:border-blue-500/50 rounded-3xl p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-3"
+              className="border-2 border-dashed border-slate-200 hover:border-blue-500/50 rounded-2xl p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-3"
             >
               <ImageIcon className="w-10 h-10 text-slate-600" />
-              <span className="text-sm font-bold text-slate-300">اضغط لاختيار الصور من جهازك</span>
+              <span className="text-sm font-bold text-slate-700">اضغط لاختيار الصور من جهازك</span>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {imageFiles.map((item, idx) => (
-                <div key={idx} className="relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 p-1">
+                <div key={idx} className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 p-1">
                   <img src={item.preview} alt="" className="w-full aspect-square object-cover rounded-lg" />
                   <button
                     onClick={() => setImageFiles((curr) => curr.filter((_, i) => i !== idx))}
@@ -1117,15 +1117,15 @@ export default function PdfToolsPage() {
 
       {/* Tab 3: PDF to Word */}
       {activeTab === "pdf_to_word" && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
           <div>
-            <h2 className="text-lg font-black text-white">تحويل PDF إلى ملف Word قابل للتعديل</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h2 className="text-lg font-black text-slate-900">تحويل PDF إلى ملف Word قابل للتعديل</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
               تحليل وقراءة مستندات الـ PDF بالذكاء الاصطناعي واستخراج النصوص وتنسيقها في ملف Word A4 وهوامش ضيقة وخط 18pt.
             </p>
           </div>
 
-          <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-blue-500/50 rounded-3xl p-8 text-center bg-slate-950/40">
+          <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-blue-500/50 rounded-2xl p-8 text-center bg-slate-50">
             <input
               ref={pdfWordInputRef}
               type="file"
@@ -1138,14 +1138,14 @@ export default function PdfToolsPage() {
 
             {selectedWordPdf ? (
               <div className="space-y-3">
-                <span className="text-sm font-bold text-white block">{selectedWordPdf.name}</span>
-                <span className="text-xs text-slate-400 block">
+                <span className="text-sm font-bold text-slate-900 block">{selectedWordPdf.name}</span>
+                <span className="text-xs text-slate-500 block">
                   الحجم: {(selectedWordPdf.size / 1024).toFixed(1)} KB
                 </span>
                 <div className="flex items-center justify-center gap-2">
                   <button
                     onClick={() => setSelectedWordPdf(null)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 cursor-pointer"
                   >
                     إلغاء
                   </button>
@@ -1170,9 +1170,9 @@ export default function PdfToolsPage() {
           </div>
 
           {wordConvertedText && (
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
               <span className="text-xs font-bold text-emerald-400 block">معاينة النص المستخرج والمنسق:</span>
-              <pre className="text-xs text-slate-300 max-h-60 overflow-y-auto whitespace-pre-wrap font-mono p-3 bg-slate-900 rounded-xl leading-relaxed">
+              <pre className="text-xs text-slate-700 max-h-60 overflow-y-auto whitespace-pre-wrap font-mono p-3 bg-white rounded-xl leading-relaxed">
                 {wordConvertedText}
               </pre>
             </div>

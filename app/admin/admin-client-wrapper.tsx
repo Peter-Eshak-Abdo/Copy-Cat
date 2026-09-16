@@ -22,10 +22,10 @@ export function AdminClientWrapper({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-900">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-          <p className="text-sm text-slate-400">جاري التحقق من الصلاحيات والوصول الأمني...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <p className="text-xs font-semibold text-slate-500">جاري التحقق من الصلاحيات...</p>
         </div>
       </div>
     );
@@ -36,9 +36,9 @@ export function AdminClientWrapper({
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
+    <div className="flex min-h-screen bg-slate-50 text-slate-900">
       <AdminSidebar />
-      <main className="flex-1 p-6 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
+      <main className="flex-1 p-5 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
         {children}
       </main>
     </div>

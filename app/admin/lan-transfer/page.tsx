@@ -252,7 +252,7 @@ export default function LanTransferPage() {
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className="border-2 border-dashed border-border hover:border-primary/50 transition cursor-pointer rounded-3xl p-10 flex flex-col items-center justify-center text-center gap-3 bg-card/40 hover:bg-card/70 min-h-[220px]"
+        className="border-2 border-dashed border-border hover:border-primary/50 transition cursor-pointer rounded-2xl p-10 flex flex-col items-center justify-center text-center gap-3 bg-card/40 hover:bg-card/70 min-h-[220px]"
       >
         <input
           ref={fileInputRef}

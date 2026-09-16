@@ -288,7 +288,7 @@ export default function MultiStageOcrPage() {
 
       <div className="flex flex-col gap-space-lg w-full max-w-7xl mx-auto pb-space-3xl pt-space-sm">
         {/* Top Header Banner */}
-        <div className="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg shadow-xl border border-surface-container-high/40">
+        <div className="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg shadow-xs border border-surface-container-high/40">
           <div className="absolute -right-24 -top-24 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-space-md">
             <div className="flex items-start gap-space-md">
@@ -499,7 +499,7 @@ export default function MultiStageOcrPage() {
                   <button
                     onClick={handleExportWord}
                     disabled={!refinedText.trim()}
-                    className="flex items-center gap-1.5 py-1.5 px-3 rounded-lg bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow"
+                    className="flex items-center gap-1.5 py-1.5 px-3 rounded-lg bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-slate-900 text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow"
                   >
                     <span className="material-symbols-outlined text-base">download</span>
                     <span>تصدير Word (.docx)</span>

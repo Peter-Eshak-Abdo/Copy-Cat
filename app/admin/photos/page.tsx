@@ -561,7 +561,7 @@ export default function PhotoPoolPage() {
               onClick={() => setStatusFilter("unassigned")}
               className={`px-space-sm py-1 rounded-lg text-body-sm font-medium transition-colors cursor-pointer ${
                 statusFilter === "unassigned"
-                  ? "bg-amber-500 text-white font-bold"
+                  ? "bg-amber-500 text-slate-900 font-bold"
                   : "bg-surface-container hover:bg-surface-container-high text-on-surface"
               }`}
             >
@@ -697,8 +697,8 @@ export default function PhotoPoolPage() {
                       <span
                         className={`text-[10px] font-label-code px-1.5 py-0.5 rounded-md backdrop-blur-md font-bold shadow-sm ${
                           photo.source === "facebook"
-                            ? "bg-blue-600/80 text-white"
-                            : "bg-emerald-600/80 text-white"
+                            ? "bg-blue-600/80 text-slate-900"
+                            : "bg-emerald-600/80 text-slate-900"
                         }`}
                       >
                         {photo.source === "facebook" ? "فيسبوك" : "كاميرا"}
@@ -731,7 +731,7 @@ export default function PhotoPoolPage() {
                   <div className="p-2 flex flex-col justify-between flex-1 gap-2">
                     {/* Status Badge */}
                     {isLinked ? (
-                      <div className="flex flex-col gap-0.5 bg-emerald-500/10 p-1.5 rounded-lg border border-emerald-500/20">
+                      <div className="flex flex-col gap-0.5 bg-emerald-500/10 p-1.5 rounded-lg border border-emerald-200">
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-bold text-emerald-500 flex items-center gap-1 truncate">
                             <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
@@ -966,7 +966,7 @@ export default function PhotoPoolPage() {
             {/* Modal Header */}
             <div className="p-4 border-b border-surface-container-high/40 flex items-center justify-between bg-surface-container/30">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-primary to-violet-600 flex items-center justify-center text-white shadow-md shadow-primary/20">
+                <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-primary to-violet-600 flex items-center justify-center text-slate-900 shadow-md shadow-primary/20">
                   <Wand2 className="w-5 h-5" />
                 </div>
                 <div>
@@ -999,7 +999,7 @@ export default function PhotoPoolPage() {
                     <span>معاينة النتيجة بعد التحسين</span>
                   </span>
                   <div className="flex items-center gap-2 text-[11px] text-on-surface-variant">
-                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md font-mono font-bold">
+                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-200 px-2 py-0.5 rounded-md font-mono font-bold">
                       0 KB على Supabase (تخزين محلي 100%)
                     </span>
                   </div>
@@ -1021,7 +1021,7 @@ export default function PhotoPoolPage() {
                   )}
 
                   {/* Top Floating Badge */}
-                  <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-lg">
+                  <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 text-slate-900 text-[11px] font-bold flex items-center gap-1.5 shadow-lg">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span>معالجة إضاءة استوديو + Unsharp Mask</span>
                   </div>
@@ -1245,7 +1245,7 @@ export default function PhotoPoolPage() {
               <button
                 onClick={handleSaveEnhancedToPool}
                 disabled={isEnhancingProcess || !enhancedPreviewUrl}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-linear-to-r from-primary to-violet-600 text-white font-bold text-xs hover:opacity-95 transition-all shadow-md shadow-primary/20 disabled:opacity-50 cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-linear-to-r from-primary to-violet-600 text-slate-900 font-bold text-xs hover:opacity-95 transition-all shadow-md shadow-primary/20 disabled:opacity-50 cursor-pointer"
               >
                 {isEnhancingProcess ? (
                   <>
@@ -1276,7 +1276,7 @@ export default function PhotoPoolPage() {
           >
             <button
               onClick={() => setPreviewPhoto(null)}
-              className="absolute top-2 right-2 z-10 p-2 rounded-full bg-black/60 text-white hover:bg-black"
+              className="absolute top-2 right-2 z-10 p-2 rounded-full bg-black/60 text-slate-900 hover:bg-black"
             >
               <X className="w-6 h-6" />
             </button>
@@ -1288,7 +1288,7 @@ export default function PhotoPoolPage() {
                 className="object-contain"
               />
             </div>
-            <div className="mt-2 text-center text-white/80 font-label-code text-label-sm">
+            <div className="mt-2 text-center text-slate-900/80 font-label-code text-label-sm">
               {previewPhoto.filename} ({(previewPhoto.sizeBytes / 1024).toFixed(0)} KB)
             </div>
           </div>

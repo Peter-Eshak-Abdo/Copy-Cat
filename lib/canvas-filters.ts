@@ -34,6 +34,8 @@ export interface ProcessImageOptions {
   sharpness?: number;           // 0 to 100 (0 is off, 50 is medium, 100 is max)
   camScannerMode?: boolean;     // CamScanner Magic Color & Document Whitening
   screenClarifierMode?: boolean;// Anti-Moire & computer screen photo text clarifier
+  thresholdMode?: boolean;      // Print-ready high-contrast B&W document threshold
+  saturation?: number;          // 0 to 200 (100 is default)
   grayscale?: boolean;
   fineAngle?: number;           // Rotation in degrees (-45 to +45 or 0-360)
   preserveColors?: boolean;     // 100% Color-safe HSL mode (Fix for requirement #4)
@@ -154,8 +156,9 @@ export function warpPerspectiveQuad(
   const leftEdge = Math.hypot(p3.x - p0.x, p3.y - p0.y);
   const rightEdge = Math.hypot(p2.x - p1.x, p2.y - p1.y);
 
-  const calcW = Math.round(Math.max(topEdge, bottomEdge, 800));
-  const calcH = Math.round(Math.max(leftEdge, rightEdge, calcW / 1.58577));
+  const rawW = Math.round(Math.max(topEdge, bottomEdge, 800));
+  const calcW = Math.min(rawW, 1280);
+  const calcH = Math.round(calcW / 1.58577);
   const destW = targetWidth || calcW;
   const destH = targetHeight || calcH;
 
@@ -615,8 +618,14 @@ export function rotateImageCanvas(
   const sin = Math.abs(Math.sin(rad));
   const cos = Math.abs(Math.cos(rad));
 
-  const w = "naturalWidth" in imgElement ? imgElement.naturalWidth || imgElement.width : imgElement.width;
-  const h = "naturalHeight" in imgElement ? imgElement.naturalHeight || imgElement.height : imgElement.height;
+  let w = "naturalWidth" in imgElement ? imgElement.naturalWidth || imgElement.width : imgElement.width;
+  let h = "naturalHeight" in imgElement ? imgElement.naturalHeight || imgElement.height : imgElement.height;
+  const maxDim = 1400;
+  if (Math.max(w, h) > maxDim) {
+    const scale = maxDim / Math.max(w, h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
 
   canvas.width = Math.round(w * cos + h * sin);
   canvas.height = Math.round(h * cos + w * sin);
@@ -626,7 +635,7 @@ export function rotateImageCanvas(
 
   ctx.translate(canvas.width / 2, canvas.height / 2);
   ctx.rotate(rad);
-  ctx.drawImage(imgElement, -w / 2, -h / 2);
+  ctx.drawImage(imgElement, -w / 2, -h / 2, w, h);
 
   return canvas;
 }
@@ -641,6 +650,8 @@ export function processImageOnCanvas(
     contrast = 100,
     sharpness = 0,
     camScannerMode = false,
+    thresholdMode = false,
+    saturation = 100,
     grayscale = false,
     fineAngle = 0,
     preserveColors = true, // Default to true for authentic ID card & photo colors
@@ -654,11 +665,19 @@ export function processImageOnCanvas(
     workingCanvas = rotateImageCanvas(imgElement, fineAngle);
   } else {
     workingCanvas = document.createElement("canvas");
-    workingCanvas.width = imgElement.naturalWidth || imgElement.width || 800;
-    workingCanvas.height = imgElement.naturalHeight || imgElement.height || 600;
+    let rawW = imgElement.naturalWidth || imgElement.width || 800;
+    let rawH = imgElement.naturalHeight || imgElement.height || 600;
+    const maxDim = 1400;
+    if (Math.max(rawW, rawH) > maxDim) {
+      const scale = maxDim / Math.max(rawW, rawH);
+      rawW = Math.round(rawW * scale);
+      rawH = Math.round(rawH * scale);
+    }
+    workingCanvas.width = rawW;
+    workingCanvas.height = rawH;
     const initialCtx = workingCanvas.getContext("2d");
     if (initialCtx) {
-      initialCtx.drawImage(imgElement, 0, 0);
+      initialCtx.drawImage(imgElement, 0, 0, rawW, rawH);
     }
   }
 
@@ -700,7 +719,18 @@ export function processImageOnCanvas(
       b = 255 - b;
     }
 
-    // 2. Grayscale mode
+    // 2. High-contrast Document B&W Threshold for Printing (Photocopy style, card-full.png page 3)
+    if (thresholdMode) {
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      const threshCutoff = Math.max(50, Math.min(215, 140 + (100 - brightness) * 0.75));
+      const val = lum < threshCutoff ? 0 : 255;
+      d[i] = val;
+      d[i + 1] = val;
+      d[i + 2] = val;
+      continue;
+    }
+
+    // 3. Grayscale mode
     if (grayscale) {
       const gray = 0.299 * r + 0.587 * g + 0.114 * b;
       r = gray;
@@ -708,13 +738,13 @@ export function processImageOnCanvas(
       b = gray;
     }
 
-    // 3. COLOR-SAFE HSL LUMINANCE BRIGHTENING (Requirement #4)
+    // 4. COLOR-SAFE HSL LUMINANCE BRIGHTENING (Requirement #4)
     // Preserves Hue & Saturation perfectly without washing out colors
     if (preserveColors && !grayscale) {
       const [hue, sat, light] = rgbToHsl(r, g, b);
 
       let newLight = light;
-      let newSat = sat;
+      let newSat = saturation !== 100 ? Math.min(1.0, Math.max(0, sat * (saturation / 100))) : sat;
 
       if (bDelta > 0) {
         // Boost midtones and background while keeping dark numbers black
@@ -727,7 +757,9 @@ export function processImageOnCanvas(
           const lift = (bDelta / 100) * 0.38 * Math.pow(ratio, 0.75);
           newLight = Math.min(1.0, light + lift);
           // Protect saturation from fading
-          newSat = Math.min(1.0, sat * 1.06);
+          if (saturation === 100) {
+            newSat = Math.min(1.0, sat * 1.06);
+          }
         }
       } else if (bDelta < 0) {
         newLight = Math.max(0, light * (1 + bDelta / 150));

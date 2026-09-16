@@ -550,41 +550,39 @@ export default function SmartCalculatorPage() {
   };
 
   return (
-    <div className="flex flex-col w-full pb-space-3xl gap-space-lg text-on-surface" dir="rtl">
+    <div className="flex flex-col w-full pb-12 gap-6 text-slate-900" dir="rtl">
       {/* Top Hero Bar / Mode Switcher */}
-      <div className="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg shadow-xl border border-surface-container-high/40">
-        <div className="absolute -left-12 -top-12 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute -right-8 -bottom-8 w-48 h-48 bg-tertiary/5 rounded-full blur-2xl pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-space-md">
-          <div className="flex items-start gap-space-md">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface-container-highest shadow-md text-primary">
-              <span className="material-symbols-outlined text-headline-md">calculate</span>
+      <div className="rounded-2xl bg-white p-6 shadow-xs border border-slate-200">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+              <span className="material-symbols-outlined text-2xl">calculate</span>
             </div>
-            <div className="flex flex-col gap-space-2xs">
-              <div className="flex flex-wrap items-center gap-space-xs">
-                <h1 className="font-headline-md text-headline-md font-bold tracking-tight text-on-surface">
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-bold text-slate-900">
                   حاسبة المطبعة والملازم الذكية
                 </h1>
-                <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded-full bg-primary/15 text-primary">
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                   Smart Calculator v2.4
                 </span>
-                <span className="font-label-tag text-label-tag px-space-xs py-space-2xs rounded-full bg-surface-container-high text-on-surface-variant">
+                <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
                   تسعير لحظي
                 </span>
               </div>
-              <p className="font-body-sm text-body-sm text-on-surface-variant max-w-3xl">
+              <p className="text-sm text-slate-500 max-w-3xl">
                 حساب دقيق لورق الملازم والكتب (وش/ظهر أو وجه واحد)، أزرار تسعير فورية ومخصصة، وإضافات التجليد والسلوفان مع حاسبة عامة سريعة بنظام Numpad.
               </p>
             </div>
           </div>
 
           {/* Main Tabs */}
-          <div className="flex items-center gap-space-xs self-start lg:self-center p-1 rounded-xl bg-surface-container-lowest border border-surface-container-high/60">
+          <div className="flex items-center gap-1.5 self-start lg:self-center p-1 rounded-xl bg-slate-100 border border-slate-200">
             <button
-              className={`flex items-center gap-space-xs px-space-md py-space-xs rounded-lg font-headline-sm text-body-sm font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
                 activeTab === "print"
-                  ? "bg-primary-container text-on-primary-container shadow-sm font-bold"
-                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container"
+                  ? "bg-white text-slate-900 shadow-xs font-bold"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
               }`}
               onClick={() => setActiveTab("print")}
               type="button"
@@ -593,10 +591,10 @@ export default function SmartCalculatorPage() {
               <span>حاسبة الملازم والطباعة</span>
             </button>
             <button
-              className={`flex items-center gap-space-xs px-space-md py-space-xs rounded-lg font-body-sm text-body-sm transition-all ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
                 activeTab === "numpad"
-                  ? "bg-primary-container text-on-primary-container shadow-sm font-bold"
-                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container"
+                  ? "bg-white text-slate-900 shadow-xs font-bold"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
               }`}
               onClick={() => setActiveTab("numpad")}
               type="button"
@@ -605,7 +603,7 @@ export default function SmartCalculatorPage() {
               <span>حاسبة عامة (Numpad)</span>
             </button>
             <button
-              className="p-space-xs rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
+              className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors cursor-pointer"
               title="إعدادات التسعير الافتراضية"
               onClick={() => {
                 setTempPricing(pricing);
@@ -621,43 +619,43 @@ export default function SmartCalculatorPage() {
 
       {/* Numpad View */}
       {activeTab === "numpad" ? (
-        <div className="flex flex-col items-center justify-center pt-space-md">
-          <div className="max-w-md mx-auto w-full bg-surface-container-low rounded-xl p-space-lg shadow-xl flex flex-col gap-space-md border border-surface-container-high/40">
+        <div className="flex flex-col items-center justify-center pt-4">
+          <div className="max-w-md mx-auto w-full bg-white rounded-2xl p-6 shadow-xs flex flex-col gap-4 border border-slate-200">
             <div className="flex items-center justify-between">
-              <span className="font-headline-sm text-headline-sm text-on-surface font-bold">آلة حاسبة سريعة</span>
-              <span className="font-label-code text-label-code text-on-surface-variant">يدعم الكيبورد (Numpad)</span>
+              <span className="text-base font-bold text-slate-900">آلة حاسبة سريعة</span>
+              <span className="text-xs text-slate-500 font-medium">يدعم الكيبورد (Numpad)</span>
             </div>
             <div
-              className="bg-surface-container-lowest p-space-md rounded-xl text-left font-label-code text-headline-lg text-primary tracking-wider overflow-x-auto min-h-[58px] flex items-center justify-end border border-surface-container-high/60 shadow-inner"
+              className="bg-slate-50 p-4 rounded-xl text-left font-mono text-2xl text-blue-600 font-bold tracking-wider overflow-x-auto min-h-[58px] flex items-center justify-end border border-slate-200"
               dir="ltr"
             >
-              {numpadEquation && <span className="text-on-surface-variant text-sm mr-2">{numpadEquation}</span>}
+              {numpadEquation && <span className="text-slate-400 text-sm mr-2">{numpadEquation}</span>}
               <span>{numpadDisplay}</span>
             </div>
-            <div className="grid grid-cols-4 gap-space-xs font-label-code text-body-lg" dir="ltr">
+            <div className="grid grid-cols-4 gap-2 font-mono text-lg" dir="ltr">
               <button
-                className="p-space-sm rounded-lg bg-surface-container-high text-error hover:bg-surface-container-highest transition-colors font-bold cursor-pointer"
+                className="p-3 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors font-bold cursor-pointer border border-rose-100"
                 onClick={() => handleNumpadAction("C")}
                 type="button"
               >
                 C
               </button>
               <button
-                className="p-space-sm rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest transition-colors font-bold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-100 text-blue-600 hover:bg-blue-50 transition-colors font-bold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadAction("÷")}
                 type="button"
               >
                 ÷
               </button>
               <button
-                className="p-space-sm rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest transition-colors font-bold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-100 text-blue-600 hover:bg-blue-50 transition-colors font-bold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadAction("×")}
                 type="button"
               >
                 ×
               </button>
               <button
-                className="p-space-sm rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors font-bold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors font-bold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadAction("DEL")}
                 type="button"
               >
@@ -665,28 +663,28 @@ export default function SmartCalculatorPage() {
               </button>
 
               <button
-                className="p-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors font-semibold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadNum("7")}
                 type="button"
               >
                 7
               </button>
               <button
-                className="p-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors font-semibold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadNum("8")}
                 type="button"
               >
                 8
               </button>
               <button
-                className="p-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors font-semibold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadNum("9")}
                 type="button"
               >
                 9
               </button>
               <button
-                className="p-space-sm rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest transition-colors font-bold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-100 text-blue-600 hover:bg-blue-50 transition-colors font-bold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadAction("-")}
                 type="button"
               >
@@ -694,28 +692,28 @@ export default function SmartCalculatorPage() {
               </button>
 
               <button
-                className="p-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors font-semibold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadNum("4")}
                 type="button"
               >
                 4
               </button>
               <button
-                className="p-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors font-semibold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadNum("5")}
                 type="button"
               >
                 5
               </button>
               <button
-                className="p-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors font-semibold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadNum("6")}
                 type="button"
               >
                 6
               </button>
               <button
-                className="p-space-sm rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest transition-colors font-bold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-100 text-blue-600 hover:bg-blue-50 transition-colors font-bold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadAction("+")}
                 type="button"
               >
@@ -723,28 +721,28 @@ export default function SmartCalculatorPage() {
               </button>
 
               <button
-                className="p-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors font-semibold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadNum("1")}
                 type="button"
               >
                 1
               </button>
               <button
-                className="p-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors font-semibold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadNum("2")}
                 type="button"
               >
                 2
               </button>
               <button
-                className="p-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors font-semibold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadNum("3")}
                 type="button"
               >
                 3
               </button>
               <button
-                className="row-span-2 p-space-sm rounded-lg bg-primary text-on-primary font-bold hover:brightness-110 transition-all flex items-center justify-center text-headline-sm cursor-pointer shadow-md"
+                className="row-span-2 p-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all flex items-center justify-center text-xl cursor-pointer shadow-xs"
                 onClick={handleNumpadEquals}
                 type="button"
               >
@@ -752,14 +750,14 @@ export default function SmartCalculatorPage() {
               </button>
 
               <button
-                className="col-span-2 p-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors font-semibold cursor-pointer"
+                className="col-span-2 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
                 onClick={() => handleNumpadNum("0")}
                 type="button"
               >
                 0
               </button>
               <button
-                className="p-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors font-semibold cursor-pointer"
+                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
                 onClick={() => {
                   if (!numpadDisplay.includes(".")) handleNumpadNum(".");
                 }}
@@ -772,35 +770,35 @@ export default function SmartCalculatorPage() {
         </div>
       ) : (
         /* Primary Calculator Workspace (2 Columns Grid) */
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-space-lg items-start">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
           {/* Right/Center: Setup Inputs & Modules (8 Cols on XL) */}
-          <div className="xl:col-span-8 flex flex-col gap-space-lg">
+          <div className="xl:col-span-8 flex flex-col gap-6">
             {/* Module 1: Document & Quantity Core */}
-            <div className="bg-surface-container-low rounded-xl p-space-lg shadow-xl relative overflow-hidden border border-surface-container-high/40">
-              <div className="flex items-center justify-between pb-space-md mb-space-md border-b-0">
-                <div className="flex items-center gap-space-xs">
-                  <span className="material-symbols-outlined text-primary text-headline-sm">folder_open</span>
-                  <span className="font-headline-sm text-headline-sm font-semibold text-on-surface">
+            <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200">
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-blue-600 text-2xl">folder_open</span>
+                  <span className="text-base font-bold text-slate-900">
                     بيانات المذكرة أو المستند
                   </span>
                 </div>
-                <span className="font-label-tag text-label-tag px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface-variant uppercase">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 uppercase">
                   Step 1 · الأبعاد والكميات
                 </span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Page Count */}
-                <div className="flex flex-col gap-space-xs">
+                <div className="flex flex-col gap-1.5">
                   <label
-                    className="flex items-center justify-between font-body-sm text-body-sm font-medium text-on-surface"
+                    className="flex items-center justify-between text-xs font-bold text-slate-700"
                     htmlFor="input-pages"
                   >
                     <span>عدد الصفحات في الملف (PDF / Word)</span>
-                    <span className="text-on-surface-variant font-label-code text-label-code">صفحة أصلية</span>
+                    <span className="text-slate-500 font-mono">صفحة أصلية</span>
                   </label>
                   <div className="relative flex items-center">
                     <input
-                      className="w-full h-11 px-space-md pr-space-md pl-12 rounded-xl bg-surface-container-lowest text-on-surface font-label-code text-body-lg text-left focus:outline-none focus:ring-2 focus:ring-primary shadow-inner border border-surface-container-high/50"
+                      className="w-full h-11 px-4 pr-4 pl-12 rounded-xl bg-slate-50 text-slate-900 font-mono text-base text-left focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 border border-slate-200 transition"
                       id="input-pages"
                       min="0"
                       onChange={(e) => {
@@ -812,26 +810,26 @@ export default function SmartCalculatorPage() {
                       type="number"
                       value={pageCount === 0 ? "" : pageCount}
                     />
-                    <span className="absolute left-3 text-on-surface-variant font-body-sm text-body-sm pointer-events-none">
+                    <span className="absolute left-3 text-slate-400 text-xs pointer-events-none">
                       صفحة
                     </span>
                   </div>
-                  <span className="text-on-surface-variant font-body-sm text-body-sm">
+                  <span className="text-slate-500 text-xs">
                     مثال: كتاب مدرسي 120 صفحة أو ملزمة 45 ورقة
                   </span>
                 </div>
                 {/* Copies Count */}
-                <div className="flex flex-col gap-space-xs">
+                <div className="flex flex-col gap-1.5">
                   <label
-                    className="flex items-center justify-between font-body-sm text-body-sm font-medium text-on-surface"
+                    className="flex items-center justify-between text-xs font-bold text-slate-700"
                     htmlFor="input-copies"
                   >
                     <span>عدد النسخ المطلوبة (الكمية)</span>
-                    <span className="text-on-surface-variant font-label-code text-label-code">نسخة للعميل</span>
+                    <span className="text-slate-500 font-mono">نسخة للعميل</span>
                   </label>
                   <div className="relative flex items-center">
                     <input
-                      className="w-full h-11 px-space-md pr-space-md pl-12 rounded-xl bg-surface-container-lowest text-on-surface font-label-code text-body-lg text-left focus:outline-none focus:ring-2 focus:ring-primary shadow-inner border border-surface-container-high/50"
+                      className="w-full h-11 px-4 pr-4 pl-12 rounded-xl bg-slate-50 text-slate-900 font-mono text-base text-left focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 border border-slate-200 transition"
                       id="input-copies"
                       min="0"
                       onChange={(e) => {
@@ -843,26 +841,26 @@ export default function SmartCalculatorPage() {
                       type="number"
                       value={copiesCount === 0 ? "" : copiesCount}
                     />
-                    <span className="absolute left-3 text-on-surface-variant font-body-sm text-body-sm pointer-events-none">
+                    <span className="absolute left-3 text-slate-400 text-xs pointer-events-none">
                       نسخة
                     </span>
                   </div>
-                  <span className="text-on-surface-variant font-body-sm text-body-sm">
+                  <span className="text-slate-500 text-xs">
                     عدد الملازم أو الكتب للعميل / السنتر
                   </span>
                 </div>
               </div>
               {/* Duplex / Single Selection */}
-              <div className="mt-space-md flex flex-col gap-space-xs">
-                <label className="font-body-sm text-body-sm font-medium text-on-surface">
+              <div className="mt-4 flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700">
                   نوع طباعة الورق (وجه واحد أم وش وظهر)
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm" id="duplex-selector">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" id="duplex-selector">
                   <button
-                    className={`relative p-space-md rounded-xl flex items-center justify-between transition-all cursor-pointer border ${
+                    className={`relative p-4 rounded-xl flex items-center justify-between transition-all cursor-pointer border ${
                       isDuplex
-                        ? "bg-primary/10 text-primary border-primary/40 shadow-[0_0_12px_rgba(6,182,212,0.15)]"
-                        : "bg-surface-container-highest text-on-surface-variant hover:text-on-surface border-transparent"
+                        ? "bg-blue-50 text-blue-700 border-blue-300 shadow-xs"
+                        : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200"
                     }`}
                     onClick={() => {
                       setIsDuplex(true);
@@ -873,17 +871,17 @@ export default function SmartCalculatorPage() {
                     }}
                     type="button"
                   >
-                    <div className="flex items-center gap-space-sm text-right">
-                      <span className="material-symbols-outlined text-headline-sm">auto_stories</span>
+                    <div className="flex items-center gap-3 text-right">
+                      <span className="material-symbols-outlined text-2xl">auto_stories</span>
                       <div>
-                        <div className="font-headline-sm text-body-md font-bold">وش وظهر (Duplex)</div>
-                        <div className="font-body-sm text-body-sm text-on-surface-variant">
+                        <div className="text-sm font-bold">وش وظهر (Duplex)</div>
+                        <div className="text-xs text-slate-500">
                           الافتراضي للملازم والكتب (يوفر 50% ورق)
                         </div>
                       </div>
                     </div>
                     <span
-                      className={`material-symbols-outlined text-primary check-icon ${
+                      className={`material-symbols-outlined text-blue-600 ${
                         isDuplex ? "opacity-100" : "opacity-0"
                       }`}
                     >
@@ -891,10 +889,10 @@ export default function SmartCalculatorPage() {
                     </span>
                   </button>
                   <button
-                    className={`relative p-space-md rounded-xl flex items-center justify-between transition-all cursor-pointer border ${
+                    className={`relative p-4 rounded-xl flex items-center justify-between transition-all cursor-pointer border ${
                       !isDuplex
-                        ? "bg-primary/10 text-primary border-primary/40 shadow-[0_0_12px_rgba(6,182,212,0.15)]"
-                        : "bg-surface-container-highest text-on-surface-variant hover:text-on-surface border-transparent"
+                        ? "bg-blue-50 text-blue-700 border-blue-300 shadow-xs"
+                        : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200"
                     }`}
                     onClick={() => {
                       setIsDuplex(false);
@@ -905,17 +903,17 @@ export default function SmartCalculatorPage() {
                     }}
                     type="button"
                   >
-                    <div className="flex items-center gap-space-sm text-right">
-                      <span className="material-symbols-outlined text-headline-sm">description</span>
+                    <div className="flex items-center gap-3 text-right">
+                      <span className="material-symbols-outlined text-2xl">description</span>
                       <div>
-                        <div className="font-headline-sm text-body-md font-bold">وجه واحد (Single-Sided)</div>
-                        <div className="font-body-sm text-body-sm text-on-surface-variant">
+                        <div className="text-sm font-bold">وجه واحد (Single-Sided)</div>
+                        <div className="text-xs text-slate-500">
                           شيتات وامتحانات ورسم بياني ومذكرات فردية
                         </div>
                       </div>
                     </div>
                     <span
-                      className={`material-symbols-outlined text-primary check-icon ${
+                      className={`material-symbols-outlined text-blue-600 ${
                         !isDuplex ? "opacity-100" : "opacity-0"
                       }`}
                     >
@@ -925,17 +923,17 @@ export default function SmartCalculatorPage() {
                 </div>
               </div>
               {/* Dynamic Live Summary Pill Banner */}
-              <div className="mt-space-md p-space-sm rounded-xl bg-surface-container flex flex-wrap items-center justify-between gap-space-sm border border-surface-container-high/50">
-                <div className="flex items-center gap-space-xs text-on-surface font-body-sm text-body-sm">
-                  <span className="material-symbols-outlined text-primary text-base">insights</span>
-                  <span className="text-on-surface-variant">النتيجة الحسابية:</span>
-                  <span className="font-label-code text-label-code font-bold text-primary" id="banner-pages-calc">
+              <div className="mt-4 p-3 rounded-xl bg-slate-50 flex flex-wrap items-center justify-between gap-3 border border-slate-200">
+                <div className="flex items-center gap-2 text-slate-800 text-xs">
+                  <span className="material-symbols-outlined text-blue-600 text-lg">insights</span>
+                  <span className="text-slate-500 font-medium">النتيجة الحسابية:</span>
+                  <span className="font-mono font-bold text-blue-700" id="banner-pages-calc">
                     {pageCount} صفحة {isDuplex ? "وش وظهر" : "وجه واحد"} = {sheetCountPerCopy} ورقة لكل نسخة
                   </span>
                 </div>
-                <div className="flex items-center gap-space-xs px-space-sm py-space-2xs rounded-lg bg-surface-container-lowest border border-surface-container-high/40">
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">إجمالي الأوردر:</span>
-                  <span className="font-label-code text-label-code font-bold text-tertiary" id="banner-total-sheets">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white border border-slate-200 shadow-xs">
+                  <span className="text-xs text-slate-500 font-medium">إجمالي الأوردر:</span>
+                  <span className="font-mono text-xs font-bold text-emerald-700" id="banner-total-sheets">
                     {totalSheetsOrder.toLocaleString("ar-EG")} ورقة ({packetsA4Count} باكيت A4)
                   </span>
                 </div>
@@ -943,25 +941,25 @@ export default function SmartCalculatorPage() {
             </div>
 
             {/* Module 2: Paper & Print Price Presets */}
-            <div className="bg-surface-container-low rounded-xl p-space-lg shadow-xl flex flex-col gap-space-md border border-surface-container-high/40">
-              <div className="flex flex-wrap items-center justify-between gap-space-xs">
-                <div className="flex items-center gap-space-xs">
-                  <span className="material-symbols-outlined text-primary text-headline-sm">sell</span>
-                  <span className="font-headline-sm text-headline-sm font-semibold text-on-surface">
+            <div className="bg-white rounded-2xl p-6 shadow-xs flex flex-col gap-4 border border-slate-200">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-blue-600 text-2xl">sell</span>
+                  <span className="text-base font-bold text-slate-900">
                     أزرار تسعير الورقة والطباعة السريعة
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-space-xs font-label-code text-label-code text-on-surface-variant">
+                  <div className="flex items-center gap-1.5 font-mono text-xs text-slate-500">
                     <span>المحدد:</span>
-                    <span className="px-space-xs py-space-2xs rounded bg-primary/15 text-primary font-semibold">
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold">
                       {rateLabel} {paperRate.toFixed(2)} ج.م
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsManageButtonsOpen(true)}
-                    className="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs text-primary font-bold flex items-center gap-1 cursor-pointer transition border border-primary/20"
+                    className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-xs text-blue-700 font-bold flex items-center gap-1 cursor-pointer transition border border-slate-200"
                   >
                     <span className="material-symbols-outlined text-sm">tune</span>
                     <span>إدارة وتعديل الأزرار</span>
@@ -970,41 +968,41 @@ export default function SmartCalculatorPage() {
               </div>
 
               {/* Dynamic Quick Presets Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-space-sm" id="preset-grid">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3" id="preset-grid">
                 {quickButtons.map((btn) => (
                   <button
                     key={btn.id}
-                    className={`p-space-sm rounded-xl text-right flex flex-col justify-between h-20 transition-all cursor-pointer border relative group ${
+                    className={`p-3.5 rounded-xl text-right flex flex-col justify-between h-20 transition-all cursor-pointer border relative group ${
                       paperRate === btn.price && rateLabel === btn.label
-                        ? "bg-primary/10 border-primary/40 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
-                        : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
+                        ? "bg-blue-50 border-blue-300 text-blue-700 shadow-xs"
+                        : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900"
                     }`}
                     onClick={() => handlePresetSelect(btn.price, btn.label)}
                     type="button"
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className="font-body-sm text-body-sm font-semibold truncate max-w-[140px]">
+                      <span className="text-xs font-bold truncate max-w-[140px]">
                         {btn.label}
                       </span>
-                      <span className={`w-2 h-2 rounded-full ${btn.colorDot || "bg-primary"}`}></span>
+                      <span className={`w-2 h-2 rounded-full ${btn.colorDot || "bg-blue-600"}`}></span>
                     </div>
-                    <div className="font-label-code text-headline-sm font-bold">
+                    <div className="font-mono text-lg font-bold">
                       {btn.price.toFixed(2)}{" "}
-                      <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">ج.م</span>
+                      <span className="text-xs font-normal text-slate-500">ج.م</span>
                     </div>
                   </button>
                 ))}
               </div>
 
               {/* Custom Price Inline Input */}
-              <div className="flex items-center justify-between p-space-sm rounded-xl bg-surface-container-lowest gap-space-md border border-surface-container-high/40">
-                <div className="flex items-center gap-space-xs">
-                  <span className="material-symbols-outlined text-on-surface-variant text-lg">tune</span>
-                  <span className="font-body-sm text-body-sm text-on-surface">أو تحديد سعر ورقة يدوي مخصص:</span>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 gap-4 border border-slate-200">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-slate-400 text-lg">tune</span>
+                  <span className="text-xs font-bold text-slate-700">أو تحديد سعر ورقة يدوي مخصص:</span>
                 </div>
-                <div className="flex items-center gap-space-xs">
+                <div className="flex items-center gap-2">
                   <input
-                    className="w-24 h-9 px-space-xs rounded-lg bg-surface-container text-primary font-label-code text-body-md text-center focus:outline-none focus:ring-2 focus:ring-primary shadow-inner border border-surface-container-high"
+                    className="w-24 h-9 px-2 rounded-lg bg-white text-blue-600 font-mono text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 border border-slate-200 shadow-xs"
                     min="0.1"
                     onChange={(e) => {
                       const val = parseFloat(e.target.value) || 0;
@@ -1015,28 +1013,28 @@ export default function SmartCalculatorPage() {
                     type="number"
                     value={paperRate}
                   />
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">ج.م للورقة</span>
+                  <span className="text-xs text-slate-500">ج.م للورقة</span>
                 </div>
               </div>
             </div>
 
             {/* Module 3: Binding & Add-ons Finishes */}
-            <div className="bg-surface-container-low rounded-xl p-space-lg shadow-xl flex flex-col gap-space-md border border-surface-container-high/40">
-              <div className="flex flex-wrap items-center justify-between gap-space-xs">
-                <div className="flex items-center gap-space-xs">
-                  <span className="material-symbols-outlined text-primary text-headline-sm">book_online</span>
-                  <h2 className="font-headline-sm text-headline-sm font-semibold text-on-surface">
+            <div className="bg-white rounded-2xl p-6 shadow-xs flex flex-col gap-4 border border-slate-200">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-blue-600 text-2xl">book_online</span>
+                  <h2 className="text-base font-bold text-slate-900">
                     خدمات التجليد والتشطيب (Add-ons)
                   </h2>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-label-tag text-label-tag px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface-variant">
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
                     سعر مضاف للنسخة
                   </span>
                   <button
                     type="button"
                     onClick={() => setIsManageAddonsOpen(true)}
-                    className="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs text-primary font-bold flex items-center gap-1 cursor-pointer transition border border-primary/20"
+                    className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-xs text-blue-700 font-bold flex items-center gap-1 cursor-pointer transition border border-slate-200"
                   >
                     <span className="material-symbols-outlined text-sm">tune</span>
                     <span>إدارة وتعديل خدمات التجليد</span>
@@ -1045,28 +1043,28 @@ export default function SmartCalculatorPage() {
               </div>
 
               {/* Spiral Wire Binding Options */}
-              <div className="flex flex-col gap-space-sm">
-                <span className="font-body-sm text-body-sm font-medium text-on-surface-variant">
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-bold text-slate-600">
                   تجليد السلك المعدني (Spiral Wire Binding):
                 </span>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-space-sm">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {customAddons.filter((a) => a.category === "wire").map((item) => {
                     const isSelected = selectedBinding?.name === item.name;
                     return (
                       <button
                         key={item.id}
-                        className={`p-space-sm rounded-xl text-right flex flex-col justify-between transition-all cursor-pointer border ${
+                        className={`p-3 rounded-xl text-right flex flex-col justify-between transition-all cursor-pointer border ${
                           isSelected
-                            ? "bg-primary/10 border-primary/40 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
-                            : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
+                            ? "bg-blue-50 border-blue-300 text-blue-700 shadow-xs"
+                            : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800"
                         }`}
                         onClick={() => setSelectedBinding(isSelected ? null : { name: item.name, price: item.price })}
                         type="button"
                       >
-                        <span className="font-body-sm text-body-sm font-semibold">{item.label}</span>
-                        <span className="font-label-code text-headline-sm mt-space-2xs font-bold">
+                        <span className="text-xs font-bold">{item.label}</span>
+                        <span className="font-mono text-base mt-1 font-bold">
                           {item.price}{" "}
-                          <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">ج.م</span>
+                          <span className="text-xs font-normal text-slate-500">ج.م</span>
                         </span>
                       </button>
                     );
@@ -1075,28 +1073,28 @@ export default function SmartCalculatorPage() {
               </div>
 
               {/* Plastic Comb Binding Options */}
-              <div className="flex flex-col gap-space-sm mt-space-xs">
-                <span className="font-body-sm text-body-sm font-medium text-on-surface-variant">
+              <div className="flex flex-col gap-2 mt-1">
+                <span className="text-xs font-bold text-slate-600">
                   تجليد المشط البلاستيكي (Plastic Comb):
                 </span>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-space-sm">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {customAddons.filter((a) => a.category === "plastic").map((item) => {
                     const isSelected = selectedBinding?.name === item.name;
                     return (
                       <button
                         key={item.id}
-                        className={`p-space-sm rounded-xl text-right flex flex-col justify-between transition-all cursor-pointer border ${
+                        className={`p-3 rounded-xl text-right flex flex-col justify-between transition-all cursor-pointer border ${
                           isSelected
-                            ? "bg-primary/10 border-primary/40 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
-                            : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
+                            ? "bg-blue-50 border-blue-300 text-blue-700 shadow-xs"
+                            : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800"
                         }`}
                         onClick={() => setSelectedBinding(isSelected ? null : { name: item.name, price: item.price })}
                         type="button"
                       >
-                        <span className="font-body-sm text-body-sm font-semibold">{item.label}</span>
-                        <span className="font-label-code text-headline-sm mt-space-2xs font-bold">
+                        <span className="text-xs font-bold">{item.label}</span>
+                        <span className="font-mono text-base mt-1 font-bold">
                           {item.price}{" "}
-                          <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">ج.م</span>
+                          <span className="text-xs font-normal text-slate-500">ج.م</span>
                         </span>
                       </button>
                     );
@@ -1105,38 +1103,38 @@ export default function SmartCalculatorPage() {
               </div>
 
               {/* Extras: Finishing & Coatings */}
-              <div className="flex flex-col gap-space-sm mt-space-xs">
-                <span className="font-body-sm text-body-sm font-medium text-on-surface-variant">
+              <div className="flex flex-col gap-2 mt-1">
+                <span className="text-xs font-bold text-slate-600">
                   خدمات التشطيب والسلوفان الإضافية:
                 </span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {customAddons.filter((a) => a.category === "finishing").map((item) => {
                     const isChecked = selectedFinishingIds.includes(item.id);
                     return (
                       <button
                         key={item.id}
-                        className={`p-space-sm rounded-xl flex items-center justify-between text-right transition-all cursor-pointer border ${
+                        className={`p-3 rounded-xl flex items-center justify-between text-right transition-all cursor-pointer border ${
                           isChecked
-                            ? "bg-primary/10 border-primary/40 text-primary shadow-sm"
-                            : "bg-surface-container hover:bg-surface-container-high border-transparent text-on-surface"
+                            ? "bg-blue-50 border-blue-300 text-blue-700 shadow-xs"
+                            : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800"
                         }`}
                         onClick={() => toggleFinishing(item.id)}
                         type="button"
                       >
-                        <div className="flex items-center gap-space-xs">
-                          <span className="material-symbols-outlined text-primary">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-blue-600 text-lg">
                             {isChecked ? "check_box" : "check_box_outline_blank"}
                           </span>
-                          <span className="font-body-sm text-body-sm font-semibold">{item.label}</span>
+                          <span className="text-xs font-bold">{item.label}</span>
                         </div>
-                        <span className="font-label-code text-body-sm text-tertiary font-bold">
+                        <span className="font-mono text-xs text-blue-700 font-bold">
                           +{item.price} ج.م
                         </span>
                       </button>
                     );
                   })}
                   <button
-                    className="p-space-sm rounded-xl bg-surface-container-highest hover:bg-surface-container-high text-on-surface-variant hover:text-error flex items-center justify-center gap-space-2xs transition-colors cursor-pointer border border-surface-container-high"
+                    className="p-3 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200"
                     onClick={() => {
                       setSelectedBinding(null);
                       setSelectedFinishingIds([]);
@@ -1144,7 +1142,7 @@ export default function SmartCalculatorPage() {
                     type="button"
                   >
                     <span className="material-symbols-outlined text-base">close</span>
-                    <span className="font-body-sm text-body-sm">إلغاء التجليد والتشطيب</span>
+                    <span className="text-xs font-semibold">إلغاء التجليد والتشطيب</span>
                   </button>
                 </div>
               </div>
@@ -1152,22 +1150,19 @@ export default function SmartCalculatorPage() {
           </div>
 
           {/* Left Column: Live Estimation Sticky Invoice Card (4 Cols on XL) */}
-          <div className="xl:col-span-4 sticky top-20 flex flex-col gap-space-md">
-            <div className="bg-surface-container-low rounded-xl p-space-lg shadow-2xl relative overflow-hidden flex flex-col gap-space-md border border-surface-container-high/50">
-              {/* Glow top edge */}
-                <div className="absolute top-0 right-0 left-0 h-1 bg-linear-to-r from-primary via-primary-container to-tertiary"></div>
-
+          <div className="xl:col-span-4 sticky top-20 flex flex-col gap-4">
+            <div className="bg-white rounded-2xl p-6 shadow-sm flex flex-col gap-4 border border-slate-200">
               {/* Invoice Header */}
-              <div className="flex items-center justify-between pb-space-sm border-b-0">
-                <div className="flex items-center gap-space-xs">
-                  <span className="material-symbols-outlined text-primary text-headline-sm">receipt_long</span>
-                  <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-blue-600 text-2xl">receipt_long</span>
+                  <h3 className="text-base font-bold text-slate-900">
                     ملخص الفاتورة التقديرية
                   </h3>
                 </div>
-                <div className="flex items-center gap-space-2xs">
+                <div className="flex items-center gap-1">
                   <button
-                    className="p-space-2xs rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
                     onClick={handleCopyInvoice}
                     title="نسخ الفاتورة نصياً"
                     type="button"
@@ -1175,7 +1170,7 @@ export default function SmartCalculatorPage() {
                     <span className="material-symbols-outlined text-lg">content_copy</span>
                   </button>
                   <button
-                    className="p-space-2xs rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
                     onClick={handleCopyInvoice}
                     title="مشاركة الفاتورة"
                     type="button"
@@ -1186,124 +1181,123 @@ export default function SmartCalculatorPage() {
               </div>
 
               {/* Metric Rows */}
-              <div className="flex flex-col gap-space-xs font-body-sm text-body-sm text-on-surface divide-y-0">
+              <div className="flex flex-col gap-2 text-xs text-slate-800">
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-on-surface-variant">عدد الصفحات الأصلية:</span>
-                  <span className="font-label-code text-label-code font-bold text-on-surface">
+                  <span className="text-slate-500">عدد الصفحات الأصلية:</span>
+                  <span className="font-mono font-bold text-slate-900">
                     {pageCount} صفحة
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-on-surface-variant">نوع الطباعة:</span>
-                  <span className="font-label-code text-label-code text-primary font-bold">
+                  <span className="text-slate-500">نوع الطباعة:</span>
+                  <span className="font-mono text-blue-600 font-bold">
                     {isDuplex ? "وش وظهر (Duplex)" : "وجه واحد (Single)"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-on-surface-variant">الورق الفعلي لكل نسخة:</span>
-                  <span className="font-label-code text-label-code font-bold text-on-surface">
+                  <span className="text-slate-500">الورق الفعلي لكل نسخة:</span>
+                  <span className="font-mono font-bold text-slate-900">
                     {sheetCountPerCopy} ورقة
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-on-surface-variant">عدد النسخ المطلوبة:</span>
-                  <span className="font-label-code text-label-code font-bold text-on-surface">
+                  <span className="text-slate-500">عدد النسخ المطلوبة:</span>
+                  <span className="font-mono font-bold text-slate-900">
                     {copiesCount} نسخة
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-on-surface-variant">إجمالي الورق المستخدم:</span>
-                  <span className="font-label-code text-label-code font-bold text-tertiary">
+                  <span className="text-slate-500">إجمالي الورق المستخدم:</span>
+                  <span className="font-mono font-bold text-emerald-600">
                     {totalSheetsOrder.toLocaleString("ar-EG")} ورقة (A4)
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-on-surface-variant">سعر الورقة المختارة:</span>
-                  <span className="font-label-code text-label-code text-on-surface">
+                  <span className="text-slate-500">سعر الورقة المختارة:</span>
+                  <span className="font-mono text-slate-900">
                     {paperRate.toFixed(2)} ج.م
                   </span>
                 </div>
 
-                <div className="my-space-xs h-px bg-surface-container-highest"></div>
+                <div className="my-1 h-px bg-slate-100"></div>
 
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-on-surface-variant">تكلفة الطباعة للنسخة:</span>
-                  <span className="font-label-code text-label-code text-on-surface">
+                  <span className="text-slate-500">تكلفة الطباعة للنسخة:</span>
+                  <span className="font-mono text-slate-900">
                     {printCostPerCopy.toFixed(2)} ج.م
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-on-surface-variant">تكلفة التجليد والتشطيب:</span>
-                  <span className="font-label-code text-label-code text-on-surface">
+                  <span className="text-slate-500">تكلفة التجليد والتشطيب:</span>
+                  <span className="font-mono text-slate-900">
                     {bindingCostPerCopy.toFixed(2)} ج.م
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1 font-semibold">
-                  <span className="text-on-surface">إجمالي تكلفة النسخة الواحدة:</span>
-                  <span className="font-label-code text-body-md text-primary">
+                  <span className="text-slate-900">إجمالي تكلفة النسخة الواحدة:</span>
+                  <span className="font-mono text-sm text-blue-600 font-bold">
                     {singleCopyTotalCost.toFixed(2)} ج.م
                   </span>
                 </div>
               </div>
 
               {/* Big Highlight Grand Total Box */}
-              <div className="p-space-md rounded-xl bg-surface-container-lowest flex flex-col items-center justify-center gap-space-2xs text-center shadow-inner relative overflow-hidden border border-surface-container-high/40">
-                  <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-transparent pointer-events-none"></div>
-                <span className="font-label-tag text-label-tag text-on-surface-variant uppercase tracking-wider">
+              <div className="p-4 rounded-xl bg-slate-50 flex flex-col items-center justify-center gap-1 text-center border border-slate-200">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                   الإجمالي النهائي المطلوب
                 </span>
-                <div className="flex items-baseline gap-space-2xs">
-                  <span className="font-label-code text-display-hero font-extrabold text-primary tracking-tight">
+                <div className="flex items-baseline gap-1">
+                  <span className="font-mono text-3xl font-extrabold text-blue-600 tracking-tight">
                     {grandTotalCost.toLocaleString("ar-EG")}
                   </span>
-                  <span className="font-headline-sm text-headline-sm text-primary">ج.م</span>
+                  <span className="text-sm font-bold text-blue-600">ج.م</span>
                 </div>
-                <div className="flex items-center gap-space-xs mt-1">
-                  <span className="font-label-code text-label-code px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant">
+                <div className="flex items-center gap-1 mt-1">
+                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600 font-medium">
                     تكلفة الإنتاج التقديرية: ~{estProductionCost.toLocaleString("ar-EG")} ج.م
                   </span>
                 </div>
               </div>
 
               {/* Fast Actions & Workflow Buttons */}
-              <div className="flex flex-col gap-space-sm pt-space-xs">
+              <div className="flex flex-col gap-2.5 pt-1">
                 <button
-                  className="w-full h-12 rounded-xl bg-primary hover:bg-primary-fixed-dim text-on-primary font-headline-sm text-body-md font-bold flex items-center justify-center gap-space-xs shadow-[0_0_20px_rgba(6,182,212,0.35)] transition-all transform active:scale-95 cursor-pointer"
+                  className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
                   onClick={handleTransferToShiftOrder}
                   type="button"
                 >
-                  <span className="material-symbols-outlined text-xl">assignment_turned_in</span>
+                  <span className="material-symbols-outlined text-lg">assignment_turned_in</span>
                   <span>تحويل إلى أوردر في الشفت فوراً</span>
                 </button>
                 <button
-                  className="w-full h-11 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm font-semibold flex items-center justify-center gap-space-xs transition-all cursor-pointer border border-surface-container-highest"
+                  className="w-full h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-200"
                   onClick={handleSendWhatsappQuote}
                   type="button"
                 >
-                  <span className="material-symbols-outlined text-lg text-primary">send_to_mobile</span>
+                  <span className="material-symbols-outlined text-base text-emerald-600">send_to_mobile</span>
                   <span>إرسال عرض السعر للعميل عبر واتساب</span>
                 </button>
                 <button
-                  className="w-full py-space-xs rounded-lg text-on-surface-variant hover:text-error text-body-sm font-body-sm flex items-center justify-center gap-space-2xs transition-colors cursor-pointer"
+                  className="w-full py-1.5 rounded-lg text-slate-500 hover:text-rose-600 text-xs font-medium flex items-center justify-center gap-1 transition-colors cursor-pointer"
                   onClick={handleReset}
                   type="button"
                 >
-                  <span className="material-symbols-outlined text-base">refresh</span>
+                  <span className="material-symbols-outlined text-sm">refresh</span>
                   <span>تصفير الحسابات والبدء من جديد</span>
                 </button>
               </div>
             </div>
 
             {/* Quick Tips Box */}
-            <div className="p-space-md rounded-xl bg-surface-container-low flex items-start gap-space-sm border border-surface-container-high/40">
-              <span className="material-symbols-outlined text-tertiary text-xl shrink-0 mt-0.5">
+            <div className="p-4 rounded-xl bg-white flex items-start gap-3 border border-slate-200 shadow-xs">
+              <span className="material-symbols-outlined text-amber-500 text-xl shrink-0 mt-0.5">
                 tips_and_updates
               </span>
-              <div className="flex flex-col gap-space-2xs">
-                <span className="font-body-sm text-body-sm font-semibold text-on-surface">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-bold text-slate-900">
                   ملاحظة تسعير الملازم:
                 </span>
-                <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                <p className="text-xs text-slate-500 leading-relaxed">
                   الطباعة &apos;وش وظهر&apos; تحسب سعر الورقة كاملة متضمنة وجهي الطباعة. إذا كانت المذكرة فردية الصفحات (مثلاً 121 صفحة)، تُجبر آخر ورقة تلقائياً لضمان حساب التكلفة الصحيح.
                 </p>
               </div>
@@ -1314,26 +1308,26 @@ export default function SmartCalculatorPage() {
 
       {/* Settings Modal Dialog */}
       {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-low border border-surface-container-high rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-surface-container-high">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-xl">settings</span>
-                <h3 className="font-bold text-lg text-on-surface">إعدادات أسعار الطباعة والتجليد الافتراضية</h3>
+                <span className="material-symbols-outlined text-blue-600 text-xl">settings</span>
+                <h3 className="font-bold text-base text-slate-900">إعدادات أسعار الطباعة والتجليد الافتراضية</h3>
               </div>
               <button
                 onClick={() => setIsSettingsOpen(false)}
-                className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container-high"
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            <div className="space-y-3 text-sm">
-              <span className="font-bold text-primary block">أسعار الورق والطباعة (ج.م للورقة):</span>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-3 text-xs">
+              <span className="font-bold text-blue-600 block">أسعار الورق والطباعة (ج.م للورقة):</span>
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="text-xs text-on-surface-variant block mb-1">أبيض وأسود (وجه):</label>
+                  <label className="text-xs text-slate-600 block mb-1">أبيض وأسود (وجه):</label>
                   <input
                     type="number"
                     step="0.05"
@@ -1341,11 +1335,11 @@ export default function SmartCalculatorPage() {
                     onChange={(e) =>
                       setTempPricing({ ...tempPricing, bwSingle: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-on-surface-variant block mb-1">أبيض وأسود (وش وظهر):</label>
+                  <label className="text-xs text-slate-600 block mb-1">أبيض وأسود (وش وظهر):</label>
                   <input
                     type="number"
                     step="0.05"
@@ -1353,11 +1347,11 @@ export default function SmartCalculatorPage() {
                     onChange={(e) =>
                       setTempPricing({ ...tempPricing, bwDuplex: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-on-surface-variant block mb-1">ألوان خفيف (وش وظهر):</label>
+                  <label className="text-xs text-slate-600 block mb-1">ألوان خفيف (وش وظهر):</label>
                   <input
                     type="number"
                     step="0.05"
@@ -1365,11 +1359,11 @@ export default function SmartCalculatorPage() {
                     onChange={(e) =>
                       setTempPricing({ ...tempPricing, colorLightDuplex: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-on-surface-variant block mb-1">ألوان ملازم (وش وظهر):</label>
+                  <label className="text-xs text-slate-600 block mb-1">ألوان ملازم (وش وظهر):</label>
                   <input
                     type="number"
                     step="0.05"
@@ -1377,72 +1371,72 @@ export default function SmartCalculatorPage() {
                     onChange={(e) =>
                       setTempPricing({ ...tempPricing, colorMediumDuplex: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
                   />
                 </div>
               </div>
 
-              <span className="font-bold text-primary block pt-2">أسعار التجليد (ج.م للنسخة):</span>
-              <div className="grid grid-cols-2 gap-2">
+              <span className="font-bold text-blue-600 block pt-2">أسعار التجليد (ج.م للنسخة):</span>
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="text-xs text-on-surface-variant block mb-1">سلك صغير:</label>
+                  <label className="text-xs text-slate-600 block mb-1">سلك صغير:</label>
                   <input
                     type="number"
                     value={tempPricing.wireBindingSmall}
                     onChange={(e) =>
                       setTempPricing({ ...tempPricing, wireBindingSmall: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-on-surface-variant block mb-1">سلك وسط:</label>
+                  <label className="text-xs text-slate-600 block mb-1">سلك وسط:</label>
                   <input
                     type="number"
                     value={tempPricing.wireBindingMed}
                     onChange={(e) =>
                       setTempPricing({ ...tempPricing, wireBindingMed: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-on-surface-variant block mb-1">سلوفان حراري:</label>
+                  <label className="text-xs text-slate-600 block mb-1">سلوفان حراري:</label>
                   <input
                     type="number"
                     value={tempPricing.cellophane}
                     onChange={(e) =>
                       setTempPricing({ ...tempPricing, cellophane: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-on-surface-variant block mb-1">كعب غراء حراري:</label>
+                  <label className="text-xs text-slate-600 block mb-1">كعب غراء حراري:</label>
                   <input
                     type="number"
                     value={tempPricing.glue}
                     onChange={(e) =>
                       setTempPricing({ ...tempPricing, glue: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface border border-surface-container-high"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-surface-container-high">
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
-                className="px-4 py-2 rounded-xl bg-surface-container text-on-surface-variant hover:bg-surface-container-high text-sm font-semibold"
+                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-semibold cursor-pointer"
               >
                 إلغاء
               </button>
               <button
                 type="button"
                 onClick={handleSavePricing}
-                className="px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-sm shadow-md"
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer"
               >
                 حفظ الأسعار
               </button>
@@ -1453,27 +1447,27 @@ export default function SmartCalculatorPage() {
 
       {/* Manage Custom Quick Buttons Modal */}
       {isManageButtonsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-low border border-surface-container-high rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-surface-container-high">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-xl">tune</span>
-                <h3 className="font-bold text-lg text-on-surface">إدارة وتعديل أزرار التسعير السريعة</h3>
+                <span className="material-symbols-outlined text-blue-600 text-xl">tune</span>
+                <h3 className="font-bold text-base text-slate-900">إدارة وتعديل أزرار التسعير السريعة</h3>
               </div>
               <button
                 onClick={() => {
                   setIsManageButtonsOpen(false);
                   setEditingBtnId(null);
                 }}
-                className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container-high cursor-pointer"
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
             {/* Add New Button Form */}
-            <div className="p-3.5 rounded-xl bg-surface-container border border-surface-container-high/60 space-y-2.5">
-              <div className="font-semibold text-sm text-primary flex items-center gap-1.5">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="font-bold text-xs text-blue-600 flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-base">add_circle</span>
                 <span>إضافة زر تسعير جديد</span>
               </div>
@@ -1483,7 +1477,7 @@ export default function SmartCalculatorPage() {
                   placeholder="اسم الزر (مثلاً: ألوان خفيف)"
                   value={newBtnLabel}
                   onChange={(e) => setNewBtnLabel(e.target.value)}
-                  className="sm:col-span-3 px-3 py-2 rounded-lg bg-surface-container-lowest text-on-surface border border-surface-container-high text-xs"
+                  className="sm:col-span-3 px-3 py-2 rounded-xl bg-white text-slate-900 border border-slate-200 text-xs focus:outline-none focus:border-blue-500"
                 />
                 <input
                   type="number"
@@ -1491,13 +1485,13 @@ export default function SmartCalculatorPage() {
                   placeholder="السعر ج.م"
                   value={newBtnPrice}
                   onChange={(e) => setNewBtnPrice(e.target.value)}
-                  className="sm:col-span-2 px-3 py-2 rounded-lg bg-surface-container-lowest text-on-surface border border-surface-container-high text-xs"
+                  className="sm:col-span-2 px-3 py-2 rounded-xl bg-white text-slate-900 border border-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
                 />
               </div>
               <button
                 type="button"
                 onClick={handleAddButton}
-                className="w-full py-2 rounded-lg bg-primary text-on-primary font-bold text-xs flex items-center justify-center gap-1.5 hover:brightness-110 cursor-pointer shadow-sm"
+                className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <span className="material-symbols-outlined text-sm">add</span>
                 <span>إضافة إلى شاشة الحاسبة</span>
@@ -1506,14 +1500,14 @@ export default function SmartCalculatorPage() {
 
             {/* Existing Buttons List */}
             <div className="space-y-2">
-              <span className="font-semibold text-xs text-on-surface-variant block">
+              <span className="font-bold text-xs text-slate-600 block">
                 الأزرار المتاحة حالياً ({quickButtons.length}):
               </span>
               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                 {quickButtons.map((btn) => (
                   <div
                     key={btn.id}
-                    className="p-2.5 rounded-xl bg-surface-container-lowest border border-surface-container-high flex items-center justify-between gap-2"
+                    className="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-2 shadow-2xs"
                   >
                     {editingBtnId === btn.id ? (
                       <div className="flex-1 grid grid-cols-5 gap-2 items-center">
@@ -1521,21 +1515,21 @@ export default function SmartCalculatorPage() {
                           type="text"
                           value={editBtnLabel}
                           onChange={(e) => setEditBtnLabel(e.target.value)}
-                          className="col-span-3 px-2 py-1.5 rounded-lg bg-surface-container text-on-surface border border-surface-container-high text-xs"
+                          className="col-span-3 px-2 py-1.5 rounded-lg bg-slate-50 text-slate-900 border border-slate-200 text-xs focus:outline-none focus:border-blue-500"
                         />
                         <input
                           type="number"
                           step="0.05"
                           value={editBtnPrice}
                           onChange={(e) => setEditBtnPrice(e.target.value)}
-                          className="col-span-2 px-2 py-1.5 rounded-lg bg-surface-container text-on-surface border border-surface-container-high text-xs"
+                          className="col-span-2 px-2 py-1.5 rounded-lg bg-slate-50 text-slate-900 border border-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
                         />
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${btn.colorDot || "bg-primary"}`}></span>
-                        <span className="text-xs font-semibold truncate text-on-surface">{btn.label}</span>
-                        <span className="font-label-code text-xs font-bold text-primary mr-auto shrink-0">
+                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${btn.colorDot || "bg-blue-600"}`}></span>
+                        <span className="text-xs font-bold truncate text-slate-900">{btn.label}</span>
+                        <span className="font-mono text-xs font-bold text-blue-600 mr-auto shrink-0">
                           {btn.price.toFixed(2)} ج.م
                         </span>
                       </div>
@@ -1547,7 +1541,7 @@ export default function SmartCalculatorPage() {
                           <button
                             type="button"
                             onClick={() => handleSaveEditButton(btn.id)}
-                            className="p-1 rounded-lg text-primary hover:bg-surface-container text-xs cursor-pointer"
+                            className="p-1 rounded-lg text-blue-600 hover:bg-blue-50 text-xs cursor-pointer"
                             title="حفظ"
                           >
                             <span className="material-symbols-outlined text-base">check</span>
@@ -1555,7 +1549,7 @@ export default function SmartCalculatorPage() {
                           <button
                             type="button"
                             onClick={() => setEditingBtnId(null)}
-                            className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container text-xs cursor-pointer"
+                            className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 text-xs cursor-pointer"
                             title="إلغاء"
                           >
                             <span className="material-symbols-outlined text-base">close</span>
@@ -1570,7 +1564,7 @@ export default function SmartCalculatorPage() {
                               setEditBtnLabel(btn.label);
                               setEditBtnPrice(btn.price.toString());
                             }}
-                            className="p-1 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container text-xs cursor-pointer"
+                            className="p-1 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 text-xs cursor-pointer"
                             title="تعديل"
                           >
                             <span className="material-symbols-outlined text-base">edit</span>
@@ -1578,7 +1572,7 @@ export default function SmartCalculatorPage() {
                           <button
                             type="button"
                             onClick={() => handleDeleteButton(btn.id)}
-                            className="p-1 rounded-lg text-on-surface-variant hover:text-error hover:bg-surface-container text-xs cursor-pointer"
+                            className="p-1 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-xs cursor-pointer"
                             title="حذف"
                           >
                             <span className="material-symbols-outlined text-base">delete</span>
@@ -1591,11 +1585,11 @@ export default function SmartCalculatorPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-surface-container-high">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
               <button
                 type="button"
                 onClick={handleResetButtons}
-                className="px-3 py-1.5 rounded-lg text-xs text-on-surface-variant hover:text-error hover:bg-surface-container transition-colors cursor-pointer"
+                className="px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               >
                 استعادة الأزرار الافتراضية
               </button>
@@ -1605,7 +1599,7 @@ export default function SmartCalculatorPage() {
                   setIsManageButtonsOpen(false);
                   setEditingBtnId(null);
                 }}
-                className="px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-xs shadow-md cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer"
               >
                 تم والعودة للحاسبة
               </button>
@@ -1616,27 +1610,27 @@ export default function SmartCalculatorPage() {
 
       {/* Manage Custom Add-ons Modal */}
       {isManageAddonsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-low border border-surface-container-high rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-surface-container-high">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-xl">tune</span>
-                <h3 className="font-bold text-lg text-on-surface">إدارة وتعديل خدمات التجليد والتشطيب</h3>
+                <span className="material-symbols-outlined text-blue-600 text-xl">tune</span>
+                <h3 className="font-bold text-base text-slate-900">إدارة وتعديل خدمات التجليد والتشطيب</h3>
               </div>
               <button
                 onClick={() => {
                   setIsManageAddonsOpen(false);
                   setEditingAddonId(null);
                 }}
-                className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container-high cursor-pointer"
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
             {/* Add New Add-on Form */}
-            <div className="p-3.5 rounded-xl bg-surface-container border border-surface-container-high/60 space-y-2.5">
-              <div className="font-semibold text-sm text-primary flex items-center gap-1.5">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="font-bold text-xs text-blue-600 flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-base">add_circle</span>
                 <span>إضافة خدمة تجليد أو تشطيب جديدة</span>
               </div>
@@ -1644,7 +1638,7 @@ export default function SmartCalculatorPage() {
                 <select
                   value={newAddonCategory}
                   onChange={(e) => setNewAddonCategory(e.target.value as "wire" | "plastic" | "finishing")}
-                  className="sm:col-span-4 px-2 py-2 rounded-lg bg-surface-container-lowest text-on-surface border border-surface-container-high text-xs font-bold"
+                  className="sm:col-span-4 px-2 py-2 rounded-xl bg-white text-slate-900 border border-slate-200 text-xs font-bold focus:outline-none focus:border-blue-500"
                 >
                   <option value="wire">سلك معدني</option>
                   <option value="plastic">مشط بلاستيكي</option>
@@ -1655,7 +1649,7 @@ export default function SmartCalculatorPage() {
                   placeholder="اسم الخدمة (مثلاً: سلك سوبر كينج)"
                   value={newAddonName}
                   onChange={(e) => setNewAddonName(e.target.value)}
-                  className="sm:col-span-5 px-3 py-2 rounded-lg bg-surface-container-lowest text-on-surface border border-surface-container-high text-xs"
+                  className="sm:col-span-5 px-3 py-2 rounded-xl bg-white text-slate-900 border border-slate-200 text-xs focus:outline-none focus:border-blue-500"
                 />
                 <input
                   type="number"
@@ -1663,13 +1657,13 @@ export default function SmartCalculatorPage() {
                   placeholder="السعر ج.م"
                   value={newAddonPrice}
                   onChange={(e) => setNewAddonPrice(e.target.value)}
-                  className="sm:col-span-3 px-3 py-2 rounded-lg bg-surface-container-lowest text-on-surface border border-surface-container-high text-xs"
+                  className="sm:col-span-3 px-3 py-2 rounded-xl bg-white text-slate-900 border border-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
                 />
               </div>
               <button
                 type="button"
                 onClick={handleAddAddon}
-                className="w-full py-2 rounded-lg bg-primary text-on-primary font-bold text-xs flex items-center justify-center gap-1.5 hover:brightness-110 cursor-pointer shadow-sm"
+                className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <span className="material-symbols-outlined text-sm">add</span>
                 <span>إضافة الخدمة للحاسبة</span>
@@ -1678,21 +1672,21 @@ export default function SmartCalculatorPage() {
 
             {/* Existing Add-ons List */}
             <div className="space-y-2">
-              <span className="font-semibold text-xs text-on-surface-variant block">
+              <span className="font-bold text-xs text-slate-600 block">
                 الخدمات المتاحة حالياً ({customAddons.length}):
               </span>
               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                 {customAddons.map((addon) => (
                   <div
                     key={addon.id}
-                    className="p-2.5 rounded-xl bg-surface-container-lowest border border-surface-container-high flex items-center justify-between gap-2"
+                    className="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-2 shadow-2xs"
                   >
                     {editingAddonId === addon.id ? (
                       <div className="flex-1 grid grid-cols-12 gap-1.5 items-center">
                         <select
                           value={editAddonCategory}
                           onChange={(e) => setEditAddonCategory(e.target.value as "wire" | "plastic" | "finishing")}
-                          className="col-span-4 px-1.5 py-1 rounded-lg bg-surface-container text-on-surface border border-surface-container-high text-xs"
+                          className="col-span-4 px-1.5 py-1 rounded-lg bg-slate-50 text-slate-900 border border-slate-200 text-xs"
                         >
                           <option value="wire">سلك معدني</option>
                           <option value="plastic">مشط بلاستيك</option>
@@ -1702,14 +1696,14 @@ export default function SmartCalculatorPage() {
                           type="text"
                           value={editAddonName}
                           onChange={(e) => setEditAddonName(e.target.value)}
-                          className="col-span-5 px-2 py-1 rounded-lg bg-surface-container text-on-surface border border-surface-container-high text-xs"
+                          className="col-span-5 px-2 py-1 rounded-lg bg-slate-50 text-slate-900 border border-slate-200 text-xs"
                         />
                         <input
                           type="number"
                           step="0.5"
                           value={editAddonPrice}
                           onChange={(e) => setEditAddonPrice(e.target.value)}
-                          className="col-span-3 px-1.5 py-1 rounded-lg bg-surface-container text-on-surface border border-surface-container-high text-xs"
+                          className="col-span-3 px-1.5 py-1 rounded-lg bg-slate-50 text-slate-900 border border-slate-200 text-xs font-mono"
                         />
                       </div>
                     ) : (
@@ -1717,16 +1711,16 @@ export default function SmartCalculatorPage() {
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                             addon.category === "wire"
-                              ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
+                              ? "bg-blue-50 text-blue-700 border border-blue-200"
                               : addon.category === "plastic"
-                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
-                              : "bg-purple-500/10 text-purple-400 border border-purple-500/30"
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                              : "bg-purple-50 text-purple-700 border border-purple-200"
                           }`}
                         >
                           {addon.category === "wire" ? "سلك" : addon.category === "plastic" ? "بلاستيك" : "تشطيب"}
                         </span>
-                        <span className="text-xs font-semibold truncate text-on-surface">{addon.name}</span>
-                        <span className="font-label-code text-xs font-bold text-primary mr-auto shrink-0">
+                        <span className="text-xs font-bold truncate text-slate-900">{addon.name}</span>
+                        <span className="font-mono text-xs font-bold text-blue-600 mr-auto shrink-0">
                           {addon.price.toFixed(2)} ج.م
                         </span>
                       </div>
@@ -1738,7 +1732,7 @@ export default function SmartCalculatorPage() {
                           <button
                             type="button"
                             onClick={() => handleSaveEditAddon(addon.id)}
-                            className="p-1 rounded-lg text-primary hover:bg-surface-container text-xs cursor-pointer"
+                            className="p-1 rounded-lg text-blue-600 hover:bg-blue-50 text-xs cursor-pointer"
                             title="حفظ"
                           >
                             <span className="material-symbols-outlined text-base">check</span>
@@ -1746,7 +1740,7 @@ export default function SmartCalculatorPage() {
                           <button
                             type="button"
                             onClick={() => setEditingAddonId(null)}
-                            className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container text-xs cursor-pointer"
+                            className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 text-xs cursor-pointer"
                             title="إلغاء"
                           >
                             <span className="material-symbols-outlined text-base">close</span>
@@ -1762,7 +1756,7 @@ export default function SmartCalculatorPage() {
                               setEditAddonPrice(addon.price.toString());
                               setEditAddonCategory(addon.category);
                             }}
-                            className="p-1 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container text-xs cursor-pointer"
+                            className="p-1 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 text-xs cursor-pointer"
                             title="تعديل"
                           >
                             <span className="material-symbols-outlined text-base">edit</span>
@@ -1770,7 +1764,7 @@ export default function SmartCalculatorPage() {
                           <button
                             type="button"
                             onClick={() => handleDeleteAddon(addon.id)}
-                            className="p-1 rounded-lg text-on-surface-variant hover:text-error hover:bg-surface-container text-xs cursor-pointer"
+                            className="p-1 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-xs cursor-pointer"
                             title="حذف"
                           >
                             <span className="material-symbols-outlined text-base">delete</span>
@@ -1783,11 +1777,11 @@ export default function SmartCalculatorPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-surface-container-high">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
               <button
                 type="button"
                 onClick={handleResetAddons}
-                className="px-3 py-1.5 rounded-lg text-xs text-on-surface-variant hover:text-error hover:bg-surface-container transition-colors cursor-pointer"
+                className="px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               >
                 استعادة الخدمات الافتراضية
               </button>
@@ -1797,7 +1791,7 @@ export default function SmartCalculatorPage() {
                   setIsManageAddonsOpen(false);
                   setEditingAddonId(null);
                 }}
-                className="px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-xs shadow-md cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer"
               >
                 تم والعودة للحاسبة
               </button>

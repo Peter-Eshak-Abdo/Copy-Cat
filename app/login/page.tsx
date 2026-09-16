@@ -6,7 +6,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { LogIn, Lock, Mail, AlertCircle, ArrowRight, ShieldCheck, KeyRound } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { ThemeToggle } from "@/components/theme-provider";
 import { getFriendlyErrorMessage } from "@/lib/utils";
 
 export default function LoginPage() {
@@ -36,7 +35,6 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg("");
 
-    // Cyber security check: Rate limiting & brute force lockout
     const now = Date.now();
     if (lockedUntil && now < lockedUntil) {
       const waitSeconds = Math.ceil((lockedUntil - now) / 1000);
@@ -60,7 +58,6 @@ export default function LoginPage() {
         const nextAttempts = attempts + 1;
         setAttempts(nextAttempts);
         if (nextAttempts >= 5) {
-          // Lock for 30 seconds
           setLockedUntil(Date.now() + 30000);
           setErrorMsg("محاولات فاشلة متكررة! تم حظر الإدخال لمدة 30 ثانية حمايةً للحساب.");
         } else {
@@ -95,44 +92,40 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 sm:p-6 transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between p-4 sm:p-6">
       {/* Top Bar */}
       <div className="max-w-md w-full mx-auto flex items-center justify-between py-2">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-slate-900 border border-transparent hover:border-slate-800"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition px-3 py-1.5 rounded-lg hover:bg-white border border-transparent hover:border-slate-200"
         >
           <ArrowRight className="w-3.5 h-3.5" />
           <span>العودة لمتجر كوبي كات</span>
         </Link>
-        <ThemeToggle />
       </div>
 
       {/* Main Card */}
-      <div className="max-w-md w-full mx-auto my-auto bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden">
-        {/* Glow accent */}
-        <div className="absolute top-0 right-1/2 translate-x-1/2 w-48 h-2 bg-linear-to-r from-blue-500 via-cyan-400 to-indigo-500 rounded-full blur-sm" />
-
+      <div className="max-w-md w-full mx-auto my-auto bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-md relative overflow-hidden">
         <div className="text-center space-y-3 mb-6">
-          <div className="w-20 h-20 rounded-2xl bg-white mx-auto flex items-center justify-center p-2 shadow-xl shadow-blue-500/20 border border-slate-700/50 hover:scale-105 transition-transform">
+          <div className="w-16 h-16 rounded-2xl bg-slate-50 mx-auto flex items-center justify-center p-2 border border-slate-200 shadow-xs">
             <Image
               src="/logo.jpg"
-              alt="كوبي كات - Copy Cat"
-              width={72}
-              height={72}
+              alt="كوبي كات"
+              width={56}
+              height={56}
               priority
               className="w-full h-full object-contain"
             />
           </div>
-          <h1 className="text-2xl font-black text-white">تسجيل دخول المسؤول والموظفين</h1>
-          <p className="text-xs text-slate-400">
-            بوابة إدارة حلول كوبي كات الرقمية واسكربتات العمل السريعة
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900">تسجيل الدخول</h1>
+          <p className="text-xs text-slate-500">
+            لوحة تحكم وإدارة مكتبة ومطبعة كوبي كات
           </p>
         </div>
 
         {errorMsg && (
-          <div className="mb-5 p-3.5 rounded-xl bg-red-950/60 border border-red-800/80 text-red-200 text-xs flex items-center gap-2.5">
-            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+          <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
             <span className="leading-relaxed">{errorMsg}</span>
           </div>
         )}
@@ -142,9 +135,9 @@ export default function LoginPage() {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={googleLoading || loading}
-          className="w-full py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-sm shadow-md transition flex items-center justify-center gap-3 mb-4 cursor-pointer disabled:opacity-50"
+          className="w-full py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold text-xs shadow-xs transition flex items-center justify-center gap-2.5 mb-4 cursor-pointer disabled:opacity-50"
         >
-          <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
             <path
               fill="#4285F4"
               d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
@@ -166,47 +159,46 @@ export default function LoginPage() {
         </button>
 
         <div className="relative flex py-2 items-center mb-4">
-          <div className="grow border-t border-slate-800"></div>
-          <span className="shrink mx-4 text-xs text-slate-500 font-semibold">أو بالبريد وكلمة المرور</span>
-          <div className="grow border-t border-slate-800"></div>
+          <div className="grow border-t border-slate-200"></div>
+          <span className="shrink mx-3 text-xs text-slate-400 font-semibold">أو بالبريد وكلمة المرور</span>
+          <div className="grow border-t border-slate-200"></div>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-3.5">
           <div>
-            <label className="text-xs font-bold text-slate-400 block mb-1">البريد الإلكتروني:</label>
+            <label className="text-xs font-bold text-slate-700 block mb-1">البريد الإلكتروني:</label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-500 absolute right-3 top-3.5" />
+              <Mail className="w-4 h-4 text-slate-400 absolute right-3 top-3" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={"admin@example.com"}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-9 pl-4 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                placeholder="admin@example.com"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pr-9 pl-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-blue-600"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-400 block mb-1">كلمة المرور:</label>
+            <label className="text-xs font-bold text-slate-700 block mb-1">كلمة المرور:</label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-500 absolute right-3 top-3.5" />
+              <Lock className="w-4 h-4 text-slate-400 absolute right-3 top-3" />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-9 pl-4 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pr-9 pl-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-blue-600"
               />
             </div>
           </div>
 
-          {/* Quick autofill helper for the owner */}
           <button
             type="button"
             onClick={handleQuickFill}
-            className="w-full py-2 px-3 rounded-lg bg-blue-950/40 hover:bg-blue-900/40 border border-blue-800/40 text-blue-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition"
+            className="w-full py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition"
           >
             <KeyRound className="w-3.5 h-3.5" />
             <span>تعبئة بريد المسؤول تلقائياً</span>
@@ -215,25 +207,25 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading || lockedUntil !== null}
-            className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <LogIn className="w-4 h-4" />
-            <span>{loading ? "جاري التحقق الأمني..." : "دخول للوحة التحكم"}</span>
+            <span>{loading ? "جاري التحقق..." : "دخول للوحة التحكم"}</span>
           </button>
         </form>
 
-        <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
-          <span className="flex items-center gap-1.5 text-emerald-400">
+        <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+          <span className="flex items-center gap-1 text-emerald-600 font-semibold">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>اتصال مشفر وآمن (SSL 256-bit)</span>
+            <span>اتصال مشفر وآمن</span>
           </span>
           <span>Copy-Cat v1.2</span>
         </div>
       </div>
 
       {/* Footer copyright */}
-      <div className="text-center text-xs text-slate-600 py-2">
-        جميع الحقوق محفوظة © مكتبة كوبي كات  {new Date().getFullYear()}
+      <div className="text-center text-xs text-slate-400 py-2">
+        جميع الحقوق محفوظة © مكتبة كوبي كات {new Date().getFullYear()}
       </div>
     </div>
   );

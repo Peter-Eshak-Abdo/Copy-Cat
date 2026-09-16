@@ -318,15 +318,15 @@ export default function ScannerPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-200 text-amber-400 text-xs font-bold mb-2">
             <ScanLine className="w-3.5 h-3.5" /> عاكس الصور وحامي الحبر وتوضيح الشاشات
           </div>
-          <h1 className="text-2xl font-black text-white">
+          <h1 className="text-2xl font-black text-slate-900">
             قلب ألوان الشاشات وتبييض المستندات وتوضيح صور الموبايل
           </h1>
-          <p className="text-slate-400 text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl">
+          <p className="text-slate-500 text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl">
             ارفع حتى 30 صورة معاً، طبق عليها قلب الألوان أو فلتر شاشات الكمبيوتر المضاد للتموجات (Anti-Moire)،
             مع إمكانية تدوير الصور بزوايا دقيقة وتكبيرها للفحص والتنزيل كصور فردياً أو متتالية بنقرة واحدة!
           </p>
@@ -336,7 +336,7 @@ export default function ScannerPage() {
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={() => setImages([])}
-              className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-red-950/40 text-red-400 hover:bg-red-900/50 border border-red-900/50 transition cursor-pointer"
+              className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
             >
               مسح الكل
             </button>
@@ -345,7 +345,7 @@ export default function ScannerPage() {
             <button
               onClick={handleDownloadAllSequential}
               disabled={isDownloadingAll}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20 transition disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition disabled:opacity-50 cursor-pointer"
             >
               <Download className="w-4 h-4" />
               <span>{isDownloadingAll ? "جاري تنزيل الصور..." : "تنزيل كل الصور ورا بعض"}</span>
@@ -355,7 +355,7 @@ export default function ScannerPage() {
             <button
               onClick={handleDownloadZip}
               disabled={isExportingZip}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-200 border border-slate-200 transition disabled:opacity-50 cursor-pointer"
             >
               <Archive className="w-4 h-4 text-amber-400" />
               <span>{isExportingZip ? "جاري الضغط..." : "تنزيل ملف (ZIP)"}</span>
@@ -365,8 +365,8 @@ export default function ScannerPage() {
       </div>
 
       {/* Preset Quick Actions */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center gap-2.5">
-        <span className="text-xs font-bold text-slate-400 ml-2">الإعدادات السريعة الجاهزة:</span>
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center gap-2.5">
+        <span className="text-xs font-bold text-slate-500 ml-2">الإعدادات السريعة الجاهزة:</span>
 
         {/* Screen Clarifier Preset (Requirement #13) */}
         <button
@@ -374,7 +374,7 @@ export default function ScannerPage() {
           className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
             activePreset === "screen_clarifier"
               ? "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20 font-black"
-              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
           }`}
         >
           <Monitor className="w-3.5 h-3.5 text-cyan-300" />
@@ -386,7 +386,7 @@ export default function ScannerPage() {
           className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
             activePreset === "invert_screen"
               ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-black"
-              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
           }`}
         >
           <Zap className="w-3.5 h-3.5" />
@@ -398,7 +398,7 @@ export default function ScannerPage() {
           className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
             activePreset === "camscanner"
               ? "bg-blue-600 text-white shadow-md shadow-blue-600/20 font-black"
-              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
           }`}
         >
           <Sparkles className="w-3.5 h-3.5" />
@@ -410,7 +410,7 @@ export default function ScannerPage() {
           className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
             activePreset === "sharp_only"
               ? "bg-emerald-600 text-white shadow-md font-black"
-              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
           }`}
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -419,7 +419,7 @@ export default function ScannerPage() {
 
         <button
           onClick={() => applyPreset("reset")}
-          className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800/60 text-slate-400 hover:bg-slate-800 hover:text-white transition flex items-center gap-1.5 cursor-pointer mr-auto"
+          className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer mr-auto"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           <span>إعادة ضبط المصنع</span>
@@ -427,9 +427,9 @@ export default function ScannerPage() {
       </div>
 
       {/* Detailed Sliders & Controls */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-center">
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-center">
         {/* Invert Toggle */}
-        <div className="flex items-center justify-between bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+        <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200">
           <div>
             <span className="text-xs font-bold text-slate-200 block">عكس الألوان (Invert)</span>
             <span className="text-[10px] text-amber-400">قلب السواد لبياض ناصع</span>
@@ -446,10 +446,10 @@ export default function ScannerPage() {
         </div>
 
         {/* Screen Clarifier Mode Toggle (Requirement #13) */}
-        <div className="flex items-center justify-between bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+        <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200">
           <div>
             <span className="text-xs font-bold text-cyan-300 block">فلتر شاشات الكمبيوتر</span>
-            <span className="text-[10px] text-slate-400">إزالة تموجات الشاشة والموبايل</span>
+            <span className="text-[10px] text-slate-500">إزالة تموجات الشاشة والموبايل</span>
           </div>
           <input
             type="checkbox"
@@ -463,8 +463,8 @@ export default function ScannerPage() {
         </div>
 
         {/* Sharpness Slider */}
-        <div className="space-y-1 bg-slate-950 p-3 rounded-xl border border-slate-800">
-          <div className="flex justify-between text-xs font-semibold text-slate-300">
+        <div className="space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div className="flex justify-between text-xs font-semibold text-slate-700">
             <span>حدة النصوص (Sharpness)</span>
             <span className="text-amber-400 font-bold">{sharpness}%</span>
           </div>
@@ -484,8 +484,8 @@ export default function ScannerPage() {
         </div>
 
         {/* Brightness Slider */}
-        <div className="space-y-1 bg-slate-950 p-3 rounded-xl border border-slate-800">
-          <div className="flex justify-between text-xs font-semibold text-slate-300">
+        <div className="space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div className="flex justify-between text-xs font-semibold text-slate-700">
             <span>السطوع (تفتيح ناصع)</span>
             <span>{brightness}%</span>
           </div>
@@ -504,8 +504,8 @@ export default function ScannerPage() {
         </div>
 
         {/* Contrast Slider */}
-        <div className="space-y-1 bg-slate-950 p-3 rounded-xl border border-slate-800">
-          <div className="flex justify-between text-xs font-semibold text-slate-300">
+        <div className="space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div className="flex justify-between text-xs font-semibold text-slate-700">
             <span>التباين (Contrast)</span>
             <span>{contrast}%</span>
           </div>
@@ -530,10 +530,10 @@ export default function ScannerPage() {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`border-2 border-dashed transition-all rounded-3xl p-8 sm:p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-3 group ${
+        className={`border-2 border-dashed transition-all rounded-2xl p-8 sm:p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-3 group ${
           isDragging
             ? "border-amber-400 bg-amber-950/20 scale-[1.01] shadow-2xl shadow-amber-500/10"
-            : "border-slate-800 hover:border-amber-500/60 bg-slate-900/50 hover:bg-slate-900"
+            : "border-slate-200 hover:border-amber-500/60 bg-slate-50 hover:bg-white"
         }`}
       >
         <input
@@ -554,7 +554,7 @@ export default function ScannerPage() {
           <Upload className="w-8 h-8" />
         </div>
         <div>
-          <span className="text-base font-bold text-white block">
+          <span className="text-base font-bold text-slate-900 block">
             {isDragging ? "أفلت الصور هنا الآن!" : "اضغط هنا لرفع الصور أو اسحبها وأفلتها مباشرة (Drag & Drop)"}
           </span>
           <span className="text-xs text-slate-500 mt-1 block">
@@ -566,7 +566,7 @@ export default function ScannerPage() {
       {/* Processed Images Gallery Grid */}
       {images.length > 0 && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-400 gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 gap-2">
             <span>معروض {images.length} صورة معالجة جاهزة للتنزيل والفحص</span>
             <span className="text-amber-400 font-semibold">
               انقر على أي صورة لتكبيرها وفحص نقاء الكلمات، أو زر التدوير للضبط بزوايا دقيقة
@@ -577,7 +577,7 @@ export default function ScannerPage() {
             {images.map((img, index) => (
               <div
                 key={img.id}
-                className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden p-3 flex flex-col justify-between shadow-lg relative group"
+                className="bg-white border border-slate-200 hover:border-slate-200 rounded-2xl overflow-hidden p-3 flex flex-col justify-between shadow-lg relative group"
               >
                 {/* Delete 'X' Button Overlay (Requirement #12) */}
                 <button
@@ -594,7 +594,7 @@ export default function ScannerPage() {
                 {/* Image Container with click to enlarge (Requirement #12) */}
                 <div
                   onClick={() => setEnlargedImage(img)}
-                  className="relative aspect-[3/4] bg-slate-950 rounded-xl overflow-hidden mb-3 border border-slate-800 flex items-center justify-center cursor-zoom-in group/img"
+                  className="relative aspect-[3/4] bg-slate-50 rounded-xl overflow-hidden mb-3 border border-slate-200 flex items-center justify-center cursor-zoom-in group/img"
                   title="انقر لتكبير الصورة وفحص الكلمات بملء الشاشة"
                 >
                   <NextImage
@@ -607,13 +607,13 @@ export default function ScannerPage() {
                   />
 
                   {/* Page indicator badge */}
-                  <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-slate-900/90 text-white font-mono text-[10px] border border-slate-700">
+                  <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-white text-slate-900 font-mono text-[10px] border border-slate-200">
                     صفحة {index + 1}
                   </span>
 
                   {/* Hover enlarge overlay */}
-                  <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-900/90 text-white text-xs font-bold flex items-center gap-1 border border-slate-700">
+                  <div className="absolute inset-0 bg-slate-50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <span className="px-2.5 py-1 rounded-lg bg-white text-slate-900 text-xs font-bold flex items-center gap-1 border border-slate-200">
                       <Maximize2 className="w-3.5 h-3.5 text-amber-400" />
                       تكبير المعاينة
                     </span>
@@ -621,9 +621,9 @@ export default function ScannerPage() {
                 </div>
 
                 {/* Footer Controls for each image */}
-                <div className="space-y-2 pt-1 border-t border-slate-800/80">
+                <div className="space-y-2 pt-1 border-t border-slate-200">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-300 font-medium truncate max-w-[150px]" title={img.name}>
+                    <span className="text-xs text-slate-700 font-medium truncate max-w-[150px]" title={img.name}>
                       {img.name}
                     </span>
 
@@ -644,7 +644,7 @@ export default function ScannerPage() {
                   {/* Dedicated Download Button Under Each Image (Requirement #12) */}
                   <button
                     onClick={() => handleDownloadSingleImage(img, index)}
-                    className="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-200 text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow"
+                    className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-200 text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>تنزيل هذه الصورة</span>
@@ -660,26 +660,26 @@ export default function ScannerPage() {
       {enlargedImage && (
         <div
           onClick={() => setEnlargedImage(null)}
-          className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 cursor-zoom-out"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-4 cursor-zoom-out"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-4xl w-full max-h-[92vh] bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl flex flex-col justify-between cursor-default"
+            className="relative max-w-4xl w-full max-h-[92vh] bg-white border border-slate-200 rounded-2xl p-5 shadow-2xl flex flex-col justify-between cursor-default"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
                 <Eye className="w-4 h-4 text-amber-400" />
-                <span className="text-sm font-bold text-white">{enlargedImage.name} (معاينة فائقة الدقة)</span>
+                <span className="text-sm font-bold text-slate-900">{enlargedImage.name} (معاينة فائقة الدقة)</span>
               </div>
               <button
                 onClick={() => setEnlargedImage(null)}
-                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                className="p-1 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="my-4 flex-1 overflow-auto max-h-[70vh] flex items-center justify-center bg-slate-950 rounded-2xl p-2 border border-slate-800">
+            <div className="my-4 flex-1 overflow-auto max-h-[70vh] flex items-center justify-center bg-slate-50 rounded-2xl p-2 border border-slate-200">
               <NextImage
                 src={enlargedImage.processedSrc}
                 alt="Enlarged"
@@ -691,12 +691,12 @@ export default function ScannerPage() {
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-slate-500">
                 افحص وضوح ونقاء الحروف والكلمات بعد تطبيق التفتيح وعكس الألوان
               </span>
               <button
                 onClick={() => handleDownloadSingleImage(enlargedImage, 1)}
-                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-2 cursor-pointer shadow-lg"
+                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs flex items-center gap-2 cursor-pointer shadow-lg"
               >
                 <Download className="w-4 h-4" />
                 <span>تنزيل الصورة المعالجة</span>
@@ -708,22 +708,22 @@ export default function ScannerPage() {
 
       {/* Fine-Angle Rotation Modal (Requirement #12) */}
       {editingDoc && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2">
                 <RotateCw className="w-4 h-4 text-amber-400" />
-                <h3 className="text-base font-black text-white">تدوير دقيق وتعديل ميلان الصورة</h3>
+                <h3 className="text-base font-black text-slate-900">تدوير دقيق وتعديل ميلان الصورة</h3>
               </div>
               <button
                 onClick={() => setEditingDoc(null)}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="text-slate-500 hover:text-slate-900 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="aspect-[4/3] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center p-2">
+            <div className="aspect-[4/3] bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center p-2">
               <NextImage
                 src={editingDoc.processedSrc}
                 alt="Preview"
@@ -736,8 +736,8 @@ export default function ScannerPage() {
             </div>
 
             {/* Slider for exact degrees */}
-            <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="space-y-2 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                 <span>زاوية الدوران الدقيقة:</span>
                 <span className="text-amber-400 font-mono text-sm">{fineAngle > 0 ? `+${fineAngle}` : fineAngle}°</span>
               </div>
@@ -753,19 +753,19 @@ export default function ScannerPage() {
               <div className="flex items-center justify-between pt-2">
                 <button
                   onClick={() => setFineAngle((prev) => (prev - 90) % 360)}
-                  className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
+                  className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
                 >
                   -90° يسار
                 </button>
                 <button
                   onClick={() => setFineAngle(0)}
-                  className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs transition cursor-pointer"
+                  className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs transition cursor-pointer"
                 >
                   إلغاء الميلان (0°)
                 </button>
                 <button
                   onClick={() => setFineAngle((prev) => (prev + 90) % 360)}
-                  className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
+                  className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
                 >
                   +90° يمين
                 </button>
@@ -776,14 +776,14 @@ export default function ScannerPage() {
               <button
                 type="button"
                 onClick={() => setEditingDoc(null)}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
               >
                 إلغاء
               </button>
               <button
                 type="button"
                 onClick={handleApplyFineRotation}
-                className="flex-1 py-2.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 transition cursor-pointer shadow-lg shadow-amber-500/20"
+                className="flex-1 py-2.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-white transition cursor-pointer shadow-lg shadow-amber-500/20"
               >
                 تطبيق التدوير
               </button>
