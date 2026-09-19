@@ -19,6 +19,11 @@ import {
   MapPin,
   FileText,
   Clock,
+  Navigation,
+  Compass,
+  Layers,
+  ExternalLink,
+  RotateCcw,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -111,6 +116,10 @@ export default function StorefrontPage() {
 
   const [selectedProductModal, setSelectedProductModal] = useState<InventoryItem | null>(null);
   const [activeModalImageIndex, setActiveModalImageIndex] = useState<number>(0);
+
+  // 3D Realistic Map View State (150m exploration)
+  const [mapType, setMapType] = useState<"k" | "m">("k"); // "k": 3D/satellite photorealistic, "m": streets
+  const [mapZoom, setMapZoom] = useState<number>(19); // 19: ~150m radius view around the store
 
   const announcementText = useSyncExternalStore(
     subscribeAnnouncement,
@@ -487,8 +496,8 @@ export default function StorefrontPage() {
                   setVisibleCount(24);
                 }}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${selectedCategory === cat
-                    ? "bg-blue-600 text-white shadow-xs"
-                    : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-700"
                   }`}
               >
                 {cat}
@@ -614,6 +623,139 @@ export default function StorefrontPage() {
           </div>
         )}
       </main>
+
+      {/* 3D Realistic Interactive Map Section (150m Exploration Radius) */}
+      <section id="location-map" className="max-w-7xl mx-auto w-full px-4 sm:px-6 pb-12">
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-7 shadow-xs space-y-5">
+          {/* Header & Badges */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
+                <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                <span>موقع المكتبة الدقيق على الخريطة</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                مكان مكتبة كوبي كات <span className="text-blue-600">(عرض واقعي 3D للبيوت والمعالم)</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-2xl">
+                {SITE_CONFIG.store.address}
+              </p>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href={SITE_CONFIG.store.directionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-xs transition"
+              >
+                <Navigation className="w-4 h-4 shrink-0" />
+                <span>الاتجاهات وطريق الوصول</span>
+              </a>
+
+              <a
+                href={SITE_CONFIG.store.googleMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>فتح في Google Maps</span>
+              </a>
+            </div>
+          </div>
+
+          {/* Interactive Controls Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 border border-slate-200/80 p-3 rounded-2xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-slate-600 ml-1">نوع العرض:</span>
+              <button
+                type="button"
+                onClick={() => setMapType("k")}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${mapType === "k"
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                  }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>بيوت وأقمار صناعية 3D</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMapType("m")}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${mapType === "m"
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                  }`}
+              >
+                <Compass className="w-3.5 h-3.5" />
+                <span>خريطة شوارع</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMapZoom((prev) => (prev === 19 ? 20 : 19))}
+                className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="إعادة التركيز على نطاق 150 متر حول المكتبة"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-blue-600" />
+                <span>نطاق 150م حول المحل</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Map Container */}
+          <div className="relative w-full h-[420px] sm:h-[500px] rounded-2xl overflow-hidden border border-slate-200 shadow-inner bg-slate-100">
+            <iframe
+              title="موقع مكتبة كوبي كات ثلاثي الأبعاد"
+              src={`https://maps.google.com/maps?q=${SITE_CONFIG.store.coordinates.lat},${SITE_CONFIG.store.coordinates.lng}+(%D9%85%D9%83%D8%AA%D8%A8%D8%A9+%D9%83%D9%88%D8%A8%D9%8A+%D9%83%D8%A7%D8%AA+Copy+Cat)&t=${mapType}&z=${mapZoom}&ie=UTF8&iwloc=B&output=embed`}
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="w-full h-full"
+            />
+            {/* Compass / Navigation hint overlay */}
+            <div className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-md text-white px-3 py-1.5 rounded-xl text-[11px] font-medium flex items-center gap-1.5 shadow-md pointer-events-none">
+              <Compass className="w-3.5 h-3.5 text-emerald-400" />
+              <span>يمكنك السحب والتحريك لاستكشاف المباني ومحيط الـ 150 متراً</span>
+            </div>
+          </div>
+
+          {/* Landmarks / Orientation Guide Chips */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-2.5">
+              <span className="text-xl shrink-0">🕌</span>
+              <div>
+                <h4 className="text-xs font-bold text-slate-800">مسجد المطافي</h4>
+                <p className="text-[11px] text-slate-500">على بُعد خطوات معدودة في نفس الشارع</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-2.5">
+              <span className="text-xl shrink-0">🏥</span>
+              <div>
+                <h4 className="text-xs font-bold text-slate-800">مركز نور الحياة</h4>
+                <p className="text-[11px] text-slate-500">المكتبة تقع أمامه مباشرة</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-2.5">
+              <span className="text-xl shrink-0">📍</span>
+              <div>
+                <h4 className="text-xs font-bold text-slate-800">عرايشية مصر</h4>
+                <p className="text-[11px] text-slate-500">شارع الدقهلية الحيوي - سهولة الوصول بالسيارة أو سيراً</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Cart Drawer / Modal */}
       {isCartOpen && (
@@ -804,8 +946,8 @@ export default function StorefrontPage() {
                           type="button"
                           onClick={() => setActiveModalImageIndex(idx)}
                           className={`relative w-12 h-12 rounded-lg overflow-hidden border-2 shrink-0 transition cursor-pointer ${activeModalImageIndex === idx
-                              ? "border-blue-600"
-                              : "border-slate-200 opacity-60"
+                            ? "border-blue-600"
+                            : "border-slate-200 opacity-60"
                             }`}
                         >
                           <Image

@@ -35,6 +35,7 @@ const securityHeaders = [
       "font-src 'self' https: data:; " +
       "connect-src 'self' blob: data: https:; " +
       "worker-src 'self' blob:; " +
+      "frame-src 'self' https://maps.google.com https://www.google.com https://maps.googleapis.com; " +
       "frame-ancestors 'self';",
   },
 ];

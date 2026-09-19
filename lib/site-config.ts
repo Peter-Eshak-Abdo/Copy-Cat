@@ -21,5 +21,11 @@ export const SITE_CONFIG = {
     openHour: 9, // 9:00 AM
     closeHour: 22, // 10:00 PM (22:00)
     hoursDisplay: "يومياً من 9:00 صباحاً حتى 10:00 مساءً",
+    coordinates: {
+      lat: 30.5978743,
+      lng: 32.2709703,
+    },
+    googleMapsUrl: "https://maps.app.goo.gl/iF1ZN3oPdknx53mt9",
+    directionsUrl: "https://www.google.com/maps/dir/?api=1&destination=30.5978743,32.2709703",
   },
 } as const;
