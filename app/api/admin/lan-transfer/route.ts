@@ -28,7 +28,7 @@ interface FileMetadata {
 function cleanupOldFiles(roomDir: string) {
   try {
     const now = Date.now();
-    const entries = fs.readdirSync(roomDir);
+    const entries = fs.readdirSync(/* turbopackIgnore: true */ roomDir);
     for (const entry of entries) {
       if (entry.endsWith(".meta.json")) {
         try {
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     cleanupOldFiles(roomDir);
 
     const files: FileMetadata[] = [];
-    const entries = fs.readdirSync(roomDir);
+    const entries = fs.readdirSync(/* turbopackIgnore: true */ roomDir);
 
     for (const entry of entries) {
       if (entry.endsWith(".meta.json")) {
@@ -144,7 +144,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const { roomDir } = ensureRoomDir(roomId);
-    const entries = fs.readdirSync(roomDir);
+    const entries = fs.readdirSync(/* turbopackIgnore: true */ roomDir);
 
     let deleted = false;
     for (const entry of entries) {

@@ -18,6 +18,7 @@ import {
   Image as ImageIcon,
   MapPin,
   FileText,
+  Clock,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -51,12 +52,31 @@ function getAnnouncementSnapshot(): string {
     if (saved && saved.trim()) {
       return saved.trim();
     }
-  } catch {}
+  } catch { }
   return DEFAULT_ANNOUNCEMENT;
 }
 
 function getAnnouncementServerSnapshot(): string {
   return DEFAULT_ANNOUNCEMENT;
+}
+
+function subscribeStoreHours(callback: () => void) {
+  const intervalId = window.setInterval(callback, 30000);
+  return () => {
+    window.clearInterval(intervalId);
+  };
+}
+
+function getStoreHoursSnapshot(): boolean {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const openMinutes = SITE_CONFIG.store.openHour * 60; // 9:00 AM (540 mins)
+  const closeMinutes = SITE_CONFIG.store.closeHour * 60; // 10:00 PM (1320 mins)
+  return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+}
+
+function getStoreHoursServerSnapshot(): boolean {
+  return false;
 }
 
 function saveOfflineOrder(order: {
@@ -74,7 +94,7 @@ function saveOfflineOrder(order: {
       ...order,
     });
     localStorage.setItem("copycat_offline_orders", JSON.stringify(existing));
-  } catch {}
+  } catch { }
 }
 
 export default function StorefrontPage() {
@@ -98,6 +118,12 @@ export default function StorefrontPage() {
     getAnnouncementServerSnapshot
   );
 
+  const isStoreOpen = useSyncExternalStore(
+    subscribeStoreHours,
+    getStoreHoursSnapshot,
+    getStoreHoursServerSnapshot
+  );
+
   useEffect(() => {
     async function loadProducts() {
       try {
@@ -107,7 +133,7 @@ export default function StorefrontPage() {
           if (savedCustom) {
             customImagesMap = JSON.parse(savedCustom);
           }
-        } catch {}
+        } catch { }
 
         const mergeWithCustomImages = (list: InventoryItem[]): InventoryItem[] => {
           return list.map((it) => {
@@ -240,7 +266,7 @@ export default function StorefrontPage() {
         spread: 60,
         origin: { y: 0.6 },
       });
-    } catch {}
+    } catch { }
 
     let message = `*طلب جديد من مكتبة كوبي كات (Copy Cat)* 📋🐱\n\n`;
     message += `👤 *اسم العميل:* ${customerName.trim() ? customerName.trim() : "طلب مباشر"}\n`;
@@ -330,9 +356,17 @@ export default function StorefrontPage() {
                 <span className="font-black text-lg text-slate-900 tracking-tight">
                   كوبي كات
                 </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
-                  مفتوح
-                </span>
+                {isStoreOpen ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    مفتوح
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    مغلق الآن
+                  </span>
+                )}
               </div>
               <span className="text-[11px] text-slate-500 hidden sm:block">
                 طباعة وتصوير وأدوات مكتبية بالإسماعيلية
@@ -355,7 +389,7 @@ export default function StorefrontPage() {
 
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer shadow-xs"
+              className="relative flex items-center gap-1.5 px-2 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer shadow-xs"
             >
               <ShoppingBag className="w-4 h-4" />
               <span className="hidden sm:inline">السلة</span>
@@ -365,14 +399,6 @@ export default function StorefrontPage() {
                 </span>
               )}
             </button>
-
-            <Link
-              href="/admin"
-              className="px-2.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs font-semibold transition"
-              title="لوحة تحكم الأدمن"
-            >
-              الإدارة
-            </Link>
           </div>
         </div>
       </header>
@@ -380,6 +406,23 @@ export default function StorefrontPage() {
       {/* Ultra-Minimalist Hero & Search Section */}
       <section className="bg-white border-b border-slate-200 py-8 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center space-y-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium">
+            <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span>مواعيد العمل: {SITE_CONFIG.store.hoursDisplay}</span>
+            <span className="text-slate-300">•</span>
+            {isStoreOpen ? (
+              <span className="text-emerald-700 font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                مفتوح الآن
+              </span>
+            ) : (
+              <span className="text-rose-600 font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                مغلق الآن (يفتح 9 ص)
+              </span>
+            )}
+          </div>
+
           <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
             مكتبة ومطبعة كوبي كات <span className="text-blue-600">Copy Cat</span>
           </h1>
@@ -408,6 +451,12 @@ export default function StorefrontPage() {
               <span>شارع الدقهلية، عرايشية مصر</span>
             </a>
           </div>
+
+          {!isStoreOpen && (
+            <p className="text-[11px] text-slate-500 font-medium pt-1">
+              🌙 يمكنك إرسال ملفاتك وطلباتك على الواتساب على مدار 24 ساعة، وسيتم تجهيزها فور بدء مواعيد العمل في التاسعة صباحاً.
+            </p>
+          )}
         </div>
       </section>
 
@@ -437,11 +486,10 @@ export default function StorefrontPage() {
                   setSelectedCategory(cat);
                   setVisibleCount(24);
                 }}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
-                  selectedCategory === cat
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${selectedCategory === cat
                     ? "bg-blue-600 text-white shadow-xs"
                     : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                }`}
+                  }`}
               >
                 {cat}
               </button>
@@ -755,11 +803,10 @@ export default function StorefrontPage() {
                           key={idx}
                           type="button"
                           onClick={() => setActiveModalImageIndex(idx)}
-                          className={`relative w-12 h-12 rounded-lg overflow-hidden border-2 shrink-0 transition cursor-pointer ${
-                            activeModalImageIndex === idx
+                          className={`relative w-12 h-12 rounded-lg overflow-hidden border-2 shrink-0 transition cursor-pointer ${activeModalImageIndex === idx
                               ? "border-blue-600"
                               : "border-slate-200 opacity-60"
-                          }`}
+                            }`}
                         >
                           <Image
                             src={imgUrl}
@@ -849,6 +896,10 @@ export default function StorefrontPage() {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-4 text-slate-600">
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-blue-600" />
+              <span>{SITE_CONFIG.store.hoursDisplay}</span>
+            </span>
             <span className="flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5 text-rose-500" />
               <span>عرايشية مصر، الإسماعيلية</span>

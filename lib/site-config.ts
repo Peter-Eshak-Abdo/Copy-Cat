@@ -18,5 +18,8 @@ export const SITE_CONFIG = {
     facebookUrl:
       process.env.NEXT_PUBLIC_FACEBOOK_URL ||
       "https://www.facebook.com/p/%D9%83%D9%88%D8%A8%D9%89-%D9%83%D8%A7%D8%AA-100090709554990/",
+    openHour: 9, // 9:00 AM
+    closeHour: 22, // 10:00 PM (22:00)
+    hoursDisplay: "يومياً من 9:00 صباحاً حتى 10:00 مساءً",
   },
 } as const;

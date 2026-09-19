@@ -24,7 +24,7 @@ const STORAGE_KEY = "copycat_tasks_v1";
 const INITIAL_TASKS: PrintTask[] = [];
 
 function getCurrentShift(date: Date = new Date()): {
-  id: "morning" | "evening";
+  id: "morning" | "evening" | "off_hours";
   label: string;
   timeRange: string;
 } {
@@ -32,19 +32,28 @@ function getCurrentShift(date: Date = new Date()): {
   const minutes = date.getMinutes();
   const totalMinutes = hours * 60 + minutes;
 
-  // 8:30 AM to 4:00 PM
-  if (totalMinutes >= 510 && totalMinutes < 960) {
+  // 9:00 AM to 4:00 PM
+  if (totalMinutes >= 540 && totalMinutes < 960) {
     return {
       id: "morning",
       label: "شفت صباحي",
-      timeRange: "08:30 ص - 04:00 م",
+      timeRange: "09:00 ص - 04:00 م",
+    };
+  }
+
+  // 4:00 PM to 10:00 PM
+  if (totalMinutes >= 960 && totalMinutes < 1320) {
+    return {
+      id: "evening",
+      label: "شفت مسائي",
+      timeRange: "04:00 م - 10:00 م",
     };
   }
 
   return {
-    id: "evening",
-    label: "شفت مسائي",
-    timeRange: "04:00 م - 12:00 ص",
+    id: "off_hours",
+    label: "خارج أوقات العمل",
+    timeRange: "المكتبة مغلقة (09:00 ص - 10:00 م)",
   };
 }
 
