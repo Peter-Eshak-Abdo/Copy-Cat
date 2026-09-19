@@ -34,7 +34,6 @@ export default function FacebookPostToolsPage() {
 
   const [postUrl, setPostUrl] = useState("");
   const [docTitle, setDocTitle] = useState("");
-  const [saveToPool, setSaveToPool] = useState(true);
   const [maxPhotos, setMaxPhotos] = useState(120);
 
   const [isRunning, setIsRunning] = useState(false);
@@ -69,12 +68,17 @@ export default function FacebookPostToolsPage() {
     setIsLoadingHistory(true);
     try {
       const res = await fetch("/api/admin/fb-download");
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        console.warn("Fetch history notice:", errJson.error || res.statusText);
+        return;
+      }
       const data = await res.json();
       if (data.success) {
         setHistoryDocs(data.documents || []);
       }
-    } catch {
-      // ignore
+    } catch (e) {
+      console.warn("Error fetching history:", e);
     } finally {
       setIsLoadingHistory(false);
     }
@@ -102,10 +106,18 @@ export default function FacebookPostToolsPage() {
         body: JSON.stringify({
           url: postUrl.trim(),
           title: docTitle.trim() || "ملزمة_فيسبوك",
-          saveToPool,
           maxPhotos,
         }),
       });
+
+      if (!response.ok) {
+        let errMsg = "حدث خطأ غير متوقع أثناء معالجة الطلب.";
+        try {
+          const errData = await response.json();
+          if (errData?.error) errMsg = errData.error;
+        } catch {}
+        throw new Error(errMsg);
+      }
 
       if (!response.body) {
         throw new Error("تعذر قراءة الاستجابة من الخادم.");
@@ -274,27 +286,6 @@ export default function FacebookPostToolsPage() {
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:border-blue-500 focus:outline-none"
                 />
               </div>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-cyan-400" />
-                <div>
-                  <span className="text-xs font-bold text-slate-900 block">
-                    نسخ الصور تلقائياً لمكتبة صور المنتجات (Photo Pool)
-                  </span>
-                  <span className="text-[10px] text-slate-500 block">
-                    يتيح لك استخدام هذه الصور وربطها بالمنتجات المعروضة في المتجر لاحقاً
-                  </span>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={saveToPool}
-                onChange={(e) => setSaveToPool(e.target.checked)}
-                disabled={isRunning}
-                className="w-4 h-4 accent-blue-500 cursor-pointer"
-              />
             </div>
 
             <button

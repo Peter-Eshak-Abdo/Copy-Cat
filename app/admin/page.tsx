@@ -882,6 +882,7 @@ export default function AdminDashboardPage() {
               {/* Center: QR Code Display */}
               <div className="my-4 flex flex-col items-center">
                 <div className="p-3 bg-white rounded-2xl border-4 border-slate-900 shadow-lg inline-block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/images/whatsapp-qr.jpg"
                     alt="WhatsApp QR Code Copy Cat"
@@ -892,7 +893,7 @@ export default function AdminDashboardPage() {
                   <span>امسح الكود بكاميرا الموبايل أو كاميرا واتساب</span>
                 </div>
                 <div className="text-xs text-slate-600 font-mono mt-0.5" dir="ltr">
-                  https://wa.me/qr/MA4E2HELDOY7F1
+                  {WHATSAPP_LINK}
                 </div>
               </div>
 

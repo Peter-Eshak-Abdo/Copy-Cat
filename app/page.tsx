@@ -10,15 +10,12 @@ import {
   Trash2,
   Send,
   CheckCircle2,
-  ExternalLink,
   ShoppingBag,
   Boxes,
   MessageCircle,
   X,
-  Share2,
   Package,
   Image as ImageIcon,
-  WifiOff,
   MapPin,
   FileText,
 } from "lucide-react";
@@ -41,8 +38,6 @@ interface CartItem {
   quantity: number;
 }
 
-const emptySubscribe = () => () => {};
-
 function subscribeAnnouncement(callback: () => void) {
   window.addEventListener("storage", callback);
   return () => {
@@ -62,23 +57,6 @@ function getAnnouncementSnapshot(): string {
 
 function getAnnouncementServerSnapshot(): string {
   return DEFAULT_ANNOUNCEMENT;
-}
-
-function subscribeOnline(callback: () => void) {
-  window.addEventListener("online", callback);
-  window.addEventListener("offline", callback);
-  return () => {
-    window.removeEventListener("online", callback);
-    window.removeEventListener("offline", callback);
-  };
-}
-
-function getOnlineSnapshot() {
-  return navigator.onLine;
-}
-
-function getOnlineServerSnapshot() {
-  return true;
 }
 
 function saveOfflineOrder(order: {
@@ -110,14 +88,6 @@ export default function StorefrontPage() {
   const [customerNotes, setCustomerNotes] = useState("");
   const [orderSent, setOrderSent] = useState(false);
   const [visibleCount, setVisibleCount] = useState(24);
-
-  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
-  const isOnline = useSyncExternalStore(
-    subscribeOnline,
-    getOnlineSnapshot,
-    getOnlineServerSnapshot
-  );
-  const [offlineNoticeModal, setOfflineNoticeModal] = useState(false);
 
   const [selectedProductModal, setSelectedProductModal] = useState<InventoryItem | null>(null);
   const [activeModalImageIndex, setActiveModalImageIndex] = useState<number>(0);
@@ -303,7 +273,7 @@ export default function StorefrontPage() {
         totalPrice: totalCartPrice,
         message,
       });
-      setOfflineNoticeModal(true);
+      toast.info("تم حفظ الطلب أوفلاين", "أنت غير متصل بالإنترنت حالياً، تم حفظ بيانات طلبك في جهازك بنجاح.");
     } else {
       toast.success("تم التوجيه للواتساب", "جاري فتح المحادثة لتأكيد الطلب.");
     }

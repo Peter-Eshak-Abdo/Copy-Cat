@@ -17,7 +17,6 @@ import {
   ChevronRight,
   ChevronLeft,
   Send,
-  Upload,
   Image as ImageIcon,
   Loader2,
   Sparkles,
@@ -76,13 +75,13 @@ export default function InventoryPage() {
   const [notes, setNotes] = useState("");
   const [image, setImage] = useState("");
   const [images, setImages] = useState<string[]>([]);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [, setIsUploadingImage] = useState(false);
 
   // AI Product Images Assistant State
   const [isAiSearchingImages, setIsAiSearchingImages] = useState(false);
   const [aiDiscoveredImages, setAiDiscoveredImages] = useState<string[]>([]);
   const [showAiPrompt, setShowAiPrompt] = useState(false);
-  const [aiDetectedName, setAiDetectedName] = useState("");
+  const [, setAiDetectedName] = useState("");
 
   // Photo Pool Picker State
   const [showPoolPicker, setShowPoolPicker] = useState(false);

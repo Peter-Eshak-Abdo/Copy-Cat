@@ -1008,6 +1008,7 @@ export default function PhotoPoolPage() {
                 {/* Main Comparison Canvas / Image */}
                 <div className="relative aspect-square w-full rounded-xl overflow-hidden border border-surface-container-high bg-black/40 flex items-center justify-center shadow-inner">
                   {enhancedPreviewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={enhancedPreviewUrl}
                       alt="معاينة محسنة"
@@ -1030,6 +1031,7 @@ export default function PhotoPoolPage() {
                 {/* Mini original thumbnail preview */}
                 <div className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-container/50 border border-surface-container-high/40">
                   <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-surface-container-high shrink-0 bg-black/20">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={enhancingPhoto.url}
                       alt="الأصلية"

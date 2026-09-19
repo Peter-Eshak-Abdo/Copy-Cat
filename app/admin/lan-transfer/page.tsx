@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Share2,
   Upload,
@@ -14,6 +14,10 @@ import {
   FileArchive,
   Image as ImageIcon,
   File,
+  RefreshCw,
+  Dices,
+  Loader2,
+  Printer,
 } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 
@@ -22,10 +26,38 @@ interface SharedItem {
   name: string;
   size: number;
   type: string;
-  dataUrl?: string;
-  blob?: Blob;
   sender: string;
   timestamp: number;
+  downloadUrl: string;
+}
+
+// Generate fun and professional Arabic semi-random device names
+export function generateRandomDeviceName(): string {
+  const prefixes = ["حاسوب", "محطة", "جهاز", "منصة", "وحدة"];
+  const titles = [
+    "الصقر",
+    "النسر",
+    "الليزر",
+    "البرق",
+    "الفولاذ",
+    "الصاروخ",
+    "النمر",
+    "الأسد",
+    "الفهد",
+    "الألماسي",
+    "الذهبي",
+    "السريع",
+    "العملاق",
+    "الشبح",
+  ];
+  const traits = ["سريع", "برق", "فولاذ", "صاروخ", "نمر", "ليزر", "صقر", "عملاق"];
+
+  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+  const title = titles[Math.floor(Math.random() * titles.length)];
+  const trait = traits[Math.floor(Math.random() * traits.length)];
+  const num = Math.floor(100 + Math.random() * 900);
+
+  return `${prefix} ${title} (${trait}-${num})`;
 }
 
 export default function LanTransferPage() {
@@ -35,51 +67,86 @@ export default function LanTransferPage() {
   const [roomId, setRoomId] = useState<string>("copycat-lan-room");
   const [deviceName, setDeviceName] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("copycat_device_name") || "جهاز المكتبة 1";
+      try {
+        const saved = localStorage.getItem("copycat_device_name");
+        if (saved && saved.trim() && saved !== "جهاز المكتبة 1") {
+          return saved;
+        }
+        const randomName = generateRandomDeviceName();
+        localStorage.setItem("copycat_device_name", randomName);
+        return randomName;
+      } catch {}
     }
-    return "جهاز المكتبة 1";
+    return "";
   });
 
   const [sharedFiles, setSharedFiles] = useState<SharedItem[]>([]);
   const [isTransferring, setIsTransferring] = useState(false);
   const [transferProgress, setTransferProgress] = useState<number>(0);
-
-  // BroadcastChannel for instant local inter-tab & local instance sync
-  const channelRef = useRef<BroadcastChannel | null>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
-
-    try {
-      const channel = new BroadcastChannel(`copycat_lan_${roomId}`);
-      channelRef.current = channel;
-
-      channel.onmessage = (event) => {
-        const { type, payload } = event.data;
-        if (type === "NEW_FILE") {
-          setSharedFiles((prev) => [payload, ...prev]);
-          toast.info("ملف جديد مستلم!", `تم استلام ملف "${payload.name}" من ${payload.sender}`);
-        } else if (type === "DELETE_FILE") {
-          setSharedFiles((prev) => prev.filter((f) => f.id !== payload.id));
-        }
-      };
-
-      return () => {
-        channel.close();
-      };
-    } catch {
-      // ignore
-    }
-  }, [roomId, toast]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleDeviceNameChange = (name: string) => {
     setDeviceName(name);
     try {
       localStorage.setItem("copycat_device_name", name);
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
+
+  const regenerateDeviceName = () => {
+    const newName = generateRandomDeviceName();
+    setDeviceName(newName);
+    try {
+      localStorage.setItem("copycat_device_name", newName);
+      toast.success("تم تجديد اسم الجهاز", `الاسم الجديد: ${newName}`);
+    } catch {}
+  };
+
+  // Fetch shared files from the LAN server (for manual button refresh)
+  const fetchSharedFiles = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetch(`/api/admin/lan-transfer?roomId=${encodeURIComponent(roomId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.files)) {
+          setSharedFiles(data.files);
+        }
+      }
+    } catch (err) {
+      console.warn("LAN fetch sync error:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [roomId]);
+
+  // Periodic polling every 2 seconds to keep devices in sync over LAN
+  useEffect(() => {
+    let ignore = false;
+
+    const syncFiles = async () => {
+      try {
+        const res = await fetch(`/api/admin/lan-transfer?roomId=${encodeURIComponent(roomId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!ignore && data.success && Array.isArray(data.files)) {
+            setSharedFiles(data.files);
+          }
+        }
+      } catch (err) {
+        console.warn("LAN fetch sync error:", err);
+      }
+    };
+
+    void syncFiles();
+    const interval = setInterval(() => {
+      void syncFiles();
+    }, 2000);
+
+    return () => {
+      ignore = true;
+      clearInterval(interval);
+    };
+  }, [roomId]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -99,81 +166,72 @@ export default function LanTransferPage() {
     }
   };
 
-  const processAndShareFile = (file: File) => {
+  const processAndShareFile = async (file: File) => {
     setIsTransferring(true);
-    setTransferProgress(20);
+    setTransferProgress(25);
 
-    const reader = new FileReader();
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("sender", deviceName || "جهاز غير معروف");
+      formData.append("roomId", roomId);
 
-    reader.onprogress = (evt) => {
-      if (evt.lengthComputable) {
-        const percent = Math.round((evt.loaded / evt.total) * 90);
-        setTransferProgress(percent);
-      }
-    };
+      setTransferProgress(50);
 
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const newItem: SharedItem = {
-        id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        name: file.name,
-        size: file.size,
-        type: file.type || "application/octet-stream",
-        dataUrl,
-        blob: file,
-        sender: deviceName,
-        timestamp: Date.now(),
-      };
+      const res = await fetch("/api/admin/lan-transfer", {
+        method: "POST",
+        body: formData,
+      });
 
-      setSharedFiles((prev) => [newItem, ...prev]);
-      setTransferProgress(100);
-      setIsTransferring(false);
+      setTransferProgress(85);
 
-      // Broadcast to any listening tabs/browsers on LAN channel
-      if (channelRef.current) {
-        try {
-          channelRef.current.postMessage({
-            type: "NEW_FILE",
-            payload: newItem,
-          });
-        } catch {
-          // in case payload is too large for structured clone
-        }
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "تعذر رفع الملف إلى شبكة المكتبة.");
       }
 
-      toast.success("جاهز للنقل", `تمت مشاركة "${file.name}" بنجاح على الشبكة المحلية`);
-    };
-
-    reader.onerror = () => {
+      const data = await res.json();
+      if (data.success && data.file) {
+        setSharedFiles((prev) => [data.file, ...prev.filter((f) => f.id !== data.file.id)]);
+        setTransferProgress(100);
+        toast.success("تم الإرسال على الشبكة 🚀", `الملف "${file.name}" متاح الآن للتحميل على أجهزة المكتبة.`);
+        void fetchSharedFiles();
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "فشل نقل الملف عبر الشبكة";
+      toast.error("خطأ في النقل", msg);
+    } finally {
       setIsTransferring(false);
-      toast.error("خطأ", "تعذر قراءة الملف المحدد");
-    };
-
-    reader.readAsDataURL(file);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const handleDownloadFile = (item: SharedItem) => {
-    if (!item.dataUrl) {
-      toast.warning("تنبيه", "بيانات الملف غير متوفرة للتحميل المباشر");
+    if (!item.downloadUrl) {
+      toast.warning("تنبيه", "رابط تحميل الملف غير متوفر");
       return;
     }
 
     const a = document.createElement("a");
-    a.href = item.dataUrl;
+    a.href = item.downloadUrl;
     a.download = item.name;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    toast.success("جاري التنزيل", `بدأ تحميل "${item.name}"`);
+    toast.success("بدء التحميل", `جاري تنزيل "${item.name}"...`);
   };
 
-  const handleDeleteItem = (id: string) => {
-    setSharedFiles((prev) => prev.filter((f) => f.id !== id));
-    if (channelRef.current) {
-      channelRef.current.postMessage({
-        type: "DELETE_FILE",
-        payload: { id },
+  const handleDeleteItem = async (id: string) => {
+    try {
+      setSharedFiles((prev) => prev.filter((f) => f.id !== id));
+      const res = await fetch(`/api/admin/lan-transfer?id=${encodeURIComponent(id)}&roomId=${encodeURIComponent(roomId)}`, {
+        method: "DELETE",
       });
+      if (res.ok) {
+        toast.success("تم الحذف", "تم حذف الملف من غرفة النقل المشتركة.");
+      }
+    } catch {
+      toast.error("خطأ", "تعذر حذف الملف من الخادم.");
     }
   };
 
@@ -183,9 +241,35 @@ export default function LanTransferPage() {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
+  const handleSendToPrintQueue = useCallback((item: SharedItem) => {
+    try {
+      const raw = localStorage.getItem("copycat_tasks_v1");
+      const existing = raw ? JSON.parse(raw) : [];
+      const now = Date.now();
+      const newTask = {
+        id: `task-${now}-${Math.random().toString(36).substring(2, 6)}`,
+        title: `طباعة: ${item.name}`,
+        customerName: item.sender || "شبكة المكتبة",
+        phone: "",
+        deadline: new Date(now + 30 * 60 * 1000).toTimeString().slice(0, 5),
+        totalCopies: 1,
+        completedCopies: 0,
+        bindingType: "عادي",
+        notes: `أُرسل عبر سلك الشبكة / LAN من "${item.sender}". الحجم: ${formatFileSize(item.size)}`,
+        status: "pending" as const,
+        createdAt: now,
+      };
+      localStorage.setItem("copycat_tasks_v1", JSON.stringify([newTask, ...existing]));
+      toast.success("أُرسل لطابور الطباعة 🖨️", `تم تسجيل مهمة طباعة "${item.name}" في جدول مهام التسليم (/admin/tasks).`);
+    } catch (err) {
+      console.error(err);
+      toast.error("خطأ", "تعذر تسجيل المهمة في طابور الطباعة.");
+    }
+  }, [toast]);
+
   const getFileIcon = (name: string, type: string) => {
     const ext = name.split(".").pop()?.toLowerCase() || "";
-    if (type.startsWith("image/") || ["jpg", "jpeg", "png", "webp", "gif"].includes(ext)) {
+    if (type?.startsWith("image/") || ["jpg", "jpeg", "png", "webp", "gif"].includes(ext)) {
       return <ImageIcon className="w-5 h-5 text-emerald-500" />;
     }
     if (["pdf"].includes(ext)) {
@@ -194,7 +278,7 @@ export default function LanTransferPage() {
     if (["zip", "rar", "7z", "tar"].includes(ext)) {
       return <FileArchive className="w-5 h-5 text-amber-500" />;
     }
-    return <File className="w-5 h-5 text-primary" />;
+    return <File className="w-5 h-5 text-blue-500" />;
   };
 
   return (
@@ -203,47 +287,72 @@ export default function LanTransferPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card/60 backdrop-blur-md p-6 rounded-2xl border border-border shadow-sm">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-primary/10 text-primary rounded-xl">
+            <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl">
               <Share2 className="w-6 h-6" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">مركز النقل السريع الداخلي (Local LAN Transfer Hub)</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            نقل فوري للملفات والملازم بين أجهزة المكتبة عبر كابل الشبكة المحلية أو الراوتر الداخلي بدون استهلاك باقة الإنترنت.
+            نقل فوري وسريع للملفات والملازم بين أجهزة المكتبة عبر كابل الشبكة المحلية أو الراوتر الداخلي بدون استهلاك باقة الإنترنت.
           </p>
         </div>
 
         {/* Network Status Badge */}
         <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 px-4 py-2.5 rounded-2xl text-xs font-semibold">
-          <Zap className="w-4 h-4 text-emerald-500" />
-          <span>الشبكة المحلية جاهزة (Direct LAN Cable / Wi-Fi)</span>
+          <Zap className="w-4 h-4 text-emerald-500 animate-pulse" />
+          <span>الشبكة المحلية متصلة (LAN Cable / Wi-Fi Sync)</span>
         </div>
       </div>
 
       {/* Device & Room Settings Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-card/70 backdrop-blur-md p-4 rounded-2xl border border-border">
+        {/* Device Name with Random Generator Button */}
         <div className="flex items-center gap-2">
-          <Laptop className="w-4 h-4 text-primary" />
+          <Laptop className="w-4 h-4 text-blue-500 shrink-0" />
           <span className="text-xs font-semibold text-foreground whitespace-nowrap">اسم هذا الجهاز:</span>
-          <input
-            type="text"
-            value={deviceName}
-            onChange={(e) => handleDeviceNameChange(e.target.value)}
-            className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-border bg-background"
-            placeholder="جهاز الطباعة 1"
-          />
+          <div className="flex-1 flex items-center gap-1.5">
+            <input
+              type="text"
+              suppressHydrationWarning
+              value={deviceName}
+              onChange={(e) => handleDeviceNameChange(e.target.value)}
+              className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-border bg-background focus:border-blue-500 focus:outline-none"
+              placeholder="مثال: حاسوب الصقر (سريع-742)"
+            />
+            <button
+              type="button"
+              onClick={regenerateDeviceName}
+              title="توليد اسم شبه عشوائي جديد بنظام مميز"
+              className="p-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-bold"
+            >
+              <Dices className="w-4 h-4" />
+              <span className="hidden sm:inline">اسم عشوائي</span>
+            </button>
+          </div>
         </div>
 
+        {/* Shared Room Input with Manual Refresh */}
         <div className="flex items-center gap-2">
-          <HardDrive className="w-4 h-4 text-muted-foreground" />
+          <HardDrive className="w-4 h-4 text-muted-foreground shrink-0" />
           <span className="text-xs font-semibold text-foreground whitespace-nowrap">غرفة النقل المشتركة:</span>
-          <input
-            type="text"
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-            className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-border bg-background font-mono"
-            placeholder="copycat-lan-room"
-          />
+          <div className="flex-1 flex items-center gap-1.5">
+            <input
+              type="text"
+              value={roomId}
+              onChange={(e) => setRoomId(e.target.value)}
+              className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-border bg-background font-mono focus:border-blue-500 focus:outline-none"
+              placeholder="copycat-lan-room"
+            />
+            <button
+              type="button"
+              onClick={() => fetchSharedFiles()}
+              disabled={isRefreshing}
+              title="تحديث قائمة الملفات يدوياً"
+              className="p-1.5 rounded-lg bg-slate-500/10 hover:bg-slate-500/20 text-slate-700 dark:text-slate-300 transition cursor-pointer shrink-0"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -252,7 +361,7 @@ export default function LanTransferPage() {
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className="border-2 border-dashed border-border hover:border-primary/50 transition cursor-pointer rounded-2xl p-10 flex flex-col items-center justify-center text-center gap-3 bg-card/40 hover:bg-card/70 min-h-[220px]"
+        className="border-2 border-dashed border-border hover:border-blue-500/60 transition cursor-pointer rounded-2xl p-10 flex flex-col items-center justify-center text-center gap-3 bg-card/40 hover:bg-card/70 min-h-[220px]"
       >
         <input
           ref={fileInputRef}
@@ -262,7 +371,7 @@ export default function LanTransferPage() {
           onChange={handleFileUpload}
         />
 
-        <div className="p-4 bg-primary/10 text-primary rounded-full">
+        <div className="p-4 bg-blue-500/10 text-blue-500 rounded-full">
           <Upload className="w-8 h-8" />
         </div>
 
@@ -271,19 +380,22 @@ export default function LanTransferPage() {
             اسحب أي ملفات هنا أو اضغط للاختيار من الجهاز
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
-            يدعم ملفات PDF، الملازم، الصور، ومجلدات الـ ZIP من أي حجم للنقل المباشر
+            يدعم ملفات PDF، الملازم، الصور، ومجلدات الـ ZIP من أي حجم للنقل المباشر عبر السيرفر الداخلي
           </p>
         </div>
 
         {isTransferring && (
           <div className="w-full max-w-xs mt-3 space-y-1">
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>جاري تجهيز وبث الملف...</span>
+              <span className="flex items-center gap-1.5 text-blue-500">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>جاري بث الملف عبر الشبكة...</span>
+              </span>
               <span>{transferProgress}%</span>
             </div>
-            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-primary transition-all duration-200"
+                className="h-full bg-linear-to-r from-blue-500 to-cyan-400 transition-all duration-200"
                 style={{ width: `${transferProgress}%` }}
               />
             </div>
@@ -295,10 +407,13 @@ export default function LanTransferPage() {
       <div className="bg-card/70 backdrop-blur-md border border-border rounded-2xl p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <HardDrive className="w-5 h-5 text-primary" />
+            <HardDrive className="w-5 h-5 text-blue-500" />
             <h2 className="font-bold text-foreground">الملفات المتبادلة في الغرفة</h2>
+            <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              مزامنة تلقائية كل 2 ثانية
+            </span>
           </div>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs font-bold text-muted-foreground">
             {sharedFiles.length} ملفات جاهزة للتحميل
           </span>
         </div>
@@ -306,9 +421,9 @@ export default function LanTransferPage() {
         {sharedFiles.length === 0 ? (
           <div className="py-12 text-center text-muted-foreground">
             <Share2 className="w-10 h-10 mx-auto opacity-30 mb-2" />
-            <p className="text-sm font-medium">لم يتم إرسال أي ملفات بعد في هذه الجلسة</p>
-            <p className="text-xs mt-1">
-              الملفات المرفوعة ستظهر فوراً لجميع الأجهزة المشتركة في نفس الغرفة
+            <p className="text-sm font-medium">لم يتم إرسال أي ملفات بعد في هذه الغرفة</p>
+            <p className="text-xs mt-1 text-slate-400">
+              الملفات المرفوعة ستظهر فوراً وبشكل تلقائي لجميع الأجهزة المشتركة في نفس الغرفة عبر الشبكة الداخلية.
             </p>
           </div>
         ) : (
@@ -316,10 +431,10 @@ export default function LanTransferPage() {
             {sharedFiles.map((item) => (
               <div
                 key={item.id}
-                className="p-4 rounded-xl border border-border bg-background/80 hover:border-primary/40 transition flex items-center justify-between gap-3 shadow-xs"
+                className="p-4 rounded-xl border border-border bg-background/80 hover:border-blue-500/40 transition flex items-center justify-between gap-3 shadow-xs"
               >
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="p-2.5 bg-muted rounded-xl flex-shrink-0">
+                  <div className="p-2.5 bg-muted rounded-xl shrink-0">
                     {getFileIcon(item.name, item.type)}
                   </div>
                   <div className="overflow-hidden">
@@ -327,25 +442,35 @@ export default function LanTransferPage() {
                       {item.name}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                      <span>{formatFileSize(item.size)}</span>
+                      <span className="font-mono">{formatFileSize(item.size)}</span>
                       <span>•</span>
-                      <span>من: {item.sender}</span>
+                      <span className="text-blue-500 font-semibold truncate max-w-[130px]">من: {item.sender}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => handleSendToPrintQueue(item)}
+                    className="px-2.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                    title="إرسال لطابور مهام الطباعة والتسليم"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span className="hidden sm:inline">طابور الطباعة</span>
+                  </button>
+
                   <button
                     onClick={() => handleDownloadFile(item)}
-                    className="p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition font-semibold"
+                    className="px-3 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                     title="تحميل الملف للجهاز"
                   >
                     <Download className="w-4 h-4" />
+                    <span>تحميل</span>
                   </button>
 
                   <button
                     onClick={() => handleDeleteItem(item.id)}
-                    className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition"
+                    className="p-2 rounded-xl hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition cursor-pointer"
                     title="حذف من الغرفة"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -360,17 +485,17 @@ export default function LanTransferPage() {
       {/* Instructions / LAN Setup Tips */}
       <div className="p-4 bg-muted/30 border border-border rounded-2xl text-xs text-muted-foreground space-y-2">
         <div className="font-semibold text-foreground flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-primary" />
-          كيف يعمل النقل الداخلي في المطبعة؟
+          <ShieldCheck className="w-4 h-4 text-blue-500" />
+          كيف يعمل النقل الداخلي عبر سلك الشبكة / الروتر في المكتبة؟
         </div>
         <p>
-          1. افتح صفحة <strong>/admin/lan-transfer</strong> على الجهازين (مثلاً جهاز التصوير وجهاز الاستقبال).
+          1. افتح صفحة <strong>/admin/lan-transfer</strong> على الجهازين (مثلاً جهاز التصوير وجهاز الاستقبال) المتصلين بالراوتر بكابل LAN أو واي فاي.
         </p>
         <p>
-          2. تأكد من تطابق اسم <strong>&ldquo;غرفة النقل المشتركة&rdquo;</strong> في الجهازين.
+          2. تأكد من تطابق اسم <strong>&ldquo;غرفة النقل المشتركة&rdquo;</strong> في الجهازين (الافتراضي: copycat-lan-room).
         </p>
         <p>
-          3. اسحب أي ملف في أي جهاز وسيظهر زر التحميل في الجهاز الآخر فوراً عبر الشبكة الداخلية بدون أي استهلاك لباقة الإنترنت.
+          3. اسحب أي ملف في أي جهاز؛ سيتم رفعه فورا لمخدم المكتبة المحلي، وسيظهر زر <strong>&ldquo;تحميل&rdquo;</strong> في الجهاز الآخر خلال ثانيتين دون استهلاك باقة الإنترنت إطلاقاً!
         </p>
       </div>
     </div>

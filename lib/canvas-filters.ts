@@ -153,8 +153,6 @@ export function warpPerspectiveQuad(
   // Standard ID Card (ID-1) aspect ratio = 85.60mm / 53.98mm = 1.58577
   const topEdge = Math.hypot(p1.x - p0.x, p1.y - p0.y);
   const bottomEdge = Math.hypot(p2.x - p3.x, p2.y - p3.y);
-  const leftEdge = Math.hypot(p3.x - p0.x, p3.y - p0.y);
-  const rightEdge = Math.hypot(p2.x - p1.x, p2.y - p1.y);
 
   const rawW = Math.round(Math.max(topEdge, bottomEdge, 800));
   const calcW = Math.min(rawW, 1280);
@@ -469,9 +467,6 @@ export function applyCamScannerMagicColor(canvas: HTMLCanvasElement): HTMLCanvas
  * Looks for the largest quadrilateral convex polygon with standard ~1.58:1 aspect ratio.
  */
 export function detectCardCorners(sourceCanvas: HTMLCanvasElement): QuadCorners {
-  const sw = sourceCanvas.width;
-  const sh = sourceCanvas.height;
-
   // Default fallback quad (inset 5%)
   const defaultQuad: QuadCorners = {
     tl: { x: 0.05, y: 0.08 },

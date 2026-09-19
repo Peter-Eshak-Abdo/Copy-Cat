@@ -46,7 +46,7 @@ export const TOP_ARABIC_ACADEMIC_SOURCES = [
     desc: "أشمل قاعدة بيانات عربية متخصصة في الدراسات التربوية والنفسية والاجتماعية عبر 22 دولة عربية.",
     category: "علوم تربوية ونفسية واجتماعية",
     getCitation: (t: string) =>
-      `3. قاعدة بيانات شمعة (Shamaa) - شبكة المعلومات العربية التربوية، بحوث ودراسات تربوية محكمة، بيروت، 2024.`,
+      `3. قاعدة بيانات شمعة (Shamaa) - شبكة المعلومات العربية التربوية، بحوث ودراسات محكمة في (${t})، بيروت، 2024.`,
   },
   {
     id: "sdl",
@@ -70,7 +70,7 @@ export const TOP_ARABIC_ACADEMIC_SOURCES = [
     desc: "المرجع المغاربي والعربي الأول للدوريات والمجلات العلمية المحكمة ذات معاملات التأثير المعترف بها.",
     category: "دوريات محكمة ومجلات مصنفة",
     getCitation: (t: string) =>
-      `6. البوابة الجزائرية للمجلات العلمية (ASJP) - الدوريات المحكمة في العلوم الإنسانية والاجتماعية والتطبيقية، الجزائر، 2024.`,
+      `6. البوابة الجزائرية للمجلات العلمية (ASJP) - الدوريات المحكمة في (${t}) والعلوم التطبيقية، الجزائر، 2024.`,
   },
   {
     id: "aruc",
@@ -78,7 +78,7 @@ export const TOP_ARABIC_ACADEMIC_SOURCES = [
     desc: "المرجع الببليوجرافي الموحد للإنتاج الفكري والكتب المرجعية والتراث العلمي العربي.",
     category: "فهارس ومراجع ببليوجرافية موحدة",
     getCitation: (t: string) =>
-      `7. الفهرس العربي الموحد (ARUC) ومكتبة الملك فهد الوطنية - السجل التوثيقي لأوعية المعلومات العربية، الرياض، 2023.`,
+      `7. الفهرس العربي الموحد (ARUC) ومكتبة الملك فهد الوطنية - السجل التوثيقي لأوعية المعلومات في (${t})، الرياض، 2023.`,
   },
   {
     id: "scholar_ar",
@@ -94,7 +94,7 @@ export const TOP_ARABIC_ACADEMIC_SOURCES = [
     desc: "الدراسات التخصصية الصادرة عن عمادات البحث العلمي ومجامع العلوم واللغة العربية.",
     category: "مجلات جامعية ومجامع لغوية",
     getCitation: (t: string) =>
-      `9. اتحاد الجامعات العربية ومجمع اللغة العربية بالقاهرة - مجلة البحوث والدراسات المحكمة، بحوث محكمة، 2023.`,
+      `9. اتحاد الجامعات العربية ومجمع اللغة العربية بالقاهرة - مجلة البحوث والدراسات المحكمة في (${t})، 2023.`,
   },
   {
     id: "caus",
@@ -150,7 +150,10 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
 
   // Clean raw AI text from markdown stars & headers
   const cleanText = rawText.replace(/[*#]/g, "");
-  const rawLines = cleanText.split("\n").map((l) => l.trim()).filter(Boolean);
+  const rawLines = cleanText
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
 
   const children: (Paragraph | Table)[] = [];
 
@@ -172,7 +175,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
             rightToLeft: true,
           }),
         ],
-      })
+      }),
     );
   }
 
@@ -198,7 +201,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
           color: "1E3A8A",
         }),
       ],
-    })
+    }),
   );
 
   // Metadata Box (Student, Teacher, Grade, School)
@@ -211,7 +214,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
         size: 36, // 18pt
         bold: true,
         rightToLeft: true,
-      })
+      }),
     );
   }
   if (coverInfo.teacherName) {
@@ -222,7 +225,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
         size: 36,
         bold: true,
         rightToLeft: true,
-      })
+      }),
     );
   }
   if (coverInfo.gradeOrClass) {
@@ -232,7 +235,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
         font: "Arial",
         size: 36,
         rightToLeft: true,
-      })
+      }),
     );
   }
   if (coverInfo.academicYear) {
@@ -242,7 +245,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
         font: "Arial",
         size: 32,
         rightToLeft: true,
-      })
+      }),
     );
   }
 
@@ -251,17 +254,87 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
       alignment: AlignmentType.CENTER,
       spacing: { before: 1600, after: 400 },
       children: metaRuns,
-    })
+    }),
   );
 
   // Page Break after Cover Page
   children.push(new Paragraph({ children: [new PageBreak()] }));
 
   // =========================================================================
-  // 2. Table of Contents / Index (صفحة الفهرس التفاعلية المتناسبة مع عدد الصفحات)
+  // 2. Scan for actual encyclopedic headings in rawLines (Available for Index & Body)
   // =========================================================================
-  const mainHeadingKeywords = ["المبحث", "مقدمة", "خاتمة", "الفصل", "تمهيد", "المصادر والمراجع", "قائمة المصادر"];
-  const subHeadingKeywords = ["أولاً", "ثانياً", "ثالثاً", "رابعاً", "خامساً", "المطلب", "الفرع"];
+  const mainHeadingKeywords = [
+    "المبحث",
+    "مقدمة",
+    "خاتمة",
+    "الفصل",
+    "تمهيد",
+    "المصادر والمراجع",
+    "قائمة المصادر",
+  ];
+  const subHeadingKeywords = [
+    "أولاً",
+    "ثانياً",
+    "ثالثاً",
+    "رابعاً",
+    "خامساً",
+    "المطلب",
+    "الفرع",
+  ];
+
+  const detectedHeadings: string[] = [];
+  rawLines.forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    const isMarkdownHeader = /^#{1,4}\s+/.test(trimmed);
+    const isNumbered =
+      /^[0-9]+[.-]\s+/.test(trimmed) ||
+      /^(\([0-9]+\)|[أ-ي][.-])\s+/.test(trimmed);
+    const endsWithColon = trimmed.endsWith(":") || trimmed.endsWith("：");
+    const hasKeyword = [
+      "مقدمة",
+      "تمهيد",
+      "خاتمة",
+      "المصادر",
+      "المراجع",
+      "نظرة عامة",
+      "النشأة",
+      "تاريخ",
+      "مفهوم",
+      "المبادئ",
+      "الأسس",
+      "الركائز",
+      "الأبعاد",
+      "التطبيقات",
+      "التحديات",
+      "المقارنة",
+      "استشراف",
+      "التحول",
+      "توصيات",
+      "دراسة",
+      "المحور",
+    ].some((kw) => trimmed.includes(kw));
+
+    const isHeading =
+      (isMarkdownHeader ||
+        isNumbered ||
+        (endsWithColon && trimmed.length <= 110) ||
+        (hasKeyword && trimmed.length <= 90)) &&
+      trimmed.length >= 4 &&
+      trimmed.length <= 120 &&
+      !trimmed.endsWith(".");
+
+    if (isHeading) {
+      const cleanTitle = trimmed
+        .replace(/^#{1,4}\s+/, "")
+        .replace(/[:：]$/, "")
+        .trim();
+      if (!detectedHeadings.includes(cleanTitle)) {
+        detectedHeadings.push(cleanTitle);
+      }
+    }
+  });
 
   if (includeIndex) {
     children.push(
@@ -278,82 +351,68 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
             color: "1E3A8A",
           }),
         ],
-      })
+      }),
     );
 
-    // 1. Scan for actual headings in rawLines
-    const detectedHeadings: string[] = [];
-    rawLines.forEach((line) => {
-      const isHeading =
-        mainHeadingKeywords.some((kw) => line.includes(kw)) ||
-        subHeadingKeywords.some((kw) => line.startsWith(kw));
-      // Must be a concise heading line (not a full paragraph)
-      if (isHeading && line.length <= 110 && !detectedHeadings.includes(line)) {
-        detectedHeadings.push(line.replace(/[:：]$/, "").trim());
-      }
-    });
-
-    // 2. If text didn't contain sufficient headings, synthesize structured academic outline matching targetPages
+    // 2. If text didn't contain sufficient headings, synthesize structured encyclopedic outline matching targetPages
     let finalHeadings: string[] = [];
     if (detectedHeadings.length >= 4) {
       finalHeadings = detectedHeadings;
     } else {
+      const tName =
+        topic
+          .replace(/^بحث (أكاديمي|دراسي|موسوعي)\s*(متكامل)?\s*بعنوان:\s*/i, "")
+          .trim() || "الموضوع";
       if (effectiveTargetPages <= 5) {
         finalHeadings = [
-          "مقدمة البحث التمهيدية وإشكالية الدراسة",
-          "المبحث الأول: الإطار المفاهيمي والتأصيل النظري",
-          "المبحث الثاني: العناصر والأبعاد الرئيسية والتطبيقات",
-          "المبحث الثالث: التحليلات المعاصرة والآثار العملية",
-          "خاتمة البحث وخلاصة النتائج والتوصيات",
-          ...(includeReferences ? ["قائمة المصادر والمراجع المعتمدة (أهم 10 مصادر عربية)"] : []),
+          `مقدمة وتمهيد عام عن (${tName})`,
+          `المدخل المفاهيمي والتأصيل العلمي لـ (${tName})`,
+          `الركائز الهيكلية والآليات التشغيلية`,
+          `النماذج التطبيقية ودراسات الحالة الواقعية`,
+          `التحديات الراهنة واستشراف المستقبل والتحول التقني`,
+          `خاتمة البحث وخلاصة النتائج والتوصيات`,
+          ...(includeReferences
+            ? ["قائمة المصادر والمراجع الأكاديمية المعتمدة"]
+            : []),
         ];
       } else if (effectiveTargetPages <= 12) {
         finalHeadings = [
-          "مقدمة البحث: الإشكالية، الأهمية، والأهداف",
-          "المبحث الأول: الإطار المفاهيمي والنشأة التاريخية",
-          "المبحث الثاني: الركائز الهيكلية والآليات التشغيلية",
-          "المبحث الثالث: التطبيقات الواقعية والدراسات المقارنة",
-          "المبحث الرابع: التحديات والمعوقات الراهنة وسبل المعالجة",
-          "المبحث الخامس: الرؤى الاستشرافية ومسارات التطوير",
-          "خاتمة البحث: أبرز النتائج والتوصيات التنفيذية",
-          ...(includeReferences ? ["قائمة المصادر والمراجع المعتمدة (قواعد البيانات العربية)"] : []),
-        ];
-      } else if (effectiveTargetPages <= 20) {
-        finalHeadings = [
-          "مقدمة البحث التمهيدية والإطار المنهجي",
-          "الفصل الأول: الإطار النظري والتأصيل المعرفي والتاريخي",
-          "المبحث الأول: النشأة ومراحل التطور عبر العصور",
-          "المبحث الثاني: المدارس الفكرية والاتجاهات الحديثة",
-          "الفصل الثاني: البنية التطبيقية والآليات التشغيلية",
-          "المبحث الأول: الركائز الفنية والمكونات الجوهرية",
-          "المبحث الثاني: النماذج الواقعية ودراسات الحالة الميدانية",
-          "الفصل الثالث: التحديات والحلول والرؤى المستقبلية",
-          "المبحث الأول: المعوقات المؤسسية وإدارة التغيير",
-          "المبحث الثاني: استشراف المستقبل والتحول التكنولوجي",
-          "خاتمة البحث: حزمة النتائج والتوصيات الأكاديمية",
-          ...(includeReferences ? ["قائمة المصادر والمراجع المعتمدة (المستودعات الأكاديمية)"] : []),
+          `مقدمة البحث: الإشكالية، الأهمية، والأهداف`,
+          `المدخل المفاهيمي والتأصيل المعرفي لـ (${tName})`,
+          `الجذور والنشأة التاريخية ومراحل التطور`,
+          `الركائز الهيكلية والآليات التشغيلية والسياسات`,
+          `التطبيقات الواقعية والنماذج الميدانية المقارنة`,
+          `التحديات والمعوقات الراهنة وسبل المعالجة المبتكرة`,
+          `الرؤى الاستشرافية والتحول التكنولوجي الذكي`,
+          `خاتمة البحث: النتائج والتوصيات التنفيذية المقترحة`,
+          ...(includeReferences
+            ? ["قائمة المصادر والمراجع الأكاديمية والتوثيقية"]
+            : []),
         ];
       } else {
-        // 21 to 60 pages (e.g. 30 pages requested by user!)
+        // 13 to 60 pages (e.g. 30 pages requested by user!)
         finalHeadings = [
-          "مقدمة البحث الشاملة: الإشكالية، الفروض، والمنهج المعتمد",
-          "الفصل الأول: الإطار النظري والتأصيل المفاهيمي والتاريخي",
-          "المبحث الأول: الجذور التاريخية وتطور المفهوم",
-          "المبحث الثاني: الاتجاهات النظرية والمدارس الفكرية الرائدة",
-          "المبحث الثالث: المفاهيم المتقاطعة والصلات البينية",
-          "الفصل الثاني: الأبعاد الهيكلية والآليات التشغيلية والتنظيمية",
-          "المبحث الأول: الركائز الأساسية والمكونات الجوهرية",
-          "المبحث الثاني: السياسات والأطر والمعايير المعتمدة",
-          "المبحث الثالث: المنهجيات المعاصرة ومؤشرات الكفاءة",
-          "الفصل الثالث: الدراسات الميدانية والتجارب المقارنة",
-          "المبحث الأول: النماذج الرائدة والتطبيقات الواقعية",
-          "المبحث الثاني: المعوقات والتحديات التشغيلية والإدارية",
-          "المبحث الثالث: التحليل التقييمي والدروس المستفادة",
-          "الفصل الرابع: استشراف المستقبل، الحلول المبتكرة، والتحول الذكي",
-          "المبحث الأول: تطبيقات الذكاء الاصطناعي والأتمتة",
-          "المبحث الثاني: خارطة طريق مقترحة للتطوير المستدام",
-          "خاتمة البحث المستفيضة: النتائج والتوصيات والآفاق المستقبلية",
-          ...(includeReferences ? ["قائمة المصادر والمراجع الأكاديمية (أهم 10 مصادر عربية)"] : []),
+          `مقدمة وتمهيد عام وإشكالية الدراسة`,
+          `المدخل الموسوعي والإطار المفاهيمي لـ (${tName})`,
+          `النشأة التاريخية وتطور الظاهرة عبر الحقب المختلفة`,
+          `الأسس العلمية والمدارس الفكرية الرائدة`,
+          `العلاقات المعرفية والصلات البينية في العلوم الحديثة`,
+          `الركائز الهيكلية والمكونات التنظيمية والتشغيلية`,
+          `السياسات العامة والأطر التشريعية ومعايير الجودة`,
+          `المؤشرات الإحصائية ومقاييس تقييم الأداء (KPIs)`,
+          `التطبيقات الميدانية ودراسات الحالة في البيئة العربية`,
+          `الأبعاد الاقتصادية والجدوى التنموية لـ (${tName})`,
+          `المعوقات والتحديات المؤسسية وحلول المعالجة المبتكرة`,
+          `المقارنات الدولية وأفضل الممارسات المعيارية`,
+          `الابتكار التكنولوجي وتطبيقات الذكاء الاصطناعي`,
+          `خارطة طريق تنفيذية مقترحة للتطوير المستدام`,
+          `الرؤى الاستشرافية والسيناريوهات المستقبلية المتوقعة`,
+          `خاتمة واستنتاجات وتوصيات تنفيذية شاملة`,
+          ...(includeReferences
+            ? [
+                "قائمة المصادر والمراجع الأكاديمية المعتمدة (أهم 10 مصادر عربية)",
+              ]
+            : []),
         ];
       }
     }
@@ -432,7 +491,10 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
                         font: "Arial",
                         size: 32, // 16pt
                         rightToLeft: true,
-                        bold: item.title.includes("الفصل") || item.title.includes("خاتمة") || item.title.includes("المراجع"),
+                        bold:
+                          item.title.includes("الفصل") ||
+                          item.title.includes("خاتمة") ||
+                          item.title.includes("المراجع"),
                       }),
                     ],
                   }),
@@ -456,7 +518,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
                 ],
               }),
             ],
-          })
+          }),
       ),
     ];
 
@@ -465,7 +527,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
         width: { size: 100, type: WidthType.PERCENTAGE },
         visuallyRightToLeft: true,
         rows: tableRows,
-      })
+      }),
     );
 
     // Page break after Index
@@ -481,44 +543,47 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
   let paragraphsSinceLastBreak = 0;
 
   rawLines.forEach((line) => {
-    const isChapter = line.includes("الفصل ");
-    const isMainHeading = mainHeadingKeywords.some((kw) => line.includes(kw));
-    const isSubHeading = !isMainHeading && subHeadingKeywords.some((kw) => line.startsWith(kw));
+    const trimmed = line.trim();
+    if (!trimmed) return;
 
-    // For multi-page papers (>= 10 pages), start major chapters on fresh pages to match page layout
-    if (isChapter && effectiveTargetPages >= 10) {
-      children.push(new Paragraph({ children: [new PageBreak()] }));
-      paragraphsSinceLastBreak = 0;
-    } else if (isMainHeading && effectiveTargetPages >= 20 && paragraphsSinceLastBreak >= 5) {
+    const isMarkdownHeader = /^#{1,4}\s+/.test(trimmed);
+    const isNumberedHeading =
+      /^[0-9]+[.-]\s+/.test(trimmed) && trimmed.length <= 110;
+    const endsWithColon =
+      (trimmed.endsWith(":") || trimmed.endsWith("：")) &&
+      trimmed.length <= 110 &&
+      !trimmed.endsWith(".");
+    const isDetected = detectedHeadings.some((dh) => trimmed.includes(dh));
+    const isMainHeading =
+      isMarkdownHeader ||
+      isNumberedHeading ||
+      endsWithColon ||
+      isDetected ||
+      mainHeadingKeywords.some((kw) => trimmed.includes(kw));
+
+    const isSubHeading =
+      !isMainHeading && subHeadingKeywords.some((kw) => trimmed.startsWith(kw));
+
+    // For multi-page papers (>= 10 pages, e.g. 30 pages), start major encyclopedic headings on fresh pages
+    if (
+      isMainHeading &&
+      effectiveTargetPages >= 10 &&
+      paragraphsSinceLastBreak >= 3
+    ) {
       children.push(new Paragraph({ children: [new PageBreak()] }));
       paragraphsSinceLastBreak = 0;
     }
 
-    if (isChapter) {
+    const cleanLine = trimmed.replace(/^#{1,4}\s+/, "").trim();
+
+    if (isMainHeading) {
       children.push(
         new Paragraph({
           alignment: AlignmentType.RIGHT,
-          spacing: { before: 500, after: 240 },
+          spacing: { before: 450, after: 220 },
           children: [
             new TextRun({
-              text: line,
-              font: "Arial",
-              size: 48, // 24pt
-              bold: true,
-              rightToLeft: true,
-              color: "1E3A8A",
-            }),
-          ],
-        })
-      );
-    } else if (isMainHeading) {
-      children.push(
-        new Paragraph({
-          alignment: AlignmentType.RIGHT,
-          spacing: { before: 400, after: 200 },
-          children: [
-            new TextRun({
-              text: line,
+              text: cleanLine,
               font: "Arial",
               size: 44, // 22pt
               bold: true,
@@ -526,8 +591,9 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
               color: "1E3A8A",
             }),
           ],
-        })
+        }),
       );
+      paragraphsSinceLastBreak++;
     } else if (isSubHeading) {
       children.push(
         new Paragraph({
@@ -542,7 +608,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
               rightToLeft: true,
             }),
           ],
-        })
+        }),
       );
     } else {
       paragraphsSinceLastBreak += 1;
@@ -563,7 +629,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
               rightToLeft: true,
             }),
           ],
-        })
+        }),
       );
     }
   });
@@ -588,7 +654,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
             color: "1E3A8A",
           }),
         ],
-      })
+      }),
     );
 
     children.push(
@@ -605,11 +671,12 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
             color: "4B5563",
           }),
         ],
-      })
+      }),
     );
 
     // Citing custom or default Top 10 Arabic Academic Research databases customized to topic
-    const activeSources = sources && sources.length > 0 ? sources : TOP_ARABIC_ACADEMIC_SOURCES;
+    const activeSources =
+      sources && sources.length > 0 ? sources : TOP_ARABIC_ACADEMIC_SOURCES;
     activeSources.forEach((source, idx) => {
       let citationText = "";
       if ("getCitation" in source && typeof source.getCitation === "function") {
@@ -631,7 +698,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
               rightToLeft: true,
             }),
           ],
-        })
+        }),
       );
     });
   }
@@ -660,10 +727,30 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
                 zOrder: PageBorderZOrder.FRONT,
                 offsetFrom: PageBorderOffsetFrom.PAGE,
               },
-              pageBorderTop: { style: BorderStyle.SINGLE, size: 12, space: 24, color: "1E3A8A" },
-              pageBorderRight: { style: BorderStyle.SINGLE, size: 12, space: 24, color: "1E3A8A" },
-              pageBorderBottom: { style: BorderStyle.SINGLE, size: 12, space: 24, color: "1E3A8A" },
-              pageBorderLeft: { style: BorderStyle.SINGLE, size: 12, space: 24, color: "1E3A8A" },
+              pageBorderTop: {
+                style: BorderStyle.SINGLE,
+                size: 12,
+                space: 24,
+                color: "1E3A8A",
+              },
+              pageBorderRight: {
+                style: BorderStyle.SINGLE,
+                size: 12,
+                space: 24,
+                color: "1E3A8A",
+              },
+              pageBorderBottom: {
+                style: BorderStyle.SINGLE,
+                size: 12,
+                space: 24,
+                color: "1E3A8A",
+              },
+              pageBorderLeft: {
+                style: BorderStyle.SINGLE,
+                size: 12,
+                space: 24,
+                color: "1E3A8A",
+              },
             },
           },
         },
@@ -691,7 +778,9 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
   });
 
   const blob = await Packer.toBlob(doc);
-  const safeTopic = topic.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, "_").slice(0, 25);
+  const safeTopic = topic
+    .replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, "_")
+    .slice(0, 25);
   const versionSuffix = versionNumber ? `_نسخة_${versionNumber}` : "";
   if (typeof window !== "undefined") {
     saveAs(blob, `CopyCat_Research_${safeTopic}${versionSuffix}.docx`);

@@ -17,6 +17,7 @@ const eslintConfig = defineConfig([
     "scratch/**",
     "scripts/**",
     "stitch_ocr_document_platform_redesign/**",
+    "public/**",
   ]),
 ]);
 

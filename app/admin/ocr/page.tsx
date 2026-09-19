@@ -5,7 +5,6 @@ import { useToast } from "@/components/toast-provider";
 import { readFileAsDataURL } from "@/lib/utils";
 import { generateOcrDocx } from "@/lib/docx/ocr-docx";
 
-type OcrStage = "idle" | "vision" | "refinement" | "completed";
 
 interface OcrPageItem {
   id: string;
@@ -22,11 +21,9 @@ export default function MultiStageOcrPage() {
 
   const [pages, setPages] = useState<OcrPageItem[]>([]);
   const [activePageIndex, setActivePageIndex] = useState<number>(0);
-  const [currentStage, setCurrentStage] = useState<OcrStage>("idle");
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoomPreview, setZoomPreview] = useState(false);
 
-  const [rawText, setRawText] = useState<string>("");
   const [refinedText, setRefinedText] = useState<string>("");
   const [docTitle, setDocTitle] = useState<string>("مستند_نصوص_مستخرجة_مكتبة_كوبي_كات.docx");
 
@@ -152,8 +149,6 @@ export default function MultiStageOcrPage() {
     }
 
     setIsProcessing(true);
-    setCurrentStage("vision");
-    setRawText("");
     setRefinedText("");
 
     let combinedRaw = "";
@@ -196,12 +191,10 @@ export default function MultiStageOcrPage() {
           combinedRaw += pageExtracted;
         }
 
-        setRawText(combinedRaw);
         setRefinedText(combinedRaw);
       }
 
       // Stage 2: Linguistic refinement
-      setCurrentStage("refinement");
       toast.info("جاري التدقيق اللغوي", "جاري مراجعة وتنسيق الألفاظ وصياغة البنود...");
 
       const res2 = await fetch("/api/ocr", {
@@ -219,7 +212,6 @@ export default function MultiStageOcrPage() {
         setRefinedText(refined);
       }
 
-      setCurrentStage("completed");
       toast.success(
         "اكتمل الاستخراج بنجاح",
         `تم استخراج وتدقيق نصوص ${pages.length} صفحة بنجاح وجاهزة للتصدير للوورد.`
@@ -227,7 +219,6 @@ export default function MultiStageOcrPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "حدث خطأ أثناء معالجة الصفحات";
       toast.error("فشل الاستخراج", msg);
-      setCurrentStage("idle");
     } finally {
       setIsProcessing(false);
     }

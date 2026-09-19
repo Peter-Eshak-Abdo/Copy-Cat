@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
   CreditCard,
@@ -11,14 +11,8 @@ import {
   Trash2,
   MessageCircle,
   ShieldCheck,
-  ArrowRight,
-  RefreshCw,
   X,
   AlertCircle,
-  FileText,
-  UserCheck,
-  Smartphone,
-  Copy,
 } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 import { useAuth } from "@/lib/auth";
@@ -61,7 +55,7 @@ export function saveInstaPayRecords(records: InstaPayRecord[]) {
 export default function InstaPayAdminPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [records, setRecords] = useState<InstaPayRecord[]>([]);
+  const [records, setRecords] = useState<InstaPayRecord[]>(() => getInstaPaySnapshot());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed">("pending");
 
@@ -75,8 +69,6 @@ export default function InstaPayAdminPage() {
 
   // Load records
   useEffect(() => {
-    setRecords(getInstaPaySnapshot());
-
     const handleStorageChange = () => {
       setRecords(getInstaPaySnapshot());
     };
@@ -84,8 +76,16 @@ export default function InstaPayAdminPage() {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
+  const resetForm = useCallback(() => {
+    setCustomerName("");
+    setPhone("");
+    setAmount("");
+    setSenderAccount("");
+    setNotes("");
+  }, []);
+
   // Submit new transfer
-  const handleAddRecord = (e: React.FormEvent) => {
+  const handleAddRecord = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim()) {
       toast.error("بيانات ناقصة", "يرجى كتابة اسم العميل.");
@@ -96,14 +96,15 @@ export default function InstaPayAdminPage() {
       return;
     }
 
+    const now = Date.now();
     const newRecord: InstaPayRecord = {
-      id: `INSTA-${Date.now().toString().slice(-6)}`,
+      id: `INSTA-${now.toString().slice(-6)}`,
       customerName: customerName.trim(),
       phone: phone.trim(),
       amount: Number(amount),
       senderAccount: senderAccount.trim() || undefined,
       notes: notes.trim() || undefined,
-      timestamp: Date.now(),
+      timestamp: now,
       status: "pending",
     };
 
@@ -114,15 +115,8 @@ export default function InstaPayAdminPage() {
     toast.success("تم تسجيل التحويل بنجاح!", `تحويل ${newRecord.amount} ج.م مسجل كمعلق حتى يؤكده الباشمهندس.`);
     setIsAddingModal(false);
     resetForm();
-  };
+  }, [amount, customerName, notes, phone, records, resetForm, senderAccount, toast]);
 
-  const resetForm = () => {
-    setCustomerName("");
-    setPhone("");
-    setAmount("");
-    setSenderAccount("");
-    setNotes("");
-  };
 
   // Confirm a payment (Done by the Engineer)
   const handleConfirmRecord = (id: string) => {

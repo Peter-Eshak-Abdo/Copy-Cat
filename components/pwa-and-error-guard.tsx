@@ -1,33 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { WifiOff, Wifi } from "lucide-react";
 
+const emptySubscribe = () => () => {};
+const useMounted = () => useSyncExternalStore(emptySubscribe, () => true, () => false);
+
+const subscribeOnline = (callback: () => void) => {
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+};
+
+const getOnlineSnapshot = () => navigator.onLine;
+const getServerOnlineSnapshot = () => true;
+
 export function PwaAndErrorGuard() {
-  const [mounted, setMounted] = useState(false);
-  const [isOffline, setIsOffline] = useState(false);
+  const mounted = useMounted();
+  const isOnline = useSyncExternalStore(subscribeOnline, getOnlineSnapshot, getServerOnlineSnapshot);
+  const isOffline = !isOnline;
   const [showRestored, setShowRestored] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    if (typeof navigator !== "undefined") {
-      setIsOffline(!navigator.onLine);
-    }
-
     const handleOnline = () => {
-      setIsOffline(false);
       setShowRestored(true);
       const timer = setTimeout(() => setShowRestored(false), 3500);
       return () => clearTimeout(timer);
     };
 
-    const handleOffline = () => {
-      setIsOffline(true);
-      setShowRestored(false);
-    };
-
     window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
 
     // 1. Suppress benign Chrome extension listener disconnect errors
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
@@ -81,7 +85,6 @@ export function PwaAndErrorGuard() {
 
     return () => {
       window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
       window.removeEventListener("unhandledrejection", handleUnhandledRejection);
     };
   }, []);

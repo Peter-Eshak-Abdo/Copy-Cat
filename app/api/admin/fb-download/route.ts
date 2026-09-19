@@ -2,22 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
+import { verifySessionTokenEdge } from "@/lib/edge-auth";
+import { isAllowedFacebookUrl } from "@/lib/security";
 
 const FB_POSTS_ROOT = path.join(process.cwd(), "public", "uploads", "fb_posts");
-const POOL_DIR = path.join(process.cwd(), "public", "uploads", "pool");
 const PYTHON_PATH = path.join(process.cwd(), ".venv", "Scripts", "python.exe");
 
 function ensureDirs() {
   if (!fs.existsSync(FB_POSTS_ROOT)) {
     fs.mkdirSync(FB_POSTS_ROOT, { recursive: true });
   }
-  if (!fs.existsSync(POOL_DIR)) {
-    fs.mkdirSync(POOL_DIR, { recursive: true });
-  }
 }
-
-import { verifySessionTokenEdge } from "@/lib/edge-auth";
-import { isAllowedFacebookUrl } from "@/lib/security";
 
 async function checkAuth(req: NextRequest): Promise<boolean> {
   const token =
@@ -33,7 +28,7 @@ export async function GET(req: NextRequest) {
   try {
     const isAuthed = await checkAuth(req);
     if (!isAuthed) {
-      return NextResponse.json({ success: false, error: "وصول غير مصرح به" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "وصول غير مصرح به. يرجى تسجيل الدخول كمسؤول." }, { status: 401 });
     }
 
     ensureDirs();
@@ -42,26 +37,30 @@ export async function GET(req: NextRequest) {
 
     for (const entry of entries) {
       if (entry.isDirectory()) {
-        const docDir = path.join(FB_POSTS_ROOT, entry.name);
-        const subFiles = fs.readdirSync(docDir);
-        const pdfFile = subFiles.find((f) => f.toLowerCase().endsWith(".pdf"));
-        const images = subFiles
-          .filter((f) => [".jpg", ".jpeg", ".png", ".webp"].includes(path.extname(f).toLowerCase()))
-          .sort();
+        try {
+          const docDir = path.join(FB_POSTS_ROOT, entry.name);
+          const subFiles = fs.readdirSync(docDir);
+          const pdfFile = subFiles.find((f) => f.toLowerCase().endsWith(".pdf"));
+          const images = subFiles
+            .filter((f) => [".jpg", ".jpeg", ".png", ".webp"].includes(path.extname(f).toLowerCase()))
+            .sort();
 
-        if (pdfFile || images.length > 0) {
-          const stats = fs.statSync(docDir);
-          documents.push({
-            id: entry.name,
-            title: entry.name.replace(/^doc_\d+_/, "").replace(/_/g, " "),
-            dirName: entry.name,
-            pdfUrl: pdfFile ? `/uploads/fb_posts/${entry.name}/${pdfFile}` : null,
-            pdfFilename: pdfFile || null,
-            imageCount: images.length,
-            previewImage: images.length > 0 ? `/uploads/fb_posts/${entry.name}/${images[0]}` : null,
-            images: images.map((img) => `/uploads/fb_posts/${entry.name}/${img}`),
-            createdAt: stats.birthtimeMs || stats.mtimeMs || Date.now(),
-          });
+          if (pdfFile || images.length > 0) {
+            const stats = fs.statSync(docDir);
+            documents.push({
+              id: entry.name,
+              title: entry.name.replace(/^doc_\d+_/, "").replace(/_/g, " "),
+              dirName: entry.name,
+              pdfUrl: pdfFile ? `/uploads/fb_posts/${entry.name}/${pdfFile}` : null,
+              pdfFilename: pdfFile || null,
+              imageCount: images.length,
+              previewImage: images.length > 0 ? `/uploads/fb_posts/${entry.name}/${images[0]}` : null,
+              images: images.map((img) => `/uploads/fb_posts/${entry.name}/${img}`),
+              createdAt: stats.birthtimeMs || stats.mtimeMs || Date.now(),
+            });
+          }
+        } catch (dirErr) {
+          console.warn(`Error reading document dir ${entry.name}:`, dirErr);
         }
       }
     }
@@ -71,7 +70,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, documents });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "تعذر جلب المستندات السابقة";
+    const message = err instanceof Error ? err.message : "تعذر جلب المستندات السابقة من الخادم";
+    console.error("GET /api/admin/fb-download error:", err);
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
@@ -81,15 +81,29 @@ export async function POST(req: NextRequest) {
   try {
     const isAuthed = await checkAuth(req);
     if (!isAuthed) {
-      return NextResponse.json({ success: false, error: "وصول غير مصرح به" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "وصول غير مصرح به. انتهت جلسة الدخول." }, { status: 401 });
     }
 
     ensureDirs();
-    const body = await req.json();
-    const { url, title, saveToPool = true, maxPhotos = 120 } = body;
 
-    if (!url || typeof url !== "string") {
-      return NextResponse.json({ success: false, error: "رابط المنشور مطلوب." }, { status: 400 });
+    let body: { url?: string; title?: string; maxPhotos?: number };
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ success: false, error: "صيغة الطلب غير صالحة. يرجى إرسال بيانات JSON صحيحة." }, { status: 400 });
+    }
+
+    const title = body?.title;
+    const maxPhotos = body?.maxPhotos ?? 120;
+    let url = body?.url;
+
+    if (!url || typeof url !== "string" || !url.trim()) {
+      return NextResponse.json({ success: false, error: "رابط المنشور مطلوب. يرجى لصق رابط منشور أو ألبوم الفيسبوك." }, { status: 400 });
+    }
+
+    url = url.trim();
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = "https://" + url;
     }
 
     // SSRF Defense: strictly validate URL belongs to legitimate Facebook domains
@@ -97,7 +111,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "الرابط غير صالح. يرجى التأكد من إدخال رابط فيسبوك صحيح (facebook.com).",
+          error: "الرابط غير صالح. يرجى التأكد من إدخال رابط فيسبوك صحيح (مثل facebook.com أو fb.watch).",
         },
         { status: 400 }
       );
@@ -123,18 +137,36 @@ export async function POST(req: NextRequest) {
         const pythonExecutable = fs.existsSync(PYTHON_PATH) ? PYTHON_PATH : "python";
         const scriptPath = path.join(process.cwd(), "scripts", "download_fb_post.py");
 
+        if (!fs.existsSync(scriptPath)) {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: "error", message: "ملف سكريبت التحميل download_fb_post.py غير موجود في مجلد scripts." })}\n\n`)
+          );
+          controller.close();
+          return;
+        }
+
         const args = [
-            scriptPath,
-            "--url", url,
-            "--out-dir", outDir,
-            "--pdf-name", pdfFilename,
-            "--max", String(maxPhotos),
+          scriptPath,
+          "--url", url,
+          "--out-dir", outDir,
+          "--pdf-name", pdfFilename,
+          "--max", String(Math.max(1, Math.min(200, Number(maxPhotos) || 120))),
         ];
 
-        const pyProc = spawn(pythonExecutable, args, {
-          cwd: process.cwd(),
-          env: { ...process.env, PYTHONIOENCODING: "utf-8" },
-        });
+        let pyProc;
+        try {
+          pyProc = spawn(pythonExecutable, args, {
+            cwd: process.cwd(),
+            env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+          });
+        } catch (spawnErr: unknown) {
+          const errMsg = spawnErr instanceof Error ? spawnErr.message : "خطأ غير معروف";
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: "error", message: `تعذر تشغيل بيئة بايثون: ${errMsg}` })}\n\n`)
+          );
+          controller.close();
+          return;
+        }
 
         let lineBuffer = "";
 
@@ -148,23 +180,6 @@ export async function POST(req: NextRequest) {
             if (!trimmed) continue;
             try {
               const parsed = JSON.parse(trimmed);
-
-              // If completed and user requested pool sync, copy to pool
-              if (parsed.type === "completed" && saveToPool) {
-                try {
-                  const downloadedFiles = fs.readdirSync(outDir);
-                  for (const f of downloadedFiles) {
-                    if ([".jpg", ".jpeg", ".png"].includes(path.extname(f).toLowerCase())) {
-                      const src = path.join(outDir, f);
-                      const dest = path.join(POOL_DIR, `fb_${folderName}_${f}`);
-                      fs.copyFileSync(src, dest);
-                    }
-                  }
-                } catch (e) {
-                  console.warn("Error copying to pool:", e);
-                }
-              }
-
               controller.enqueue(encoder.encode(`data: ${JSON.stringify(parsed)}\n\n`));
             } catch {
               // Not JSON, send as log
@@ -188,7 +203,7 @@ export async function POST(req: NextRequest) {
           if (code !== 0) {
             controller.enqueue(
               encoder.encode(
-                `data: ${JSON.stringify({ type: "error", message: `انتهت العملية بكود خطأ (${code})` })}\n\n`
+                `data: ${JSON.stringify({ type: "error", message: `انتهت عملية الفيس بوك بكود (${code}). يرجى التحقق من خصوصية المنشور أو صلاحية الرابط.` })}\n\n`
               )
             );
           }
@@ -197,7 +212,7 @@ export async function POST(req: NextRequest) {
 
         pyProc.on("error", (err) => {
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "error", message: `فشل تشغيل بايثون: ${err.message}` })}\n\n`)
+            encoder.encode(`data: ${JSON.stringify({ type: "error", message: `فشل تشغيل بيئة بايثون: ${err.message}` })}\n\n`)
           );
           controller.close();
         });
@@ -212,7 +227,8 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "حدث خطأ غير متوقع أثناء معالجة الطلب";
+    const message = err instanceof Error ? err.message : "حدث خطأ غير متوقع أثناء معالجة الطلب في الخادم";
+    console.error("POST /api/admin/fb-download error:", err);
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

@@ -216,10 +216,6 @@ export default function SmartCalculatorPage() {
     return Math.round(grandTotalCost * 0.52);
   }, [grandTotalCost]);
 
-  const profitMarginPercent = useMemo(() => {
-    if (grandTotalCost <= 0) return 0;
-    return Math.round(((grandTotalCost - estProductionCost) / grandTotalCost) * 100);
-  }, [grandTotalCost, estProductionCost]);
 
   // Quick preset selections
   const handlePresetSelect = (rate: number, label: string) => {

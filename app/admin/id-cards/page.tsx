@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import NextImage from "next/image";
 import {
   Upload,
@@ -16,17 +16,15 @@ import {
   ChevronDown,
   X,
   RotateCcw,
-  ShieldCheck,
   Wand2,
   Scan,
   Printer,
   Sliders,
-  Eye,
   FileText,
 } from "lucide-react";
 import { generateIdCardsDocx, PaperSize, DuplexAlignment } from "@/lib/docx/id-cards-docx";
 import { processImageOnCanvas, CropRect, QuadCorners, Point2D, detectCardCorners } from "@/lib/canvas-filters";
-import { detectCardCornersOpenCV, warpPerspectiveOpenCV, loadOpenCV } from "@/lib/opencv-loader";
+import { detectCardCornersOpenCV } from "@/lib/opencv-loader";
 import { useToast } from "@/components/toast-provider";
 import { readFileAsDataURL, getFriendlyErrorMessage } from "@/lib/utils";
 

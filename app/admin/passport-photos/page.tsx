@@ -14,8 +14,6 @@ import {
   RotateCw,
   RefreshCw,
   Printer,
-  Sliders,
-  Sparkles,
   Layers,
   Wand2,
 } from "lucide-react";
@@ -47,7 +45,7 @@ export default function PassportPhotosPage() {
   const [isProcessingBg, setIsProcessingBg] = useState(false);
   const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
-  const [globalIncludeName, setGlobalIncludeName] = useState(false);
+  const [globalIncludeName] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
   // Full-size preview modal
@@ -226,6 +224,43 @@ export default function PassportPhotosPage() {
     return canvas.toDataURL("image/jpeg", 0.96);
   };
 
+  const downscaleImageIfNeeded = async (file: File, maxDim = 1200): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width, height } = img;
+        if (width <= maxDim && height <= maxDim) {
+          resolve(file);
+          return;
+        }
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => resolve(blob || file), "image/jpeg", 0.92);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(file);
+      };
+      img.src = url;
+    });
+  };
+
   const processFiles = async (fileList: File[]) => {
     if (!fileList || fileList.length === 0) return;
 
@@ -246,19 +281,21 @@ export default function PassportPhotosPage() {
         const file = fileList[i];
         setStatusMessage(`جاري تجهيز صورة (${i + 1} من ${fileList.length})...`);
 
-        let processedBlob: Blob = file;
+        // Downscale large phone camera photos before AI removal to speed up processing 4x
+        const preprocessedBlob = await downscaleImageIfNeeded(file, 1200);
+        let processedBlob: Blob = preprocessedBlob;
         let cutoutDataUrl: string | undefined = undefined;
 
         if (removeBgFn) {
           try {
-            const bgPromise = removeBgFn(file);
+            const bgPromise = removeBgFn(preprocessedBlob);
             const timeoutPromise = new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error("Timeout")), 6000)
+              setTimeout(() => reject(new Error("Timeout")), 8000)
             );
             processedBlob = await Promise.race([bgPromise, timeoutPromise]);
             cutoutDataUrl = await readFileAsDataURL(new File([processedBlob], file.name));
           } catch {
-            processedBlob = file;
+            processedBlob = preprocessedBlob;
           }
         }
 
@@ -341,18 +378,6 @@ export default function PassportPhotosPage() {
 
   const removePerson = (id: string) => {
     setPersons((prev) => prev.filter((p) => p.id !== id));
-  };
-
-  const updatePersonName = (id: string, name: string) => {
-    setPersons((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, name } : p))
-    );
-  };
-
-  const togglePersonName = (id: string) => {
-    setPersons((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, includeName: !p.includeName } : p))
-    );
   };
 
   // Live adjustment of filters directly from person card

@@ -71,41 +71,35 @@ export default function ResearchPage() {
   const [copied, setCopied] = useState(false);
 
   // Custom Sources Management State (Item #2)
-  const [sources, setSources] = useState<CustomResearchSource[]>([]);
+  const [sources, setSources] = useState<CustomResearchSource[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("copycat_custom_research_sources_v1");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      } catch {}
+    }
+    return TOP_ARABIC_ACADEMIC_SOURCES.map((s) => ({
+      id: s.id,
+      name: s.name,
+      desc: s.desc,
+      category: s.category,
+    }));
+  });
   const [showAddSourceModal, setShowAddSourceModal] = useState(false);
   const [newSourceName, setNewSourceName] = useState("");
   const [newSourceDesc, setNewSourceDesc] = useState("");
   const [newSourceCategory, setNewSourceCategory] = useState("دوريات محكمة وقواعد بيانات");
   const [newSourceCitation, setNewSourceCitation] = useState("");
 
-  // Load sources from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("copycat_custom_research_sources_v1");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setSources(parsed);
-          return;
-        }
-      }
-    } catch {}
-    // Default to Top 10 Arabic Academic Sources
-    setSources(
-      TOP_ARABIC_ACADEMIC_SOURCES.map((s) => ({
-        id: s.id,
-        name: s.name,
-        desc: s.desc,
-        category: s.category,
-      }))
-    );
-  }, []);
-
   // Live timer for research generation
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isLoading) {
-      setElapsedSeconds(0);
       interval = setInterval(() => {
         setElapsedSeconds((prev) => prev + 1);
       }, 1000);
@@ -170,6 +164,7 @@ export default function ResearchPage() {
       return;
     }
 
+    setElapsedSeconds(0);
     setIsLoading(true);
     setGeneratedText(null);
     setGeneratedVersions([]);

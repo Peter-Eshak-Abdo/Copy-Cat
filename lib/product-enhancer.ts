@@ -173,9 +173,9 @@ export function enhanceProductPhotoCanvas(
   const bFactor = brightnessDelta / 100;
 
   for (let i = 0; i < d.length; i += 4) {
-    let r = d[i];
-    let g = d[i + 1];
-    let b = d[i + 2];
+    const r = d[i];
+    const g = d[i + 1];
+    const b = d[i + 2];
 
     const [hue, sat, lum] = rgbToHsl(r, g, b);
 

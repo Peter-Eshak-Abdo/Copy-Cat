@@ -5,7 +5,6 @@ import {
   FileText,
   Upload,
   Trash2,
-  Download,
   Image as ImageIcon,
   Plus,
   RotateCw,
@@ -932,6 +931,7 @@ export default function PdfToolsPage() {
                           }}
                           className="w-full h-full flex items-center justify-center p-1"
                         >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={page.thumbnail}
                             alt={`صفحة ${index + 1}`}
@@ -1101,6 +1101,7 @@ export default function PdfToolsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {imageFiles.map((item, idx) => (
                 <div key={idx} className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 p-1">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={item.preview} alt="" className="w-full aspect-square object-cover rounded-lg" />
                   <button
                     onClick={() => setImageFiles((curr) => curr.filter((_, i) => i !== idx))}
