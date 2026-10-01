@@ -32,10 +32,28 @@ import { useToast } from "@/components/toast-provider";
 import { getFriendlyErrorMessage } from "@/lib/utils";
 
 interface GeneratedVersion {
-  id: number;
-  angle: string;
-  title: string;
+  id?: number;
+  versionNumber?: number;
+  angle?: string | { id?: number | string; name?: string; focus?: string; keywords?: string[] };
+  title?: string;
   content: string;
+  provider?: string;
+  wordCount?: number;
+  estimatedPages?: number;
+}
+
+function getAngleName(angle?: GeneratedVersion["angle"]): string {
+  if (!angle) return "";
+  if (typeof angle === "string") return angle;
+  if (typeof angle === "object" && angle.name) return angle.name;
+  return "";
+}
+
+function getAngleShortLabel(angle?: GeneratedVersion["angle"]): string {
+  const name = getAngleName(angle);
+  if (!name) return "";
+  const parts = name.trim().split(/\s+/);
+  return parts[1] || parts[0] || name;
 }
 
 export default function ResearchPage() {
@@ -205,9 +223,11 @@ export default function ResearchPage() {
         setGeneratedVersions(data.versions);
         setSelectedVersionIndex(0);
         setGeneratedText(data.versions[0].content);
+        setActiveProvider(data.versions[0].provider || data.provider || "Gemini Flash");
       } else {
         const singleVersion: GeneratedVersion = {
           id: 1,
+          versionNumber: 1,
           angle: "النسخة الرئيسية",
           title: `بحث متكامل عن: ${topic}`,
           content: data.content,
@@ -215,9 +235,8 @@ export default function ResearchPage() {
         setGeneratedVersions([singleVersion]);
         setSelectedVersionIndex(0);
         setGeneratedText(data.content);
+        setActiveProvider(data.provider || "Gemini Flash");
       }
-
-      setActiveProvider(data.provider || "Gemini Flash");
       toast.success(
         "تم توليد البحث بنجاح",
         versionsCount > 1
@@ -602,38 +621,53 @@ export default function ResearchPage() {
               {generatedVersions.length > 1 && (
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200">
                   <span className="text-xs font-bold text-slate-500 shrink-0 flex items-center gap-1">
-                    <Layers className="w-3.5 h-3.5 text-purple-400" /> النسخ المُولدة:
+                    <Layers className="w-3.5 h-3.5 text-purple-600" /> النسخ المُولدة:
                   </span>
-                  {generatedVersions.map((v, idx) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedVersionIndex(idx);
-                        setGeneratedText(v.content);
-                      }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
-                        selectedVersionIndex === idx
-                          ? "bg-purple-600 text-slate-900 border-purple-500 shadow-md shadow-purple-600/30"
-                          : "bg-slate-50 text-slate-500 border-slate-200 hover:text-slate-200"
-                      }`}
-                    >
-                      <span>نسخة {v.id}</span>
-                      <span className="text-[10px] opacity-80">({v.angle.split(" ")[1] || v.angle})</span>
-                    </button>
-                  ))}
+                  {generatedVersions.map((v, idx) => {
+                    const angleName = getAngleName(v.angle);
+                    const shortAngle = getAngleShortLabel(v.angle);
+                    const versionNum = v.versionNumber || v.id || idx + 1;
+
+                    return (
+                      <button
+                        key={v.id || v.versionNumber || idx}
+                        type="button"
+                        onClick={() => {
+                          setSelectedVersionIndex(idx);
+                          setGeneratedText(v.content);
+                          if (v.provider) {
+                            setActiveProvider(v.provider);
+                          }
+                        }}
+                        title={angleName ? `نسخة ${versionNum}: ${angleName}` : `نسخة ${versionNum}`}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
+                          selectedVersionIndex === idx
+                            ? "bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-600/30"
+                            : "bg-slate-50 text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>نسخة {versionNum}</span>
+                        {shortAngle && <span className="text-[10px] opacity-80">({shortAngle})</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-purple-400" />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <BookOpen className="w-5 h-5 text-purple-600" />
                   <span className="font-bold text-slate-900 text-base">
                     معاينة نص البحث {generatedVersions.length > 1 ? `(نسخة ${selectedVersionIndex + 1})` : ""}
                   </span>
+                  {generatedVersions[selectedVersionIndex]?.angle && (
+                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 font-medium">
+                      {getAngleName(generatedVersions[selectedVersionIndex].angle)}
+                    </span>
+                  )}
                   {activeProvider && (
-                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 flex items-center gap-1 font-medium">
-                      <Server className="w-3 h-3" /> تم التوليد عبر: {activeProvider}
+                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 flex items-center gap-1 font-medium">
+                      <Server className="w-3 h-3 text-purple-500" /> تم التوليد عبر: {activeProvider}
                     </span>
                   )}
                 </div>
