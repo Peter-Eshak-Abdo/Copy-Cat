@@ -344,7 +344,7 @@ export async function POST(req: NextRequest) {
     // Check if Local Python virtual environment is available with playwright
     const pythonExecutable = getPythonExecutable();
     const scriptPath = path.join(process.cwd(), "scripts", "download_fb_post.py");
-    const hasPythonScript = !isServerless && !!pythonExecutable && fs.existsSync(scriptPath);
+    const hasPythonScript = !!pythonExecutable && fs.existsSync(scriptPath);
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -507,9 +507,11 @@ export async function POST(req: NextRequest) {
               if (resp.ok) {
                 const html = await resp.text();
                 const extracted = extractFacebookImageUrls(html);
-                if (extracted.length > 0) {
+                if (extracted.length > imageUrls.length) {
                   imageUrls = extracted;
-                  break;
+                  if (imageUrls.length >= maxPhotos) {
+                    break;
+                  }
                 }
               }
             } catch (attemptErr) {

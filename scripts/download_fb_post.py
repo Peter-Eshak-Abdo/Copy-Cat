@@ -134,13 +134,27 @@ def scrape_post_images(post_url: str, output_dir: str, pdf_name: str, max_photos
         is_theatre = "/photo" in page.url or "theater" in page.url or "fbid=" in page.url
 
         if not is_theatre:
-            # Look for photo links inside the post
-            photo_links = page.query_selector_all('a[href*="/photo"], a[href*="photo.php"], a[href*="/photos/"]')
-            if photo_links:
+            post_id_match = re.search(r'/(?:permalink|posts|story_fbid)/(\d+)', post_url) or re.search(r'[?&](?:fbid|id|story_fbid)=(\d+)', post_url)
+            target_post_id = post_id_match.group(1) if post_id_match else None
+
+            # Find photo links specific to this post
+            all_links = page.query_selector_all('a[href*="/photo"], a[href*="photo.php"]')
+            target_link = None
+            if target_post_id:
+                for l in all_links:
+                    href = l.get_attribute("href") or ""
+                    if target_post_id in href or "set=pcb" in href:
+                        target_link = l
+                        break
+
+            if not target_link and all_links:
+                target_link = all_links[0]
+
+            if target_link:
                 log_json("status", {"message": "تم العثور على ألبوم/صور المنشور، جاري الدخول لوضع العرض الكامل..."})
                 try:
-                    photo_links[0].click()
-                    time.sleep(2.5)
+                    target_link.click()
+                    time.sleep(3.5)
                 except:
                     pass
 
@@ -192,9 +206,10 @@ def scrape_post_images(post_url: str, output_dir: str, pdf_name: str, max_photos
                             found_src = src
 
             if found_src:
-                # Deduplicate by URL
-                if found_src not in seen_urls:
-                    seen_urls.add(found_src)
+                base_key = found_src.split("?")[0]
+                # Deduplicate by base URL
+                if base_key not in seen_urls:
+                    seen_urls.add(base_key)
                     collected_urls.append(found_src)
                     stagnant_count = 0
                     log_json("progress", {
@@ -207,17 +222,34 @@ def scrape_post_images(post_url: str, output_dir: str, pdf_name: str, max_photos
             else:
                 stagnant_count += 1
 
-            # If we see the same image or no image 3 times consecutively, we likely reached the end of the post
-            if stagnant_count >= 3:
-                log_json("status", {"message": f"تم الوصول لنهاية المنشور بعد جمع {len(collected_urls)} صورة."})
+            # If we see the same image or no image 4 times consecutively, we likely reached the end of the post
+            if stagnant_count >= 4:
+                log_json("status", {"message": f"تم استخراج جميع صور المنشور بنجاح ({len(collected_urls)} صورة)."})
                 break
 
-            # Press Right Arrow or click Next button to advance to next photo
-            try:
-                page.keyboard.press("ArrowRight")
-                time.sleep(1.2)
-            except:
-                break
+            # Try clicking Next photo button first (theatre overlay), fallback to keyboard
+            clicked = False
+            next_btn = page.query_selector(
+                'div[aria-label="Next photo"], '
+                'div[aria-label="الصورة التالية"], '
+                'div[aria-label="صورة تالية"], '
+                'div[aria-label*="Next"], '
+                'div[aria-label*="التالية"]'
+            )
+            if next_btn:
+                try:
+                    next_btn.click(timeout=2000)
+                    clicked = True
+                    time.sleep(1.2)
+                except:
+                    pass
+
+            if not clicked:
+                try:
+                    page.keyboard.press("ArrowRight")
+                    time.sleep(1.2)
+                except:
+                    break
 
         browser_context.close()
 
