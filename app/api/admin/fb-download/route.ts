@@ -8,7 +8,16 @@ import { verifySessionTokenEdge } from "@/lib/edge-auth";
 import { isAllowedFacebookUrl } from "@/lib/security";
 
 const LOCAL_POSTS_ROOT = path.join(process.cwd(), "public", "uploads", "fb_posts");
-const PYTHON_PATH = path.join(process.cwd(), ".venv", "Scripts", "python.exe");
+
+function getPythonExecutable(): string | null {
+  const winVenv = path.join(process.cwd(), ".venv", "Scripts", "python.exe");
+  if (fs.existsSync(winVenv)) return winVenv;
+
+  const posixVenv = path.join(process.cwd(), ".venv", "bin", "python");
+  if (fs.existsSync(posixVenv)) return posixVenv;
+
+  return null;
+}
 
 /**
  * Returns a guaranteed writable directory for storing generated documents.
@@ -190,19 +199,37 @@ function extractFacebookImageUrls(html: string): string[] {
   const unescaped = html
     .replace(/\\\//g, "/")
     .replace(/\\u0026/g, "&")
-    .replace(/&amp;/g, "&");
-
-  const regex = /https?:\/\/[a-zA-Z0-9.-]*fbcdn\.net\/[^\s"'<>\\]+/g;
-  const matches = unescaped.match(regex) || [];
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"');
 
   const validUrls: string[] = [];
   const seen = new Set<string>();
+
+  // 1. First, check og:image and twitter:image meta tags (primary high-res source)
+  const ogMatches = unescaped.matchAll(
+    /<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/gi
+  );
+  for (const match of ogMatches) {
+    const rawUrl = match[1];
+    if (rawUrl && (rawUrl.includes("fbcdn.net") || rawUrl.includes("scontent"))) {
+      const cleanUrl = rawUrl.split('"')[0].split("'")[0].split("\\")[0];
+      const baseKey = cleanUrl.split("?")[0];
+      if (!seen.has(baseKey)) {
+        seen.add(baseKey);
+        validUrls.push(cleanUrl);
+      }
+    }
+  }
+
+  // 2. Scan for high-res photo URLs in page body / JSON bundles
+  const regex = /https?:\/\/[a-zA-Z0-9.-]*(?:fbcdn\.net|scontent[a-zA-Z0-9.-]*)\/[^\s"'<>\\]+/g;
+  const matches = unescaped.match(regex) || [];
 
   for (const rawUrl of matches) {
     const cleanUrl = rawUrl.split('"')[0].split("'")[0].split("\\")[0];
     const u = cleanUrl.toLowerCase();
 
-    // Ignore UI elements, avatars, emojis
+    // Ignore UI elements, avatars, emojis, keyframe animations, small icons
     if (
       u.includes("rsrc.php") ||
       u.includes("emoji.php") ||
@@ -213,7 +240,13 @@ function extractFacebookImageUrls(html: string): string[] {
       u.includes("s150x150") ||
       u.includes("p50x50") ||
       u.includes("p100x100") ||
-      u.includes("cp0")
+      u.includes("s50x50") ||
+      u.includes("p32x32") ||
+      u.includes("s384x384") ||
+      u.includes("p384x384") ||
+      u.includes("t1.30497") ||
+      u.includes("cp0") ||
+      u.includes(".kf")
     ) {
       continue;
     }
@@ -308,15 +341,10 @@ export async function POST(req: NextRequest) {
 
     const encoder = new TextEncoder();
 
-    // Check if Local Python environment is available
-    const pythonExecutable = fs.existsSync(PYTHON_PATH)
-      ? PYTHON_PATH
-      : process.platform === "win32"
-      ? "python.exe"
-      : "python3";
-
+    // Check if Local Python virtual environment is available with playwright
+    const pythonExecutable = getPythonExecutable();
     const scriptPath = path.join(process.cwd(), "scripts", "download_fb_post.py");
-    const hasPythonScript = fs.existsSync(scriptPath) && !isServerless;
+    const hasPythonScript = !isServerless && !!pythonExecutable && fs.existsSync(scriptPath);
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -403,48 +431,90 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Strategy B: Universal Native Node.js Scraper & pdf-lib Compiler (100% Serverless / Vercel Ready)
+        // Strategy B: Universal Native Multi-Engine Scraper & pdf-lib Compiler (100% Serverless / Vercel Ready)
         sendEvent({
           type: "status",
           message: "جاري الاتصال بخوادم فيسبوك واستخراج الصور المتاحة...",
         });
 
         try {
-          const headers = {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-            Accept:
-              "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
-            "Sec-Ch-Ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Windows"',
-          };
+          // Normalize base URLs
+          const cleanBaseUrl = url!.replace(/(\?|&)fbclid=[^&]*/, "");
+          const mobileUrl = cleanBaseUrl
+            .replace("www.facebook.com", "m.facebook.com")
+            .replace("web.facebook.com", "m.facebook.com");
 
-          // Fetch post HTML
-          const resp = await fetch(url!, { headers, redirect: "follow" });
-          const html = await resp.text();
+          // Multiple realistic client profiles without bot-triggering Sec-Ch headers
+          const fetchAttempts: {
+            name: string;
+            url: string;
+            headers: Record<string, string>;
+          }[] = [
+            {
+              name: "النسخة الخفيفة (Facebook Mobile Web)",
+              url: mobileUrl,
+              headers: {
+                "User-Agent":
+                  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
+              },
+            },
+            {
+              name: "محرك Meta لاستعراض الروابط (Facebook Externalhit)",
+              url: cleanBaseUrl,
+              headers: {
+                "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+                Accept: "*/*",
+                "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
+              },
+            },
+            {
+              name: "نسخة سطح المكتب النقية (Clean Desktop)",
+              url: cleanBaseUrl,
+              headers: {
+                "User-Agent":
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
+              },
+            },
+            {
+              name: "محرك الفهرسة ومحركات البحث (Search Indexer)",
+              url: cleanBaseUrl,
+              headers: {
+                "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+                Accept: "*/*",
+                "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
+              },
+            },
+          ];
 
-          let imageUrls = extractFacebookImageUrls(html);
+          let imageUrls: string[] = [];
 
-          // If no images found on desktop, attempt mobile endpoint
-          if (imageUrls.length === 0) {
-            sendEvent({
-              type: "status",
-              message: "جاري فحص النسخة المصغرة للمنشور...",
-            });
-            const mobileUrl = url!.replace("www.facebook.com", "m.facebook.com");
+          for (const attempt of fetchAttempts) {
             try {
-              const mResp = await fetch(mobileUrl, {
-                headers: {
-                  ...headers,
-                  "User-Agent":
-                    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
-                },
+              sendEvent({
+                type: "status",
+                message: `جاري فحص المنشور عبر ${attempt.name}...`,
               });
-              const mHtml = await mResp.text();
-              imageUrls = extractFacebookImageUrls(mHtml);
-            } catch {}
+
+              const resp = await fetch(attempt.url, {
+                headers: attempt.headers,
+                redirect: "follow",
+              });
+
+              if (resp.ok) {
+                const html = await resp.text();
+                const extracted = extractFacebookImageUrls(html);
+                if (extracted.length > 0) {
+                  imageUrls = extracted;
+                  break;
+                }
+              }
+            } catch (attemptErr) {
+              console.warn(`Scraper attempt ${attempt.name} failed:`, attemptErr);
+            }
           }
 
           if (imageUrls.length === 0) {

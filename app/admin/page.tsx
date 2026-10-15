@@ -315,19 +315,8 @@ export default function AdminDashboardPage() {
   const tasks = useSyncExternalStore(subscribeTasks, getTasksSnapshot, getTasksServerSnapshot);
 
   // Tools state with persistent Drag & Drop ordering
-  const [tools, setTools] = useState<WorkstationTool[]>(WORKSTATION_TOOLS);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-
-  // Collapsible top section (collapsed by default for ultra simplicity)
-  const [showOverview, setShowOverview] = useState(false);
-
-  // Customer storefront preview modal
-  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
-
-  // Load custom tools order from localStorage
-  useEffect(() => {
+  const [tools, setTools] = useState<WorkstationTool[]>(() => {
+    if (typeof window === "undefined") return WORKSTATION_TOOLS;
     try {
       const savedOrder = localStorage.getItem("copycat_workstation_tools_order_v2");
       if (savedOrder) {
@@ -343,11 +332,21 @@ export default function AdminDashboardPage() {
           }
         });
         if (reordered.length === WORKSTATION_TOOLS.length) {
-          setTools(reordered);
+          return reordered;
         }
       }
     } catch {}
-  }, []);
+    return WORKSTATION_TOOLS;
+  });
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // Collapsible top section (collapsed by default for ultra simplicity)
+  const [showOverview, setShowOverview] = useState(false);
+
+  // Customer storefront preview modal
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
 
   // Drag & Drop handlers
   const handleDragStart = (e: React.DragEvent, index: number) => {

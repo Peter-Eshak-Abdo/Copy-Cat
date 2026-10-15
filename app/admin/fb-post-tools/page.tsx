@@ -39,6 +39,7 @@ export default function FacebookPostToolsPage() {
   const [activeMode, setActiveMode] = useState<"url" | "upload">("url");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isCompilingLocal, setIsCompilingLocal] = useState(false);
+  const [showUploadFallbackPrompt, setShowUploadFallbackPrompt] = useState(false);
 
   const [isRunning, setIsRunning] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
@@ -103,6 +104,7 @@ export default function FacebookPostToolsPage() {
     setPreviewImages([]);
     setLogs([`بدء فحص الرابط: ${postUrl}`]);
     setCompletedDoc(null);
+    setShowUploadFallbackPrompt(false);
 
     try {
       const response = await fetch("/api/admin/fb-download", {
@@ -171,6 +173,7 @@ export default function FacebookPostToolsPage() {
               setStatusMessage(`خطأ: ${data.message}`);
               setLogs((prev) => [...prev, `❌ [خطأ] ${data.message}`]);
               toast.error("حدث خطأ", data.message);
+              setShowUploadFallbackPrompt(true);
             } else if (data.type === "log") {
               setLogs((prev) => [...prev, data.message]);
             }
@@ -419,6 +422,33 @@ export default function FacebookPostToolsPage() {
                   </>
                 )}
               </button>
+
+              {showUploadFallbackPrompt && (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-3 animate-in fade-in">
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-lg">💡</span>
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-bold text-amber-950">
+                        المنشور في مجموعة مغلقة أو يتطلب تسجيل الدخول؟
+                      </h4>
+                      <p className="text-[11px] text-amber-800 leading-relaxed">
+                        لحماية الخصوصية، يمنع فيسبوك سحب محتوى المجموعات المغلقة بدون حساب. يمكنك سحب وإفلات صور صفحات الملزمة مباشرة في صندوق الرفع بالمتصفح لتوليد ملف الـ PDF فوراً بدون أي أخطاء!
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveMode("upload");
+                      setShowUploadFallbackPrompt(false);
+                    }}
+                    className="w-full py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                  >
+                    <FolderDown className="w-4 h-4" />
+                    <span>📁 التبديل الآن لصندوق رفع وسحب الصور (سحب وإفلات مباشر)</span>
+                  </button>
+                </div>
+              )}
             </form>
           ) : (
             /* Mode 2: Direct Upload */
