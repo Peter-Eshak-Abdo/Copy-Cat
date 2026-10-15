@@ -373,61 +373,82 @@ export default function ResearchPage() {
         >
           {/* Topic */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-200 block">عنوان أو موضوع البحث المطلوب:</label>
+            <label className="text-sm font-black text-slate-900 block">عنوان أو موضوع البحث المطلوب:</label>
             <textarea
               rows={3}
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="مثال: الذكاء الاصطناعي وتطبيقاته في الطب الحديث..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-sm text-slate-900 focus:border-purple-500 focus:outline-none transition resize-none leading-relaxed"
+              className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl p-3.5 text-sm font-medium text-slate-900 focus:border-purple-600 focus:bg-white focus:outline-none transition resize-none leading-relaxed"
               required
             />
           </div>
 
-          {/* Versions Count (Item #1) */}
-          <div className="space-y-2 p-3.5 rounded-2xl bg-purple-950/25 border border-purple-500/30">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-extrabold text-purple-200 block flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-purple-400" /> عدد النسخ المطلوبة للبحث (1 - 15):
+          {/* Versions Count (Item #1) - High Contrast & Interactive */}
+          <div className="space-y-3 p-4 rounded-2xl bg-purple-50 border-2 border-purple-200 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label className="text-sm font-black text-purple-900 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-purple-700" />
+                <span>عدد النسخ المطلوبة للبحث:</span>
               </label>
-              <span className="text-xs font-black text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20">
-                {versionsCount} {versionsCount === 1 ? "نسخة واحدة" : "نسخ مستقلة"}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-purple-800 bg-purple-100 border border-purple-300 px-2.5 py-1 rounded-xl">
+                  (اختر أي رقم من 1 إلى 15 نسخة)
+                </span>
+                <span className="text-sm font-black text-white bg-purple-700 px-3 py-1 rounded-xl shadow-xs">
+                  {versionsCount} {versionsCount === 1 ? "نسخة واحدة" : "نسخ مستقلة"}
+                </span>
+              </div>
             </div>
-            <p className="text-[11px] text-slate-500 leading-snug">
-              لو طلب 15 طالباً نفس البحث، كل نسخة ستصدر بزاوية وهيكل ومقدمة وعناوين واستنتاجات فريدة تماماً لضمان عدم التطابق!
+            <p className="text-xs text-purple-900 leading-relaxed font-medium">
+              لو طلب 15 طالباً نفس البحث، كل نسخة ستصدر بزاوية وهيكل ومقدمة وعناوين واستنتاجات ومصادر فريدة تماماً لضمان عدم التطابق!
             </p>
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex items-center gap-3 pt-1">
               <input
                 type="range"
                 min="1"
                 max="15"
                 value={versionsCount}
-                onChange={(e) => setVersionsCount(Number(e.target.value))}
-                className="w-full accent-purple-500 cursor-pointer h-2 bg-slate-50 rounded-lg"
+                onChange={(e) => setVersionsCount(Math.max(1, Math.min(15, Number(e.target.value))))}
+                className="w-full accent-purple-600 cursor-pointer h-2.5 bg-purple-200 rounded-lg"
               />
-              <div className="flex items-center gap-1">
-                {[1, 3, 5, 10, 15].map((cnt) => (
-                  <button
-                    key={cnt}
-                    type="button"
-                    onClick={() => setVersionsCount(cnt)}
-                    className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer border ${
-                      versionsCount === cnt
-                        ? "bg-purple-600 text-slate-900 border-purple-400"
-                        : "bg-white text-slate-500 border-slate-200 hover:border-slate-200"
-                    }`}
-                  >
-                    {cnt}
-                  </button>
-                ))}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setVersionsCount((prev) => Math.max(1, prev - 1))}
+                  className="w-8 h-8 rounded-lg bg-white border border-purple-300 text-purple-800 hover:bg-purple-100 font-black text-base flex items-center justify-center transition cursor-pointer"
+                  title="تقليل نسخة"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  max="15"
+                  value={versionsCount}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val)) {
+                      setVersionsCount(Math.max(1, Math.min(15, val)));
+                    }
+                  }}
+                  className="w-14 text-center font-black text-purple-900 bg-white border-2 border-purple-300 rounded-lg py-1 text-sm focus:border-purple-600 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setVersionsCount((prev) => Math.min(15, prev + 1))}
+                  className="w-8 h-8 rounded-lg bg-white border border-purple-300 text-purple-800 hover:bg-purple-100 font-black text-base flex items-center justify-center transition cursor-pointer"
+                  title="زيادة نسخة"
+                >
+                  +
+                </button>
               </div>
             </div>
           </div>
 
           {/* Custom Requirements / Details */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 block">
+            <label className="text-sm font-black text-slate-900 block">
               شروط وتفاصيل خاصة وملاحظات بالبحث (اختياري):
             </label>
             <textarea
@@ -435,13 +456,13 @@ export default function ResearchPage() {
               value={customDetails}
               onChange={(e) => setCustomDetails(e.target.value)}
               placeholder="مثال: التركيز على 5 نقاط معينة، إضافة مقارنة أو إحصائيات، الالتزام بشروط الدكتور..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs text-slate-900 focus:border-purple-500 focus:outline-none transition resize-none leading-relaxed"
+              className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl p-3 text-xs sm:text-sm text-slate-900 focus:border-purple-600 focus:bg-white focus:outline-none transition resize-none leading-relaxed"
             />
           </div>
 
           {/* Target Pages */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 block">الحجم التقديري للبحث المطبوع:</label>
+            <label className="text-sm font-black text-slate-900 block">الحجم التقديري للبحث المطبوع:</label>
             <div className="grid grid-cols-6 gap-1.5">
               {[5, 10, 15, 20, 30].map((pages) => (
                 <button
@@ -451,10 +472,10 @@ export default function ResearchPage() {
                     setTargetPages(pages);
                     setIsCustomPages(false);
                   }}
-                  className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition cursor-pointer border ${
+                  className={`py-2 px-1 text-center rounded-xl text-xs sm:text-sm font-black transition cursor-pointer border-2 ${
                     !isCustomPages && targetPages === pages
-                      ? "bg-purple-600 text-slate-900 border-purple-500 shadow-md shadow-purple-600/20"
-                      : "bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-200"
+                      ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/20"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:border-purple-300"
                   }`}
                 >
                   {pages} ص
@@ -463,10 +484,10 @@ export default function ResearchPage() {
               <button
                 type="button"
                 onClick={() => setIsCustomPages(true)}
-                className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition cursor-pointer border ${
+                className={`py-2 px-1 text-center rounded-xl text-xs sm:text-sm font-black transition cursor-pointer border-2 ${
                   isCustomPages
-                    ? "bg-purple-600 text-slate-900 border-purple-500 shadow-md shadow-purple-600/20"
-                    : "bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-200"
+                    ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/20"
+                    : "bg-slate-50 text-slate-700 border-slate-200 hover:border-purple-300"
                 }`}
               >
                 أخرى
@@ -595,16 +616,16 @@ export default function ResearchPage() {
           <button
             type="submit"
             disabled={isLoading || !topic.trim()}
-            className="w-full py-3.5 px-4 rounded-2xl bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-slate-900 font-extrabold text-sm shadow-xs shadow-purple-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            className="w-full py-3.5 px-4 rounded-2xl bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm shadow-md shadow-purple-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
                 <span>جاري صياغة وكتابة النسخ الأكاديمية ({versionsCount})...</span>
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-4 h-4 text-purple-200" />
                 <span>
                   توليد وصياغة البحث الأكاديمي {versionsCount > 1 ? `(${versionsCount} نسخ مختلفة)` : ""}
                 </span>
@@ -620,7 +641,7 @@ export default function ResearchPage() {
               {/* Version Switcher Tabs if multiple versions generated */}
               {generatedVersions.length > 1 && (
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200">
-                  <span className="text-xs font-bold text-slate-500 shrink-0 flex items-center gap-1">
+                  <span className="text-xs font-bold text-slate-600 shrink-0 flex items-center gap-1">
                     <Layers className="w-3.5 h-3.5 text-purple-600" /> النسخ المُولدة:
                   </span>
                   {generatedVersions.map((v, idx) => {
@@ -643,7 +664,7 @@ export default function ResearchPage() {
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
                           selectedVersionIndex === idx
                             ? "bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-600/30"
-                            : "bg-slate-50 text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-100"
+                            : "bg-slate-50 text-slate-700 border-slate-200 hover:text-purple-700 hover:bg-purple-50"
                         }`}
                       >
                         <span>نسخة {versionNum}</span>
@@ -666,8 +687,8 @@ export default function ResearchPage() {
                     </span>
                   )}
                   {activeProvider && (
-                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 flex items-center gap-1 font-medium">
-                      <Server className="w-3 h-3 text-purple-500" /> تم التوليد عبر: {activeProvider}
+                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center gap-1 font-medium">
+                      <Server className="w-3 h-3 text-purple-600" /> تم التوليد عبر: {activeProvider}
                     </span>
                   )}
                 </div>
@@ -677,16 +698,16 @@ export default function ResearchPage() {
                     onClick={handleCopy}
                     className="flex items-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer"
                   >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copied ? "تم النسخ" : "نسخ النص"}</span>
                   </button>
 
                   <button
                     onClick={() => handleDownloadDocx(selectedVersionIndex)}
                     disabled={isExportingDocx || isBatchExporting}
-                    className="flex items-center gap-2 py-2 px-4 rounded-xl bg-linear-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-slate-900 text-xs font-bold shadow-lg shadow-purple-600/30 transition disabled:opacity-50 cursor-pointer"
+                    className="flex items-center gap-2 py-2 px-4 rounded-xl bg-linear-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition disabled:opacity-50 cursor-pointer"
                   >
-                    <Download className="w-3.5 h-3.5" />
+                    <Download className="w-3.5 h-3.5 text-white" />
                     <span>
                       {isExportingDocx
                         ? "جاري التجهيز..."
@@ -700,9 +721,9 @@ export default function ResearchPage() {
                     <button
                       onClick={handleDownloadAllVersions}
                       disabled={isBatchExporting || isExportingDocx}
-                      className="flex items-center gap-2 py-2 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-purple-300 border border-purple-500/30 text-xs font-bold shadow-md transition disabled:opacity-50 cursor-pointer"
+                      className="flex items-center gap-2 py-2 px-4 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border-2 border-purple-300 text-xs font-bold shadow-xs transition disabled:opacity-50 cursor-pointer"
                     >
-                      <Layers className="w-3.5 h-3.5 text-purple-400" />
+                      <Layers className="w-3.5 h-3.5 text-purple-600" />
                       <span>
                         {isBatchExporting ? "جاري تنزيل كل النسخ..." : `تنزيل كل النسخ (${generatedVersions.length})`}
                       </span>
@@ -711,7 +732,10 @@ export default function ResearchPage() {
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 max-h-[600px] overflow-y-auto whitespace-pre-wrap text-slate-200 text-sm leading-relaxed font-sans select-text">
+              <div
+                dir="rtl"
+                className="bg-white p-6 rounded-2xl border-2 border-slate-200 max-h-[600px] overflow-y-auto whitespace-pre-wrap text-slate-900 text-sm sm:text-base leading-relaxed font-sans select-text shadow-inner"
+              >
                 {generatedText}
               </div>
             </div>
@@ -734,76 +758,76 @@ export default function ResearchPage() {
               </p>
 
               {/* Live Timer Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-950/60 border border-purple-800/50 text-purple-300 text-xs font-bold mb-5 shadow-inner">
-                <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-purple-800 text-xs font-bold mb-5 shadow-inner">
+                <span className="w-2 h-2 rounded-full bg-purple-600 animate-ping" />
                 <span>الوقت المستغرق: {elapsedSeconds} ثانية</span>
               </div>
 
               {/* Visual Progress Bar */}
-              <div className="w-full bg-slate-50 rounded-full h-3 p-0.5 border border-slate-200 mb-6 overflow-hidden">
+              <div className="w-full bg-slate-100 rounded-full h-3 p-0.5 border border-slate-200 mb-6 overflow-hidden">
                 <div
-                  className="bg-linear-to-r from-purple-500 via-indigo-400 to-purple-400 h-full rounded-full transition-all duration-1000 shadow-lg shadow-purple-500/40"
+                  className="bg-linear-to-r from-purple-500 via-indigo-500 to-purple-600 h-full rounded-full transition-all duration-1000 shadow-md shadow-purple-500/40"
                   style={{ width: `${Math.min(96, Math.max(15, elapsedSeconds * 2.8))}%` }}
                 />
               </div>
 
               {/* Step Checklist */}
-              <div className="w-full bg-slate-900/40 rounded-2xl border border-slate-200 p-4 text-right space-y-2.5 text-xs">
+              <div className="w-full bg-slate-50 rounded-2xl border border-slate-200 p-4 text-right space-y-2.5 text-xs">
                 <div
                   className={`flex items-center justify-between gap-2 ${
-                    elapsedSeconds >= 0 ? "text-purple-300 font-bold" : "text-slate-500"
+                    elapsedSeconds >= 0 ? "text-purple-700 font-bold" : "text-slate-500"
                   }`}
                 >
                   <span>1. تحليل الموضوع وإعداد الهيكلية الأكاديمية والزوايا المتباينة</span>
-                  <span className="text-[11px]">{elapsedSeconds > 10 ? "✓ تم" : "جاري..."}</span>
+                  <span className="text-[11px] font-bold">{elapsedSeconds > 10 ? "✓ تم" : "جاري..."}</span>
                 </div>
                 <div
                   className={`flex items-center justify-between gap-2 ${
-                    elapsedSeconds >= 12 ? "text-purple-300 font-bold" : "text-slate-500"
+                    elapsedSeconds >= 12 ? "text-purple-700 font-bold" : "text-slate-500"
                   }`}
                 >
                   <span>2. صياغة المقدمة والمنهجية والأهداف وإشكالية البحث لكل نسخة</span>
-                  <span className="text-[11px]">
+                  <span className="text-[11px] font-bold">
                     {elapsedSeconds > 28 ? "✓ تم" : elapsedSeconds >= 12 ? "جاري..." : "قيد الانتظار"}
                   </span>
                 </div>
                 <div
                   className={`flex items-center justify-between gap-2 ${
-                    elapsedSeconds >= 30 ? "text-purple-300 font-bold" : "text-slate-500"
+                    elapsedSeconds >= 30 ? "text-purple-700 font-bold" : "text-slate-500"
                   }`}
                 >
                   <span>3. كتابة المباحث ومناقشة المحتوى العلمي والمراجع المعتمدة</span>
-                  <span className="text-[11px]">
+                  <span className="text-[11px] font-bold">
                     {elapsedSeconds > 60 ? "✓ تم" : elapsedSeconds >= 30 ? "جاري..." : "قيد الانتظار"}
                   </span>
                 </div>
                 <div
                   className={`flex items-center justify-between gap-2 ${
-                    elapsedSeconds >= 62 ? "text-purple-300 font-bold" : "text-slate-500"
+                    elapsedSeconds >= 62 ? "text-purple-700 font-bold" : "text-slate-500"
                   }`}
                 >
                   <span>4. صياغة الخاتمة والتوصيات وتدقيق قائمة المراجع لكل نسخة</span>
-                  <span className="text-[11px]">
+                  <span className="text-[11px] font-bold">
                     {elapsedSeconds > 80 ? "✓ تم" : elapsedSeconds >= 62 ? "جاري..." : "قيد الانتظار"}
                   </span>
                 </div>
                 <div
                   className={`flex items-center justify-between gap-2 ${
-                    elapsedSeconds >= 82 ? "text-purple-300 font-bold" : "text-slate-500"
+                    elapsedSeconds >= 82 ? "text-purple-700 font-bold" : "text-slate-500"
                   }`}
                 >
                   <span>5. مراجعة التنسيقات وتجهيز ملفات Word (DOCX) للتحميل</span>
-                  <span className="text-[11px]">{elapsedSeconds >= 82 ? "جاري..." : "قيد الانتظار"}</span>
+                  <span className="text-[11px] font-bold">{elapsedSeconds >= 82 ? "جاري..." : "قيد الانتظار"}</span>
                 </div>
               </div>
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500">
-              <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4 shadow-inner">
+              <div className="w-16 h-16 rounded-2xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-600 mb-4 shadow-inner">
                 <FileText className="w-8 h-8" />
               </div>
-              <p className="text-base font-bold text-slate-200 mb-1">جاهز لكتابة وتنسيق بحثك فوراً</p>
-              <p className="text-xs max-w-md text-slate-500 leading-relaxed">
+              <p className="text-base font-bold text-slate-900 mb-1">جاهز لكتابة وتنسيق بحثك فوراً</p>
+              <p className="text-xs max-w-md text-slate-600 leading-relaxed font-medium">
                 أدخل عنوان البحث وبيانات الغلاف وعدد النسخ واضغط &quot;توليد وصياغة البحث&quot;. سيتكفل النظام بتوليد
                 محتوى ثري وطبيعي ومستقل وتصدير ملفات Word مقاس A4 بهوامش ضيقة وغلاف رسمي وفهرس جاهزة للطباعة فوراً.
               </p>
@@ -824,7 +848,7 @@ export default function ResearchPage() {
                 <h3 className="text-sm md:text-base font-bold text-slate-900">
                   المصادر وقواعد البيانات البحثية المعتمدة للتوثيق
                 </h3>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold border border-purple-200">
                   {sources.length} مصدر
                 </span>
               </div>
@@ -858,29 +882,29 @@ export default function ResearchPage() {
           {sources.map((source, index) => (
             <div
               key={source.id}
-              className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-purple-500/40 hover:bg-slate-100/40 transition-all flex flex-col justify-between text-right space-y-2 group relative"
+              className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-purple-500/40 hover:bg-purple-50/30 transition-all flex flex-col justify-between text-right space-y-2 group relative"
             >
               <div className="flex items-center justify-between gap-1">
-                <span className="text-xs font-black text-purple-400 group-hover:text-purple-300">#{index + 1}</span>
+                <span className="text-xs font-black text-purple-600">#{index + 1}</span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] px-2 py-0.5 rounded-md bg-purple-950/50 text-purple-300 border border-purple-800/40 truncate max-w-[105px]">
+                  <span className="text-[9px] px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 border border-purple-200 truncate max-w-[105px] font-bold">
                     {source.category}
                   </span>
                   <button
                     type="button"
                     onClick={() => handleDeleteSource(source.id, source.name)}
                     title={`حذف مصدر "${source.name}"`}
-                    className="p-1 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                    className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-200 group-hover:text-slate-900 leading-snug">
+                <h4 className="text-xs font-black text-slate-900 group-hover:text-purple-900 leading-snug">
                   {source.name}
                 </h4>
-                <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{source.desc}</p>
+                <p className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-relaxed font-medium">{source.desc}</p>
               </div>
             </div>
           ))}

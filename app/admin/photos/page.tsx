@@ -443,7 +443,7 @@ export default function PhotoPoolPage() {
   return (
     <div className="min-h-screen bg-surface-container-lowest text-on-surface p-space-md sm:p-space-xl">
       {/* Header */}
-      <div className="max-w-7xl mx-auto mb-space-lg">
+      <div className="w-full mb-space-lg">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md pb-space-md border-b border-surface-container-high/40">
           <div>
             <div className="flex items-center gap-space-xs text-primary font-label-code text-label-code mb-1">
@@ -630,7 +630,7 @@ export default function PhotoPoolPage() {
       </div>
 
       {/* Main Grid */}
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         {isLoading ? (
           <div className="py-24 text-center">
             <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-space-sm" />

@@ -4,12 +4,28 @@ import path from "path";
 
 import { verifySessionTokenEdge } from "@/lib/edge-auth";
 
+import os from "os";
+
 const POOL_DIR = path.join(process.cwd(), "public", "uploads", "pool");
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15MB max
 
-function ensurePoolDir() {
-  if (!fs.existsSync(POOL_DIR)) {
-    fs.mkdirSync(POOL_DIR, { recursive: true });
+function getTargetPoolDir(): { poolDir: string; isServerless: boolean } {
+  try {
+    if (!fs.existsSync(POOL_DIR)) {
+      fs.mkdirSync(POOL_DIR, { recursive: true });
+    }
+    const testFile = path.join(POOL_DIR, `.test_${Date.now()}`);
+    fs.writeFileSync(testFile, "ok");
+    fs.unlinkSync(testFile);
+    return { poolDir: POOL_DIR, isServerless: false };
+  } catch {
+    const tmpPool = path.join(os.tmpdir(), "copycat_pool");
+    try {
+      if (!fs.existsSync(tmpPool)) {
+        fs.mkdirSync(tmpPool, { recursive: true });
+      }
+    } catch {}
+    return { poolDir: tmpPool, isServerless: true };
   }
 }
 
@@ -29,7 +45,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "وصول غير مصرح به" }, { status: 401 });
     }
 
-    ensurePoolDir();
+    const { poolDir, isServerless } = getTargetPoolDir();
     const { imageBase64, filename, customTitle } = await req.json();
 
     if (!imageBase64 || typeof imageBase64 !== "string") {
@@ -57,11 +73,18 @@ export async function POST(req: NextRequest) {
       .substring(0, 30);
 
     const savedFilename = `enhanced_${timestamp}_${safeName}.jpg`;
-    const fullPath = path.join(POOL_DIR, savedFilename);
+    const fullPath = path.join(poolDir, savedFilename);
 
-    // Save image to pool locally (Zero Supabase storage consumed!)
-    fs.writeFileSync(fullPath, buffer);
-    const webUrl = `/uploads/pool/${savedFilename}`;
+    // Save image to pool locally or tmp directory
+    try {
+      fs.writeFileSync(fullPath, buffer);
+    } catch (writeErr) {
+      console.warn("Write to poolDir failed:", writeErr);
+    }
+
+    const webUrl = isServerless
+      ? `/api/admin/photos?file=${encodeURIComponent(savedFilename)}`
+      : `/uploads/pool/${savedFilename}`;
 
     // Query Gemini Vision if API key is configured
     const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;

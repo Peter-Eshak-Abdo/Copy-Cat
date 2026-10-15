@@ -314,13 +314,90 @@ export default function AdminDashboardPage() {
   const toast = useToast();
   const tasks = useSyncExternalStore(subscribeTasks, getTasksSnapshot, getTasksServerSnapshot);
 
+  // Tools state with persistent Drag & Drop ordering
+  const [tools, setTools] = useState<WorkstationTool[]>(WORKSTATION_TOOLS);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // Collapsible top section (collapsed by default for ultra simplicity)
+  const [showOverview, setShowOverview] = useState(false);
+
   // Customer storefront preview modal
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
 
-  const handleRefresh = () => {
-    notifyTasksChanged();
-    toast.success("تم تحديث البيانات", "تمت مزامنة قائمة أوردرات الشفت والعدادات الحية بنجاح");
+  // Load custom tools order from localStorage
+  useEffect(() => {
+    try {
+      const savedOrder = localStorage.getItem("copycat_workstation_tools_order_v2");
+      if (savedOrder) {
+        const orderIds: string[] = JSON.parse(savedOrder);
+        const reordered: WorkstationTool[] = [];
+        orderIds.forEach((id) => {
+          const found = WORKSTATION_TOOLS.find((t) => t.id === id);
+          if (found) reordered.push(found);
+        });
+        WORKSTATION_TOOLS.forEach((t) => {
+          if (!reordered.find((x) => x.id === t.id)) {
+            reordered.push(t);
+          }
+        });
+        if (reordered.length === WORKSTATION_TOOLS.length) {
+          setTools(reordered);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Drag & Drop handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", index.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newTools = [...tools];
+    const [moved] = newTools.splice(draggedIndex, 1);
+    newTools.splice(targetIndex, 0, moved);
+    setTools(newTools);
+    try {
+      localStorage.setItem(
+        "copycat_workstation_tools_order_v2",
+        JSON.stringify(newTools.map((t) => t.id))
+      );
+    } catch {}
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    toast.success("تم ترتيب الأدوات بنجاح", "تم حفظ ترتيب أدوات العمل محلياً لهذا الجهاز.");
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleResetOrder = () => {
+    setTools(WORKSTATION_TOOLS);
+    try {
+      localStorage.removeItem("copycat_workstation_tools_order_v2");
+    } catch {}
+    toast.info("استعادة الترتيب", "تمت استعادة الترتيب الافتراضي لجميع الأدوات.");
   };
 
   // Shift & Real metrics calculations
@@ -330,7 +407,6 @@ export default function AdminDashboardPage() {
   const readyCount = tasks.filter((t) => t.status === "ready").length;
   const completedCount = tasks.filter((t) => t.status === "completed").length;
 
-  // إجمالي النسخ المطبوعة الفعلي من مهام اليوم الحقيقية
   const totalCopiesToday = tasks.reduce(
     (sum, t) => sum + (Number(t.completedCopies) || Number(t.totalCopies) || 0),
     0
@@ -348,11 +424,9 @@ export default function AdminDashboardPage() {
   const [isEditingBanner, setIsEditingBanner] = useState(false);
   const [bannerInput, setBannerInput] = useState("");
 
-  // WhatsApp QR Stand & Direct Contact
   const WHATSAPP_LINK = "https://wa.me/qr/MA4E2HELDOY7F1";
   const [printQrModal, setPrintQrModal] = useState<"stand" | "poster" | null>(null);
 
-  // Desktop PWA Installation Hook for Library PC
   const [pwaPrompt, setPwaPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isPwaInstalled, setIsPwaInstalled] = useState(() => {
     if (typeof window !== "undefined") {
@@ -397,409 +471,371 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="flex flex-col w-full space-y-6" dir="rtl">
-      {/* Top Welcome Operations Banner */}
-      <div className="rounded-2xl bg-white p-6 shadow-xs border border-slate-200">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200/60">
-                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                مكتبة ومطبعة كوبي كات
-              </span>
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs border border-slate-200">
-                <span className="material-symbols-outlined text-sm text-slate-500">location_on</span>
-                فرع الإسماعيلية — شارع الدقهلية
-              </span>
-            </div>
-            <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">
-              مركز العمليات ومطبعة كوبي كات
+      {/* Top Simple Action Bar & Tools Control */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl sm:rounded-3xl border-2 border-slate-200/90 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
+            <span className="material-symbols-outlined text-3xl">grid_view</span>
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              أدوات وماكينات العمل اليومية
             </h1>
-            <p className="text-sm text-slate-500 max-w-2xl leading-relaxed">
-              منصة إدارة أوردرات الطباعة وتسليم الشفت، استخراج النصوص، حاسبة الملازم، وأدوات المستندات الذكية.
+            <p className="text-xs sm:text-sm text-slate-500 font-semibold mt-0.5">
+              💡 يمكنك سحب وإفلات أي أداة (Drag & Drop) لإعادة ترتيبها بحرية حسب تفضيلك اليومي
             </p>
           </div>
+        </div>
 
-          {/* Quick Header Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-center">
-            {/* Direct PWA Install */}
-            <button
-              onClick={handleInstallPwa}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs transition cursor-pointer"
-              title="تثبيت لوحة الأدمن كتطبيق مستقل على كمبيوتر المكتبة (PWA)"
-            >
-              <span className="material-symbols-outlined text-lg text-emerald-600">desktop_windows</span>
-              <span>{isPwaInstalled ? "تطبيق الأدمن مثبت ✓" : "تثبيت أدمن المكتبة PWA"}</span>
-            </button>
+        {/* Header Controls: Collapsible Overview Toggle & Quick Actions */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => setShowOverview(!showOverview)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all border cursor-pointer ${
+              showOverview
+                ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300/80"
+            }`}
+          >
+            <span className="material-symbols-outlined text-lg">
+              {showOverview ? "expand_less" : "analytics"}
+            </span>
+            <span>{showOverview ? "إخفاء ملخص الشفت والإحصائيات ▲" : "عرض ملخص الشفت والإحصائيات ▼"}</span>
+            {activeOrdersCount > 0 && !showOverview && (
+              <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-xs font-bold mr-1">
+                {activeOrdersCount} أوردر
+              </span>
+            )}
+          </button>
 
-            <Link
-              href="/admin/calculator"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-xs"
-            >
-              <span className="material-symbols-outlined text-lg">calculate</span>
-              <span>حاسبة الملازم والطباعة</span>
-            </Link>
-            <Link
-              href="/admin/tasks"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition border border-slate-200"
-            >
-              <span className="material-symbols-outlined text-lg text-slate-600">assignment_turned_in</span>
-              <span>مهام وأوردرات الشفت</span>
-            </Link>
-            <button
-              onClick={() => setIsPreviewModalOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs transition cursor-pointer"
-              title="معاينة واجهة المتجر كما يراها العميل"
-            >
-              <span className="material-symbols-outlined text-lg text-slate-600">preview</span>
-              <span>معاينة متجر الزبائن</span>
-            </button>
-          </div>
+          <button
+            onClick={handleResetOrder}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 transition cursor-pointer"
+            title="إعادة ترتيب الأدوات للوضع الافتراضي الأصلي"
+          >
+            <span className="material-symbols-outlined text-base">restore</span>
+            <span className="hidden sm:inline">إعادة الترتيب</span>
+          </button>
+
+          <button
+            onClick={() => setPrintQrModal("stand")}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs sm:text-sm border border-emerald-200 transition cursor-pointer"
+            title="طباعة بوستر أو استند كيو آر واتساب المكتبة"
+          >
+            <span className="material-symbols-outlined text-base text-emerald-600">print</span>
+            <span>بوستر واتساب</span>
+          </button>
+
+          <button
+            onClick={() => setIsPreviewModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs sm:text-sm border border-blue-200 transition cursor-pointer"
+            title="معاينة واجهة متجر الزبائن"
+          >
+            <span className="material-symbols-outlined text-base text-blue-600">preview</span>
+            <span>متجر الزبائن</span>
+          </button>
         </div>
       </div>
 
-      {/* Announcement Banner Management Card */}
-      <div className="rounded-2xl bg-white p-4 border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-        <div className="flex items-center gap-3 flex-1 w-full">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-            <span className="material-symbols-outlined text-xl">campaign</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-900">شريط إعلان وخصم المتجر العلوي:</span>
-              <span className="text-[11px] text-slate-400">يظهر أعلى متجر الزبائن مباشرة</span>
-            </div>
-            {isEditingBanner ? (
-              <div className="flex items-center gap-2 mt-2 w-full">
-                <input
-                  type="text"
-                  value={bannerInput}
-                  onChange={(e) => setBannerInput(e.target.value)}
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
-                />
-                <button
-                  onClick={handleSaveBanner}
-                  className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shrink-0 cursor-pointer"
-                >
-                  حفظ التعديل ✓
-                </button>
-                <button
-                  onClick={() => setIsEditingBanner(false)}
-                  className="px-2.5 py-1.5 rounded-xl text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
-                >
-                  إلغاء
-                </button>
+      {/* Collapsible Section: Operations Welcome + Announcement Banner + KPI Metrics */}
+      {showOverview && (
+        <div className="flex flex-col space-y-5 animate-in fade-in slide-in-from-top-4 duration-300">
+          {/* Operations Welcome Banner */}
+          <div className="rounded-2xl sm:rounded-3xl bg-white p-6 shadow-xs border-2 border-slate-200">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200/60">
+                    <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                    مكتبة ومطبعة كوبي كات
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs border border-slate-200">
+                    <span className="material-symbols-outlined text-sm text-slate-500">location_on</span>
+                    فرع الإسماعيلية — شارع الدقهلية
+                  </span>
+                </div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                  مركز العمليات ومطبعة كوبي كات
+                </h2>
+                <p className="text-sm text-slate-500 max-w-2xl leading-relaxed">
+                  منصة إدارة أوردرات الطباعة وتسليم الشفت، استخراج النصوص، حاسبة الملازم، وأدوات المستندات الذكية.
+                </p>
               </div>
-            ) : (
-              <p className="text-xs text-slate-600 font-medium truncate mt-0.5">
-                {bannerText}
-              </p>
+
+              {/* Quick Header Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-center">
+                <button
+                  onClick={handleInstallPwa}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs transition cursor-pointer"
+                  title="تثبيت لوحة الأدمن كتطبيق مستقل على كمبيوتر المكتبة (PWA)"
+                >
+                  <span className="material-symbols-outlined text-lg text-emerald-600">desktop_windows</span>
+                  <span>{isPwaInstalled ? "تطبيق الأدمن مثبت ✓" : "تثبيت أدمن المكتبة PWA"}</span>
+                </button>
+
+                <Link
+                  href="/admin/calculator"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-lg">calculate</span>
+                  <span>حاسبة الملازم والطباعة</span>
+                </Link>
+                <Link
+                  href="/admin/tasks"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition border border-slate-200"
+                >
+                  <span className="material-symbols-outlined text-lg text-slate-600">assignment_turned_in</span>
+                  <span>مهام وأوردرات الشفت</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Announcement Banner Management Card */}
+          <div className="rounded-2xl sm:rounded-3xl bg-white p-4 sm:p-5 border-2 border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 flex-1 w-full">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+                <span className="material-symbols-outlined text-xl">campaign</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs sm:text-sm font-bold text-slate-900">شريط إعلان وخصم المتجر العلوي:</span>
+                  <span className="text-xs text-slate-400">يظهر أعلى متجر الزبائن مباشرة</span>
+                </div>
+                {isEditingBanner ? (
+                  <div className="flex items-center gap-2 mt-2 w-full">
+                    <input
+                      type="text"
+                      value={bannerInput}
+                      onChange={(e) => setBannerInput(e.target.value)}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                    />
+                    <button
+                      onClick={handleSaveBanner}
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shrink-0 cursor-pointer"
+                    >
+                      حفظ التعديل ✓
+                    </button>
+                    <button
+                      onClick={() => setIsEditingBanner(false)}
+                      className="px-3 py-2 rounded-xl text-xs sm:text-sm text-slate-500 hover:text-slate-800 cursor-pointer"
+                    >
+                      إلغاء
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-xs sm:text-sm text-slate-600 font-medium truncate mt-0.5">
+                    {bannerText}
+                  </p>
+                )}
+              </div>
+            </div>
+            {!isEditingBanner && (
+              <button
+                onClick={() => {
+                  setBannerInput(bannerText);
+                  setIsEditingBanner(true);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold shrink-0 transition cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">edit</span>
+                <span>تعديل الإعلان</span>
+              </button>
             )}
           </div>
-        </div>
-        {!isEditingBanner && (
-          <button
-            onClick={() => {
-              setBannerInput(bannerText);
-              setIsEditingBanner(true);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold shrink-0 transition cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-sm">edit</span>
-            <span>تعديل الإعلان</span>
-          </button>
-        )}
-      </div>
 
-      {/* KPI Operational Metrics Grid (4 Clean White Metric Cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {/* Card 1: Active Orders */}
-        <div className="flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-500">أوردرات اليوم النشطة</span>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100">
-              <span className="material-symbols-outlined text-xl">receipt_long</span>
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              {activeOrdersCount}
-            </span>
-            <span className="text-xs font-bold text-blue-600">أوردر مسجل</span>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-            <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-              {inProgressCount > 0 ? (
-                <>
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping"></span>
-                  {inProgressCount} جاري تنفيذها بالماكينات
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-sm text-emerald-600">done_all</span>
-                  جميع الأوردرات مسجلة وجاهزة
-                </>
-              )}
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
-              {currentShift.label}
-            </span>
-          </div>
-        </div>
-
-        {/* Card 2: Printed Sheets Total */}
-        <div className="flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-500">إجمالي النسخ المطبوعة اليوم</span>
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
-              <span className="material-symbols-outlined text-xl">print</span>
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              {totalCopiesToday.toLocaleString("ar-EG")}
-            </span>
-            <span className="text-xs font-bold text-indigo-600">ورقة A4/A5</span>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-            <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-              <span className="material-symbols-outlined text-sm text-emerald-600">check_circle</span>
-              {readyCount > 0 ? `${readyCount} أوردر جاهز للتسليم` : `${completedCount} أوردر مكتمل`}
-            </span>
-            <span className="text-xs text-slate-400 font-medium">{currentShift.label}</span>
-          </div>
-        </div>
-
-        {/* Card 3: InstaPay Pending Transfers */}
-        <Link
-          href="/admin/instapay"
-          className="group flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-violet-300 hover:shadow-md transition cursor-pointer"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-500">تحويلات إنستا باي المعلقة</span>
-            <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-colors border border-violet-100">
-              <span className="material-symbols-outlined text-xl">credit_card</span>
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-3xl font-extrabold text-violet-700 tracking-tight">
-              {getPendingInstaPaySummary().total.toLocaleString("ar-EG")}
-            </span>
-            <span className="text-sm font-bold text-slate-600">ج.م</span>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-            <span className="text-xs text-amber-600 font-bold">
-              {getPendingInstaPaySummary().count > 0 ? `${getPendingInstaPaySummary().count} بانتظار التأكيد` : "لا توجد مبالغ معلقة"}
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 font-bold flex items-center gap-0.5">
-              <span>فتح السجل</span>
-              <span className="material-symbols-outlined text-xs">arrow_forward</span>
-            </span>
-          </div>
-        </Link>
-
-        {/* Card 4: Shift Completion & Progress */}
-        <div className="flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-500">معدل إنجاز أوردرات الشفت</span>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100">
-              <span className="material-symbols-outlined text-xl">donut_large</span>
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              {tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0}%
-            </span>
-            <span className="text-xs font-bold text-emerald-600">
-              {tasks.length > 0 ? `${completedCount} من ${tasks.length}` : "0 أوردر"}
-            </span>
-          </div>
-          <div className="flex flex-col gap-1 pt-2 border-t border-slate-100">
-            <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
-              <div
-                className="h-full bg-emerald-500 transition-all duration-500 rounded-full"
-                style={{ width: `${tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0}%` }}
-              ></div>
-            </div>
-            <span className="text-[11px] text-slate-400 mt-1">
-              {tasks.length > 0
-                ? `${inProgressCount} أوردر جاري تنفيذه حالياً`
-                : "جاهز لبدء استقبال أوردرات الشفت الجديدة"}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Header for Workstations Section */}
-      <div className="flex items-center justify-between pt-2">
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-blue-600 text-2xl">grid_view</span>
-          <h2 className="text-lg font-bold text-slate-900">جميع أدوات وماكينات العمل اليومية</h2>
-          <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold border border-slate-200">
-            {WORKSTATION_TOOLS.length} أداة جاهزة
-          </span>
-        </div>
-        <div className="hidden sm:flex items-center gap-1.5 text-slate-500 text-xs font-medium">
-          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          أدوات وماكينات الطباعة والتجهيز
-        </div>
-      </div>
-
-      {/* The Dynamic Workstation Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {WORKSTATION_TOOLS.map((tool) => (
-          <Link
-            key={tool.id}
-            href={tool.href}
-            className={`group flex flex-col justify-between p-5 rounded-2xl bg-white hover:bg-slate-50/70 transition-all shadow-xs border border-slate-200 ${tool.borderHoverClass}`}
-          >
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${tool.iconBgClass}`}>
-                  <span className="material-symbols-outlined text-2xl">{tool.icon}</span>
+          {/* KPI Operational Metrics Grid (4 Clean Metric Cards) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            {/* Card 1: Active Orders */}
+            <div className="flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-slate-500">أوردرات اليوم النشطة</span>
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100">
+                  <span className="material-symbols-outlined text-xl">receipt_long</span>
                 </div>
-                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                  {tool.badge}
+              </div>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                  {activeOrdersCount}
+                </span>
+                <span className="text-xs font-bold text-blue-600">أوردر مسجل</span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                  {inProgressCount > 0 ? (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping"></span>
+                      {inProgressCount} جاري تنفيذها بالماكينات
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-sm text-emerald-600">done_all</span>
+                      جميع الأوردرات مسجلة وجاهزة
+                    </>
+                  )}
+                </span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
+                  {currentShift.label}
                 </span>
               </div>
-              <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors mb-2">
-                {tool.title}
-              </h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                {tool.desc}
-              </p>
             </div>
-            <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
-              <span className={`text-xs font-bold ${tool.colorClass} flex items-center gap-1 group-hover:translate-x-[-3px] transition-transform`}>
-                تشغيل الأداة
-                <span className="material-symbols-outlined text-base">arrow_forward</span>
-              </span>
-              <span className="text-[11px] text-slate-400 font-medium">{tool.footerTag}</span>
-            </div>
-          </Link>
-        ))}
-      </div>
 
-      {/* Recent Shift Activity & Active Print Queue Table */}
-      <div className="rounded-2xl bg-white p-6 shadow-xs border border-slate-200">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-              <span className="material-symbols-outlined text-xl">hourglass_top</span>
+            {/* Card 2: Printed Sheets Total */}
+            <div className="flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-slate-500">إجمالي النسخ المطبوعة اليوم</span>
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
+                  <span className="material-symbols-outlined text-xl">print</span>
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                  {totalCopiesToday.toLocaleString("ar-EG")}
+                </span>
+                <span className="text-xs font-bold text-indigo-600">ورقة A4/A5</span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                  <span className="material-symbols-outlined text-sm text-emerald-600">check_circle</span>
+                  {readyCount > 0 ? `${readyCount} أوردر جاهز للتسليم` : `${completedCount} أوردر مكتمل`}
+                </span>
+                <span className="text-xs text-slate-400 font-medium">{currentShift.label}</span>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">أوردرات الشفت المباشرة وقائمة الانتظار</h3>
-              <p className="text-xs text-slate-500">متابعة فورية للمهام قيد الطباعة والجاهزة للتسليم للزبائن والمدرسين</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleRefresh}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer border border-slate-200"
-              type="button"
-            >
-              <span className="material-symbols-outlined text-base">refresh</span>
-              <span>تحديث القائمة</span>
-            </button>
+
+            {/* Card 3: InstaPay Pending Transfers */}
             <Link
-              href="/admin/tasks"
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs"
+              href="/admin/instapay"
+              className="group flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-violet-300 hover:shadow-md transition cursor-pointer"
             >
-              <span className="material-symbols-outlined text-base">add</span>
-              <span>أوردر جديد</span>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-slate-500">تحويلات إنستا باي المعلقة</span>
+                <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-colors border border-violet-100">
+                  <span className="material-symbols-outlined text-xl">credit_card</span>
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-3xl font-extrabold text-violet-700 tracking-tight">
+                  {getPendingInstaPaySummary().total.toLocaleString("ar-EG")}
+                </span>
+                <span className="text-sm font-bold text-slate-600">ج.م</span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <span className="text-xs text-amber-600 font-bold">
+                  {getPendingInstaPaySummary().count > 0 ? `${getPendingInstaPaySummary().count} بانتظار التأكيد` : "لا توجد مبالغ معلقة"}
+                </span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 font-bold flex items-center gap-0.5">
+                  <span>فتح السجل</span>
+                  <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                </span>
+              </div>
             </Link>
+
+            {/* Card 4: Shift Completion & Progress */}
+            <div className="flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-slate-500">معدل إنجاز أوردرات الشفت</span>
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100">
+                  <span className="material-symbols-outlined text-xl">donut_large</span>
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                  {tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0}%
+                </span>
+                <span className="text-xs font-bold text-emerald-600">
+                  {tasks.length > 0 ? `${completedCount} من ${tasks.length}` : "0 أوردر"}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1 pt-2 border-t border-slate-100">
+                <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 transition-all duration-500 rounded-full"
+                    style={{ width: `${tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0}%` }}
+                  ></div>
+                </div>
+                <span className="text-[11px] text-slate-400 mt-1">
+                  {tasks.length > 0
+                    ? `${inProgressCount} أوردر جاري تنفيذه حالياً`
+                    : "جاهز لبدء استقبال أوردرات الشفت الجديدة"}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-right border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-slate-600 text-xs font-bold border-y border-slate-200">
-                <th className="p-3 rounded-r-xl">رقم الأوردر</th>
-                <th className="p-3">اسم العميل / المدرس</th>
-                <th className="p-3">تفاصيل المهمة</th>
-                <th className="p-3 text-left">الكمية</th>
-                <th className="p-3 text-left">الحالة</th>
-                <th className="p-3 text-center rounded-l-xl">إجراءات سريعة</th>
-              </tr>
-            </thead>
-            <tbody className="text-slate-800 text-xs divide-y divide-slate-100">
-              {tasks.slice(0, 5).map((task) => (
-                <tr key={task.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="p-3 font-mono font-bold text-blue-600">
-                    #{task.id}
-                  </td>
-                  <td className="p-3 font-semibold text-slate-900">{task.customerName}</td>
-                  <td className="p-3 text-slate-500 max-w-xs truncate">{task.title}</td>
-                  <td className="p-3 text-left font-mono">
-                    {task.completedCopies ? `${task.completedCopies} / ` : ""}{task.totalCopies} نسخة
-                  </td>
-                  <td className="p-3 text-left">
-                    {task.status === "in_progress" ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping"></span>
-                        جاري التنفيذ
-                      </span>
-                    ) : task.status === "ready" ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                        جاهز للتسليم
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-medium border border-slate-200">
-                        تم التسليم
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-3 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
-                      {task.phone && (
-                        <a
-                          className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition cursor-pointer"
-                          href={`https://wa.me/2${task.phone.replace(/[^0-9]/g, "")}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="مراسلة واتساب"
-                        >
-                          <span className="material-symbols-outlined text-base">chat</span>
-                        </a>
-                      )}
-                      <Link
-                        href="/admin/tasks"
-                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer"
-                        title="إدارة الأوردر"
+      {/* The Dynamic Workstation Cards Grid with Drag & Drop Reordering */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6">
+        {tools.map((tool, index) => {
+          const isDragging = draggedIndex === index;
+          const isOver = dragOverIndex === index;
+
+          return (
+            <div
+              key={tool.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              className={`relative transition-all duration-200 ${
+                isDragging ? "opacity-35 scale-95" : ""
+              } ${isOver ? "ring-4 ring-blue-500/40 rounded-3xl scale-[1.02]" : ""}`}
+            >
+              <Link
+                href={tool.href}
+                className={`group flex flex-col justify-between p-6 sm:p-7 rounded-2xl sm:rounded-3xl bg-white hover:bg-slate-50/90 transition-all shadow-xs border-2 border-slate-200/90 hover:border-blue-500 hover:shadow-xl ${tool.borderHoverClass} h-full`}
+              >
+                <div>
+                  {/* Top Row: Icon, Badge, Drag Handle */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center transition-colors shadow-xs ${tool.iconBgClass}`}
                       >
-                        <span className="material-symbols-outlined text-base">edit_document</span>
-                      </Link>
+                        <span className="material-symbols-outlined text-3xl sm:text-4xl">{tool.icon}</span>
+                      </div>
+                      <span className="text-xs sm:text-sm font-extrabold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                        {tool.badge}
+                      </span>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-      {/* Bottom Status Bar */}
-      <div className="flex flex-col md:flex-row items-center justify-between p-4 rounded-2xl bg-white text-slate-500 text-xs gap-3 border border-slate-200 shadow-xs">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-slate-800 font-bold">حالة النظام:</span>
-            <span className="text-emerald-700 font-bold">جاهز ومستعد للعمل</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-blue-600 text-base">schedule</span>
-            <span>الوردية: {currentShift.label} ({currentShift.timeRange})</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-slate-500 text-base">person</span>
-            <span>المسؤول: {user?.name || "مشرف الشفت"}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium">
-          <span className="material-symbols-outlined text-sm">location_on</span>
-          <span>شارع الدقهلية بالقرب من مسجد المطافي أمام مركز نور الحياة - عرايشية مصر - الإسماعيلية</span>
-        </div>
+                    {/* Drag Handle Indicator */}
+                    <div
+                      className="p-1.5 rounded-xl text-slate-300 group-hover:text-slate-500 hover:bg-slate-100 cursor-grab active:cursor-grabbing transition-colors"
+                      title="اسحب البطاقة لتغيير ترتيبها (Drag & Drop)"
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      <span className="material-symbols-outlined text-2xl">drag_indicator</span>
+                    </div>
+                  </div>
+
+                  {/* Card Title (Large & Bold) */}
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 group-hover:text-blue-600 transition-colors mb-2.5 leading-snug">
+                    {tool.title}
+                  </h2>
+
+                  {/* Card Description (Enlarged & Easy to read) */}
+                  <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+                    {tool.desc}
+                  </p>
+                </div>
+
+                {/* Footer Action Button */}
+                <div className="flex items-center justify-between pt-4 mt-5 border-t border-slate-100">
+                  <span
+                    className={`text-sm sm:text-base font-black ${tool.colorClass} flex items-center gap-1.5 group-hover:translate-x-[-4px] transition-transform`}
+                  >
+                    تشغيل الأداة
+                    <span className="material-symbols-outlined text-xl">arrow_forward</span>
+                  </span>
+                  <span className="text-xs sm:text-sm text-slate-400 font-bold">{tool.footerTag}</span>
+                </div>
+              </Link>
+            </div>
+          );
+        })}
       </div>
 
       {/* Modal: Printable WhatsApp QR Stand / Wall Poster */}

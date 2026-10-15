@@ -36,6 +36,10 @@ export default function FacebookPostToolsPage() {
   const [docTitle, setDocTitle] = useState("");
   const [maxPhotos, setMaxPhotos] = useState(120);
 
+  const [activeMode, setActiveMode] = useState<"url" | "upload">("url");
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isCompilingLocal, setIsCompilingLocal] = useState(false);
+
   const [isRunning, setIsRunning] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [scrapedCount, setScrapedCount] = useState(0);
@@ -53,6 +57,7 @@ export default function FacebookPostToolsPage() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
   const logEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchHistory();
@@ -182,20 +187,102 @@ export default function FacebookPostToolsPage() {
     }
   };
 
+  // Direct File Selection Handling
+  const handleFilesSelected = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const newFiles = Array.from(files).filter((f) =>
+      /\.(jpe?g|png|webp)$/i.test(f.name)
+    );
+    // Natural alphanumeric sort by filename (e.g. page_1, page_2, page_10)
+    newFiles.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
+    );
+    setUploadedFiles((prev) => [...prev, ...newFiles]);
+    toast.success(`تم اختيار ${newFiles.length} صفحة`, "تم ترتيبها تلقائياً حسب أرقام الصفحات.");
+  };
+
+  const removeUploadedFile = (index: number) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const clearUploadedFiles = () => {
+    setUploadedFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Compile uploaded images directly in the browser via pdf-lib (100% Client-side, 0 Server Errors)
+  const compileLocalImagesToPdf = async () => {
+    if (uploadedFiles.length === 0) {
+      toast.warning("يرجى اختيار صور", "اسحب أو اختر صور صفحات الملزمة أولاً.");
+      return;
+    }
+
+    setIsCompilingLocal(true);
+    setStatusMessage("جاري تجميع الصفحات في ملف PDF للطباعة بالمتصفح...");
+    setLogs((prev) => [
+      ...prev,
+      `بدء تجميع ${uploadedFiles.length} صفحة محلياً بأعلى دقة للطباعة...`,
+    ]);
+
+    try {
+      const { PDFDocument } = await import("pdf-lib");
+      const pdfDoc = await PDFDocument.create();
+
+      for (let i = 0; i < uploadedFiles.length; i++) {
+        const file = uploadedFiles[i];
+        const bytes = await file.arrayBuffer();
+        let img;
+        if (file.type.includes("png")) {
+          img = await pdfDoc.embedPng(bytes);
+        } else {
+          img = await pdfDoc.embedJpg(bytes);
+        }
+        const page = pdfDoc.addPage([img.width, img.height]);
+        page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+        setLogs((prev) => [...prev, `[صفحة #${i + 1}] تمت إضافة ${file.name}`]);
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes as unknown as BlobPart], { type: "application/pdf" });
+      const blobUrl = URL.createObjectURL(blob);
+      const safeTitle = (docTitle || "ملزمة_مطبوعة").trim().replace(/[\\/*?:"<>|]/g, "_");
+      const filename = `${safeTitle}.pdf`;
+
+      setCompletedDoc({
+        pdfUrl: blobUrl,
+        pdfFilename: filename,
+        totalImages: uploadedFiles.length,
+        title: safeTitle,
+      });
+
+      toast.success(
+        "تم تجهيز ملف الـ PDF بنجاح!",
+        `تم دمج ${uploadedFiles.length} صفحة بالترتيب وجاهز للطباعة فوراً.`
+      );
+      setLogs((prev) => [...prev, `✅ اكتمل إنشاء ملف ${filename} بنجاح!`]);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "تعذر تجميع ملف PDF";
+      toast.error("خطأ", msg);
+      setLogs((prev) => [...prev, `❌ [خطأ] ${msg}`]);
+    } finally {
+      setIsCompilingLocal(false);
+    }
+  };
+
   // 1-Click Send to Print Queue
   const sendToPrintQueue = (doc: { title: string; pdfUrl: string; totalImages: number }) => {
     try {
       const existing = JSON.parse(localStorage.getItem("copycat_tasks_v1") || "[]");
       const newTask = {
         id: `fb_doc_${Date.now()}`,
-        title: `طباعة ملزمة فيسبوك: ${doc.title} (${doc.totalImages} ص)`,
+        title: `طباعة ملزمة: ${doc.title} (${doc.totalImages} ص)`,
         customerName: "عميل فيسبوك / تحميل مباشر",
         phone: "",
         deadline: "فوري",
         totalCopies: doc.totalImages,
         completedCopies: 0,
         bindingType: "سلك بلاستيك / كعب",
-        notes: `ملف PDF تم سحبه آلياً: ${doc.pdfUrl}`,
+        notes: `ملف PDF تم سحبه أو تجهيزه آلياً: ${doc.pdfUrl}`,
         status: "pending",
         createdAt: Date.now(),
       };
@@ -221,8 +308,8 @@ export default function FacebookPostToolsPage() {
             سحب وتحميل بوستات فيسبوك كاملة وتحويلها لملف PDF جاهز للطباعة
           </h1>
           <p className="text-slate-500 text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl">
-            ضع رابط أي منشور فيسبوك يحتوي على صفحات أو صور كثيرة (مثل ملازم 50 إلى 80 صورة)، وسيقوم النظام
-            بسحبها بالترتيب الدقيق، وتجميعها في ملف PDF عالي الجودة للطباعة والتسليم الفوري للعملاء!
+            ضع رابط أي منشور فيسبوك يحتوي على صفحات أو صور كثيرة (مثل ملازم 50 إلى 80 صورة)، أو اسحب صور الملزمة
+            مباشرة لتجميعها بالترتيب الدقيق في ملف PDF عالي الجودة للطباعة الفورية!
           </p>
         </div>
 
@@ -238,74 +325,208 @@ export default function FacebookPostToolsPage() {
       {/* Main Form & Configuration */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
-          <form onSubmit={startScraping} className="space-y-4">
-            <div>
-              <label className="block text-xs font-black text-slate-700 mb-1.5">
-                رابط منشور أو ألبوم فيسبوك (Facebook Post / Album URL):
-              </label>
-              <input
-                type="url"
-                required
-                placeholder="https://www.facebook.com/.../posts/..."
-                value={postUrl}
-                onChange={(e) => setPostUrl(e.target.value)}
-                disabled={isRunning}
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-600 focus:border-blue-500 focus:outline-none transition"
-              />
-              <span className="text-[11px] text-slate-500 block mt-1">
-                يدعم روابط المنشورات العادية، ألبومات الصور، وعروض المسرح (Theater View).
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                  عنوان الملزمة أو المذكرة (اسم الملف):
-                </label>
-                <input
-                  type="text"
-                  placeholder="مثال: مذكرة لغة عربية الصف الثالث"
-                  value={docTitle}
-                  onChange={(e) => setDocTitle(e.target.value)}
-                  disabled={isRunning}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-600 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                  الحد الأقصى لعدد الصور المسموح سحبها:
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="200"
-                  value={maxPhotos}
-                  onChange={(e) => setMaxPhotos(Number(e.target.value))}
-                  disabled={isRunning}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
+          {/* Method Selector Tabs */}
+          <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
             <button
-              type="submit"
-              disabled={isRunning}
-              className="w-full py-3.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-sm transition cursor-pointer shadow-xs shadow-blue-600/30 flex items-center justify-center gap-2 disabled:opacity-50"
+              type="button"
+              onClick={() => setActiveMode("url")}
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition cursor-pointer flex items-center justify-center gap-2 ${
+                activeMode === "url"
+                  ? "bg-white text-blue-600 shadow-sm border border-slate-200/80"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
             >
-              {isRunning ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>جاري سحب الصور ودمج الـ PDF...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  <span>🚀 ابدأ سحب الصور وتوليد الـ PDF للطباعة</span>
-                </>
-              )}
+              <span>🔗 سحب تلقائي برابط المنشور</span>
             </button>
-          </form>
+            <button
+              type="button"
+              onClick={() => setActiveMode("upload")}
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition cursor-pointer flex items-center justify-center gap-2 ${
+                activeMode === "upload"
+                  ? "bg-white text-blue-600 shadow-sm border border-slate-200/80"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <span>📁 رفع وسحب صور الملزمة مباشرة (بدون قيود)</span>
+            </button>
+          </div>
+
+          {activeMode === "url" ? (
+            <form onSubmit={startScraping} className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-slate-700 mb-1.5">
+                  رابط منشور أو ألبوم فيسبوك (Facebook Post / Album URL):
+                </label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://www.facebook.com/.../posts/..."
+                  value={postUrl}
+                  onChange={(e) => setPostUrl(e.target.value)}
+                  disabled={isRunning}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-600 focus:border-blue-500 focus:outline-none transition"
+                />
+                <span className="text-[11px] text-slate-500 block mt-1">
+                  يدعم روابط المنشورات العامة، ألبومات الصور، والصفحات التعليمية.
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1.5">
+                    عنوان الملزمة أو المذكرة (اسم الملف):
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="مثال: مذكرة لغة عربية الصف الثالث"
+                    value={docTitle}
+                    onChange={(e) => setDocTitle(e.target.value)}
+                    disabled={isRunning}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-600 focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1.5">
+                    الحد الأقصى لعدد الصور المسموح سحبها:
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="200"
+                    value={maxPhotos}
+                    onChange={(e) => setMaxPhotos(Number(e.target.value))}
+                    disabled={isRunning}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isRunning}
+                className="w-full py-3.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-sm transition cursor-pointer shadow-xs shadow-blue-600/30 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isRunning ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>جاري سحب الصور ودمج الـ PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>🚀 ابدأ سحب الصور وتوليد الـ PDF للطباعة</span>
+                  </>
+                )}
+              </button>
+            </form>
+          ) : (
+            /* Mode 2: Direct Upload */
+            <div className="space-y-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => handleFilesSelected(e.target.files)}
+                className="hidden"
+              />
+
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleFilesSelected(e.dataTransfer.files);
+                }}
+                className="border-2 border-dashed border-blue-400/50 hover:border-blue-600 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-3 bg-blue-50/30 hover:bg-blue-50/60 transition cursor-pointer"
+              >
+                <div className="p-3 bg-blue-500/10 text-blue-600 rounded-full">
+                  <FolderDown className="w-7 h-7" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">
+                    اسحب وأفلت صور صفحات الملزمة هنا أو اضغط للاختيار
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    يدعم اختيار حتى 150 صورة دفعة واحدة من الموبايل أو واتساب، وسيتم ترتيبها تلقائياً
+                  </p>
+                </div>
+              </div>
+
+              {uploadedFiles.length > 0 && (
+                <div className="space-y-2">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700">
+                      تم تحديد {uploadedFiles.length} صفحة
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearUploadedFiles}
+                      className="text-xs text-red-500 hover:text-red-700 font-bold cursor-pointer"
+                    >
+                      مسح الكل
+                    </button>
+                  </div>
+
+                  <div className="max-h-36 overflow-y-auto flex flex-wrap gap-1.5 p-2 bg-slate-50 rounded-xl border border-slate-200">
+                    {uploadedFiles.map((f, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-700 font-mono shadow-2xs"
+                      >
+                        <span className="text-blue-600 font-bold">#{idx + 1}</span>
+                        <span className="truncate max-w-[120px]">{f.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeUploadedFile(idx)}
+                          className="text-slate-400 hover:text-red-500 font-black cursor-pointer"
+                          title="حذف هذه الصفحة"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1.5">
+                    عنوان الملزمة أو المذكرة:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="مثال: مذكرة علوم الصف الأول الإعدادي"
+                    value={docTitle}
+                    onChange={(e) => setDocTitle(e.target.value)}
+                    disabled={isCompilingLocal}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-600 focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={compileLocalImagesToPdf}
+                disabled={isCompilingLocal || uploadedFiles.length === 0}
+                className="w-full py-3.5 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm transition cursor-pointer shadow-xs shadow-emerald-600/30 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isCompilingLocal ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>جاري تجميع ملف PDF بالمتصفح...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>⚡ تجميع الـ PDF فوراً ({uploadedFiles.length} صفحة)</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
 
           {/* Active Process Status Card */}
           {isRunning && (

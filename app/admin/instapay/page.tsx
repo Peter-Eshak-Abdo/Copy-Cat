@@ -181,7 +181,7 @@ export default function InstaPayAdminPage() {
 
   return (
     <div className="min-h-screen bg-surface-container-lowest text-on-surface p-space-md sm:p-space-xl">
-      <div className="max-w-7xl mx-auto mb-space-lg">
+      <div className="w-full mb-space-lg">
         {/* Breadcrumb & Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md pb-space-md border-b border-surface-container-high/40">
           <div>
@@ -329,7 +329,7 @@ export default function InstaPayAdminPage() {
       </div>
 
       {/* Main Table */}
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         {filteredRecords.length === 0 ? (
           <div className="py-20 text-center rounded-2xl bg-surface-container-low border border-surface-container-high/40 p-space-xl">
             <AlertCircle className="w-12 h-12 text-on-surface-variant mx-auto mb-space-sm opacity-50" />

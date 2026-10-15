@@ -277,7 +277,7 @@ export default function MultiStageOcrPage() {
         className="hidden"
       />
 
-      <div className="flex flex-col gap-space-lg w-full max-w-7xl mx-auto pb-space-3xl pt-space-sm">
+      <div className="flex flex-col gap-space-lg w-full pb-space-3xl pt-space-sm">
         {/* Top Header Banner */}
         <div className="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg shadow-xs border border-surface-container-high/40">
           <div className="absolute -right-24 -top-24 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>

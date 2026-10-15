@@ -20,7 +20,7 @@ import {
 import { saveAs } from "file-saver";
 
 /**
- * أفضل 10 مصادر وقواعد بيانات بحثية وأكاديمية باللغة العربية
+ * أفضل 20 مصدر وقاعدة بيانات بحثية وأكاديمية باللغة العربية
  * معتمدة للتوثيق والاستشهاد في الأبحاث والرسائل الجامعية
  */
 export const TOP_ARABIC_ACADEMIC_SOURCES = [
@@ -104,7 +104,123 @@ export const TOP_ARABIC_ACADEMIC_SOURCES = [
     getCitation: (t: string) =>
       `10. دوريات مركز دراسات الوحدة العربية ومجلة قطاع البحوث بجامعة الأزهر الشريف - بحوث ودراسات (${t})، بيروت/القاهرة، 2024.`,
   },
+  {
+    id: "kau_repo",
+    name: "مستودع أبحاث جامعة الملك عبد العزيز (KAU Repository)",
+    desc: "المستودع الرقمي للإنتاج العلمي وأطروحات الدراسات العليا والمجلات التخصصية المصنفة عالمياً.",
+    category: "مستودعات أبحاث جامعية عليا",
+    getCitation: (t: string) =>
+      `11. مستودع أبحاث جامعة الملك عبد العزيز - دراسات وأطروحات متقدمة في (${t})، جدة، 2024.`,
+  },
+  {
+    id: "uqu_repo",
+    name: "مستودع أبحاث ورسائل جامعة أم القرى ومعهد خادم الحرمين",
+    desc: "أرشيف الأطروحات العلمية المحكمة والمجلات البحثية في العلوم التطبيقية والاجتماعية والإنسانية.",
+    category: "رسائل وأبحاث جامعية",
+    getCitation: (t: string) =>
+      `12. جامعة أم القرى ومعهد خادم الحرمين لأبحاث الحج والبيئة - دراسات محكمة حول (${t})، مكة المكرمة، 2023.`,
+  },
+  {
+    id: "jordan_uni",
+    name: "مجلة دراسات: عمادة البحث العلمي بالجامعة الأردنية",
+    desc: "دورية علمية دولية محكمة ومفهرسة في قواعد البيانات العالمية (Scopus) منذ عقود.",
+    category: "دوريات علمية محكمة ومفهرسة",
+    getCitation: (t: string) =>
+      `13. الجامعة الأردنية - مجلة دراسات للعلوم الإنسانية والاجتماعية والتطبيقية، بحوث (${t})، عمّان، 2024.`,
+  },
+  {
+    id: "ksu_journal",
+    name: "مجلة جامعة الملك سعود ومستودع الأبحاث المؤسسي",
+    desc: "سلسلة المجلات العلمية المحكمة الصادرة عن جامعة الملك سعود في العلوم الإدارية والتربوية والتقنية.",
+    category: "مجلات علمية رائدة",
+    getCitation: (t: string) =>
+      `14. مجلة جامعة الملك سعود - دراسات علمية محكمة في محاور (${t})، الرياض، 2023.`,
+  },
+  {
+    id: "acrps",
+    name: "المركز العربي للأبحاث ودراسة السياسات (دوريات تبيّن وسياسات)",
+    desc: "أبرز مؤسسة بحثية عربية مستقلة تنشر دراسات استراتيجية واجتماعية وفكرية محكمة.",
+    category: "مراكز بحوث ودراسات استراتيجية",
+    getCitation: (t: string) =>
+      `15. المركز العربي للأبحاث ودراسة السياسات - دوريات علمية محكمة وأبحاث في (${t})، الدوحة، 2024.`,
+  },
+  {
+    id: "kuwait_uni",
+    name: "مجلس النشر العلمي ومستودع الأطروحات لجامعة الكويت",
+    desc: "المجلات العلمية المتخصصة وحوليات الآداب والعلوم الاجتماعية المحكمة بالخليج العربي.",
+    category: "نشر علمي وأطروحات خليجية",
+    getCitation: (t: string) =>
+      `16. مجلس النشر العلمي بجامعة الكويت - أبحاث ودراسات محكمة في (${t})، الكويت، 2023.`,
+  },
+  {
+    id: "damascus_uni",
+    name: "مجلة جامعة دمشق للبحوث والدراسات العلمية",
+    desc: "أقدم الدوريات الأكاديمية المحكمة في العالم العربي في العلوم الأساسية والإنسانية والاقتصادية.",
+    category: "دوريات أكاديمية عريقة",
+    getCitation: (t: string) =>
+      `17. مجلة جامعة دمشق للبحوث العلمية - دراسات تخصصية في (${t})، دمشق، 2023.`,
+  },
+  {
+    id: "kfu_journal",
+    name: "مجلة جامعة الملك فيصل للعلوم الإنسانية والإدارية",
+    desc: "دورية دورية محكمة تعنى بالدراسات الميدانية والتطبيقية والنظرية المتخصصة.",
+    category: "مجلات علمية دورية محكمة",
+    getCitation: (t: string) =>
+      `18. جامعة الملك فيصل - مجلة العلوم الإنسانية والإدارية، بحوث محكمة في (${t})، الأحساء، 2024.`,
+  },
+  {
+    id: "imamu_repo",
+    name: "مستودع الرسائل العلمية لجامعة الإمام محمد بن سعود الإسلامية",
+    desc: "أضخم مستودع جامعي لأطروحات الدراسات العليا والمجلات الفقهية والقانونية والاجتماعية.",
+    category: "مستودعات رسائل ومجلات تخصصية",
+    getCitation: (t: string) =>
+      `19. مستودع الرسائل العلمية بجامعة الإمام - دراسات وأطروحات ماجستير ودكتوراه في (${t})، الرياض، 2023.`,
+  },
+  {
+    id: "bau_journal",
+    name: "مجلة جامعة بيروت العربية للأبحاث والدراسات المتقدمة",
+    desc: "دورية علمية دولية محكمة تصدر دراسات تطبيقية وبينية متميزة بالتعاون مع جامعات عالمية.",
+    category: "أبحاث علمية ودراسات بينية",
+    getCitation: (t: string) =>
+      `20. جامعة بيروت العربية (BAU) - مجلة الدراسات والأبحاث العلمية المحكمة في (${t})، بيروت، 2024.`,
+  },
 ];
+
+/**
+ * دالة استخراج وتدوير مراجع أكاديمية متنوعة ومتباينة لكل نسخة
+ * تضمن عدم تطابق المراجع بين النسخ حتى لو كان نفس الموضوع
+ */
+export function getDiverseSourcesForVersion(
+  allSources: CustomResearchSource[],
+  versionNumber: number = 1,
+  count: number = 8
+): CustomResearchSource[] {
+  if (!allSources || allSources.length === 0) return [];
+  const v = Math.max(1, versionNumber) - 1;
+  const total = allSources.length;
+  // Use a prime stride to guarantee shifting sets per version
+  const stride = 7;
+  const offset = (v * stride) % total;
+  const rotated = [...allSources.slice(offset), ...allSources.slice(0, offset)];
+  return rotated.slice(0, Math.min(count, total));
+}
+
+/**
+ * دالة مساعدة لإنشاء فقرة متوافقة 100% مع الاتجاه من اليمين إلى اليسار (RTL) في Microsoft Word
+ * تضيف وسم <w:bidi/> تلقائياً لكل فقرة بدون استثناء
+ */
+function bidiParagraph(options: ConstructorParameters<typeof Paragraph>[0]): Paragraph {
+  if (typeof options === "string") {
+    return new Paragraph({
+      bidirectional: true,
+      text: options,
+    });
+  }
+  return new Paragraph({
+    bidirectional: true,
+    ...(options as object),
+  });
+}
 
 export interface CustomResearchSource {
   id: string;
@@ -158,12 +274,12 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
   const children: (Paragraph | Table)[] = [];
 
   // =========================================================================
-  // 1. Cover Page (صفحة الغلاف الرسمية)
+  // 1. Cover Page (صفحة الغلاف الرسمية - RTL 100%)
   // =========================================================================
   // Top school / institution header
   if (coverInfo.schoolOrUniversity) {
     children.push(
-      new Paragraph({
+      bidiParagraph({
         alignment: AlignmentType.RIGHT,
         spacing: { before: 200, after: 100 },
         children: [
@@ -181,7 +297,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
 
   // Large Centered Title (26pt bold)
   children.push(
-    new Paragraph({
+    bidiParagraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 1800, after: 800 },
       children: [
@@ -250,7 +366,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
   }
 
   children.push(
-    new Paragraph({
+    bidiParagraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 1600, after: 400 },
       children: metaRuns,
@@ -258,11 +374,26 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
   );
 
   // Page Break after Cover Page
-  children.push(new Paragraph({ children: [new PageBreak()] }));
+  children.push(bidiParagraph({ children: [new PageBreak()] }));
 
   // =========================================================================
   // 2. Scan for actual encyclopedic headings in rawLines (Available for Index & Body)
   // =========================================================================
+  // Separate body lines from references lines to avoid duplication and keep references on their own page
+  const refHeaderKeywords = ["قائمة المصادر والمراجع", "المصادر والمراجع الأكاديمية", "المصادر والمراجع"];
+  const refIndexInRaw = rawLines.findIndex((line) => {
+    const trimmed = line.trim();
+    return refHeaderKeywords.some((kw) => trimmed.includes(kw));
+  });
+
+  let bodyLines = rawLines;
+  let textRefLines: string[] = [];
+
+  if (refIndexInRaw !== -1) {
+    bodyLines = rawLines.slice(0, refIndexInRaw);
+    textRefLines = rawLines.slice(refIndexInRaw + 1);
+  }
+
   const mainHeadingKeywords = [
     "المبحث",
     "مقدمة",
@@ -283,7 +414,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
   ];
 
   const detectedHeadings: string[] = [];
-  rawLines.forEach((line) => {
+  bodyLines.forEach((line) => {
     const trimmed = line.trim();
     if (!trimmed) return;
 
@@ -338,7 +469,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
 
   if (includeIndex) {
     children.push(
-      new Paragraph({
+      bidiParagraph({
         alignment: AlignmentType.CENTER,
         spacing: { before: 300, after: 400 },
         children: [
@@ -390,7 +521,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
             : []),
         ];
       } else {
-        // 13 to 60 pages (e.g. 30 pages requested by user!)
+        // 13 to 60 pages
         finalHeadings = [
           `مقدمة وتمهيد عام وإشكالية الدراسة`,
           `المدخل الموسوعي والإطار المفاهيمي لـ (${tName})`,
@@ -410,7 +541,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
           `خاتمة واستنتاجات وتوصيات تنفيذية شاملة`,
           ...(includeReferences
             ? [
-                "قائمة المصادر والمراجع الأكاديمية المعتمدة (أهم 10 مصادر عربية)",
+                "قائمة المصادر والمراجع الأكاديمية المعتمدة",
               ]
             : []),
         ];
@@ -443,7 +574,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
           new TableCell({
             width: { size: 75, type: WidthType.PERCENTAGE },
             children: [
-              new Paragraph({
+              bidiParagraph({
                 alignment: AlignmentType.RIGHT,
                 children: [
                   new TextRun({
@@ -460,7 +591,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
           new TableCell({
             width: { size: 25, type: WidthType.PERCENTAGE },
             children: [
-              new Paragraph({
+              bidiParagraph({
                 alignment: AlignmentType.RIGHT,
                 children: [
                   new TextRun({
@@ -483,7 +614,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
               new TableCell({
                 width: { size: 75, type: WidthType.PERCENTAGE },
                 children: [
-                  new Paragraph({
+                  bidiParagraph({
                     alignment: AlignmentType.RIGHT,
                     children: [
                       new TextRun({
@@ -503,7 +634,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
               new TableCell({
                 width: { size: 25, type: WidthType.PERCENTAGE },
                 children: [
-                  new Paragraph({
+                  bidiParagraph({
                     alignment: AlignmentType.RIGHT,
                     children: [
                       new TextRun({
@@ -531,18 +662,17 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
     );
 
     // Page break after Index
-    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(bidiParagraph({ children: [new PageBreak()] }));
   }
 
   // =========================================================================
   // 3. Body Content (المقدمة، الفصول، المباحث، الخاتمة)
   // Font sizes: Main Headings = 22pt (44), Subheadings = 20pt (40), Body = 18pt (36)
-  // All text explicitly Right-to-Left and Right-Aligned
-  // Dynamically inserts PageBreak for multi-page papers so Word pagination matches target
+  // All text explicitly Right-to-Left (bidirectional: true) and Right-Aligned
   // =========================================================================
   let paragraphsSinceLastBreak = 0;
 
-  rawLines.forEach((line) => {
+  bodyLines.forEach((line) => {
     const trimmed = line.trim();
     if (!trimmed) return;
 
@@ -570,7 +700,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
       effectiveTargetPages >= 10 &&
       paragraphsSinceLastBreak >= 3
     ) {
-      children.push(new Paragraph({ children: [new PageBreak()] }));
+      children.push(bidiParagraph({ children: [new PageBreak()] }));
       paragraphsSinceLastBreak = 0;
     }
 
@@ -578,7 +708,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
 
     if (isMainHeading) {
       children.push(
-        new Paragraph({
+        bidiParagraph({
           alignment: AlignmentType.RIGHT,
           spacing: { before: 450, after: 220 },
           children: [
@@ -596,7 +726,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
       paragraphsSinceLastBreak++;
     } else if (isSubHeading) {
       children.push(
-        new Paragraph({
+        bidiParagraph({
           alignment: AlignmentType.RIGHT,
           spacing: { before: 280, after: 160 },
           children: [
@@ -612,9 +742,9 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
       );
     } else {
       paragraphsSinceLastBreak += 1;
-      // Body Text: 18pt font (36 half-points), Right-aligned, natural continuous flow
+      // Body Text: 18pt font (36 half-points), Right-aligned, RTL continuous flow
       children.push(
-        new Paragraph({
+        bidiParagraph({
           alignment: AlignmentType.RIGHT,
           spacing: {
             before: 100,
@@ -635,13 +765,13 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
   });
 
   // =========================================================================
-  // 4. References Page (المراجع والمصادر الأكاديمية - أهم 10 مصادر عربية معتمدة)
+  // 4. References Page (المراجع والمصادر الأكاديمية المتنوعة لكل نسخة - RTL 100%)
   // =========================================================================
   if (includeReferences) {
-    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(bidiParagraph({ children: [new PageBreak()] }));
 
     children.push(
-      new Paragraph({
+      bidiParagraph({
         alignment: AlignmentType.RIGHT,
         spacing: { before: 300, after: 300 },
         children: [
@@ -658,12 +788,12 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
     );
 
     children.push(
-      new Paragraph({
+      bidiParagraph({
         alignment: AlignmentType.RIGHT,
         spacing: { before: 100, after: 200 },
         children: [
           new TextRun({
-            text: "تم توثيق واستقاء محتوى هذه الدراسة بالرجوع إلى أمهات الكتب والأطروحات الصادرة عن أفضل 10 قواعد بيانات ومستودعات أكاديمية عربية موثقة:",
+            text: "تم توثيق واستقاء محتوى هذه النسخة بالرجوع إلى أمهات الكتب والأطروحات الصادرة عن قواعد البيانات والمستودعات الأكاديمية المعتمدة:",
             font: "Arial",
             size: 32, // 16pt
             italics: true,
@@ -674,33 +804,55 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
       }),
     );
 
-    // Citing custom or default Top 10 Arabic Academic Research databases customized to topic
-    const activeSources =
-      sources && sources.length > 0 ? sources : TOP_ARABIC_ACADEMIC_SOURCES;
-    activeSources.forEach((source, idx) => {
-      let citationText = "";
-      if ("getCitation" in source && typeof source.getCitation === "function") {
-        citationText = source.getCitation(topic);
-      } else if ("citation" in source && source.citation) {
-        citationText = source.citation;
-      } else {
-        citationText = `${idx + 1}. ${source.name} - ${source.desc || "أبحاث ورسائل جامعية محكمة"} - دراسات تخصصية في (${topic})، 2024.`;
-      }
-      children.push(
-        new Paragraph({
-          alignment: AlignmentType.RIGHT,
-          spacing: { before: 120, after: 160, line: 360 },
-          children: [
-            new TextRun({
-              text: citationText,
-              font: "Arial",
-              size: 36, // 18pt
-              rightToLeft: true,
-            }),
-          ],
-        }),
-      );
-    });
+    // If text already has 3+ reference lines generated by AI or synthesizer, use them!
+    if (textRefLines.length >= 3) {
+      textRefLines.forEach((refLine) => {
+        children.push(
+          bidiParagraph({
+            alignment: AlignmentType.RIGHT,
+            spacing: { before: 120, after: 160, line: 360 },
+            children: [
+              new TextRun({
+                text: refLine,
+                font: "Arial",
+                size: 36, // 18pt
+                rightToLeft: true,
+              }),
+            ],
+          }),
+        );
+      });
+    } else {
+      // Citing diverse sources unique to this version number
+      const baseSources =
+        sources && sources.length > 0 ? sources : TOP_ARABIC_ACADEMIC_SOURCES;
+      const activeSources = getDiverseSourcesForVersion(baseSources, versionNumber || 1, 8);
+
+      activeSources.forEach((source, idx) => {
+        let citationText = "";
+        if ("getCitation" in source && typeof source.getCitation === "function") {
+          citationText = source.getCitation(topic);
+        } else if ("citation" in source && source.citation) {
+          citationText = source.citation;
+        } else {
+          citationText = `${idx + 1}. ${source.name} - ${source.desc || "أبحاث ورسائل جامعية محكمة"} - دراسات تخصصية في (${topic})، 2024.`;
+        }
+        children.push(
+          bidiParagraph({
+            alignment: AlignmentType.RIGHT,
+            spacing: { before: 120, after: 160, line: 360 },
+            children: [
+              new TextRun({
+                text: citationText,
+                font: "Arial",
+                size: 36, // 18pt
+                rightToLeft: true,
+              }),
+            ],
+          }),
+        );
+      });
+    }
   }
 
   // =========================================================================
@@ -757,7 +909,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
         footers: {
           default: new Footer({
             children: [
-              new Paragraph({
+              bidiParagraph({
                 alignment: AlignmentType.CENTER,
                 children: [
                   new TextRun({

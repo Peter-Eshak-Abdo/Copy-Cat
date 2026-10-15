@@ -1,5 +1,5 @@
-// Copy-Cat Service Worker v5.0 - High Performance & Dynamic Admin Bypass
-const CACHE_NAME = "copycat-cache-v5.0";
+// Copy-Cat Service Worker v6.0 - High Performance & Dynamic Admin Bypass
+const CACHE_NAME = "copycat-cache-v6.0";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
@@ -40,19 +40,35 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+
+  // 1. CRITICAL: Cache API strictly supports ONLY GET requests.
+  // Any POST, PUT, DELETE, PATCH, or HEAD request MUST be completely ignored.
+  if (request.method !== "GET") {
+    return;
+  }
+
   const url = new URL(request.url);
 
-  // Skip localhost / development
+  // 2. Only cache HTTP and HTTPS requests (ignore chrome-extension:, data:, blob:, etc.)
+  if (!url.protocol.startsWith("http")) {
+    return;
+  }
+
+  // 3. Skip localhost / development
   if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
     return;
   }
 
-  // CRITICAL: NEVER cache admin pages or API routes in Service Worker
-  if (url.pathname.startsWith("/admin") || url.pathname.startsWith("/api/")) {
+  // 4. CRITICAL: NEVER cache admin pages, API routes, or dynamic server actions
+  if (
+    url.pathname.startsWith("/admin") ||
+    url.pathname.startsWith("/api/") ||
+    url.pathname.includes("_next/data")
+  ) {
     return;
   }
 
-  // 2. Static Assets (Next.js JS/CSS chunks, fonts, images) -> Cache First with background update
+  // 5. Static Assets (Next.js JS/CSS chunks, fonts, images) -> Cache First with background update
   if (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|woff2?|css|js)$/)
@@ -64,10 +80,10 @@ self.addEventListener("fetch", (event) => {
         }
         return fetch(request)
           .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
+            if (networkResponse && networkResponse.status === 200 && request.method === "GET") {
               const responseClone = networkResponse.clone();
               caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, responseClone);
+                cache.put(request, responseClone).catch(() => {});
               });
             }
             return networkResponse;
@@ -80,15 +96,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 3. Document Navigation -> Network First with cache fallback, then offline.html fallback
+  // 6. Document Navigation -> Network First with cache fallback, then offline.html fallback
   if (request.mode === "navigate" || request.destination === "document") {
     event.respondWith(
       fetch(request)
         .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
+          if (networkResponse && networkResponse.status === 200 && request.method === "GET") {
             const responseClone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
+              cache.put(request, responseClone).catch(() => {});
             });
           }
           return networkResponse;
@@ -105,14 +121,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 4. Default -> Stale-while-revalidate
+  // 7. Default -> Stale-while-revalidate (strictly for GET)
   event.respondWith(
     caches.match(request).then((cached) => {
       const fetchPromise = fetch(request)
         .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
+          if (networkResponse && networkResponse.status === 200 && request.method === "GET") {
             const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, clone).catch(() => {});
+            });
           }
           return networkResponse;
         })

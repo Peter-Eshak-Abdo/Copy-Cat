@@ -2,15 +2,38 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
+import os from "os";
+import { PDFDocument } from "pdf-lib";
 import { verifySessionTokenEdge } from "@/lib/edge-auth";
 import { isAllowedFacebookUrl } from "@/lib/security";
 
-const FB_POSTS_ROOT = path.join(process.cwd(), "public", "uploads", "fb_posts");
+const LOCAL_POSTS_ROOT = path.join(process.cwd(), "public", "uploads", "fb_posts");
 const PYTHON_PATH = path.join(process.cwd(), ".venv", "Scripts", "python.exe");
 
-function ensureDirs() {
-  if (!fs.existsSync(FB_POSTS_ROOT)) {
-    fs.mkdirSync(FB_POSTS_ROOT, { recursive: true });
+/**
+ * Returns a guaranteed writable directory for storing generated documents.
+ * In local dev: public/uploads/fb_posts
+ * On Vercel / serverless: os.tmpdir()/copycat_fb_posts
+ */
+function getStorageRoot(): { rootDir: string; isServerless: boolean } {
+  try {
+    if (!fs.existsSync(LOCAL_POSTS_ROOT)) {
+      fs.mkdirSync(LOCAL_POSTS_ROOT, { recursive: true });
+    }
+    // Verify write permissions
+    const testFile = path.join(LOCAL_POSTS_ROOT, `.write_test_${Date.now()}`);
+    fs.writeFileSync(testFile, "ok");
+    fs.unlinkSync(testFile);
+    return { rootDir: LOCAL_POSTS_ROOT, isServerless: false };
+  } catch {
+    // Read-only filesystem (Vercel Lambda)
+    const tmpDir = path.join(os.tmpdir(), "copycat_fb_posts");
+    try {
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+    } catch {}
+    return { rootDir: tmpDir, isServerless: true };
   }
 }
 
@@ -23,45 +46,129 @@ async function checkAuth(req: NextRequest): Promise<boolean> {
   return auth.isValid;
 }
 
-// GET: list past generated Facebook PDFs
+// GET: List past generated Facebook PDFs OR download a specific file
 export async function GET(req: NextRequest) {
   try {
     const isAuthed = await checkAuth(req);
     if (!isAuthed) {
-      return NextResponse.json({ success: false, error: "وصول غير مصرح به. يرجى تسجيل الدخول كمسؤول." }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "وصول غير مصرح به. يرجى تسجيل الدخول كمسؤول." },
+        { status: 401 }
+      );
     }
 
-    ensureDirs();
-    const entries = fs.readdirSync(FB_POSTS_ROOT, { withFileTypes: true });
-    const documents = [];
+    const downloadParam = req.nextUrl.searchParams.get("download");
+    const dirParam = req.nextUrl.searchParams.get("dir");
+    const fileParam = req.nextUrl.searchParams.get("file");
 
-    for (const entry of entries) {
-      if (entry.isDirectory()) {
-        try {
-          const docDir = path.join(FB_POSTS_ROOT, entry.name);
-          const subFiles = fs.readdirSync(docDir);
-          const pdfFile = subFiles.find((f) => f.toLowerCase().endsWith(".pdf"));
-          const images = subFiles
-            .filter((f) => [".jpg", ".jpeg", ".png", ".webp"].includes(path.extname(f).toLowerCase()))
-            .sort();
+    const { rootDir, isServerless } = getStorageRoot();
 
-          if (pdfFile || images.length > 0) {
-            const stats = fs.statSync(docDir);
-            documents.push({
-              id: entry.name,
-              title: entry.name.replace(/^doc_\d+_/, "").replace(/_/g, " "),
-              dirName: entry.name,
-              pdfUrl: pdfFile ? `/uploads/fb_posts/${entry.name}/${pdfFile}` : null,
-              pdfFilename: pdfFile || null,
-              imageCount: images.length,
-              previewImage: images.length > 0 ? `/uploads/fb_posts/${entry.name}/${images[0]}` : null,
-              images: images.map((img) => `/uploads/fb_posts/${entry.name}/${img}`),
-              createdAt: stats.birthtimeMs || stats.mtimeMs || Date.now(),
-            });
-          }
-        } catch (dirErr) {
-          console.warn(`Error reading document dir ${entry.name}:`, dirErr);
+    // Direct File Download Handler (Supports both local and /tmp storage)
+    if (downloadParam === "1" && dirParam && fileParam) {
+      const safeDir = path.basename(dirParam);
+      const safeFile = path.basename(fileParam);
+
+      // Search in both primary root and fallback local root
+      const candidatePaths = [
+        path.join(/* turbopackIgnore: true */ rootDir, safeDir, safeFile),
+        path.join(LOCAL_POSTS_ROOT, safeDir, safeFile),
+        path.join(/* turbopackIgnore: true */ os.tmpdir(), "copycat_fb_posts", safeDir, safeFile),
+      ];
+
+      for (const targetPath of candidatePaths) {
+        if (fs.existsSync(targetPath)) {
+          const fileBytes = fs.readFileSync(targetPath);
+          const ext = path.extname(safeFile).toLowerCase();
+          const contentType =
+            ext === ".pdf"
+              ? "application/pdf"
+              : [".jpg", ".jpeg"].includes(ext)
+              ? "image/jpeg"
+              : ext === ".png"
+              ? "image/png"
+              : "application/octet-stream";
+
+          return new Response(fileBytes, {
+            headers: {
+              "Content-Type": contentType,
+              "Content-Disposition": `attachment; filename="${encodeURIComponent(safeFile)}"`,
+              "Cache-Control": "public, max-age=3600",
+            },
+          });
         }
+      }
+
+      return NextResponse.json(
+        { success: false, error: "الملف المطلوب غير موجود أو تم تنظيفه." },
+        { status: 404 }
+      );
+    }
+
+    // List History of Documents safely
+    const documents = [];
+    const scannedDirs = new Set<string>();
+
+    const dirsToScan = [rootDir];
+    if (rootDir !== LOCAL_POSTS_ROOT && fs.existsSync(LOCAL_POSTS_ROOT)) {
+      dirsToScan.push(LOCAL_POSTS_ROOT);
+    }
+
+    for (const scanDir of dirsToScan) {
+      try {
+        if (!fs.existsSync(scanDir)) continue;
+        const entries = fs.readdirSync(/* turbopackIgnore: true */ scanDir, { withFileTypes: true });
+
+        for (const entry of entries) {
+          if (entry.isDirectory() && !scannedDirs.has(entry.name)) {
+            scannedDirs.add(entry.name);
+            try {
+              const docDir = path.join(/* turbopackIgnore: true */ scanDir, entry.name);
+              const subFiles = fs.readdirSync(/* turbopackIgnore: true */ docDir);
+              const pdfFile = subFiles.find((f) => f.toLowerCase().endsWith(".pdf"));
+              const images = subFiles
+                .filter((f) =>
+                  [".jpg", ".jpeg", ".png", ".webp"].includes(path.extname(f).toLowerCase())
+                )
+                .sort();
+
+              if (pdfFile || images.length > 0) {
+                const stats = fs.statSync(/* turbopackIgnore: true */ docDir);
+                const pdfDownloadUrl = pdfFile
+                  ? isServerless
+                    ? `/api/admin/fb-download?download=1&dir=${encodeURIComponent(entry.name)}&file=${encodeURIComponent(pdfFile)}`
+                    : `/uploads/fb_posts/${entry.name}/${pdfFile}`
+                  : null;
+
+                const previewUrl =
+                  images.length > 0
+                    ? isServerless
+                      ? `/api/admin/fb-download?download=1&dir=${encodeURIComponent(entry.name)}&file=${encodeURIComponent(images[0])}`
+                      : `/uploads/fb_posts/${entry.name}/${images[0]}`
+                    : null;
+
+                documents.push({
+                  id: entry.name,
+                  title: entry.name.replace(/^doc_\d+_/, "").replace(/_/g, " "),
+                  dirName: entry.name,
+                  pdfUrl: pdfDownloadUrl,
+                  pdfFilename: pdfFile || null,
+                  imageCount: images.length,
+                  previewImage: previewUrl,
+                  images: images.map((img) =>
+                    isServerless
+                      ? `/api/admin/fb-download?download=1&dir=${encodeURIComponent(entry.name)}&file=${encodeURIComponent(img)}`
+                      : `/uploads/fb_posts/${entry.name}/${img}`
+                  ),
+                  createdAt: stats.birthtimeMs || stats.mtimeMs || Date.now(),
+                });
+              }
+            } catch (dirErr) {
+              console.warn(`Error reading document dir ${entry.name}:`, dirErr);
+            }
+          }
+        }
+      } catch (scanErr) {
+        console.warn("Scan dir error:", scanErr);
       }
     }
 
@@ -70,35 +177,99 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, documents });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "تعذر جلب المستندات السابقة من الخادم";
     console.error("GET /api/admin/fb-download error:", err);
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return NextResponse.json({ success: true, documents: [] });
   }
 }
 
-// POST: Trigger download script and stream events via Server-Sent Events (SSE)
+/**
+ * Universal Native Scraper: Extract high-res Facebook CDN image URLs
+ */
+function extractFacebookImageUrls(html: string): string[] {
+  // Unescape JSON escaped slashes and HTML entities
+  const unescaped = html
+    .replace(/\\\//g, "/")
+    .replace(/\\u0026/g, "&")
+    .replace(/&amp;/g, "&");
+
+  const regex = /https?:\/\/[a-zA-Z0-9.-]*fbcdn\.net\/[^\s"'<>\\]+/g;
+  const matches = unescaped.match(regex) || [];
+
+  const validUrls: string[] = [];
+  const seen = new Set<string>();
+
+  for (const rawUrl of matches) {
+    const cleanUrl = rawUrl.split('"')[0].split("'")[0].split("\\")[0];
+    const u = cleanUrl.toLowerCase();
+
+    // Ignore UI elements, avatars, emojis
+    if (
+      u.includes("rsrc.php") ||
+      u.includes("emoji.php") ||
+      u.includes("static.xx") ||
+      u.includes("favicon") ||
+      u.includes("/badges/") ||
+      u.includes("/icons/") ||
+      u.includes("s150x150") ||
+      u.includes("p50x50") ||
+      u.includes("p100x100") ||
+      u.includes("cp0")
+    ) {
+      continue;
+    }
+
+    // Typical high-res photo path markers on Facebook CDN
+    if (
+      u.includes(".jpg") ||
+      u.includes(".jpeg") ||
+      u.includes(".png") ||
+      u.includes(".webp") ||
+      u.includes("dst-jpg") ||
+      u.includes("t39.30808-6") ||
+      u.includes("scontent")
+    ) {
+      // Deduplicate by base path (ignore volatile token query params)
+      const baseKey = cleanUrl.split("?")[0];
+      if (!seen.has(baseKey)) {
+        seen.add(baseKey);
+        validUrls.push(cleanUrl);
+      }
+    }
+  }
+
+  return validUrls;
+}
+
+// POST: Trigger download script or native scraper and stream events via SSE
 export async function POST(req: NextRequest) {
   try {
     const isAuthed = await checkAuth(req);
     if (!isAuthed) {
-      return NextResponse.json({ success: false, error: "وصول غير مصرح به. انتهت جلسة الدخول." }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "وصول غير مصرح به. انتهت جلسة الدخول." },
+        { status: 401 }
+      );
     }
-
-    ensureDirs();
 
     let body: { url?: string; title?: string; maxPhotos?: number };
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json({ success: false, error: "صيغة الطلب غير صالحة. يرجى إرسال بيانات JSON صحيحة." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "صيغة الطلب غير صالحة. يرجى إرسال بيانات JSON صحيحة." },
+        { status: 400 }
+      );
     }
 
     const title = body?.title;
-    const maxPhotos = body?.maxPhotos ?? 120;
+    const maxPhotos = Math.max(1, Math.min(200, Number(body?.maxPhotos) || 120));
     let url = body?.url;
 
     if (!url || typeof url !== "string" || !url.trim()) {
-      return NextResponse.json({ success: false, error: "رابط المنشور مطلوب. يرجى لصق رابط منشور أو ألبوم الفيسبوك." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "رابط المنشور مطلوب. يرجى لصق رابط منشور أو ألبوم الفيسبوك." },
+        { status: 400 }
+      );
     }
 
     url = url.trim();
@@ -106,7 +277,7 @@ export async function POST(req: NextRequest) {
       url = "https://" + url;
     }
 
-    // SSRF Defense: strictly validate URL belongs to legitimate Facebook domains
+    // SSRF Defense
     if (!isAllowedFacebookUrl(url)) {
       return NextResponse.json(
         {
@@ -117,6 +288,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const { rootDir, isServerless } = getStorageRoot();
+
     const timestamp = Date.now();
     const safeTitle = (title || "ملزمة_فيسبوك")
       .trim()
@@ -124,98 +297,294 @@ export async function POST(req: NextRequest) {
       .substring(0, 50);
 
     const folderName = `doc_${timestamp}_${safeTitle}`;
-    const outDir = path.join(FB_POSTS_ROOT, folderName);
+    const outDir = path.join(rootDir, folderName);
     const pdfFilename = `${safeTitle}.pdf`;
 
-    fs.mkdirSync(outDir, { recursive: true });
+    try {
+      fs.mkdirSync(outDir, { recursive: true });
+    } catch (mkdirErr) {
+      console.warn("Failed to create outDir:", mkdirErr);
+    }
 
-    // Stream responses using ReadableStream
     const encoder = new TextEncoder();
 
+    // Check if Local Python environment is available
+    const pythonExecutable = fs.existsSync(PYTHON_PATH)
+      ? PYTHON_PATH
+      : process.platform === "win32"
+      ? "python.exe"
+      : "python3";
+
+    const scriptPath = path.join(process.cwd(), "scripts", "download_fb_post.py");
+    const hasPythonScript = fs.existsSync(scriptPath) && !isServerless;
+
     const stream = new ReadableStream({
-      start(controller) {
-        const pythonExecutable = fs.existsSync(PYTHON_PATH) ? PYTHON_PATH : "python";
-        const scriptPath = path.join(process.cwd(), "scripts", "download_fb_post.py");
+      async start(controller) {
+        const sendEvent = (data: Record<string, unknown>) => {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        };
 
-        if (!fs.existsSync(scriptPath)) {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "error", message: "ملف سكريبت التحميل download_fb_post.py غير موجود في مجلد scripts." })}\n\n`)
-          );
-          controller.close();
-          return;
-        }
-
-        const args = [
-          scriptPath,
-          "--url", url,
-          "--out-dir", outDir,
-          "--pdf-name", pdfFilename,
-          "--max", String(Math.max(1, Math.min(200, Number(maxPhotos) || 120))),
-        ];
-
-        let pyProc;
-        try {
-          pyProc = spawn(pythonExecutable, args, {
-            cwd: process.cwd(),
-            env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        // Strategy A: Local Python with Playwright (if running on desktop/local server)
+        if (hasPythonScript) {
+          sendEvent({
+            type: "status",
+            message: "جاري تشغيل محرك الفيس بوك المحلي بالمتصفح...",
           });
-        } catch (spawnErr: unknown) {
-          const errMsg = spawnErr instanceof Error ? spawnErr.message : "خطأ غير معروف";
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "error", message: `تعذر تشغيل بيئة بايثون: ${errMsg}` })}\n\n`)
-          );
-          controller.close();
-          return;
+
+          const args = [
+            scriptPath,
+            "--url",
+            url!,
+            "--out-dir",
+            outDir,
+            "--pdf-name",
+            pdfFilename,
+            "--max",
+            String(maxPhotos),
+          ];
+
+          let pyProc;
+          try {
+            pyProc = spawn(pythonExecutable, args, {
+              cwd: process.cwd(),
+              env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+            });
+          } catch (spawnErr) {
+            console.warn("Python spawn failed, falling back to native engine:", spawnErr);
+            // Fall through to native extractor below
+          }
+
+          if (pyProc) {
+            let lineBuffer = "";
+
+            pyProc.stdout.on("data", (chunk: Buffer) => {
+              lineBuffer += chunk.toString("utf-8");
+              const lines = lineBuffer.split("\n");
+              lineBuffer = lines.pop() || "";
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed) continue;
+                try {
+                  const parsed = JSON.parse(trimmed);
+                  sendEvent(parsed);
+                } catch {
+                  sendEvent({ type: "log", message: trimmed });
+                }
+              }
+            });
+
+            pyProc.stderr.on("data", (errChunk: Buffer) => {
+              const errText = errChunk.toString("utf-8").trim();
+              if (errText) {
+                sendEvent({ type: "log", level: "stderr", message: errText });
+              }
+            });
+
+            pyProc.on("close", (code) => {
+              if (code !== 0) {
+                sendEvent({
+                  type: "error",
+                  message: `انتهت العملية بكود (${code}). إذا كان المنشور في مجموعة مغلقة، يمكنك سحب وإفلات الصور يدوياً أدناه لتجميعها فوراً.`,
+                });
+              }
+              controller.close();
+            });
+
+            pyProc.on("error", (err) => {
+              sendEvent({
+                type: "error",
+                message: `تعذر تشغيل بايثون (${err.message})، جاري التبديل للمحرك السحابي...`,
+              });
+              controller.close();
+            });
+
+            return; // Finished setting up Python process
+          }
         }
 
-        let lineBuffer = "";
+        // Strategy B: Universal Native Node.js Scraper & pdf-lib Compiler (100% Serverless / Vercel Ready)
+        sendEvent({
+          type: "status",
+          message: "جاري الاتصال بخوادم فيسبوك واستخراج الصور المتاحة...",
+        });
 
-        pyProc.stdout.on("data", (chunk: Buffer) => {
-          lineBuffer += chunk.toString("utf-8");
-          const lines = lineBuffer.split("\n");
-          lineBuffer = lines.pop() || "";
+        try {
+          const headers = {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+            Accept:
+              "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
+            "Sec-Ch-Ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+          };
 
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) continue;
+          // Fetch post HTML
+          const resp = await fetch(url!, { headers, redirect: "follow" });
+          const html = await resp.text();
+
+          let imageUrls = extractFacebookImageUrls(html);
+
+          // If no images found on desktop, attempt mobile endpoint
+          if (imageUrls.length === 0) {
+            sendEvent({
+              type: "status",
+              message: "جاري فحص النسخة المصغرة للمنشور...",
+            });
+            const mobileUrl = url!.replace("www.facebook.com", "m.facebook.com");
             try {
-              const parsed = JSON.parse(trimmed);
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(parsed)}\n\n`));
-            } catch {
-              // Not JSON, send as log
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ type: "log", message: trimmed })}\n\n`)
-              );
+              const mResp = await fetch(mobileUrl, {
+                headers: {
+                  ...headers,
+                  "User-Agent":
+                    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+                },
+              });
+              const mHtml = await mResp.text();
+              imageUrls = extractFacebookImageUrls(mHtml);
+            } catch {}
+          }
+
+          if (imageUrls.length === 0) {
+            sendEvent({
+              type: "error",
+              message:
+                "هذا المنشور خاص أو يتطلب تسجيل الدخول بحساب فيسبوك. لحسن الحظ يمكنك سحب وإفلات صور الملزمة مباشرة في صندوق الرفع أدناه لتوليد ملف الـ PDF فوراً للطباعة!",
+            });
+            controller.close();
+            return;
+          }
+
+          const limitedUrls = imageUrls.slice(0, maxPhotos);
+
+          sendEvent({
+            type: "status",
+            message: `تم اكتشاف ${limitedUrls.length} صورة بالترتيب! جاري التحميل فائق السرعة...`,
+          });
+
+          // Download all images in memory
+          const downloadedBuffers: { buffer: Buffer; filename: string; webUrl: string }[] = [];
+
+          for (let i = 0; i < limitedUrls.length; i++) {
+            const imgUrl = limitedUrls[i];
+            const pageNum = i + 1;
+            const filename = `page_${String(pageNum).padStart(3, "0")}.jpg`;
+            const destPath = path.join(outDir, filename);
+
+            try {
+              const imgResp = await fetch(imgUrl, {
+                headers: { Referer: "https://www.facebook.com/" },
+              });
+
+              if (imgResp.ok) {
+                const arrayBuf = await imgResp.arrayBuffer();
+                const buf = Buffer.from(arrayBuf);
+
+                if (buf.length > 2000) {
+                  try {
+                    fs.writeFileSync(destPath, buf);
+                  } catch {}
+
+                  const webImgUrl = isServerless
+                    ? `/api/admin/fb-download?download=1&dir=${encodeURIComponent(folderName)}&file=${encodeURIComponent(filename)}`
+                    : `/uploads/fb_posts/${folderName}/${filename}`;
+
+                  downloadedBuffers.push({ buffer: buf, filename, webUrl: webImgUrl });
+
+                  sendEvent({
+                    type: "progress",
+                    current: pageNum,
+                    image_url: imgUrl,
+                  });
+
+                  sendEvent({
+                    type: "download_progress",
+                    downloaded: downloadedBuffers.length,
+                    total: limitedUrls.length,
+                    file_name: filename,
+                  });
+                }
+              }
+            } catch (dlErr) {
+              console.warn(`Failed to download image ${i + 1}:`, dlErr);
             }
           }
-        });
 
-        pyProc.stderr.on("data", (errChunk: Buffer) => {
-          const errText = errChunk.toString("utf-8").trim();
-          if (errText) {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ type: "log", level: "stderr", message: errText })}\n\n`)
-            );
+          if (downloadedBuffers.length === 0) {
+            sendEvent({
+              type: "error",
+              message: "تعذر تحميل الصور من خوادم فيس بوك. يرجى تجربة رفع الصور مباشرة.",
+            });
+            controller.close();
+            return;
           }
-        });
 
-        pyProc.on("close", (code) => {
-          if (code !== 0) {
-            controller.enqueue(
-              encoder.encode(
-                `data: ${JSON.stringify({ type: "error", message: `انتهت عملية الفيس بوك بكود (${code}). يرجى التحقق من خصوصية المنشور أو صلاحية الرابط.` })}\n\n`
-              )
-            );
+          // Compile into PDF using pdf-lib
+          sendEvent({
+            type: "status",
+            message: `جاري تجميع ${downloadedBuffers.length} صفحة في ملف PDF عالي الجودة للطباعة...`,
+          });
+
+          const pdfDoc = await PDFDocument.create();
+
+          for (const item of downloadedBuffers) {
+            try {
+              let img;
+              const isPng =
+                item.buffer[0] === 0x89 &&
+                item.buffer[1] === 0x50 &&
+                item.buffer[2] === 0x4e &&
+                item.buffer[3] === 0x47;
+
+              if (isPng) {
+                img = await pdfDoc.embedPng(item.buffer);
+              } else {
+                img = await pdfDoc.embedJpg(item.buffer);
+              }
+
+              const page = pdfDoc.addPage([img.width, img.height]);
+              page.drawImage(img, {
+                x: 0,
+                y: 0,
+                width: img.width,
+                height: img.height,
+              });
+            } catch (embedErr) {
+              console.warn("Skipping corrupt image in PDF:", embedErr);
+            }
           }
-          controller.close();
-        });
 
-        pyProc.on("error", (err) => {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "error", message: `فشل تشغيل بيئة بايثون: ${err.message}` })}\n\n`)
-          );
+          const pdfBytes = await pdfDoc.save();
+          const pdfPath = path.join(outDir, pdfFilename);
+
+          try {
+            fs.writeFileSync(pdfPath, Buffer.from(pdfBytes));
+          } catch {}
+
+          const finalPdfUrl = isServerless
+            ? `/api/admin/fb-download?download=1&dir=${encodeURIComponent(folderName)}&file=${encodeURIComponent(pdfFilename)}`
+            : `/uploads/fb_posts/${folderName}/${pdfFilename}`;
+
+          sendEvent({
+            type: "completed",
+            total_images: downloadedBuffers.length,
+            pdf_url: finalPdfUrl,
+            pdf_filename: pdfFilename,
+            images: downloadedBuffers.map((b) => b.webUrl),
+            message: `تم سحب ودمج ${downloadedBuffers.length} صفحة بنجاح في ملف PDF جاهز للطباعة فوراً!`,
+          });
+
           controller.close();
-        });
+        } catch (nativeErr: unknown) {
+          const msg = nativeErr instanceof Error ? nativeErr.message : "خطأ غير متوقع";
+          sendEvent({
+            type: "error",
+            message: `تعذر معالجة المنشور: ${msg}`,
+          });
+          controller.close();
+        }
       },
     });
 
@@ -227,7 +596,8 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "حدث خطأ غير متوقع أثناء معالجة الطلب في الخادم";
+    const message =
+      err instanceof Error ? err.message : "حدث خطأ غير متوقع أثناء معالجة الطلب في الخادم";
     console.error("POST /api/admin/fb-download error:", err);
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }

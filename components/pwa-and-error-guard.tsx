@@ -33,12 +33,14 @@ export function PwaAndErrorGuard() {
 
     window.addEventListener("online", handleOnline);
 
-    // 1. Suppress benign Chrome extension listener disconnect errors
+    // 1. Suppress benign Chrome extension listener disconnect errors & legacy SW Cache POST errors
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       const msg = event.reason?.message || String(event.reason || "");
       if (
         msg.includes("A listener indicated an asynchronous response") ||
-        msg.includes("message channel closed before a response was received")
+        msg.includes("message channel closed before a response was received") ||
+        msg.includes("Request method 'POST' is unsupported") ||
+        msg.includes("Failed to execute 'put' on 'Cache'")
       ) {
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -57,7 +59,7 @@ export function PwaAndErrorGuard() {
       if ("caches" in window) {
         caches.keys().then((keys) => {
           for (const key of keys) {
-            if (key !== "copycat-cache-v5.0") {
+            if (key !== "copycat-cache-v6.0") {
               caches.delete(key);
             }
           }
