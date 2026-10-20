@@ -3,6 +3,33 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useToast } from "@/components/toast-provider";
 import { SITE_CONFIG } from "@/lib/site-config";
+import {
+  Printer,
+  Calculator,
+  Settings,
+  FolderOpen,
+  BookOpen,
+  CheckCircle2,
+  FileText,
+  BarChart3,
+  Tag,
+  SlidersHorizontal,
+  Layers,
+  CheckSquare,
+  Square,
+  X,
+  Receipt,
+  Copy,
+  Share2,
+  Send,
+  RotateCcw,
+  Lightbulb,
+  PlusCircle,
+  Plus,
+  Check,
+  Edit2,
+  Trash2,
+} from "lucide-react";
 
 export interface QuickPricingButton {
   id: string;
@@ -349,46 +376,6 @@ export default function SmartCalculatorPage() {
     window.open(url, "_blank");
   };
 
-  // Transfer Directly to Shift Tasks in LocalStorage
-  const handleTransferToShiftOrder = () => {
-    try {
-      const orderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-      const activeFinishingNames = customAddons
-        .filter((a) => a.category === "finishing" && selectedFinishingIds.includes(a.id))
-        .map((a) => a.name)
-        .join(" + ");
-      const newTask = {
-        id: orderId,
-        title: `ملزمة/مستند (${pageCount} ص - ${isDuplex ? "وش وظهر" : "وجه واحد"}) ${selectedBinding ? "+ " + selectedBinding.name : ""} ${activeFinishingNames ? "+ " + activeFinishingNames : ""}`,
-        customerName: "عميل حاسبة الشفت",
-        phone: "",
-        deadline: "اليوم",
-        totalCopies: copiesCount,
-        completedCopies: 0,
-        bindingType: selectedBinding?.name || "ورق فرط",
-        notes: `ورق مستخدم: ${totalSheetsOrder} ورقة (${packetsA4Count} باكيت) | سعر النسخة: ${singleCopyTotalCost.toFixed(2)} ج.م | الإجمالي: ${grandTotalCost.toFixed(2)} ج.م`,
-        status: "in_progress" as const,
-        createdAt: Date.now(),
-      };
-
-      const saved = localStorage.getItem("copycat_tasks_v1");
-      let currentTasks: unknown[] = [];
-      if (saved) {
-        try {
-          currentTasks = JSON.parse(saved);
-        } catch {}
-      }
-      const updated = [newTask, ...(Array.isArray(currentTasks) ? currentTasks : [])];
-      localStorage.setItem("copycat_tasks_v1", JSON.stringify(updated));
-      window.dispatchEvent(new Event("storage"));
-      toast.success(
-        "تم تحويل الأوردر للشفت",
-        `تم تسجيل المهمة #${newTask.id} بنجاح وقيدها في قائمة مهام وأوردرات الشفت الحالية`
-      );
-    } catch {
-      toast.error("خطأ", "تعذر تحويل الأوردر إلى مهام الشفت");
-    }
-  };
 
   // Reset Calculator - Zeroes out all page and copy numbers
   const handleReset = () => {
@@ -547,70 +534,47 @@ export default function SmartCalculatorPage() {
 
   return (
     <div className="flex flex-col w-full pb-12 gap-6 text-slate-900" dir="rtl">
-      {/* Top Hero Bar / Mode Switcher */}
-      <div className="rounded-2xl bg-white p-6 shadow-xs border border-slate-200">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
-              <span className="material-symbols-outlined text-2xl">calculate</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-bold text-slate-900">
-                  حاسبة المطبعة والملازم الذكية
-                </h1>
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                  Smart Calculator v2.4
-                </span>
-                <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                  تسعير لحظي
-                </span>
-              </div>
-              <p className="text-sm text-slate-500 max-w-3xl">
-                حساب دقيق لورق الملازم والكتب (وش/ظهر أو وجه واحد)، أزرار تسعير فورية ومخصصة، وإضافات التجليد والسلوفان مع حاسبة عامة سريعة بنظام Numpad.
-              </p>
-            </div>
-          </div>
-
-          {/* Main Tabs */}
-          <div className="flex items-center gap-1.5 self-start lg:self-center p-1 rounded-xl bg-slate-100 border border-slate-200">
-            <button
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-                activeTab === "print"
-                  ? "bg-white text-slate-900 shadow-xs font-bold"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-              }`}
-              onClick={() => setActiveTab("print")}
-              type="button"
-            >
-              <span className="material-symbols-outlined text-base">print</span>
-              <span>حاسبة الملازم والطباعة</span>
-            </button>
-            <button
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-                activeTab === "numpad"
-                  ? "bg-white text-slate-900 shadow-xs font-bold"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-              }`}
-              onClick={() => setActiveTab("numpad")}
-              type="button"
-            >
-              <span className="material-symbols-outlined text-base">dialpad</span>
-              <span>حاسبة عامة (Numpad)</span>
-            </button>
-            <button
-              className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors cursor-pointer"
-              title="إعدادات التسعير الافتراضية"
-              onClick={() => {
-                setTempPricing(pricing);
-                setIsSettingsOpen(true);
-              }}
-              type="button"
-            >
-              <span className="material-symbols-outlined text-base">settings</span>
-            </button>
-          </div>
+      {/* Top Mode Switcher Bar */}
+      <div className="flex items-center justify-between gap-3 p-2 bg-white rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
+          <button
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+              activeTab === "print"
+                ? "bg-white text-slate-900 shadow-xs font-bold"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+            }`}
+            onClick={() => setActiveTab("print")}
+            type="button"
+          >
+            <Printer className="w-4 h-4" />
+            <span>حاسبة الملازم والطباعة</span>
+          </button>
+          <button
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+              activeTab === "numpad"
+                ? "bg-white text-slate-900 shadow-xs font-bold"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+            }`}
+            onClick={() => setActiveTab("numpad")}
+            type="button"
+          >
+            <Calculator className="w-4 h-4" />
+            <span>حاسبة عامة (Numpad)</span>
+          </button>
         </div>
+
+        <button
+          className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-slate-200"
+          title="إعدادات التسعير الافتراضية"
+          onClick={() => {
+            setTempPricing(pricing);
+            setIsSettingsOpen(true);
+          }}
+          type="button"
+        >
+          <Settings className="w-4 h-4" />
+          <span className="hidden sm:inline">إعدادات التسعير</span>
+        </button>
       </div>
 
       {/* Numpad View */}
@@ -773,7 +737,7 @@ export default function SmartCalculatorPage() {
             <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200">
               <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-blue-600 text-2xl">folder_open</span>
+                  <FolderOpen className="w-6 h-6 text-blue-600" />
                   <span className="text-base font-bold text-slate-900">
                     بيانات المذكرة أو المستند
                   </span>
@@ -868,7 +832,7 @@ export default function SmartCalculatorPage() {
                     type="button"
                   >
                     <div className="flex items-center gap-3 text-right">
-                      <span className="material-symbols-outlined text-2xl">auto_stories</span>
+                      <BookOpen className="w-6 h-6" />
                       <div>
                         <div className="text-sm font-bold">وش وظهر (Duplex)</div>
                         <div className="text-xs text-slate-500">
@@ -876,13 +840,11 @@ export default function SmartCalculatorPage() {
                         </div>
                       </div>
                     </div>
-                    <span
-                      className={`material-symbols-outlined text-blue-600 ${
+                    <CheckCircle2
+                      className={`w-5 h-5 text-blue-600 ${
                         isDuplex ? "opacity-100" : "opacity-0"
                       }`}
-                    >
-                      check_circle
-                    </span>
+                    />
                   </button>
                   <button
                     className={`relative p-4 rounded-xl flex items-center justify-between transition-all cursor-pointer border ${
@@ -900,7 +862,7 @@ export default function SmartCalculatorPage() {
                     type="button"
                   >
                     <div className="flex items-center gap-3 text-right">
-                      <span className="material-symbols-outlined text-2xl">description</span>
+                      <FileText className="w-6 h-6" />
                       <div>
                         <div className="text-sm font-bold">وجه واحد (Single-Sided)</div>
                         <div className="text-xs text-slate-500">
@@ -908,20 +870,18 @@ export default function SmartCalculatorPage() {
                         </div>
                       </div>
                     </div>
-                    <span
-                      className={`material-symbols-outlined text-blue-600 ${
+                    <CheckCircle2
+                      className={`w-5 h-5 text-blue-600 ${
                         !isDuplex ? "opacity-100" : "opacity-0"
                       }`}
-                    >
-                      check_circle
-                    </span>
+                    />
                   </button>
                 </div>
               </div>
               {/* Dynamic Live Summary Pill Banner */}
               <div className="mt-4 p-3 rounded-xl bg-slate-50 flex flex-wrap items-center justify-between gap-3 border border-slate-200">
                 <div className="flex items-center gap-2 text-slate-800 text-xs">
-                  <span className="material-symbols-outlined text-blue-600 text-lg">insights</span>
+                  <BarChart3 className="w-4 h-4 text-blue-600" />
                   <span className="text-slate-500 font-medium">النتيجة الحسابية:</span>
                   <span className="font-mono font-bold text-blue-700" id="banner-pages-calc">
                     {pageCount} صفحة {isDuplex ? "وش وظهر" : "وجه واحد"} = {sheetCountPerCopy} ورقة لكل نسخة
@@ -940,7 +900,7 @@ export default function SmartCalculatorPage() {
             <div className="bg-white rounded-2xl p-6 shadow-xs flex flex-col gap-4 border border-slate-200">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-blue-600 text-2xl">sell</span>
+                  <Tag className="w-6 h-6 text-blue-600" />
                   <span className="text-base font-bold text-slate-900">
                     أزرار تسعير الورقة والطباعة السريعة
                   </span>
@@ -957,7 +917,7 @@ export default function SmartCalculatorPage() {
                     onClick={() => setIsManageButtonsOpen(true)}
                     className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-xs text-blue-700 font-bold flex items-center gap-1 cursor-pointer transition border border-slate-200"
                   >
-                    <span className="material-symbols-outlined text-sm">tune</span>
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
                     <span>إدارة وتعديل الأزرار</span>
                   </button>
                 </div>
@@ -993,7 +953,7 @@ export default function SmartCalculatorPage() {
               {/* Custom Price Inline Input */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 gap-4 border border-slate-200">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-slate-400 text-lg">tune</span>
+                  <SlidersHorizontal className="w-4 h-4 text-slate-400" />
                   <span className="text-xs font-bold text-slate-700">أو تحديد سعر ورقة يدوي مخصص:</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1018,7 +978,7 @@ export default function SmartCalculatorPage() {
             <div className="bg-white rounded-2xl p-6 shadow-xs flex flex-col gap-4 border border-slate-200">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-blue-600 text-2xl">book_online</span>
+                  <Layers className="w-6 h-6 text-blue-600" />
                   <h2 className="text-base font-bold text-slate-900">
                     خدمات التجليد والتشطيب (Add-ons)
                   </h2>
@@ -1032,7 +992,7 @@ export default function SmartCalculatorPage() {
                     onClick={() => setIsManageAddonsOpen(true)}
                     className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-xs text-blue-700 font-bold flex items-center gap-1 cursor-pointer transition border border-slate-200"
                   >
-                    <span className="material-symbols-outlined text-sm">tune</span>
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
                     <span>إدارة وتعديل خدمات التجليد</span>
                   </button>
                 </div>
@@ -1118,9 +1078,11 @@ export default function SmartCalculatorPage() {
                         type="button"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-blue-600 text-lg">
-                            {isChecked ? "check_box" : "check_box_outline_blank"}
-                          </span>
+                          {isChecked ? (
+                            <CheckSquare className="w-4 h-4 text-blue-600" />
+                          ) : (
+                            <Square className="w-4 h-4 text-slate-400" />
+                          )}
                           <span className="text-xs font-bold">{item.label}</span>
                         </div>
                         <span className="font-mono text-xs text-blue-700 font-bold">
@@ -1137,7 +1099,7 @@ export default function SmartCalculatorPage() {
                     }}
                     type="button"
                   >
-                    <span className="material-symbols-outlined text-base">close</span>
+                    <X className="w-4 h-4" />
                     <span className="text-xs font-semibold">إلغاء التجليد والتشطيب</span>
                   </button>
                 </div>
@@ -1151,7 +1113,7 @@ export default function SmartCalculatorPage() {
               {/* Invoice Header */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-blue-600 text-2xl">receipt_long</span>
+                  <Receipt className="w-6 h-6 text-blue-600" />
                   <h3 className="text-base font-bold text-slate-900">
                     ملخص الفاتورة التقديرية
                   </h3>
@@ -1163,7 +1125,7 @@ export default function SmartCalculatorPage() {
                     title="نسخ الفاتورة نصياً"
                     type="button"
                   >
-                    <span className="material-symbols-outlined text-lg">content_copy</span>
+                    <Copy className="w-4 h-4" />
                   </button>
                   <button
                     className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
@@ -1171,7 +1133,7 @@ export default function SmartCalculatorPage() {
                     title="مشاركة الفاتورة"
                     type="button"
                   >
-                    <span className="material-symbols-outlined text-lg">share</span>
+                    <Share2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -1200,12 +1162,6 @@ export default function SmartCalculatorPage() {
                   <span className="text-slate-500">عدد النسخ المطلوبة:</span>
                   <span className="font-mono font-bold text-slate-900">
                     {copiesCount} نسخة
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-1">
-                  <span className="text-slate-500">إجمالي الورق المستخدم:</span>
-                  <span className="font-mono font-bold text-emerald-600">
-                    {totalSheetsOrder.toLocaleString("ar-EG")} ورقة (A4)
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1">
@@ -1258,19 +1214,11 @@ export default function SmartCalculatorPage() {
               {/* Fast Actions & Workflow Buttons */}
               <div className="flex flex-col gap-2.5 pt-1">
                 <button
-                  className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
-                  onClick={handleTransferToShiftOrder}
-                  type="button"
-                >
-                  <span className="material-symbols-outlined text-lg">assignment_turned_in</span>
-                  <span>تحويل إلى أوردر في الشفت فوراً</span>
-                </button>
-                <button
                   className="w-full h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-200"
                   onClick={handleSendWhatsappQuote}
                   type="button"
                 >
-                  <span className="material-symbols-outlined text-base text-emerald-600">send_to_mobile</span>
+                  <Send className="w-4 h-4 text-emerald-600" />
                   <span>إرسال عرض السعر للعميل عبر واتساب</span>
                 </button>
                 <button
@@ -1278,7 +1226,7 @@ export default function SmartCalculatorPage() {
                   onClick={handleReset}
                   type="button"
                 >
-                  <span className="material-symbols-outlined text-sm">refresh</span>
+                  <RotateCcw className="w-3.5 h-3.5" />
                   <span>تصفير الحسابات والبدء من جديد</span>
                 </button>
               </div>
@@ -1286,9 +1234,7 @@ export default function SmartCalculatorPage() {
 
             {/* Quick Tips Box */}
             <div className="p-4 rounded-xl bg-white flex items-start gap-3 border border-slate-200 shadow-xs">
-              <span className="material-symbols-outlined text-amber-500 text-xl shrink-0 mt-0.5">
-                tips_and_updates
-              </span>
+              <Lightbulb className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-bold text-slate-900">
                   ملاحظة تسعير الملازم:
@@ -1308,14 +1254,14 @@ export default function SmartCalculatorPage() {
           <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-600 text-xl">settings</span>
+                <Settings className="w-5 h-5 text-blue-600" />
                 <h3 className="font-bold text-base text-slate-900">إعدادات أسعار الطباعة والتجليد الافتراضية</h3>
               </div>
               <button
                 onClick={() => setIsSettingsOpen(false)}
                 className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
               >
-                <span className="material-symbols-outlined">close</span>
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1447,7 +1393,7 @@ export default function SmartCalculatorPage() {
           <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-600 text-xl">tune</span>
+                <SlidersHorizontal className="w-5 h-5 text-blue-600" />
                 <h3 className="font-bold text-base text-slate-900">إدارة وتعديل أزرار التسعير السريعة</h3>
               </div>
               <button
@@ -1457,14 +1403,14 @@ export default function SmartCalculatorPage() {
                 }}
                 className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
               >
-                <span className="material-symbols-outlined">close</span>
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Add New Button Form */}
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="font-bold text-xs text-blue-600 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-base">add_circle</span>
+                <PlusCircle className="w-4 h-4 text-blue-600" />
                 <span>إضافة زر تسعير جديد</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
@@ -1489,7 +1435,7 @@ export default function SmartCalculatorPage() {
                 onClick={handleAddButton}
                 className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
-                <span className="material-symbols-outlined text-sm">add</span>
+                <Plus className="w-3.5 h-3.5" />
                 <span>إضافة إلى شاشة الحاسبة</span>
               </button>
             </div>
@@ -1540,7 +1486,7 @@ export default function SmartCalculatorPage() {
                             className="p-1 rounded-lg text-blue-600 hover:bg-blue-50 text-xs cursor-pointer"
                             title="حفظ"
                           >
-                            <span className="material-symbols-outlined text-base">check</span>
+                            <Check className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
@@ -1548,7 +1494,7 @@ export default function SmartCalculatorPage() {
                             className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 text-xs cursor-pointer"
                             title="إلغاء"
                           >
-                            <span className="material-symbols-outlined text-base">close</span>
+                            <X className="w-4 h-4" />
                           </button>
                         </>
                       ) : (
@@ -1563,7 +1509,7 @@ export default function SmartCalculatorPage() {
                             className="p-1 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 text-xs cursor-pointer"
                             title="تعديل"
                           >
-                            <span className="material-symbols-outlined text-base">edit</span>
+                            <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
@@ -1571,7 +1517,7 @@ export default function SmartCalculatorPage() {
                             className="p-1 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-xs cursor-pointer"
                             title="حذف"
                           >
-                            <span className="material-symbols-outlined text-base">delete</span>
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </>
                       )}
@@ -1610,7 +1556,7 @@ export default function SmartCalculatorPage() {
           <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-600 text-xl">tune</span>
+                <SlidersHorizontal className="w-5 h-5 text-blue-600" />
                 <h3 className="font-bold text-base text-slate-900">إدارة وتعديل خدمات التجليد والتشطيب</h3>
               </div>
               <button
@@ -1620,14 +1566,14 @@ export default function SmartCalculatorPage() {
                 }}
                 className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
               >
-                <span className="material-symbols-outlined">close</span>
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Add New Add-on Form */}
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="font-bold text-xs text-blue-600 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-base">add_circle</span>
+                <PlusCircle className="w-4 h-4 text-blue-600" />
                 <span>إضافة خدمة تجليد أو تشطيب جديدة</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
@@ -1661,7 +1607,7 @@ export default function SmartCalculatorPage() {
                 onClick={handleAddAddon}
                 className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
-                <span className="material-symbols-outlined text-sm">add</span>
+                <Plus className="w-3.5 h-3.5" />
                 <span>إضافة الخدمة للحاسبة</span>
               </button>
             </div>
@@ -1731,7 +1677,7 @@ export default function SmartCalculatorPage() {
                             className="p-1 rounded-lg text-blue-600 hover:bg-blue-50 text-xs cursor-pointer"
                             title="حفظ"
                           >
-                            <span className="material-symbols-outlined text-base">check</span>
+                            <Check className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
@@ -1739,7 +1685,7 @@ export default function SmartCalculatorPage() {
                             className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 text-xs cursor-pointer"
                             title="إلغاء"
                           >
-                            <span className="material-symbols-outlined text-base">close</span>
+                            <X className="w-4 h-4" />
                           </button>
                         </>
                       ) : (
@@ -1755,7 +1701,7 @@ export default function SmartCalculatorPage() {
                             className="p-1 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 text-xs cursor-pointer"
                             title="تعديل"
                           >
-                            <span className="material-symbols-outlined text-base">edit</span>
+                            <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
@@ -1763,7 +1709,7 @@ export default function SmartCalculatorPage() {
                             className="p-1 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-xs cursor-pointer"
                             title="حذف"
                           >
-                            <span className="material-symbols-outlined text-base">delete</span>
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </>
                       )}
@@ -1771,6 +1717,26 @@ export default function SmartCalculatorPage() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={handleResetAddons}
+                className="px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+              >
+                استعادة الخدمات الافتراضية
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsManageAddonsOpen(false);
+                  setEditingAddonId(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer"
+              >
+                تم والعودة للحاسبة
+              </button>
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-slate-100">

@@ -57,8 +57,8 @@ export async function GET(req: NextRequest) {
       ];
 
       for (const targetPath of candidates) {
-        if (fs.existsSync(targetPath)) {
-          const fileBytes = fs.readFileSync(targetPath);
+        if (fs.existsSync(/* turbopackIgnore: true */ targetPath)) {
+          const fileBytes = fs.readFileSync(/* turbopackIgnore: true */ targetPath);
           const ext = path.extname(safeFile).toLowerCase();
           const contentType =
             ext === ".png"
@@ -81,14 +81,14 @@ export async function GET(req: NextRequest) {
     const photos = [];
     const scanned = new Set<string>();
     const dirsToScan = [poolDir];
-    if (poolDir !== LOCAL_POOL_DIR && fs.existsSync(LOCAL_POOL_DIR)) {
+    if (poolDir !== LOCAL_POOL_DIR && fs.existsSync(/* turbopackIgnore: true */ LOCAL_POOL_DIR)) {
       dirsToScan.push(LOCAL_POOL_DIR);
     }
 
     for (const currentDir of dirsToScan) {
       try {
-        if (!fs.existsSync(currentDir)) continue;
-        const files = fs.readdirSync(currentDir);
+        if (!fs.existsSync(/* turbopackIgnore: true */ currentDir)) continue;
+        const files = fs.readdirSync(/* turbopackIgnore: true */ currentDir);
 
         for (const file of files) {
           if (scanned.has(file)) continue;
@@ -240,12 +240,12 @@ export async function DELETE(req: NextRequest) {
       let deletedCount = 0;
       for (const d of dirs) {
         try {
-          if (!fs.existsSync(d)) continue;
+          if (!fs.existsSync(/* turbopackIgnore: true */ d)) continue;
           const files = fs.readdirSync(/* turbopackIgnore: true */ d);
           for (const f of files) {
             const fp = path.join(/* turbopackIgnore: true */ d, f);
-            if (fs.existsSync(fp)) {
-              fs.unlinkSync(fp);
+            if (fs.existsSync(/* turbopackIgnore: true */ fp)) {
+              fs.unlinkSync(/* turbopackIgnore: true */ fp);
               deletedCount++;
             }
           }
@@ -278,8 +278,8 @@ export async function DELETE(req: NextRequest) {
     let deleted = false;
     for (const tp of targetPaths) {
       try {
-        if (fs.existsSync(tp)) {
-          fs.unlinkSync(tp);
+        if (fs.existsSync(/* turbopackIgnore: true */ tp)) {
+          fs.unlinkSync(/* turbopackIgnore: true */ tp);
           deleted = true;
         }
       } catch {}

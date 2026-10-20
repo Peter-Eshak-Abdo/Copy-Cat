@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import Link from "next/link";
 import {
   CreditCard,
   Plus,
@@ -182,34 +181,22 @@ export default function InstaPayAdminPage() {
   return (
     <div className="min-h-screen bg-surface-container-lowest text-on-surface p-space-md sm:p-space-xl">
       <div className="w-full mb-space-lg">
-        {/* Breadcrumb & Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md pb-space-md border-b border-surface-container-high/40">
-          <div>
-            <div className="flex items-center gap-space-xs text-primary font-label-code text-label-code mb-1">
-              <Link href="/admin" className="hover:underline flex items-center gap-1">
-                لوحة التحكم
-              </Link>
-              <span>/</span>
-              <span>سجل مدفوعات إنستا باي</span>
-            </div>
-            <h1 className="font-headline-lg text-headline-lg font-bold flex items-center gap-space-xs">
-              <span className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
-                <CreditCard className="w-6 h-6" />
-              </span>
-              <span>سجل مدفوعات إنستا باي (InstaPay Tracker)</span>
-            </h1>
-            <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-              تسجيل فوري لأي عميل يدفع عبر إنستا باي لحين وصول الباشمهندس ومراجعة تطبيق البنك وتأكيد الاستلام.
-            </p>
+        {/* Action Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-md pb-space-md border-b border-surface-container-high/40">
+          <div className="flex items-center gap-2.5">
+            <span className="p-1.5 rounded-xl bg-purple-500/10 text-purple-400">
+              <CreditCard className="w-5 h-5" />
+            </span>
+            <span className="text-base font-black text-on-surface">سجل مدفوعات إنستا باي</span>
           </div>
 
           <div className="flex items-center gap-space-xs">
             <button
               onClick={() => setIsAddingModal(true)}
-              className="flex items-center gap-2 px-space-md py-space-sm rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-md transition-all cursor-pointer"
+              className="flex items-center gap-2 px-space-md py-space-sm rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-md transition-all cursor-pointer text-xs sm:text-sm"
             >
-              <Plus className="w-5 h-5" />
-              <span>تسجيل تحويل إنستا باي جديد</span>
+              <Plus className="w-4 h-4" />
+              <span>تسجيل تحويل جديد</span>
             </button>
           </div>
         </div>

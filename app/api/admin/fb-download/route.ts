@@ -192,7 +192,7 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Universal Native Scraper: Extract high-res Facebook CDN image URLs
+ * Universal Native Scraper: Extract high-res Facebook CDN image URLs from HTML and JSON scripts
  */
 function extractFacebookImageUrls(html: string): string[] {
   // Unescape JSON escaped slashes and HTML entities
@@ -205,32 +205,8 @@ function extractFacebookImageUrls(html: string): string[] {
   const validUrls: string[] = [];
   const seen = new Set<string>();
 
-  // 1. First, check og:image and twitter:image meta tags (primary high-res source)
-  const ogMatches = unescaped.matchAll(
-    /<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/gi
-  );
-  for (const match of ogMatches) {
-    const rawUrl = match[1];
-    if (rawUrl && (rawUrl.includes("fbcdn.net") || rawUrl.includes("scontent"))) {
-      const cleanUrl = rawUrl.split('"')[0].split("'")[0].split("\\")[0];
-      const baseKey = cleanUrl.split("?")[0];
-      if (!seen.has(baseKey)) {
-        seen.add(baseKey);
-        validUrls.push(cleanUrl);
-      }
-    }
-  }
-
-  // 2. Scan for high-res photo URLs in page body / JSON bundles
-  const regex = /https?:\/\/[a-zA-Z0-9.-]*(?:fbcdn\.net|scontent[a-zA-Z0-9.-]*)\/[^\s"'<>\\]+/g;
-  const matches = unescaped.match(regex) || [];
-
-  for (const rawUrl of matches) {
-    const cleanUrl = rawUrl.split('"')[0].split("'")[0].split("\\")[0];
-    const u = cleanUrl.toLowerCase();
-
-    // Ignore UI elements, avatars, emojis, keyframe animations, small icons
-    if (
+  const isIgnored = (u: string) => {
+    return (
       u.includes("rsrc.php") ||
       u.includes("emoji.php") ||
       u.includes("static.xx") ||
@@ -247,9 +223,49 @@ function extractFacebookImageUrls(html: string): string[] {
       u.includes("t1.30497") ||
       u.includes("cp0") ||
       u.includes(".kf")
-    ) {
-      continue;
+    );
+  };
+
+  // 1. Meta tags (og:image, twitter:image)
+  const ogMatches = unescaped.matchAll(
+    /<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/gi
+  );
+  for (const match of ogMatches) {
+    const rawUrl = match[1];
+    if (rawUrl && (rawUrl.includes("fbcdn.net") || rawUrl.includes("scontent"))) {
+      const cleanUrl = rawUrl.split('"')[0].split("'")[0].split("\\")[0];
+      const baseKey = cleanUrl.split("?")[0];
+      if (!seen.has(baseKey)) {
+        seen.add(baseKey);
+        validUrls.push(cleanUrl);
+      }
     }
+  }
+
+  // 2. Scan JSON image properties like "uri":"https://...", "image":{"uri":"..."}, "full_screen_image"
+  const jsonUriRegex = /"(?:uri|image_uri|full_screen_image|image|photo_image)":\s*"(https?:\\?\/\\?\/[^\s"]+)"/g;
+  for (const m of html.matchAll(jsonUriRegex)) {
+    const raw = m[1].replace(/\\\//g, "/").replace(/\\u0026/g, "&");
+    if (raw.includes("fbcdn.net") || raw.includes("scontent")) {
+      const cleanUrl = raw.split('"')[0].split("'")[0].split("\\")[0];
+      const baseKey = cleanUrl.split("?")[0];
+      const u = cleanUrl.toLowerCase();
+      if (!isIgnored(u) && !seen.has(baseKey)) {
+        seen.add(baseKey);
+        validUrls.push(cleanUrl);
+      }
+    }
+  }
+
+  // 3. Scan for high-res photo URLs in page body / JSON bundles
+  const regex = /https?:\/\/[a-zA-Z0-9.-]*(?:fbcdn\.net|scontent[a-zA-Z0-9.-]*)\/[^\s"'<>\\]+/g;
+  const matches = unescaped.match(regex) || [];
+
+  for (const rawUrl of matches) {
+    const cleanUrl = rawUrl.split('"')[0].split("'")[0].split("\\")[0];
+    const u = cleanUrl.toLowerCase();
+
+    if (isIgnored(u)) continue;
 
     // Typical high-res photo path markers on Facebook CDN
     if (
@@ -261,7 +277,6 @@ function extractFacebookImageUrls(html: string): string[] {
       u.includes("t39.30808-6") ||
       u.includes("scontent")
     ) {
-      // Deduplicate by base path (ignore volatile token query params)
       const baseKey = cleanUrl.split("?")[0];
       if (!seen.has(baseKey)) {
         seen.add(baseKey);
@@ -494,11 +509,6 @@ export async function POST(req: NextRequest) {
 
           for (const attempt of fetchAttempts) {
             try {
-              sendEvent({
-                type: "status",
-                message: `جاري فحص المنشور عبر ${attempt.name}...`,
-              });
-
               const resp = await fetch(attempt.url, {
                 headers: attempt.headers,
                 redirect: "follow",

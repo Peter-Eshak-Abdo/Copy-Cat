@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import NextImage from "next/image";
 import {
   Upload,
-  ScanLine,
   Sparkles,
   RotateCcw,
   Archive,
@@ -317,52 +316,44 @@ export default function ScannerPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-200 text-amber-400 text-xs font-bold mb-2">
-            <ScanLine className="w-3.5 h-3.5" /> عاكس الصور وحامي الحبر وتوضيح الشاشات
+      {/* Top Action Bar */}
+      {images.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-sm text-slate-900">المستندات المرفوعة:</span>
+            <span className="text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-xl">
+              {images.length} {images.length === 1 ? "صورة" : "صور"}
+            </span>
           </div>
-          <h1 className="text-2xl font-black text-slate-900">
-            قلب ألوان الشاشات وتبييض المستندات وتوضيح صور الموبايل
-          </h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl">
-            ارفع حتى 30 صورة معاً، طبق عليها قلب الألوان أو فلتر شاشات الكمبيوتر المضاد للتموجات (Anti-Moire)،
-            مع إمكانية تدوير الصور بزوايا دقيقة وتكبيرها للفحص والتنزيل كصور فردياً أو متتالية بنقرة واحدة!
-          </p>
-        </div>
 
-        {images.length > 0 && (
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={() => setImages([])}
-              className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
+              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
             >
               مسح الكل
             </button>
 
-            {/* Sequential download button (Requirement #12) */}
             <button
               onClick={handleDownloadAllSequential}
               disabled={isDownloadingAll}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/20 transition disabled:opacity-50 cursor-pointer"
             >
               <Download className="w-4 h-4" />
-              <span>{isDownloadingAll ? "جاري تنزيل الصور..." : "تنزيل كل الصور ورا بعض"}</span>
+              <span>{isDownloadingAll ? "جاري التنزيل..." : "تنزيل كل الصور متتالية"}</span>
             </button>
 
-            {/* ZIP download button */}
             <button
               onClick={handleDownloadZip}
               disabled={isExportingZip}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-200 border border-slate-200 transition disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20 transition disabled:opacity-50 cursor-pointer"
             >
-              <Archive className="w-4 h-4 text-amber-400" />
-              <span>{isExportingZip ? "جاري الضغط..." : "تنزيل ملف (ZIP)"}</span>
+              <Archive className="w-4 h-4" />
+              <span>{isExportingZip ? "جاري الضغط..." : "تنزيل أرشيف (ZIP)"}</span>
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Preset Quick Actions */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center gap-2.5">
@@ -427,12 +418,12 @@ export default function ScannerPage() {
       </div>
 
       {/* Detailed Sliders & Controls */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-center">
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-center shadow-xs">
         {/* Invert Toggle */}
         <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200">
           <div>
-            <span className="text-xs font-bold text-slate-200 block">عكس الألوان (Invert)</span>
-            <span className="text-[10px] text-amber-400">قلب السواد لبياض ناصع</span>
+            <span className="text-xs font-bold text-slate-900 block">عكس الألوان (Invert)</span>
+            <span className="text-[10px] text-amber-700 font-medium">قلب السواد لبياض ناصع</span>
           </div>
           <input
             type="checkbox"
@@ -448,8 +439,8 @@ export default function ScannerPage() {
         {/* Screen Clarifier Mode Toggle (Requirement #13) */}
         <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200">
           <div>
-            <span className="text-xs font-bold text-cyan-300 block">فلتر شاشات الكمبيوتر</span>
-            <span className="text-[10px] text-slate-500">إزالة تموجات الشاشة والموبايل</span>
+            <span className="text-xs font-bold text-cyan-900 block">فلتر شاشات الكمبيوتر</span>
+            <span className="text-[10px] text-slate-500 font-medium">إزالة تموجات الشاشة والموبايل</span>
           </div>
           <input
             type="checkbox"
@@ -463,10 +454,10 @@ export default function ScannerPage() {
         </div>
 
         {/* Sharpness Slider */}
-        <div className="space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-200">
-          <div className="flex justify-between text-xs font-semibold text-slate-700">
+        <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div className="flex justify-between text-xs font-bold text-slate-900">
             <span>حدة النصوص (Sharpness)</span>
-            <span className="text-amber-400 font-bold">{sharpness}%</span>
+            <span className="text-amber-700 font-mono font-black">{sharpness}%</span>
           </div>
           <input
             type="range"
@@ -484,10 +475,10 @@ export default function ScannerPage() {
         </div>
 
         {/* Brightness Slider */}
-        <div className="space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-200">
-          <div className="flex justify-between text-xs font-semibold text-slate-700">
-            <span>السطوع (تفتيح ناصع)</span>
-            <span>{brightness}%</span>
+        <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div className="flex justify-between text-xs font-bold text-slate-900">
+            <span>السطوع (Brightness)</span>
+            <span className="text-blue-700 font-mono font-black">{brightness}%</span>
           </div>
           <input
             type="range"
@@ -499,15 +490,15 @@ export default function ScannerPage() {
               setBrightness(val);
               triggerReprocessAll(invert, camScannerMode, screenClarifierMode, val, contrast, sharpness);
             }}
-            className="w-full accent-amber-500 cursor-pointer"
+            className="w-full accent-blue-600 cursor-pointer"
           />
         </div>
 
         {/* Contrast Slider */}
-        <div className="space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-200">
-          <div className="flex justify-between text-xs font-semibold text-slate-700">
+        <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div className="flex justify-between text-xs font-bold text-slate-900">
             <span>التباين (Contrast)</span>
-            <span>{contrast}%</span>
+            <span className="text-purple-700 font-mono font-black">{contrast}%</span>
           </div>
           <input
             type="range"
@@ -519,7 +510,7 @@ export default function ScannerPage() {
               setContrast(val);
               triggerReprocessAll(invert, camScannerMode, screenClarifierMode, brightness, val, sharpness);
             }}
-            className="w-full accent-amber-500 cursor-pointer"
+            className="w-full accent-purple-600 cursor-pointer"
           />
         </div>
       </div>

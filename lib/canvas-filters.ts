@@ -412,45 +412,74 @@ export function applyCamScannerMagicColor(canvas: HTMLCanvasElement): HTMLCanvas
 
   // 1. Calculate luminance buffer
   const lum = new Float32Array(w * h);
-  let totalLum = 0;
   for (let i = 0; i < w * h; i++) {
     const idx = i * 4;
-    const l = 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
-    lum[i] = l;
-    totalLum += l;
+    lum[i] = 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
   }
-  const avgLum = totalLum / (w * h);
 
   // 2. Estimate background illumination field B(x, y)
   const bg = estimateIlluminationBackground(lum, w, h, 36);
 
-  // Target reference level (preserves natural exposure)
-  let targetRef = avgLum * 1.25;
-  if (targetRef > 240) targetRef = 240;
-  if (targetRef < 175) targetRef = 200;
+  // Target reference level: Clean professional studio scanner white (~238)
+  const targetRef = 238;
 
-  // 3. Gentle shadow normalization that strictly preserves color fidelity and facial details
+  // Auto White Balance: sample bright pixels (> 85th percentile of background) to neutralize yellow incandescent tint
+  let sumR = 0, sumG = 0, sumB = 0, brightCount = 0;
+  for (let i = 0; i < w * h; i += 4) {
+    const idx = i * 4;
+    if (lum[i] > 160) {
+      sumR += d[idx];
+      sumG += d[idx + 1];
+      sumB += d[idx + 2];
+      brightCount++;
+    }
+  }
+
+  let wbGainR = 1.0, wbGainG = 1.0, wbGainB = 1.0;
+  if (brightCount > 100) {
+    const avgR = sumR / brightCount;
+    const avgG = sumG / brightCount;
+    const avgB = sumB / brightCount;
+    const maxVal = Math.max(avgR, avgG, avgB);
+    if (maxVal > 0) {
+      wbGainR = Math.min(1.25, Math.max(0.85, maxVal / Math.max(30, avgR)));
+      wbGainG = Math.min(1.25, Math.max(0.85, maxVal / Math.max(30, avgG)));
+      wbGainB = Math.min(1.35, Math.max(0.85, maxVal / Math.max(30, avgB)));
+    }
+  }
+
+  // 3. Adaptive Retinex Illumination Compensation (Lifts shadows and dark phone camera exposure)
   for (let y = 0; y < h; y++) {
     const rowOffset = y * w;
     for (let x = 0; x < w; x++) {
       const pIdx = rowOffset + x;
       const idx = pIdx * 4;
 
-      const r = d[idx];
-      const g = d[idx + 1];
-      const b = d[idx + 2];
+      // Apply white balance gain
+      const r = Math.min(255, d[idx] * wbGainR);
+      const g = Math.min(255, d[idx + 1] * wbGainG);
+      const b = Math.min(255, d[idx + 2] * wbGainB);
       const origL = lum[pIdx];
-      const localBg = Math.max(40, bg[pIdx]);
+      const localBg = Math.max(35, bg[pIdx]);
 
-      // Illumination compensation factor (gentle, bounded between 0.85 and 1.35)
-      const compFactor = Math.min(1.35, Math.max(0.85, targetRef / localBg));
+      // Illumination compensation factor (bounded dynamically up to 2.1x for dark captures)
+      const compFactor = Math.min(2.1, Math.max(0.9, targetRef / localBg));
 
-      // Apply compensation smoothly
-      const newL = Math.min(255, Math.max(0, origL * (1 + (compFactor - 1) * 0.55)));
+      let newL: number;
+      if (origL < 65) {
+        // Crisp Dark Ink: National ID digits, text, stamps stay rich black
+        newL = Math.max(0, origL * 0.92);
+      } else {
+        // Smoothly lift midtones and paper background to clean white
+        const ratio = (origL - 65) / 190;
+        const liftFactor = Math.pow(compFactor, 0.85);
+        newL = Math.min(255, Math.max(0, origL * (1 + (liftFactor - 1) * Math.pow(ratio, 0.6))));
+      }
 
       // Preserve Hue & Saturation completely using HSL
       const [hue, sat] = rgbToHsl(r, g, b);
-      const [nr, ng, nb] = hslToRgb(hue, sat, newL / 255);
+      const protectedSat = sat > 0.15 ? Math.min(1.0, sat * 1.08) : sat;
+      const [nr, ng, nb] = hslToRgb(hue, protectedSat, newL / 255);
 
       d[idx] = nr;
       d[idx + 1] = ng;
@@ -714,14 +743,25 @@ export function processImageOnCanvas(
       b = 255 - b;
     }
 
-    // 2. High-contrast Document B&W Threshold for Printing (Photocopy style, card-full.png page 3)
+    // 2. High-clarity Document B&W Mode for Printing (Photocopy style with grayscale photo preservation)
     if (thresholdMode) {
       const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-      const threshCutoff = Math.max(50, Math.min(215, 140 + (100 - brightness) * 0.75));
-      const val = lum < threshCutoff ? 0 : 255;
-      d[i] = val;
-      d[i + 1] = val;
-      d[i + 2] = val;
+      let val = lum;
+      // High-contrast S-curve that deepens ink text without destroying photo face details:
+      if (lum < 95) {
+        // Deepen text and national ID digits to rich black
+        val = Math.max(0, lum * 0.45);
+      } else if (lum > 185) {
+        // Push light paper background to clean white
+        val = 255;
+      } else {
+        // Smoothly preserve face photo and midtone security features
+        const t = (lum - 95) / 90;
+        val = Math.min(255, Math.max(0, 42 + t * 200));
+      }
+      d[i] = Math.round(val);
+      d[i + 1] = Math.round(val);
+      d[i + 2] = Math.round(val);
       continue;
     }
 

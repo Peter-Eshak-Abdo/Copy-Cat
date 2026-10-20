@@ -36,15 +36,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {}
     return null;
   });
-  const [loading, setLoading] = useState(isSupabaseConfigured);
+
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.email) return false;
+      }
+    } catch {}
+    return isSupabaseConfigured;
+  });
+
   const router = useRouter();
 
   useEffect(() => {
+    let isMounted = true;
+
     if (!isSupabaseConfigured) {
       return;
     }
-
-    let isMounted = true;
 
     // Check Supabase auth state if available
     supabase.auth

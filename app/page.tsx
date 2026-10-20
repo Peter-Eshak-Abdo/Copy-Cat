@@ -515,7 +515,7 @@ export default function StorefrontPage() {
 
         {/* Clean Minimalist Product Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-          {filteredProducts.slice(0, visibleCount).map((item) => {
+          {filteredProducts.slice(0, visibleCount).map((item, idx) => {
             const inCart = cart.find((c) => c.product.id === item.id);
             return (
               <div
@@ -537,6 +537,7 @@ export default function StorefrontPage() {
                         alt={item.name}
                         fill
                         unoptimized
+                        priority={idx < 4}
                         sizes="(max-width: 640px) 50vw, 25vw"
                         className="object-cover group-hover:scale-105 transition-transform duration-200"
                       />

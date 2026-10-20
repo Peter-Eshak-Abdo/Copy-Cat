@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import {
-  Bookmark,
   ExternalLink,
   Plus,
   Trash2,
@@ -149,30 +148,8 @@ export default function ShortcutsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-linear-to-r bg-white p-6 rounded-2xl border border-blue-200 shadow-xs">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-200 text-blue-400 text-xs font-bold mb-2">
-            <Bookmark className="w-3.5 h-3.5" /> مركز اختصارات ومواقع العمل السريعة
-          </div>
-          <h1 className="text-2xl font-black text-slate-900">دليل وروابط المواقع اليومية</h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-1 max-w-2xl">
-            مواقع التقديمات والجامعات، الخدمات الحكومية، أدوات التصميم وعزل الصور، ومواقع المذكرات
-            المحفوظة لسرعة الوصول إليها وتوفير وقت البحث.
-          </p>
-        </div>
-
-        <button
-          onClick={openAddModal}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-xs shadow-blue-600/30 transition cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>إضافة موقع جديد</span>
-        </button>
-      </div>
-
       {/* Filter & Search Bar */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-lg">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs">
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
           <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 text-slate-500 absolute right-3 top-3" />
@@ -185,9 +162,18 @@ export default function ShortcutsPage() {
             />
           </div>
 
-          <span className="text-xs text-slate-500 font-bold">
-            عدد المواقع: {filteredShortcuts.length}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-500 font-bold">
+              المواقع: {filteredShortcuts.length}
+            </span>
+            <button
+              onClick={openAddModal}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>إضافة موقع</span>
+            </button>
+          </div>
         </div>
 
         {/* Categories Tabs */}

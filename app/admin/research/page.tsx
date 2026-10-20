@@ -9,7 +9,6 @@ import {
   BookOpen,
   CheckSquare,
   Square,
-  Zap,
   Server,
   Copy,
   Check,
@@ -27,6 +26,7 @@ import {
   ResearchCoverInfo,
   TOP_ARABIC_ACADEMIC_SOURCES,
   CustomResearchSource,
+  normalizeResearchText,
 } from "@/lib/docx/research-docx";
 import { useToast } from "@/components/toast-provider";
 import { getFriendlyErrorMessage } from "@/lib/utils";
@@ -54,6 +54,22 @@ function getAngleShortLabel(angle?: GeneratedVersion["angle"]): string {
   if (!name) return "";
   const parts = name.trim().split(/\s+/);
   return parts[1] || parts[0] || name;
+}
+
+function getRealisticProgress(seconds: number): number {
+  if (seconds < 12) {
+    return Math.min(25, 10 + Math.floor((seconds / 12) * 15)); // Step 1: 10% -> 25%
+  }
+  if (seconds < 30) {
+    return Math.min(50, 25 + Math.floor(((seconds - 12) / 18) * 25)); // Step 2: 25% -> 50%
+  }
+  if (seconds < 65) {
+    return Math.min(75, 50 + Math.floor(((seconds - 30) / 35) * 25)); // Step 3: 50% -> 75%
+  }
+  if (seconds < 90) {
+    return Math.min(88, 75 + Math.floor(((seconds - 65) / 25) * 13)); // Step 4: 75% -> 88%
+  }
+  return Math.min(96, 88 + Math.floor(((seconds - 90) / 30) * 8)); // Step 5: 88% -> 96%
 }
 
 export default function ResearchPage() {
@@ -220,21 +236,26 @@ export default function ResearchPage() {
       }
 
       if (data.versions && Array.isArray(data.versions) && data.versions.length > 0) {
-        setGeneratedVersions(data.versions);
+        const normalizedVersions = data.versions.map((v: GeneratedVersion) => ({
+          ...v,
+          content: normalizeResearchText(v.content),
+        }));
+        setGeneratedVersions(normalizedVersions);
         setSelectedVersionIndex(0);
-        setGeneratedText(data.versions[0].content);
+        setGeneratedText(normalizedVersions[0].content);
         setActiveProvider(data.versions[0].provider || data.provider || "Gemini Flash");
       } else {
+        const normalizedContent = normalizeResearchText(data.content);
         const singleVersion: GeneratedVersion = {
           id: 1,
           versionNumber: 1,
           angle: "النسخة الرئيسية",
           title: `بحث متكامل عن: ${topic}`,
-          content: data.content,
+          content: normalizedContent,
         };
         setGeneratedVersions([singleVersion]);
         setSelectedVersionIndex(0);
-        setGeneratedText(data.content);
+        setGeneratedText(normalizedContent);
         setActiveProvider(data.provider || "Gemini Flash");
       }
       toast.success(
@@ -349,22 +370,6 @@ export default function ResearchPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-linear-to-r from-purple-950/40 via-slate-900 to-slate-900 p-6 rounded-2xl border border-purple-500/20 shadow-xs">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-bold mb-2">
-            <Zap className="w-3.5 h-3.5 text-amber-400" /> صياغة أبحاث بأسلوب أكاديمي طبيعي وتنسيق Word A4 ضيق الهوامش
-          </div>
-          <h1 className="text-2xl md:text-3xl font-black text-slate-900">
-            مولد وتنسيق الأبحاث المدرسية والجامعية المتكامل
-          </h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-1 max-w-3xl leading-relaxed">
-            صياغة بشرية متماسكة، غلاف رسمي كامل، فهرس محتويات تفاعلي، وتوليد حتى 15 نسخة مختلفة تماماً لنفس البحث بدون أي
-            تطابق لمنع تكرار الواجبات بين الطلاب، مع إدارة كاملة للمصادر والمراجع الأكاديمية!
-          </p>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form Panel */}
         <form
@@ -734,7 +739,8 @@ export default function ResearchPage() {
 
               <div
                 dir="rtl"
-                className="bg-white p-6 rounded-2xl border-2 border-slate-200 max-h-[600px] overflow-y-auto whitespace-pre-wrap text-slate-900 text-sm sm:text-base leading-relaxed font-sans select-text shadow-inner"
+                className="bg-white p-6 rounded-2xl border-2 border-slate-200 max-h-[600px] overflow-y-auto whitespace-pre-wrap text-black text-sm sm:text-base leading-relaxed font-sans select-text shadow-inner text-right"
+                style={{ color: "#000000", direction: "rtl", textAlign: "right" }}
               >
                 {generatedText}
               </div>
@@ -763,11 +769,11 @@ export default function ResearchPage() {
                 <span>الوقت المستغرق: {elapsedSeconds} ثانية</span>
               </div>
 
-              {/* Visual Progress Bar */}
-              <div className="w-full bg-slate-100 rounded-full h-3 p-0.5 border border-slate-200 mb-6 overflow-hidden">
+              {/* Visual Progress Bar (Realistic progress synchronized with current step) */}
+              <div className="w-full bg-slate-100 rounded-full h-3.5 p-0.5 border border-slate-200 mb-6 overflow-hidden">
                 <div
-                  className="bg-linear-to-r from-purple-500 via-indigo-500 to-purple-600 h-full rounded-full transition-all duration-1000 shadow-md shadow-purple-500/40"
-                  style={{ width: `${Math.min(96, Math.max(15, elapsedSeconds * 2.8))}%` }}
+                  className="bg-linear-to-r from-purple-600 via-indigo-600 to-purple-600 h-full rounded-full transition-all duration-500 shadow-sm"
+                  style={{ width: `${getRealisticProgress(elapsedSeconds)}%` }}
                 />
               </div>
 

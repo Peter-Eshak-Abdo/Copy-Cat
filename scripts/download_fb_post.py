@@ -222,34 +222,51 @@ def scrape_post_images(post_url: str, output_dir: str, pdf_name: str, max_photos
             else:
                 stagnant_count += 1
 
-            # If we see the same image or no image 4 times consecutively, we likely reached the end of the post
-            if stagnant_count >= 4:
-                log_json("status", {"message": f"تم استخراج جميع صور المنشور بنجاح ({len(collected_urls)} صورة)."})
-                break
-
-            # Try clicking Next photo button first (theatre overlay), fallback to keyboard
+            # Try clicking Next photo button in theatre overlay, thumbnail tray, or keyboard navigation
             clicked = False
             next_btn = page.query_selector(
                 'div[aria-label="Next photo"], '
                 'div[aria-label="الصورة التالية"], '
                 'div[aria-label="صورة تالية"], '
                 'div[aria-label*="Next"], '
-                'div[aria-label*="التالية"]'
+                'div[aria-label*="التالية"], '
+                'div[role="button"][aria-label*="التالية"], '
+                'div[role="button"][aria-label*="Next"], '
+                'div[data-visualcompletion="ignore-dynamic-extra"] div[role="button"]'
             )
             if next_btn:
                 try:
-                    next_btn.click(timeout=2000)
+                    next_btn.click(timeout=1500)
                     clicked = True
                     time.sleep(1.2)
                 except:
                     pass
 
+            # In Arabic Facebook layouts, ArrowLeft moves to the NEXT photo (RTL)
             if not clicked:
                 try:
+                    page.keyboard.press("ArrowLeft")
+                    time.sleep(0.8)
+                    # Also try ArrowRight as fallback
                     page.keyboard.press("ArrowRight")
-                    time.sleep(1.2)
+                    time.sleep(0.8)
                 except:
-                    break
+                    pass
+
+            # Also check if there are clickable thumbnail gallery items in theater tray
+            if stagnant_count >= 2:
+                try:
+                    tray_thumbs = page.query_selector_all('div[data-pagelet="MediaViewerRoot"] [role="list"] a, div[role="dialog"] a[href*="/photo"], div[role="tablist"] [role="tab"]')
+                    if tray_thumbs and len(tray_thumbs) > len(collected_urls):
+                        target_thumb = tray_thumbs[len(collected_urls)]
+                        target_thumb.click(timeout=1500)
+                        time.sleep(1.2)
+                except:
+                    pass
+
+            if stagnant_count >= 8:
+                log_json("status", {"message": f"تم استخراج جميع صور المنشور بنجاح ({len(collected_urls)} صورة)."})
+                break
 
         browser_context.close()
 

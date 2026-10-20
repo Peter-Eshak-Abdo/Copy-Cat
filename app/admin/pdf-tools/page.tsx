@@ -19,6 +19,8 @@ import {
   Sparkles,
   Loader2,
   CheckCircle2,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 import { PDFDocument, degrees } from "pdf-lib";
@@ -59,6 +61,7 @@ export default function PdfToolsPage() {
   const [isProcessingPdf, setIsProcessingPdf] = useState<boolean>(false);
   const [isGeneratingThumbs, setIsGeneratingThumbs] = useState<boolean>(false);
   const [selectedPageIds, setSelectedPageIds] = useState<Set<string>>(new Set());
+  const [thumbnailZoom, setThumbnailZoom] = useState<number>(2); // 1: Compact, 2: Standard, 3: Large, 4: Extra Large
 
   // Tab 2: Images to PDF State
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -646,48 +649,35 @@ export default function PdfToolsPage() {
 
   return (
     <div className="space-y-6" dir="rtl">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-200 text-blue-400 text-xs font-bold mb-2">
-            <FileText className="w-3.5 h-3.5" /> استوديو إدارة وتفكيك صفحات الـ PDF الاحترافي
-          </div>
-          <h1 className="text-2xl font-black text-slate-900">
-            منظم ومفكك صفحات PDF (معاينة صور حية، نقل مباشر، ضغط وتصدير صور)
-          </h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl">
-            فكك الـ PDF مع معاينة صور الصفحات الحقيقية، اكتب رقم الصفحة لنقلها مباشرة، حدد صفحات معينة لتصديرها أو تحويلها لصور ZIP، واضغط حجم الملف بنقرة واحدة!
-          </p>
-        </div>
-
-        {/* Tab Switcher */}
-        <div className="flex items-center p-1 bg-slate-900/40 border border-slate-200 rounded-2xl text-xs font-bold shrink-0">
+      {/* Tab Switcher */}
+      <div className="flex items-center justify-between gap-4 pb-2 border-b border-slate-200">
+        <div className="flex items-center p-1 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold">
           <button
             onClick={() => setActiveTab("pages")}
-            className={`px-4 py-2 rounded-xl transition cursor-pointer ${
+            className={`px-4 py-2 rounded-lg transition cursor-pointer ${
               activeTab === "pages"
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                : "text-slate-500 hover:text-slate-900"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             تفكيك وتنظيم الصفحات
           </button>
           <button
             onClick={() => setActiveTab("images_to_pdf")}
-            className={`px-4 py-2 rounded-xl transition cursor-pointer ${
+            className={`px-4 py-2 rounded-lg transition cursor-pointer ${
               activeTab === "images_to_pdf"
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                : "text-slate-500 hover:text-slate-900"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             تحويل صور إلى PDF
           </button>
           <button
             onClick={() => setActiveTab("pdf_to_word")}
-            className={`px-4 py-2 rounded-xl transition cursor-pointer ${
+            className={`px-4 py-2 rounded-lg transition cursor-pointer ${
               activeTab === "pdf_to_word"
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                : "text-slate-500 hover:text-slate-900"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             تحويل PDF إلى Word ذكي
@@ -719,7 +709,7 @@ export default function PdfToolsPage() {
 
                 <button
                   onClick={() => pdfInputRef.current?.click()}
-                  className="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs flex items-center gap-2 transition cursor-pointer shadow-lg shadow-blue-600/20"
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md shadow-blue-600/20"
                 >
                   <Upload className="w-4 h-4" />
                   <span>{loadedDocs.length === 0 ? "رفع ملف PDF لتفكيكه" : "فتح ملف جديد..."}</span>
@@ -728,7 +718,7 @@ export default function PdfToolsPage() {
                 {loadedDocs.length > 0 && (
                   <button
                     onClick={() => appendPdfInputRef.current?.click()}
-                    className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-2 transition cursor-pointer shadow-lg shadow-emerald-600/20"
+                    className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md shadow-teal-600/20"
                   >
                     <Plus className="w-4 h-4" />
                     <span>إضافة ملف PDF آخر للدمج والترتيب</span>
@@ -739,7 +729,7 @@ export default function PdfToolsPage() {
                   <>
                     <button
                       onClick={rotateAllPages}
-                      className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-slate-200/50"
+                      className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-slate-200"
                       title="تدوير كافة الصفحات 90 درجة"
                     >
                       <RotateCw className="w-3.5 h-3.5" />
@@ -748,7 +738,7 @@ export default function PdfToolsPage() {
 
                     <button
                       onClick={toggleSelectAll}
-                      className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-purple-300 hover:text-slate-900 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-purple-500/30"
+                      className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-purple-700 hover:text-purple-900 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-purple-200"
                     >
                       {selectedPageIds.size === pages.length ? (
                         <>
@@ -757,7 +747,7 @@ export default function PdfToolsPage() {
                         </>
                       ) : (
                         <>
-                          <CheckSquare className="w-3.5 h-3.5 text-purple-400" />
+                          <CheckSquare className="w-3.5 h-3.5 text-purple-600" />
                           <span>تحديد الكل ({pages.length})</span>
                         </>
                       )}
@@ -767,37 +757,37 @@ export default function PdfToolsPage() {
               </div>
 
               {pages.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2">
-                  {/* Compress Tool Button */}
-                  <button
-                    onClick={handleCompressPdf}
-                    disabled={isProcessingPdf}
-                    className="px-3.5 py-2.5 rounded-2xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
-                    title="ضغط ملف الـ PDF وتقليل حجمه بشكل ملحوظ"
-                  >
-                    <Minimize2 className="w-4 h-4 text-amber-400" />
-                    <span>ضغط وتخفيف الحجم</span>
-                  </button>
-
-                  {/* PDF to Images ZIP Button */}
-                  <button
-                    onClick={() => handleExportImagesZip(false)}
-                    disabled={isProcessingPdf}
-                    className="px-3.5 py-2.5 rounded-2xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
-                    title="تصدير جميع الصفحات كصور JPG في ملف ZIP"
-                  >
-                    <Archive className="w-4 h-4 text-indigo-400" />
-                    <span>تحويل لصور (ZIP)</span>
-                  </button>
-
-                  {/* Download Arranged PDF Button */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* Download Arranged PDF Button (Primary Emerald) */}
                   <button
                     onClick={() => handleExportArrangedPdf(false)}
                     disabled={isProcessingPdf}
-                    className="px-5 py-2.5 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer shadow-xs shadow-emerald-600/30 disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer shadow-md shadow-emerald-600/25 disabled:opacity-50"
                   >
                     <FileDown className="w-4 h-4" />
                     <span>{isProcessingPdf ? "جاري المعالجة..." : "تنزيل الـ PDF المرتب"}</span>
+                  </button>
+
+                  {/* PDF to Images ZIP Button (Solid Indigo with high contrast) */}
+                  <button
+                    onClick={() => handleExportImagesZip(false)}
+                    disabled={isProcessingPdf}
+                    className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md shadow-indigo-600/20 disabled:opacity-50"
+                    title="تصدير جميع الصفحات كصور JPG في ملف ZIP"
+                  >
+                    <Archive className="w-4 h-4" />
+                    <span>تحويل لصور (ZIP)</span>
+                  </button>
+
+                  {/* Compress Tool Button (Solid Amber/Orange with high contrast) */}
+                  <button
+                    onClick={handleCompressPdf}
+                    disabled={isProcessingPdf}
+                    className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md shadow-amber-500/20 disabled:opacity-50"
+                    title="ضغط ملف الـ PDF وتقليل حجمه بشكل ملحوظ"
+                  >
+                    <Minimize2 className="w-4 h-4" />
+                    <span>ضغط وتخفيف الحجم</span>
                   </button>
                 </div>
               )}
@@ -833,24 +823,58 @@ export default function PdfToolsPage() {
               </div>
             )}
 
-            {/* Quick Batch Range Delete Bar */}
+            {/* Quick Batch Range Delete Bar & Zoom Controls */}
             {pages.length > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-700">حذف سريع بنطاق الأرقام:</span>
-                  <input
-                    type="text"
-                    value={pagesToDeleteInput}
-                    onChange={(e) => setPagesToDeleteInput(e.target.value)}
-                    placeholder="مثال: 1, 3, 5-8"
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none w-44"
-                  />
-                  <button
-                    onClick={handleBatchDelete}
-                    className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-red-900/60 text-rose-600 hover:text-rose-700 font-bold border border-rose-200 transition cursor-pointer"
-                  >
-                    حذف النطاق
-                  </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-700">حذف سريع بنطاق:</span>
+                    <input
+                      type="text"
+                      value={pagesToDeleteInput}
+                      onChange={(e) => setPagesToDeleteInput(e.target.value)}
+                      placeholder="مثال: 1, 3, 5-8"
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none w-36"
+                    />
+                    <button
+                      onClick={handleBatchDelete}
+                      className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-red-900/60 text-rose-600 hover:text-rose-700 font-bold border border-rose-200 transition cursor-pointer"
+                    >
+                      حذف النطاق
+                    </button>
+                  </div>
+
+                  {/* Dynamic Page Thumbnail Zoom Controls */}
+                  <div className="flex items-center gap-2 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
+                    <span className="font-bold text-slate-600 text-[11px]">حجم المعاينة:</span>
+                    <button
+                      type="button"
+                      onClick={() => setThumbnailZoom((z) => Math.max(1, z - 1))}
+                      disabled={thumbnailZoom <= 1}
+                      className="p-1 rounded-lg hover:bg-white text-slate-700 disabled:opacity-30 transition cursor-pointer"
+                      title="تصغير حجم المعاينة"
+                    >
+                      <ZoomOut className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="font-bold text-blue-600 text-[11px] min-w-[50px] text-center">
+                      {thumbnailZoom === 1
+                        ? "صغير (7)"
+                        : thumbnailZoom === 2
+                        ? "متوسط (5)"
+                        : thumbnailZoom === 3
+                        ? "كبير (3)"
+                        : "عملاق (2)"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setThumbnailZoom((z) => Math.min(4, z + 1))}
+                      disabled={thumbnailZoom >= 4}
+                      className="p-1 rounded-lg hover:bg-white text-slate-700 disabled:opacity-30 transition cursor-pointer"
+                      title="تكبير حجم المعاينة"
+                    >
+                      <ZoomIn className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="text-slate-500 text-[11px] flex items-center gap-2">
@@ -885,7 +909,17 @@ export default function PdfToolsPage() {
             </div>
           ) : (
             /* Visual Pages Grid */
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div
+              className={`grid transition-all duration-200 ${
+                thumbnailZoom === 1
+                  ? "grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-3"
+                  : thumbnailZoom === 2
+                  ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+                  : thumbnailZoom === 3
+                  ? "grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-5"
+                  : "grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-6"
+              }`}
+            >
               {pages.map((page, index) => {
                 const isSelected = selectedPageIds.has(page.id);
                 return (

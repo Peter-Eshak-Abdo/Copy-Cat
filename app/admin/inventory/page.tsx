@@ -547,25 +547,22 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-2">
-            <Boxes className="w-3.5 h-3.5" /> نظام حصر الكتالوج والمخزن لكوبي كات
-          </div>
-          <h1 className="text-2xl font-extrabold text-slate-900">إدارة أصناف ومنتجات وخدمات كوبي كات</h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-1">
-            أضف أو عدل أو احذف المنتجات والأسعار؛ ستظهر التحديثات فورياً في متجر الزبائن العام.
-          </p>
+      {/* Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-black text-slate-800">إدارة الكتالوج والمخزن</span>
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-100">
+            {totalItemsCount} صنف
+          </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Link
             href="/admin/photos"
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs transition"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition"
           >
             <Camera className="w-4 h-4 text-emerald-600" />
-            <span>بنك ومكتبة صور المنتجات</span>
+            <span>مكتبة الصور</span>
           </Link>
 
           <button
@@ -573,10 +570,10 @@ export default function InventoryPage() {
               resetForm();
               setIsAddingModal(true);
             }}
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>إضافة صنف أو خدمة جديدة</span>
+            <span>إضافة صنف جديد</span>
           </button>
         </div>
       </div>

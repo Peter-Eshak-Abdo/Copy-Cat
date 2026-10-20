@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 import {
   FileText,
   Download,
@@ -9,7 +8,6 @@ import {
   Sparkles,
   Loader2,
   CheckCircle2,
-  ArrowRight,
   FolderDown,
   Layers,
   RefreshCw,
@@ -301,30 +299,6 @@ export default function FacebookPostToolsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-200 text-blue-400 text-xs font-bold mb-2">
-            <Layers className="w-3.5 h-3.5" /> سحب بوستات وملازم فيسبوك بالترتيب
-          </div>
-          <h1 className="text-2xl font-black text-slate-900">
-            سحب وتحميل بوستات فيسبوك كاملة وتحويلها لملف PDF جاهز للطباعة
-          </h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl">
-            ضع رابط أي منشور فيسبوك يحتوي على صفحات أو صور كثيرة (مثل ملازم 50 إلى 80 صورة)، أو اسحب صور الملزمة
-            مباشرة لتجميعها بالترتيب الدقيق في ملف PDF عالي الجودة للطباعة الفورية!
-          </p>
-        </div>
-
-        <Link
-          href="/admin"
-          className="self-start md:self-auto px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5"
-        >
-          <ArrowRight className="w-4 h-4" />
-          <span>العودة للوحة الإدارة</span>
-        </Link>
-      </div>
-
       {/* Main Form & Configuration */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
@@ -558,25 +532,27 @@ export default function FacebookPostToolsPage() {
             </div>
           )}
 
-          {/* Active Process Status Card */}
+          {/* Active Process Status Card (HeroUI Design System) */}
           {isRunning && (
-            <div className="p-4 rounded-2xl bg-blue-950/40 border border-blue-500/40 space-y-3 animate-in fade-in">
+            <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 space-y-3 animate-in fade-in">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-blue-300 flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                <span className="font-bold text-blue-900 flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
                   <span>{statusMessage}</span>
                 </span>
-                <span className="font-mono text-cyan-400 font-black">
-                  {scrapedCount} تم اكتشافها • {downloadedCount} تم تحميلها
+                <span className="font-bold text-blue-700 bg-blue-100 px-2.5 py-1 rounded-lg border border-blue-200">
+                  {scrapedCount > 0
+                    ? `${downloadedCount} من ${scrapedCount} صورة`
+                    : "جاري الفحص..."}
                 </span>
               </div>
 
               {/* Progress bar */}
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-3 bg-blue-100/80 rounded-full overflow-hidden p-0.5 border border-blue-200">
                 <div
-                  className="h-full bg-linear-to-r from-blue-500 to-cyan-400 transition-all duration-300 animate-pulse"
+                  className="h-full bg-linear-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-300 shadow-xs"
                   style={{
-                    width: `${Math.min(100, Math.max(10, (downloadedCount / Math.max(1, scrapedCount)) * 100))}%`,
+                    width: `${Math.min(100, Math.max(12, (downloadedCount / Math.max(1, scrapedCount)) * 100))}%`,
                   }}
                 />
               </div>
@@ -585,13 +561,13 @@ export default function FacebookPostToolsPage() {
 
           {/* Completed Document Card */}
           {completedDoc && (
-            <div className="p-5 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 space-y-4 animate-in zoom-in-95">
+            <div className="p-5 rounded-2xl bg-emerald-50 border-2 border-emerald-200 space-y-4 animate-in zoom-in-95">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-emerald-400 font-black text-sm">
-                  <CheckCircle2 className="w-5 h-5" />
+                <div className="flex items-center gap-2 text-emerald-800 font-black text-sm">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                   <span>تم تجهيز ملف PDF بنجاح! ({completedDoc.totalImages} صفحة)</span>
                 </div>
-                <span className="text-xs text-emerald-300 font-bold bg-emerald-950 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                <span className="text-xs text-emerald-800 font-bold bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
                   جاهز للطباعة
                 </span>
               </div>
@@ -600,7 +576,7 @@ export default function FacebookPostToolsPage() {
                 <a
                   href={completedDoc.pdfUrl}
                   download={completedDoc.pdfFilename}
-                  className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition"
+                  className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition"
                 >
                   <Download className="w-4 h-4" />
                   <span>تنزيل ملف PDF ({completedDoc.pdfFilename})</span>
@@ -609,7 +585,7 @@ export default function FacebookPostToolsPage() {
                 <button
                   type="button"
                   onClick={() => sendToPrintQueue(completedDoc)}
-                  className="py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition cursor-pointer"
+                  className="py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition cursor-pointer"
                 >
                   <Printer className="w-4 h-4" />
                   <span>إرسال لطابور الطباعة 🖨️</span>
@@ -617,23 +593,6 @@ export default function FacebookPostToolsPage() {
               </div>
             </div>
           )}
-
-          {/* Live Progress Terminal / Log Feed */}
-          <div className="space-y-2">
-            <span className="text-xs font-bold text-slate-500 block">سجل العمليات المباشر:</span>
-            <div className="h-40 bg-slate-50 border border-slate-200 rounded-2xl p-3 font-mono text-[11px] overflow-y-auto space-y-1 text-slate-500">
-              {logs.length === 0 ? (
-                <span className="text-slate-600">في انتظار بدء السحب...</span>
-              ) : (
-                logs.map((log, i) => (
-                  <div key={i} className="leading-relaxed">
-                    {log}
-                  </div>
-                ))
-              )}
-              <div ref={logEndRef} />
-            </div>
-          </div>
         </div>
 
         {/* Live Scraped Image Stream / Thumbnails */}

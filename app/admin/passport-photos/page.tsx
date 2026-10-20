@@ -14,7 +14,6 @@ import {
   RotateCw,
   RefreshCw,
   Printer,
-  Layers,
   Wand2,
 } from "lucide-react";
 import { generatePassportPhotosDocx } from "@/lib/docx/passport-docx";
@@ -290,7 +289,7 @@ export default function PassportPhotosPage() {
           try {
             const bgPromise = removeBgFn(preprocessedBlob);
             const timeoutPromise = new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error("Timeout")), 8000)
+              setTimeout(() => reject(new Error("Timeout")), 30000)
             );
             processedBlob = await Promise.race([bgPromise, timeoutPromise]);
             cutoutDataUrl = await readFileAsDataURL(new File([processedBlob], file.name));
@@ -299,13 +298,57 @@ export default function PassportPhotosPage() {
           }
         }
 
+        // Secondary fallback: Try server endpoint /api/admin/remove-bg if client timed out or failed
+        if (!cutoutDataUrl) {
+          try {
+            const serverBgRes = await fetch("/api/admin/remove-bg", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                imageBase64: await readFileAsDataURL(new File([preprocessedBlob], file.name)),
+              }),
+            });
+            if (serverBgRes.ok) {
+              const serverBgData = await serverBgRes.json();
+              if (typeof serverBgData.cutoutBase64 === "string" && serverBgData.cutoutBase64.length > 0) {
+                const base64Url: string = serverBgData.cutoutBase64;
+                cutoutDataUrl = base64Url;
+                const resp = await fetch(base64Url);
+                processedBlob = await resp.blob();
+              }
+            }
+          } catch {}
+        }
+
         const originalDataUrl = await readFileAsDataURL(file);
+
+        // Auto-detect biometric face bounds via AI endpoint if available
+        let aiFaceBox: [number, number, number, number] | undefined = undefined;
+        try {
+          const faceRes = await fetch("/api/enhance-portrait", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "detect_face",
+              imageBase64: originalDataUrl,
+            }),
+          });
+          if (faceRes.ok) {
+            const faceData = await faceRes.json();
+            if (Array.isArray(faceData.box_2d) && faceData.box_2d.length === 4) {
+              aiFaceBox = faceData.box_2d;
+            }
+          }
+        } catch {
+          // Fallback to internal biometric detection
+        }
 
         // Frame to 40mm x 52mm studio standard with white background and pure client canvas
         const framedDataUrl = await enhanceAndFramePassportPhoto(processedBlob, {
           autoCompleteCropped: true,
           superResolution: true,
           preserveIdentity: true,
+          aiBox: aiFaceBox,
         });
 
         setPersons((prev) => [
@@ -633,25 +676,22 @@ export default function PassportPhotosPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold mb-2">
-            <Layers className="w-3.5 h-3.5" /> مصنع الصور الشخصية 4×6 والاستوديو الفوري
-          </div>
-          <h1 className="text-2xl font-black text-slate-900">
-            تجهيز وقص وطباعة الصور الشخصية (40mm × 52mm)
-          </h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl">
-            أداة قص ثابتة بنسبة 4:6، سلايدرز تحكم فوري في التفتيح والتباين والتشبع، تبييض الخلفية برمجياً عبر المتصفح، ورص الصور تلقائياً في شبكة 4 صور على ورقة A6 أو 9 صور على ورقة A5 مع مسافات قص 18mm وعلامات القص!
-          </p>
+      {/* Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-black text-slate-800">تجهيز وطباعة الصور الشخصية</span>
+          {persons.length > 0 && (
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-100">
+              {persons.length} شخص
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
           {persons.length > 0 && (
             <button
               onClick={() => setPersons([])}
-              className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
+              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
             >
               مسح الكل
             </button>
@@ -660,19 +700,19 @@ export default function PassportPhotosPage() {
           <button
             onClick={() => handleExportDocx(4)}
             disabled={persons.length === 0 || isGeneratingDocx}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-lg shadow-blue-600/30 transition disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-xs transition disabled:opacity-50 cursor-pointer"
           >
             <FileDown className="w-4 h-4" />
-            <span>تصدير وورد (4 صور A6)</span>
+            <span>تصدير (4 صور A6)</span>
           </button>
 
           <button
             onClick={() => handleExportDocx(9)}
             disabled={persons.length === 0 || isGeneratingDocx}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/30 transition disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition disabled:opacity-50 cursor-pointer"
           >
             <FileDown className="w-4 h-4" />
-            <span>تصدير وورد (9 صور A5)</span>
+            <span>تصدير (9 صور A5)</span>
           </button>
         </div>
       </div>

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import {
   Camera,
   Upload,
@@ -444,28 +443,12 @@ export default function PhotoPoolPage() {
     <div className="min-h-screen bg-surface-container-lowest text-on-surface p-space-md sm:p-space-xl">
       {/* Header */}
       <div className="w-full mb-space-lg">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md pb-space-md border-b border-surface-container-high/40">
-          <div>
-            <div className="flex items-center gap-space-xs text-primary font-label-code text-label-code mb-1">
-              <Link href="/admin" className="hover:underline flex items-center gap-1">
-                لوحة التحكم
-              </Link>
-              <span>/</span>
-              <Link href="/admin/inventory" className="hover:underline flex items-center gap-1">
-                المخزن والكتالوج
-              </Link>
-              <span>/</span>
-              <span>بنك ومكتبة الصور</span>
-            </div>
-            <h1 className="font-headline-lg text-headline-lg font-bold flex items-center gap-space-xs">
-              <span>🖼️ بنك ومكتبة صور المنتجات</span>
-              <span className="text-label-sm font-label-code px-space-xs py-1 rounded-full bg-primary/20 text-primary">
-                {photos.length} صورة
-              </span>
-            </h1>
-            <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-              مستودع مركزي يجمع صور صفحة فيسبوك والصور الملتقطة بكاميرا الهاتف لربطها بمنتجات المكتبة في أي وقت.
-            </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-md pb-space-md border-b border-surface-container-high/40">
+          <div className="flex items-center gap-2">
+            <span className="text-base font-black text-on-surface">بنك ومكتبة صور المنتجات</span>
+            <span className="text-label-sm font-label-code px-2 py-0.5 rounded-full bg-primary/20 text-primary font-bold">
+              {photos.length} صورة
+            </span>
           </div>
 
           {/* Action Buttons */}

@@ -3,6 +3,22 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/components/toast-provider";
 import { safeOpenUrl } from "@/lib/utils";
+import {
+  ClipboardCheck,
+  PlusCircle,
+  Printer,
+  Layers,
+  Search,
+  Package,
+  MessageSquare,
+  Edit2,
+  Trash2,
+  FileText,
+  X,
+  Save,
+  Copy,
+  Send,
+} from "lucide-react";
 
 export interface PrintTask {
   id: string;
@@ -348,70 +364,46 @@ export default function TasksHandoverPage() {
 
   return (
     <div className="flex flex-col w-full pb-12 space-y-6 text-right" dir="rtl">
-      {/* Breadcrumbs & Quick Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-          <span className="material-symbols-outlined text-sm text-blue-600">print</span>
-          <span>متابعة طلبات الطباعة</span>
-          <span>/</span>
-          <span className="text-blue-600 font-bold">{currentShift.label}</span>
+      {/* Top Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-black text-slate-800">أوردرات الطباعة وتسليم الشفت</span>
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs border border-slate-200">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-1.5 animate-pulse"></span>
-            الشفت شغال ({currentShift.timeRange})
+            {currentShift.label} ({currentShift.timeRange})
+          </span>
+          <span className="text-xs text-slate-500 hidden sm:inline">
+            ({tasks.length} أوردر)
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">
-            إجمالي أوردرات اليوم: <strong className="text-slate-900 font-mono">{tasks.length} أوردر</strong>
-          </span>
+
+        {/* Quick Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition border border-slate-200 cursor-pointer"
+            onClick={() => setIsHandoverModalOpen(true)}
+            type="button"
+          >
+            <ClipboardCheck className="w-4 h-4" />
+            <span>تقرير تسليم الشفت</span>
+          </button>
+          <button
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
+            onClick={openAddModal}
+            type="button"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>+ أوردر جديد</span>
+          </button>
         </div>
       </div>
-
-      {/* Main Hero Card: Page Title & Global Shift Actions */}
-      <section className="rounded-2xl bg-white p-6 shadow-xs border border-slate-200">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
-          <div className="flex flex-col gap-1.5 max-w-2xl">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
-                <span className="material-symbols-outlined text-2xl">receipt_long</span>
-              </div>
-              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                أوردرات الطباعة وتسليم الشفت
-              </h1>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-              سجل واستلم ملازم وورق المدرسين والطلبة، تابع النسخ المطبوعة أولاً بأول، وابعث رسالة جاهزة للزبون على الواتساب أول ما حاجته تخلص.
-            </p>
-          </div>
-
-          {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition border border-slate-200 cursor-pointer"
-              onClick={() => setIsHandoverModalOpen(true)}
-              type="button"
-            >
-              <span className="material-symbols-outlined text-lg">fact_check</span>
-              <span>تقرير تسليم الشفت</span>
-            </button>
-            <button
-              className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
-              onClick={openAddModal}
-              type="button"
-            >
-              <span className="material-symbols-outlined text-xl">add_circle</span>
-              <span>+ أوردر طباعة جديد</span>
-            </button>
-          </div>
-        </div>
-      </section>
 
       {/* Live Shift Telemetry Metric Bar */}
       <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="rounded-2xl bg-white p-5 shadow-xs flex flex-col justify-between border border-slate-200">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
             <span>الأوردرات الجارية</span>
-            <span className="material-symbols-outlined text-blue-600 text-xl">print</span>
+            <Printer className="w-5 h-5 text-blue-600" />
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <span className="text-3xl font-extrabold text-slate-900 font-mono">
@@ -432,7 +424,7 @@ export default function TasksHandoverPage() {
         <div className="rounded-2xl bg-white p-5 shadow-xs flex flex-col justify-between border border-slate-200">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
             <span>النسخ المنجزة بالشفت</span>
-            <span className="material-symbols-outlined text-indigo-600 text-xl">layers</span>
+            <Layers className="w-5 h-5 text-indigo-600" />
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <span className="text-3xl font-extrabold text-slate-900 font-mono">
@@ -452,9 +444,7 @@ export default function TasksHandoverPage() {
       <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
         {/* Search */}
         <div className="relative w-full md:w-80">
-          <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-            search
-          </span>
+          <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
@@ -494,7 +484,7 @@ export default function TasksHandoverPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredTasks.length === 0 ? (
           <div className="col-span-full p-12 rounded-2xl bg-white border border-dashed border-slate-200 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
-            <span className="material-symbols-outlined text-4xl text-slate-300">inventory_2</span>
+            <Package className="w-10 h-10 text-slate-300" />
             <p className="text-base font-bold text-slate-900">
               لا توجد طلبات تطابق هذا البحث
             </p>
@@ -625,7 +615,7 @@ export default function TasksHandoverPage() {
                           className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition cursor-pointer"
                           title="إرسال إشعار واتساب للعميل"
                         >
-                          <span className="material-symbols-outlined text-base">chat</span>
+                          <MessageSquare className="w-4 h-4" />
                         </button>
                       )}
                       <button
@@ -633,14 +623,14 @@ export default function TasksHandoverPage() {
                         className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer"
                         title="تعديل تفاصيل الأوردر"
                       >
-                        <span className="material-symbols-outlined text-base">edit</span>
+                        <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteTask(task.id)}
                         className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition cursor-pointer"
                         title="حذف الأوردر"
                       >
-                        <span className="material-symbols-outlined text-base">delete</span>
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -657,7 +647,7 @@ export default function TasksHandoverPage() {
           <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-600 text-xl">assignment</span>
+                <FileText className="w-5 h-5 text-blue-600" />
                 <h3 className="font-bold text-base text-slate-900">
                   {editingTask ? "تعديل أوردر الطباعة" : "تسجيل أوردر طباعة جديد للشفت"}
                 </h3>
@@ -666,7 +656,7 @@ export default function TasksHandoverPage() {
                 onClick={() => setIsModalOpen(false)}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
-                <span className="material-symbols-outlined">close</span>
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -814,7 +804,7 @@ export default function TasksHandoverPage() {
                   type="submit"
                   className="flex items-center gap-1 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-base">save</span>
+                  <Save className="w-4 h-4" />
                   <span>{editingTask ? "حفظ التعديلات" : "حفظ وإرسال للماكينة"}</span>
                 </button>
               </div>
@@ -829,7 +819,7 @@ export default function TasksHandoverPage() {
           <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-600 text-2xl">fact_check</span>
+                <ClipboardCheck className="w-6 h-6 text-blue-600" />
                 <div>
                   <h3 className="font-bold text-base text-slate-900">تقرير تسليم واستلام الشفت</h3>
                   <span className="text-xs text-slate-500 font-mono">
@@ -841,7 +831,7 @@ export default function TasksHandoverPage() {
                 onClick={() => setIsHandoverModalOpen(false)}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
-                <span className="material-symbols-outlined">close</span>
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -865,7 +855,7 @@ export default function TasksHandoverPage() {
                 onClick={copyHandoverReport}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer border border-slate-200"
               >
-                <span className="material-symbols-outlined text-base">content_copy</span>
+                <Copy className="w-4 h-4" />
                 <span>نسخ التقرير</span>
               </button>
 
@@ -875,7 +865,7 @@ export default function TasksHandoverPage() {
                   onClick={sendWhatsappHandover}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer shadow-xs"
                 >
-                  <span className="material-symbols-outlined text-base">send</span>
+                  <Send className="w-4 h-4" />
                   <span>إرسال للشفت القادم واتساب</span>
                 </button>
                 <button

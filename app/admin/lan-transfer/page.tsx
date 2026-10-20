@@ -8,8 +8,6 @@ import {
   Laptop,
   Trash2,
   HardDrive,
-  Zap,
-  ShieldCheck,
   FileText,
   FileArchive,
   Image as ImageIcon,
@@ -282,50 +280,29 @@ export default function LanTransferPage() {
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card/60 backdrop-blur-md p-6 rounded-2xl border border-border shadow-sm">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl">
-              <Share2 className="w-6 h-6" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">مركز النقل السريع الداخلي (Local LAN Transfer Hub)</h1>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            نقل فوري وسريع للملفات والملازم بين أجهزة المكتبة عبر كابل الشبكة المحلية أو الراوتر الداخلي بدون استهلاك باقة الإنترنت.
-          </p>
-        </div>
-
-        {/* Network Status Badge */}
-        <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 px-4 py-2.5 rounded-2xl text-xs font-semibold">
-          <Zap className="w-4 h-4 text-emerald-500 animate-pulse" />
-          <span>الشبكة المحلية متصلة (LAN Cable / Wi-Fi Sync)</span>
-        </div>
-      </div>
-
+    <div className="space-y-5" dir="rtl">
       {/* Device & Room Settings Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-card/70 backdrop-blur-md p-4 rounded-2xl border border-border">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
         {/* Device Name with Random Generator Button */}
         <div className="flex items-center gap-2">
-          <Laptop className="w-4 h-4 text-blue-500 shrink-0" />
-          <span className="text-xs font-semibold text-foreground whitespace-nowrap">اسم هذا الجهاز:</span>
+          <Laptop className="w-4 h-4 text-blue-600 shrink-0" />
+          <span className="text-xs font-bold text-slate-700 whitespace-nowrap">اسم الجهاز:</span>
           <div className="flex-1 flex items-center gap-1.5">
             <input
               type="text"
               suppressHydrationWarning
               value={deviceName}
               onChange={(e) => handleDeviceNameChange(e.target.value)}
-              className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-border bg-background focus:border-blue-500 focus:outline-none"
-              placeholder="مثال: حاسوب الصقر (سريع-742)"
+              className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:border-blue-500 focus:bg-white focus:outline-none transition"
+              placeholder="اسم الجهاز..."
             />
             <button
               type="button"
               onClick={regenerateDeviceName}
-              title="توليد اسم شبه عشوائي جديد بنظام مميز"
-              className="p-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-bold"
+              title="توليد اسم جديد"
+              className="p-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 transition cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-bold"
             >
-              <Dices className="w-4 h-4" />
+              <Dices className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">اسم عشوائي</span>
             </button>
           </div>
@@ -333,35 +310,35 @@ export default function LanTransferPage() {
 
         {/* Shared Room Input with Manual Refresh */}
         <div className="flex items-center gap-2">
-          <HardDrive className="w-4 h-4 text-muted-foreground shrink-0" />
-          <span className="text-xs font-semibold text-foreground whitespace-nowrap">غرفة النقل المشتركة:</span>
+          <HardDrive className="w-4 h-4 text-slate-500 shrink-0" />
+          <span className="text-xs font-bold text-slate-700 whitespace-nowrap">غرفة النقل:</span>
           <div className="flex-1 flex items-center gap-1.5">
             <input
               type="text"
               value={roomId}
               onChange={(e) => setRoomId(e.target.value)}
-              className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-border bg-background font-mono focus:border-blue-500 focus:outline-none"
+              className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 font-mono focus:border-blue-500 focus:bg-white focus:outline-none transition"
               placeholder="copycat-lan-room"
             />
             <button
               type="button"
               onClick={() => fetchSharedFiles()}
               disabled={isRefreshing}
-              title="تحديث قائمة الملفات يدوياً"
-              className="p-1.5 rounded-lg bg-slate-500/10 hover:bg-slate-500/20 text-slate-700 dark:text-slate-300 transition cursor-pointer shrink-0"
+              title="تحديث يدوياً"
+              className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer shrink-0"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-blue-600" : ""}`} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Drag & Drop Zone */}
+      {/* Modern Drag & Drop Zone */}
       <div
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className="border-2 border-dashed border-border hover:border-blue-500/60 transition cursor-pointer rounded-2xl p-10 flex flex-col items-center justify-center text-center gap-3 bg-card/40 hover:bg-card/70 min-h-[220px]"
+        className="border-2 border-dashed border-slate-200 hover:border-blue-500 transition cursor-pointer rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-2 bg-white hover:bg-blue-50/20 min-h-[160px] shadow-xs"
       >
         <input
           ref={fileInputRef}
@@ -371,31 +348,31 @@ export default function LanTransferPage() {
           onChange={handleFileUpload}
         />
 
-        <div className="p-4 bg-blue-500/10 text-blue-500 rounded-full">
-          <Upload className="w-8 h-8" />
+        <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+          <Upload className="w-6 h-6" />
         </div>
 
         <div>
-          <h3 className="text-lg font-bold text-foreground">
-            اسحب أي ملفات هنا أو اضغط للاختيار من الجهاز
+          <h3 className="text-sm font-bold text-slate-900">
+            اسحب أي ملفات هنا أو اضغط للاختيار للنقل السريع
           </h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            يدعم ملفات PDF، الملازم، الصور، ومجلدات الـ ZIP من أي حجم للنقل المباشر عبر السيرفر الداخلي
+          <p className="text-xs text-slate-500 mt-0.5">
+            نقل فوري بين أجهزة المكتبة المتصلة بنفس الشبكة
           </p>
         </div>
 
         {isTransferring && (
-          <div className="w-full max-w-xs mt-3 space-y-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5 text-blue-500">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>جاري بث الملف عبر الشبكة...</span>
+          <div className="w-full max-w-xs mt-2 space-y-1">
+            <div className="flex justify-between text-xs text-slate-500">
+              <span className="flex items-center gap-1 text-blue-600 font-bold">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>جاري النقل...</span>
               </span>
-              <span>{transferProgress}%</span>
+              <span className="font-mono">{transferProgress}%</span>
             </div>
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
               <div
-                className="h-full bg-linear-to-r from-blue-500 to-cyan-400 transition-all duration-200"
+                className="h-full bg-linear-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-200"
                 style={{ width: `${transferProgress}%` }}
               />
             </div>
@@ -404,47 +381,41 @@ export default function LanTransferPage() {
       </div>
 
       {/* Shared Files List */}
-      <div className="bg-card/70 backdrop-blur-md border border-border rounded-2xl p-5 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-border">
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <HardDrive className="w-5 h-5 text-blue-500" />
-            <h2 className="font-bold text-foreground">الملفات المتبادلة في الغرفة</h2>
-            <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-              مزامنة تلقائية كل 2 ثانية
-            </span>
+            <HardDrive className="w-4 h-4 text-blue-600" />
+            <h2 className="font-bold text-sm text-slate-900">الملفات المتبادلة</h2>
           </div>
-          <span className="text-xs font-bold text-muted-foreground">
-            {sharedFiles.length} ملفات جاهزة للتحميل
+          <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-xl">
+            {sharedFiles.length} {sharedFiles.length === 1 ? "ملف" : "ملفات"}
           </span>
         </div>
 
         {sharedFiles.length === 0 ? (
-          <div className="py-12 text-center text-muted-foreground">
-            <Share2 className="w-10 h-10 mx-auto opacity-30 mb-2" />
-            <p className="text-sm font-medium">لم يتم إرسال أي ملفات بعد في هذه الغرفة</p>
-            <p className="text-xs mt-1 text-slate-400">
-              الملفات المرفوعة ستظهر فوراً وبشكل تلقائي لجميع الأجهزة المشتركة في نفس الغرفة عبر الشبكة الداخلية.
-            </p>
+          <div className="py-8 text-center text-slate-600">
+            <Share2 className="w-8 h-8 mx-auto opacity-30 mb-2" />
+            <p className="text-xs font-bold">لا توجد ملفات في الغرفة حالياً</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {sharedFiles.map((item) => (
               <div
                 key={item.id}
-                className="p-4 rounded-xl border border-border bg-background/80 hover:border-blue-500/40 transition flex items-center justify-between gap-3 shadow-xs"
+                className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-blue-300 transition flex items-center justify-between gap-3 shadow-2xs"
               >
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="p-2.5 bg-muted rounded-xl shrink-0">
+                  <div className="p-2 bg-white border border-slate-200 rounded-xl shrink-0 shadow-2xs">
                     {getFileIcon(item.name, item.type)}
                   </div>
                   <div className="overflow-hidden">
-                    <div className="font-bold text-sm text-foreground truncate max-w-[200px]" title={item.name}>
+                    <div className="font-bold text-xs text-slate-900 truncate max-w-[200px]" title={item.name}>
                       {item.name}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                    <div className="flex items-center gap-2 text-[11px] text-slate-600 mt-0.5">
                       <span className="font-mono">{formatFileSize(item.size)}</span>
                       <span>•</span>
-                      <span className="text-blue-500 font-semibold truncate max-w-[130px]">من: {item.sender}</span>
+                      <span className="text-blue-600 font-semibold truncate max-w-[120px]">{item.sender}</span>
                     </div>
                   </div>
                 </div>
@@ -452,51 +423,34 @@ export default function LanTransferPage() {
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     onClick={() => handleSendToPrintQueue(item)}
-                    className="px-2.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition font-bold text-xs flex items-center gap-1.5 cursor-pointer"
-                    title="إرسال لطابور مهام الطباعة والتسليم"
+                    className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center gap-1 transition cursor-pointer border border-emerald-200"
+                    title="إرسال لطابور الطباعة"
                   >
-                    <Printer className="w-4 h-4" />
-                    <span className="hidden sm:inline">طابور الطباعة</span>
+                    <Printer className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">طباعة</span>
                   </button>
 
                   <button
                     onClick={() => handleDownloadFile(item)}
-                    className="px-3 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                    className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1 transition cursor-pointer shadow-xs"
                     title="تحميل الملف للجهاز"
                   >
-                    <Download className="w-4 h-4" />
+                    <Download className="w-3.5 h-3.5" />
                     <span>تحميل</span>
                   </button>
 
                   <button
                     onClick={() => handleDeleteItem(item.id)}
-                    className="p-2 rounded-xl hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition cursor-pointer"
+                    className="p-1.5 rounded-lg hover:bg-red-50 text-slate-600 hover:text-red-600 transition cursor-pointer"
                     title="حذف من الغرفة"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
             ))}
           </div>
         )}
-      </div>
-
-      {/* Instructions / LAN Setup Tips */}
-      <div className="p-4 bg-muted/30 border border-border rounded-2xl text-xs text-muted-foreground space-y-2">
-        <div className="font-semibold text-foreground flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-blue-500" />
-          كيف يعمل النقل الداخلي عبر سلك الشبكة / الروتر في المكتبة؟
-        </div>
-        <p>
-          1. افتح صفحة <strong>/admin/lan-transfer</strong> على الجهازين (مثلاً جهاز التصوير وجهاز الاستقبال) المتصلين بالراوتر بكابل LAN أو واي فاي.
-        </p>
-        <p>
-          2. تأكد من تطابق اسم <strong>&ldquo;غرفة النقل المشتركة&rdquo;</strong> في الجهازين (الافتراضي: copycat-lan-room).
-        </p>
-        <p>
-          3. اسحب أي ملف في أي جهاز؛ سيتم رفعه فورا لمخدم المكتبة المحلي، وسيظهر زر <strong>&ldquo;تحميل&rdquo;</strong> في الجهاز الآخر خلال ثانيتين دون استهلاك باقة الإنترنت إطلاقاً!
-        </p>
       </div>
     </div>
   );

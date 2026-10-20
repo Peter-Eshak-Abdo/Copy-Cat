@@ -4,6 +4,22 @@ import React, { useState, useRef, useMemo } from "react";
 import { useToast } from "@/components/toast-provider";
 import { readFileAsDataURL } from "@/lib/utils";
 import { generateOcrDocx } from "@/lib/docx/ocr-docx";
+import {
+  Layers,
+  ImagePlus,
+  ArrowUp,
+  ArrowDown,
+  Trash2,
+  UploadCloud,
+  Eye,
+  ZoomIn,
+  ZoomOut,
+  Loader2,
+  Sparkles,
+  FileText,
+  Copy,
+  Download,
+} from "lucide-react";
 
 
 interface OcrPageItem {
@@ -26,8 +42,159 @@ export default function MultiStageOcrPage() {
 
   const [refinedText, setRefinedText] = useState<string>("");
   const [docTitle, setDocTitle] = useState<string>("مستند_نصوص_مستخرجة_مكتبة_كوبي_كات.docx");
+  const [viewMode, setViewMode] = useState<"visual" | "raw">("visual");
 
   const activePage = pages[activePageIndex] || null;
+
+  // Render extracted markdown text preserving tables, headings, and alignments visually
+  const renderVisualDocument = (text: string) => {
+    if (!text.trim()) {
+      return (
+        <div className="py-20 text-center text-slate-400 text-xs sm:text-sm">
+          سيظهر هنا النص والمستند المستخرج مع الحفاظ التام على الجداول والعناوين والتنسيق الأصلي...
+        </div>
+      );
+    }
+
+    const lines = text.split(/\r?\n/);
+    const elements: React.ReactNode[] = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i].trim();
+      if (!line) {
+        i++;
+        continue;
+      }
+
+      // 1. Markdown Table
+      if (line.startsWith("|") && line.endsWith("|")) {
+        const tableLines: string[] = [];
+        while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
+          tableLines.push(lines[i].trim());
+          i++;
+        }
+
+        const validRows = tableLines.filter((l) => {
+          const clean = l.replace(/\|/g, "").replace(/[-:\s]/g, "");
+          return clean.length > 0;
+        });
+
+        if (validRows.length > 0) {
+          const headerCells = validRows[0]
+            .split("|")
+            .map((c) => c.trim())
+            .slice(1, -1);
+          const dataRows = validRows.slice(1).map((r) =>
+            r
+              .split("|")
+              .map((c) => c.trim())
+              .slice(1, -1)
+          );
+
+          elements.push(
+            <div key={`table-${i}`} className="my-4 overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
+              <table className="w-full text-right text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-slate-200">
+                    {headerCells.map((cell, cIdx) => (
+                      <th
+                        key={cIdx}
+                        className="p-2.5 sm:p-3 font-black text-slate-900 border-l border-slate-200 last:border-l-0"
+                      >
+                        {cell}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {dataRows.map((row, rIdx) => (
+                    <tr key={rIdx} className="hover:bg-slate-50/70 transition">
+                      {row.map((cell, cIdx) => (
+                        <td
+                          key={cIdx}
+                          className="p-2.5 text-slate-800 border-l border-slate-200 last:border-l-0 leading-relaxed font-sans"
+                        >
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+        continue;
+      }
+
+      // 2. Heading Level 1
+      if (line.startsWith("# ")) {
+        elements.push(
+          <h2 key={`h1-${i}`} className="text-lg font-black text-slate-900 mt-4 mb-2 pb-1 border-b border-slate-200">
+            {line.replace(/^#\s+/, "")}
+          </h2>
+        );
+        i++;
+        continue;
+      }
+
+      // 3. Heading Level 2
+      if (line.startsWith("## ")) {
+        elements.push(
+          <h3 key={`h2-${i}`} className="text-base font-bold text-slate-800 mt-3 mb-1.5">
+            {line.replace(/^##\s+/, "")}
+          </h3>
+        );
+        i++;
+        continue;
+      }
+
+      // 4. Heading Level 3
+      if (line.startsWith("### ")) {
+        elements.push(
+          <h4 key={`h3-${i}`} className="text-sm font-bold text-slate-700 mt-2 mb-1">
+            {line.replace(/^###\s+/, "")}
+          </h4>
+        );
+        i++;
+        continue;
+      }
+
+      // 5. Short heading with colon
+      if (line.length < 60 && (line.endsWith(":") || line.endsWith(":-")) && !line.includes(".")) {
+        elements.push(
+          <h5 key={`h4-${i}`} className="text-xs sm:text-sm font-black text-slate-900 mt-3 mb-1">
+            {line}
+          </h5>
+        );
+        i++;
+        continue;
+      }
+
+      // 6. Bullet lists
+      if (line.startsWith("- ") || line.startsWith("* ") || line.startsWith("• ")) {
+        elements.push(
+          <div key={`li-${i}`} className="flex items-start gap-2 mr-2 text-xs sm:text-sm text-slate-800 my-1">
+            <span className="text-blue-600 font-bold">•</span>
+            <span>{line.replace(/^[-*•]\s+/, "")}</span>
+          </div>
+        );
+        i++;
+        continue;
+      }
+
+      // 7. Regular paragraph
+      elements.push(
+        <p key={`p-${i}`} className="text-xs sm:text-sm text-slate-800 leading-relaxed my-1.5 whitespace-pre-wrap">
+          {line}
+        </p>
+      );
+      i++;
+    }
+
+    return <div className="space-y-1">{elements}</div>;
+  };
 
   // Dynamic Word & Char counters
   const { wordCount, charCount } = useMemo(() => {
@@ -234,10 +401,9 @@ export default function MultiStageOcrPage() {
     try {
       await generateOcrDocx({
         content: refinedText,
-        title: docTitle.replace(/\.docx$/i, ""),
         fileName: docTitle.endsWith(".docx") ? docTitle : `${docTitle}.docx`,
       });
-      toast.success("تم تصدير ملف Word", "تم تحميل المستند بنجاح مع ضبط هوامش A4 والخط 18pt");
+      toast.success("تم تصدير ملف Word", "تم تحميل المستند بنجاح بتنسيق A4 المطابق للورقة والإطار المزدوج");
     } catch {
       toast.error("خطأ في التصدير", "تعذر توليد ملف Word. يمكنك نسخ النص يدوياً.");
     }
@@ -277,43 +443,7 @@ export default function MultiStageOcrPage() {
         className="hidden"
       />
 
-      <div className="flex flex-col gap-space-lg w-full pb-space-3xl pt-space-sm">
-        {/* Top Header Banner */}
-        <div className="relative overflow-hidden rounded-xl bg-surface-container-low p-space-lg shadow-xs border border-surface-container-high/40">
-          <div className="absolute -right-24 -top-24 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-space-md">
-            <div className="flex items-start gap-space-md">
-              <div className="p-space-sm rounded-xl bg-surface-container-high text-primary flex items-center justify-center shadow-inner">
-                <span className="material-symbols-outlined text-3xl">document_scanner</span>
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-space-xs">
-                  <span className="font-headline-md text-headline-md text-on-surface">
-                    الماسح الضوئي الذكي للمستندات والعقود
-                  </span>
-                  <span className="font-label-tag text-label-tag px-space-xs py-space-2xs rounded bg-primary/15 text-primary">
-                    خط اليد والمطبوع
-                  </span>
-                </div>
-                <p className="font-body-md text-body-md text-on-surface-variant mt-space-2xs max-w-3xl">
-                  استخراج نصوص العقود، وعقود الإيجار والزواج، وإيصالات الأمانة، والمذكرات الدراسية المكتوبة بخط اليد مع الحفاظ على الترتيب، وتصديرها في مستند Word منسق جاهز للطباعة فوراً.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-space-sm self-stretch md:self-auto">
-              <button
-                onClick={handleUploadClick}
-                className="flex items-center justify-center gap-space-xs px-space-md py-space-xs rounded-xl bg-primary hover:bg-primary/90 text-on-primary transition-all shadow-md active:scale-95 cursor-pointer font-bold text-sm"
-                type="button"
-              >
-                <span className="material-symbols-outlined text-xl">add_photo_alternate</span>
-                <span>+ إضافة صفحات / صور</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
+      <div className="flex flex-col gap-space-lg w-full pb-space-3xl pt-space-xs">
         {/* Core Workbench */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
           {/* Left Column: Source Pages & Active Preview */}
@@ -322,14 +452,19 @@ export default function MultiStageOcrPage() {
             <div className="flex flex-col rounded-xl bg-surface-container-low p-space-md shadow-lg border border-surface-container-high/40">
               <div className="flex items-center justify-between pb-space-sm border-b border-surface-container-high/60 mb-space-sm">
                 <div className="flex items-center gap-space-xs">
-                  <span className="material-symbols-outlined text-primary text-xl">layers</span>
+                  <Layers className="text-primary w-5 h-5" />
                   <span className="font-headline-sm text-headline-sm text-on-surface font-bold">
                     صفحات المستند ({pages.length})
                   </span>
                 </div>
-                <span className="text-xs text-on-surface-variant">
-                  يمكنك إعادة ترتيب الصفحات قبل البدء
-                </span>
+                <button
+                  onClick={handleUploadClick}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-xs cursor-pointer"
+                  type="button"
+                >
+                  <ImagePlus className="w-4 h-4" />
+                  <span>+ إضافة صفحات</span>
+                </button>
               </div>
 
               {pages.length > 0 ? (
@@ -374,7 +509,7 @@ export default function MultiStageOcrPage() {
                           className="p-1 rounded hover:bg-surface-bright text-on-surface-variant disabled:opacity-30 cursor-pointer"
                           title="تحريك لأعلى"
                         >
-                          <span className="material-symbols-outlined text-base">arrow_upward</span>
+                          <ArrowUp className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
@@ -383,7 +518,7 @@ export default function MultiStageOcrPage() {
                           className="p-1 rounded hover:bg-surface-bright text-on-surface-variant disabled:opacity-30 cursor-pointer"
                           title="تحريك لأسفل"
                         >
-                          <span className="material-symbols-outlined text-base">arrow_downward</span>
+                          <ArrowDown className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
@@ -391,7 +526,7 @@ export default function MultiStageOcrPage() {
                           className="p-1 rounded hover:bg-error/20 text-error cursor-pointer"
                           title="حذف هذه الصفحة"
                         >
-                          <span className="material-symbols-outlined text-base">delete</span>
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -404,7 +539,7 @@ export default function MultiStageOcrPage() {
                   onDrop={handleDrop}
                   className="p-6 text-center border-2 border-dashed border-primary/40 rounded-xl cursor-pointer hover:border-primary transition"
                 >
-                  <span className="material-symbols-outlined text-4xl text-primary mb-2">upload_file</span>
+                  <UploadCloud className="w-10 h-10 text-primary mx-auto mb-2" />
                   <p className="text-sm font-bold text-on-surface">اسحب وأفلت صور الصفحات هنا</p>
                   <p className="text-xs text-on-surface-variant mt-1">أو اضغط لاختيار صورة أو أكثر من جهازك</p>
                 </div>
@@ -416,7 +551,7 @@ export default function MultiStageOcrPage() {
               <div className="flex flex-col rounded-xl bg-surface-container-low p-space-md shadow-lg border border-surface-container-high/40">
                 <div className="flex items-center justify-between pb-space-sm">
                   <div className="flex items-center gap-space-xs">
-                    <span className="material-symbols-outlined text-primary text-xl">visibility</span>
+                    <Eye className="w-5 h-5 text-primary" />
                     <span className="font-headline-sm text-headline-sm text-on-surface font-bold">
                       معاينة: صفحة ({activePageIndex + 1})
                     </span>
@@ -427,9 +562,7 @@ export default function MultiStageOcrPage() {
                     title={zoomPreview ? "تصغير" : "تكبير"}
                     type="button"
                   >
-                    <span className="material-symbols-outlined text-lg">
-                      {zoomPreview ? "zoom_out" : "zoom_in"}
-                    </span>
+                    {zoomPreview ? <ZoomOut className="w-4 h-4" /> : <ZoomIn className="w-4 h-4" />}
                   </button>
                 </div>
 
@@ -452,9 +585,7 @@ export default function MultiStageOcrPage() {
               disabled={isProcessing || pages.length === 0}
               className="w-full py-3.5 px-4 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 transition active:scale-95 disabled:opacity-50 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-xl">
-                {isProcessing ? "sync" : "auto_read_play"}
-              </span>
+              {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
               <span>
                 {isProcessing
                   ? `جاري استخراج صفحة (${activePageIndex + 1} من ${pages.length})...`
@@ -467,32 +598,58 @@ export default function MultiStageOcrPage() {
 
           {/* Right Column: Extracted Document & Export */}
           <div className="lg:col-span-7 flex flex-col gap-space-lg">
-            <div className="flex flex-col rounded-xl bg-surface-container-low p-space-md shadow-lg border border-surface-container-high/40">
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-space-sm border-b border-surface-container-high/60 mb-space-md">
-                <div className="flex items-center gap-space-xs">
-                  <span className="material-symbols-outlined text-primary text-xl">description</span>
-                  <span className="font-headline-sm text-headline-sm text-on-surface font-bold">
+            <div className="flex flex-col rounded-2xl bg-white p-space-md shadow-sm border border-slate-200">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200 mb-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <span className="text-base font-bold text-slate-900">
                     النص المستخرج والمدقق
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-on-surface-variant bg-surface-container px-2.5 py-1 rounded-lg">
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* View Mode Toggle: Visual Tables vs Raw Textarea */}
+                  <div className="flex items-center p-0.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("visual")}
+                      className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+                        viewMode === "visual"
+                          ? "bg-white text-blue-600 shadow-2xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      التنسيق والجداول
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("raw")}
+                      className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+                        viewMode === "raw"
+                          ? "bg-white text-blue-600 shadow-2xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      محرر النص
+                    </button>
+                  </div>
+
+                  <span className="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg font-mono">
                     {wordCount} كلمة | {charCount} حرف
                   </span>
                   <button
                     onClick={handleCopyText}
-                    className="flex items-center gap-1 py-1.5 px-3 rounded-lg bg-surface-container hover:bg-surface-bright text-on-surface text-xs font-semibold transition cursor-pointer"
+                    className="flex items-center gap-1 py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer border border-slate-200"
                   >
-                    <span className="material-symbols-outlined text-base">content_copy</span>
+                    <Copy className="w-4 h-4" />
                     <span>نسخ</span>
                   </button>
                   <button
                     onClick={handleExportWord}
                     disabled={!refinedText.trim()}
-                    className="flex items-center gap-1.5 py-1.5 px-3 rounded-lg bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-slate-900 text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow"
+                    className="flex items-center gap-1.5 py-1.5 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow-xs"
                   >
-                    <span className="material-symbols-outlined text-base">download</span>
+                    <Download className="w-4 h-4" />
                     <span>تصدير Word (.docx)</span>
                   </button>
                 </div>
@@ -504,32 +661,38 @@ export default function MultiStageOcrPage() {
                   type="text"
                   value={docTitle}
                   onChange={(e) => setDocTitle(e.target.value)}
-                  className="w-full bg-surface-container border border-surface-container-high rounded-lg px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-blue-500"
                   placeholder="اسم ملف الوورد الناتج"
                 />
               </div>
 
-              {/* Text Area / Editor */}
-              <textarea
-                value={refinedText}
-                onChange={(e) => setRefinedText(e.target.value)}
-                placeholder="سيظهر هنا النص المستخرج من الصفحات بترتيبها بعد انتهاء القراءة والتدقيق..."
-                rows={18}
-                className="w-full bg-surface-container-lowest border border-surface-container-high rounded-xl p-4 text-sm text-on-surface leading-relaxed font-sans focus:outline-none focus:border-primary resize-y"
-              />
+              {/* Main Content Area: Visual Formatted with real tables OR Raw Textarea */}
+              {viewMode === "visual" ? (
+                <div className="w-full min-h-[380px] max-h-[600px] overflow-y-auto bg-slate-50/70 border border-slate-200 rounded-xl p-4 text-slate-900 font-sans shadow-inner">
+                  {renderVisualDocument(refinedText)}
+                </div>
+              ) : (
+                <textarea
+                  value={refinedText}
+                  onChange={(e) => setRefinedText(e.target.value)}
+                  placeholder="سيظهر هنا النص المستخرج من الصفحات بترتيبها بعد انتهاء القراءة والتدقيق..."
+                  rows={18}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs sm:text-sm text-slate-900 leading-relaxed font-sans focus:bg-white focus:outline-none focus:border-blue-500 resize-y"
+                />
+              )}
             </div>
           </div>
         </div>
 
         {/* Clean, Honest Status Footer */}
-        <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface-container-low border border-surface-container-high/40 text-xs text-on-surface-variant">
+        {/* <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface-container-low border border-surface-container-high/40 text-xs text-on-surface-variant">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span className="font-bold text-on-surface">الماسح الضوئي جاهز</span>
             <span>— معالجة فائقة الدقة للوثائق الرسمية والمخطوطات</span>
           </div>
           <span>مطبعة وخدمات كوبي كات</span>
-        </div>
+        </div> */}
       </div>
     </div>
   );

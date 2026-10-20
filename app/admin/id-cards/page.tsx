@@ -8,7 +8,6 @@ import {
   Trash2,
   RotateCw,
   Sparkles,
-  Layers,
   CheckCircle2,
   ArrowUpDown,
   Zap,
@@ -95,6 +94,7 @@ export default function IdCardsPage() {
   const [cropCamScannerMode, setCropCamScannerMode] = useState<boolean>(true);
   const [activeCornerDrag, setActiveCornerDrag] = useState<"tl" | "tr" | "br" | "bl" | null>(null);
   const [loupePoint, setLoupePoint] = useState<Point2D | null>(null);
+  const [isAiSnappingCorners, setIsAiSnappingCorners] = useState<boolean>(false);
   const cropContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
@@ -211,12 +211,12 @@ export default function IdCardsPage() {
       try {
         const originalSrc = await readAndOptimizeImage(file);
 
-        // 1. Instant auto-detect corners using native Canvas Sobel edge detection (~10ms)
+        // 1. Auto-detect corners using OpenCV or native Canvas Sobel edge detection
         const autoQuad = await new Promise<QuadCorners>((resolve) => {
           const img = new Image();
           img.crossOrigin = "anonymous";
           img.src = originalSrc;
-          img.onload = () => {
+          img.onload = async () => {
             try {
               const c = document.createElement("canvas");
               c.width = img.naturalWidth || img.width;
@@ -224,39 +224,50 @@ export default function IdCardsPage() {
               const ctx = c.getContext("2d");
               if (ctx) {
                 ctx.drawImage(img, 0, 0);
+                if (typeof window !== "undefined" && window.cv && window.cv.Mat) {
+                  try {
+                    const cvQuad = await detectCardCornersOpenCV(c);
+                    resolve(cvQuad);
+                    return;
+                  } catch {}
+                }
                 const q = detectCardCorners(c);
                 resolve(q);
                 return;
               }
             } catch {}
-            // Fallback
+            // Fallback: standard 4% inset
             resolve({
-              tl: { x: 0.05, y: 0.08 },
-              tr: { x: 0.95, y: 0.08 },
-              br: { x: 0.95, y: 0.92 },
-              bl: { x: 0.05, y: 0.92 },
+              tl: { x: 0.04, y: 0.06 },
+              tr: { x: 0.96, y: 0.06 },
+              br: { x: 0.96, y: 0.94 },
+              bl: { x: 0.04, y: 0.94 },
             });
           };
           img.onerror = () => {
             resolve({
-              tl: { x: 0.05, y: 0.08 },
-              tr: { x: 0.95, y: 0.08 },
-              br: { x: 0.95, y: 0.92 },
-              bl: { x: 0.05, y: 0.92 },
+              tl: { x: 0.04, y: 0.06 },
+              tr: { x: 0.96, y: 0.06 },
+              br: { x: 0.96, y: 0.94 },
+              bl: { x: 0.04, y: 0.94 },
             });
           };
         });
 
-        // 2. Automatically process with quad perspective warp while preserving 100% natural colors
+        // 2. Automatically process with quad perspective warp, CamScanner Retinex whitening & high sharpness
+        const initialBrightness = 118;
+        const initialContrast = 105;
+        const initialSharpness = 45;
+
         const processedSrc = await processSideImage(
           originalSrc,
-          100,
-          100,
-          0,
+          initialBrightness,
+          initialContrast,
+          initialSharpness,
           0,
           undefined,
           autoQuad,
-          false,
+          true, // camScannerMode = true
           false
         );
 
@@ -266,16 +277,16 @@ export default function IdCardsPage() {
           originalSrc,
           processedSrc,
           rotation: 0,
-          brightness: 100,
-          contrast: 100,
-          sharpness: 0,
-          bakedBrightness: 100,
-          bakedContrast: 100,
-          bakedSharpness: 0,
+          brightness: initialBrightness,
+          contrast: initialContrast,
+          sharpness: initialSharpness,
+          bakedBrightness: initialBrightness,
+          bakedContrast: initialContrast,
+          bakedSharpness: initialSharpness,
           thresholdMode: false,
           sideType: i % 2 === 0 ? "front" : "back",
           quad: autoQuad,
-          camScannerMode: false,
+          camScannerMode: true,
         });
       } catch (err) {
         console.error(`Error reading card image ${file.name}:`, err);
@@ -704,6 +715,35 @@ export default function IdCardsPage() {
     };
   };
 
+  // AI Smart Snap: Detects 4 corners and extrapolates true card border through hand/fingers
+  const handleAiSnapCorners = async () => {
+    if (!cropTarget) return;
+    setIsAiSnappingCorners(true);
+    try {
+      const res = await fetch("/api/admin/card-align", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: cropTarget.cardSide.originalSrc,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.corners) {
+        setQuadCorners(data.corners);
+        toast.success(
+          "تم التقاط أركان البطاقة بالذكاء الاصطناعي ✨",
+          "تم رصد حدود الكارت بدقة فائقة وتجاوز أصابع اليد والمكتب."
+        );
+      } else {
+        await handleAutoDetectCorners();
+      }
+    } catch {
+      await handleAutoDetectCorners();
+    } finally {
+      setIsAiSnappingCorners(false);
+    }
+  };
+
   // Export Word DOCX with A4/A5 and Duplex alignment
   const handleExportWord = async () => {
     if (pairs.length === 0) return;
@@ -879,25 +919,22 @@ export default function IdCardsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 sm:p-7 rounded-2xl sm:rounded-3xl border-2 border-slate-200/90 shadow-xs">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs sm:text-sm font-bold mb-2.5">
-            <Layers className="w-4 h-4 text-blue-600" /> مصنع بطاقات الرقم القومي والطباعة المزدوجة (Duplex)
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            تجهيز وقص وطباعة بطاقات الرقم القومي A4 / A5
-          </h1>
-          <p className="text-slate-600 text-sm sm:text-base mt-1.5 leading-relaxed max-w-4xl font-medium">
-            كشف تلقائي للأركان وتصحيح المنظور بمكتبة OpenCV.js، تحكم يدوي بالأركان الأربعة، سلايدرز تفتيح وتباين وحدة فورية منفصلة لكل وجه، مع فلتر أبيض وأسود عالي التباين للطباعة ومحاذاة تامة للوجهين بمقاس 85.6mm × 54mm!
-          </p>
+      {/* Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-black text-slate-800">تجهيز وطباعة بطاقات الرقم القومي</span>
+          {pairs.length > 0 && (
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-100">
+              {pairs.length} بطاقة
+            </span>
+          )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {pairs.length > 0 && (
             <button
               onClick={() => setPairs([])}
-              className="px-4 py-2.5 rounded-xl text-sm font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
+              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
             >
               مسح الكل
             </button>
@@ -906,10 +943,10 @@ export default function IdCardsPage() {
           <button
             onClick={handleExportWord}
             disabled={pairs.length === 0 || isGenerating}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-sm sm:text-base shadow-md shadow-blue-600/30 transition disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-xs transition disabled:opacity-50 cursor-pointer"
           >
-            <FileDown className="w-5 h-5" />
-            <span>{isGenerating ? "جاري إنشاء ملف الوورد..." : `تصدير وورد (${paperSize})`}</span>
+            <FileDown className="w-4 h-4" />
+            <span>{isGenerating ? "جاري الإنشاء..." : `تصدير وورد (${paperSize})`}</span>
           </button>
         </div>
       </div>
@@ -1651,12 +1688,23 @@ export default function IdCardsPage() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    onClick={handleAiSnapCorners}
+                    disabled={isAiSnappingCorners}
+                    className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                    title="التقاط أركان البطاقة بالذكاء الاصطناعي وتخطي أصابع اليد والمكتب"
+                  >
+                    <Sparkles className={`w-3.5 h-3.5 ${isAiSnappingCorners ? "animate-spin" : ""}`} />
+                    <span>{isAiSnappingCorners ? "جاري الالتقاط..." : "التقاط ذكي بالذكاء الاصطناعي (AI Snap)"}</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={handleAutoDetectCorners}
-                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-amber-400 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border border-amber-500/20"
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-amber-500 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border border-amber-500/20"
                     title="كشف حدود البطاقة وتوجيه الأركان الأربعة آلياً بمكتبة OpenCV"
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>كشف الزوايا التلقائي (OpenCV)</span>
+                    <Scan className="w-3.5 h-3.5" />
+                    <span>كشف الزوايا (OpenCV)</span>
                   </button>
 
                   <button

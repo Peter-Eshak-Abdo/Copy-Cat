@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth";
 import {
   Loader2,
-  Home,
   LogOut,
   QrCode,
   X,
@@ -16,9 +15,10 @@ import {
   Copy,
   Check,
   ArrowRight,
-  LayoutGrid,
 } from "lucide-react";
 import QRCode from "qrcode";
+
+const emptySubscribe = () => () => {};
 
 export function AdminClientWrapper({
   children,
@@ -29,6 +29,7 @@ export function AdminClientWrapper({
   const router = useRouter();
   const pathname = usePathname();
 
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [showQrModal, setShowQrModal] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [copiedLink, setCopiedLink] = useState(false);
@@ -37,10 +38,10 @@ export function AdminClientWrapper({
   const isMainAdminHome = pathname === "/admin";
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (mounted && !loading && !user) {
       router.push("/login");
     }
-  }, [user, loading, router]);
+  }, [mounted, user, loading, router]);
 
   const handleOpenQrModal = async () => {
     setShowQrModal(true);
@@ -76,7 +77,7 @@ export function AdminClientWrapper({
     a.click();
   };
 
-  if (loading) {
+  if (!mounted || (loading && !user)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-900">
         <div className="flex flex-col items-center gap-3">
@@ -150,7 +151,7 @@ export function AdminClientWrapper({
             </button>
 
             {/* Link to Public Store */}
-            <Link
+            {/* <Link
               href="/"
               target="_blank"
               className="p-2 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 border border-slate-200 transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold"
@@ -158,13 +159,13 @@ export function AdminClientWrapper({
             >
               <Home className="w-4 h-4 text-blue-500" />
               <span className="hidden md:inline">متجر الزبائن</span>
-            </Link>
+            </Link> */}
 
             {/* User Indicator */}
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700">
+            {/* <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span className="truncate max-w-[120px]">{user.name}</span>
-            </div>
+            </div> */}
 
             {/* Logout Button */}
             <button

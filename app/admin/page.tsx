@@ -4,6 +4,78 @@ import React, { useState, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/toast-provider";
+import {
+  LayoutGrid,
+  ChevronUp,
+  BarChart3,
+  RotateCcw,
+  Printer,
+  Eye,
+  MapPin,
+  Monitor,
+  Calculator,
+  ClipboardCheck,
+  Megaphone,
+  Edit2,
+  Receipt,
+  CheckCheck,
+  CheckCircle2,
+  CreditCard,
+  ArrowLeft,
+  PieChart,
+  GripVertical,
+  Store,
+  Laptop,
+  Smartphone,
+  ExternalLink,
+  X,
+  FileText,
+  ScanText,
+  Share2,
+  Contact,
+  Camera,
+  Sliders,
+  GraduationCap,
+  Globe,
+  Package,
+  Images,
+  Download,
+} from "lucide-react";
+
+function renderToolIcon(toolId: string, className: string = "w-8 h-8 sm:w-9 sm:h-9") {
+  switch (toolId) {
+    case "calculator":
+      return <Calculator className={className} />;
+    case "tasks":
+      return <ClipboardCheck className={className} />;
+    case "pdf-tools":
+      return <FileText className={className} />;
+    case "ocr":
+      return <ScanText className={className} />;
+    case "lan-transfer":
+      return <Share2 className={className} />;
+    case "id-cards":
+      return <Contact className={className} />;
+    case "passport-photos":
+      return <Camera className={className} />;
+    case "scanner":
+      return <Sliders className={className} />;
+    case "research":
+      return <GraduationCap className={className} />;
+    case "shortcuts":
+      return <Globe className={className} />;
+    case "inventory":
+      return <Package className={className} />;
+    case "photos":
+      return <Images className={className} />;
+    case "instapay":
+      return <CreditCard className={className} />;
+    case "fb-post-tools":
+      return <Download className={className} />;
+    default:
+      return <LayoutGrid className={className} />;
+  }
+}
 
 interface PrintTask {
   id: string;
@@ -93,10 +165,6 @@ function subscribeTasks(callback: () => void) {
   };
 }
 
-function notifyTasksChanged() {
-  cachedRaw = null;
-  taskListeners.forEach((listener) => listener());
-}
 
 // حساب الوردية الحالية بدقة بناءً على التوقيت الفعلي
 function getCurrentShift(date: Date = new Date()): {
@@ -151,18 +219,18 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
     borderHoverClass: "hover:border-blue-400 hover:shadow-md",
     iconBgClass: "bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white",
   },
-  {
-    id: "tasks",
-    title: "أوردرات الطباعة وتسليم الشفت",
-    desc: "متابعة أوردرات وملازم المدرسين، عداد النسخ المطبوعة الحي، مراسلة واتساب فورية، وتوليد تقرير تسليم الشفت بضغطة واحدة.",
-    badge: "مراسلة واتساب فورية",
-    footerTag: "تقرير شفت متكامل",
-    icon: "task_alt",
-    href: "/admin/tasks",
-    colorClass: "text-indigo-600",
-    borderHoverClass: "hover:border-indigo-400 hover:shadow-md",
-    iconBgClass: "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white",
-  },
+  // {
+  //   id: "tasks",
+  //   title: "أوردرات الطباعة وتسليم الشفت",
+  //   desc: "متابعة أوردرات وملازم المدرسين، عداد النسخ المطبوعة الحي، مراسلة واتساب فورية، وتوليد تقرير تسليم الشفت بضغطة واحدة.",
+  //   badge: "مراسلة واتساب فورية",
+  //   footerTag: "تقرير شفت متكامل",
+  //   icon: "task_alt",
+  //   href: "/admin/tasks",
+  //   colorClass: "text-indigo-600",
+  //   borderHoverClass: "hover:border-indigo-400 hover:shadow-md",
+  //   iconBgClass: "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white",
+  // },
   {
     id: "pdf-tools",
     title: "استوديو وأدوات الـ PDF المتقدمة",
@@ -310,7 +378,7 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
 ];
 
 export default function AdminDashboardPage() {
-  const { user } = useAuth();
+  useAuth();
   const toast = useToast();
   const tasks = useSyncExternalStore(subscribeTasks, getTasksSnapshot, getTasksServerSnapshot);
 
@@ -474,7 +542,7 @@ export default function AdminDashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl sm:rounded-3xl border-2 border-slate-200/90 shadow-xs">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
-            <span className="material-symbols-outlined text-3xl">grid_view</span>
+            <LayoutGrid className="w-7 h-7" />
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -496,9 +564,7 @@ export default function AdminDashboardPage() {
                 : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300/80"
             }`}
           >
-            <span className="material-symbols-outlined text-lg">
-              {showOverview ? "expand_less" : "analytics"}
-            </span>
+            {showOverview ? <ChevronUp className="w-4 h-4" /> : <BarChart3 className="w-4 h-4" />}
             <span>{showOverview ? "إخفاء ملخص الشفت والإحصائيات ▲" : "عرض ملخص الشفت والإحصائيات ▼"}</span>
             {activeOrdersCount > 0 && !showOverview && (
               <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-xs font-bold mr-1">
@@ -512,7 +578,7 @@ export default function AdminDashboardPage() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 transition cursor-pointer"
             title="إعادة ترتيب الأدوات للوضع الافتراضي الأصلي"
           >
-            <span className="material-symbols-outlined text-base">restore</span>
+            <RotateCcw className="w-4 h-4" />
             <span className="hidden sm:inline">إعادة الترتيب</span>
           </button>
 
@@ -521,7 +587,7 @@ export default function AdminDashboardPage() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs sm:text-sm border border-emerald-200 transition cursor-pointer"
             title="طباعة بوستر أو استند كيو آر واتساب المكتبة"
           >
-            <span className="material-symbols-outlined text-base text-emerald-600">print</span>
+            <Printer className="w-4 h-4 text-emerald-600" />
             <span>بوستر واتساب</span>
           </button>
 
@@ -530,7 +596,7 @@ export default function AdminDashboardPage() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs sm:text-sm border border-blue-200 transition cursor-pointer"
             title="معاينة واجهة متجر الزبائن"
           >
-            <span className="material-symbols-outlined text-base text-blue-600">preview</span>
+            <Eye className="w-4 h-4 text-blue-600" />
             <span>متجر الزبائن</span>
           </button>
         </div>
@@ -549,7 +615,7 @@ export default function AdminDashboardPage() {
                     مكتبة ومطبعة كوبي كات
                   </span>
                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs border border-slate-200">
-                    <span className="material-symbols-outlined text-sm text-slate-500">location_on</span>
+                    <MapPin className="w-3.5 h-3.5 text-slate-500" />
                     فرع الإسماعيلية — شارع الدقهلية
                   </span>
                 </div>
@@ -568,7 +634,7 @@ export default function AdminDashboardPage() {
                   className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs transition cursor-pointer"
                   title="تثبيت لوحة الأدمن كتطبيق مستقل على كمبيوتر المكتبة (PWA)"
                 >
-                  <span className="material-symbols-outlined text-lg text-emerald-600">desktop_windows</span>
+                  <Monitor className="w-4 h-4 text-emerald-600" />
                   <span>{isPwaInstalled ? "تطبيق الأدمن مثبت ✓" : "تثبيت أدمن المكتبة PWA"}</span>
                 </button>
 
@@ -576,14 +642,14 @@ export default function AdminDashboardPage() {
                   href="/admin/calculator"
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-xs"
                 >
-                  <span className="material-symbols-outlined text-lg">calculate</span>
+                  <Calculator className="w-4 h-4" />
                   <span>حاسبة الملازم والطباعة</span>
                 </Link>
                 <Link
                   href="/admin/tasks"
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition border border-slate-200"
                 >
-                  <span className="material-symbols-outlined text-lg text-slate-600">assignment_turned_in</span>
+                  <ClipboardCheck className="w-4 h-4 text-slate-600" />
                   <span>مهام وأوردرات الشفت</span>
                 </Link>
               </div>
@@ -594,7 +660,7 @@ export default function AdminDashboardPage() {
           <div className="rounded-2xl sm:rounded-3xl bg-white p-4 sm:p-5 border-2 border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
             <div className="flex items-center gap-3 flex-1 w-full">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-                <span className="material-symbols-outlined text-xl">campaign</span>
+                <Megaphone className="w-5 h-5 text-blue-600" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -637,7 +703,7 @@ export default function AdminDashboardPage() {
                 }}
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold shrink-0 transition cursor-pointer"
               >
-                <span className="material-symbols-outlined text-base">edit</span>
+                <Edit2 className="w-4 h-4" />
                 <span>تعديل الإعلان</span>
               </button>
             )}
@@ -650,7 +716,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold text-slate-500">أوردرات اليوم النشطة</span>
                 <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100">
-                  <span className="material-symbols-outlined text-xl">receipt_long</span>
+                  <Receipt className="w-5 h-5 text-blue-600" />
                 </div>
               </div>
               <div className="flex items-baseline gap-2 mb-2">
@@ -668,7 +734,7 @@ export default function AdminDashboardPage() {
                     </>
                   ) : (
                     <>
-                      <span className="material-symbols-outlined text-sm text-emerald-600">done_all</span>
+                      <CheckCheck className="w-4 h-4 text-emerald-600" />
                       جميع الأوردرات مسجلة وجاهزة
                     </>
                   )}
@@ -684,7 +750,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold text-slate-500">إجمالي النسخ المطبوعة اليوم</span>
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
-                  <span className="material-symbols-outlined text-xl">print</span>
+                  <Printer className="w-5 h-5 text-indigo-600" />
                 </div>
               </div>
               <div className="flex items-baseline gap-2 mb-2">
@@ -695,7 +761,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                 <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-                  <span className="material-symbols-outlined text-sm text-emerald-600">check_circle</span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   {readyCount > 0 ? `${readyCount} أوردر جاهز للتسليم` : `${completedCount} أوردر مكتمل`}
                 </span>
                 <span className="text-xs text-slate-400 font-medium">{currentShift.label}</span>
@@ -710,7 +776,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold text-slate-500">تحويلات إنستا باي المعلقة</span>
                 <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-colors border border-violet-100">
-                  <span className="material-symbols-outlined text-xl">credit_card</span>
+                  <CreditCard className="w-5 h-5 text-violet-600" />
                 </div>
               </div>
               <div className="flex items-baseline gap-2 mb-2">
@@ -725,7 +791,7 @@ export default function AdminDashboardPage() {
                 </span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 font-bold flex items-center gap-0.5">
                   <span>فتح السجل</span>
-                  <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                  <ArrowLeft className="w-3.5 h-3.5" />
                 </span>
               </div>
             </Link>
@@ -735,7 +801,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold text-slate-500">معدل إنجاز أوردرات الشفت</span>
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100">
-                  <span className="material-symbols-outlined text-xl">donut_large</span>
+                  <PieChart className="w-5 h-5 text-emerald-600" />
                 </div>
               </div>
               <div className="flex items-baseline gap-2 mb-2">
@@ -765,7 +831,7 @@ export default function AdminDashboardPage() {
       )}
 
       {/* The Dynamic Workstation Cards Grid with Drag & Drop Reordering */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 lg:gap-6">
         {tools.map((tool, index) => {
           const isDragging = draggedIndex === index;
           const isOver = dragOverIndex === index;
@@ -793,7 +859,7 @@ export default function AdminDashboardPage() {
                       <div
                         className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center transition-colors shadow-xs ${tool.iconBgClass}`}
                       >
-                        <span className="material-symbols-outlined text-3xl sm:text-4xl">{tool.icon}</span>
+                        {renderToolIcon(tool.id)}
                       </div>
                       <span className="text-xs sm:text-sm font-extrabold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                         {tool.badge}
@@ -806,7 +872,7 @@ export default function AdminDashboardPage() {
                       title="اسحب البطاقة لتغيير ترتيبها (Drag & Drop)"
                       onClick={(e) => e.preventDefault()}
                     >
-                      <span className="material-symbols-outlined text-2xl">drag_indicator</span>
+                      <GripVertical className="w-5 h-5" />
                     </div>
                   </div>
 
@@ -827,7 +893,7 @@ export default function AdminDashboardPage() {
                     className={`text-sm sm:text-base font-black ${tool.colorClass} flex items-center gap-1.5 group-hover:translate-x-[-4px] transition-transform`}
                   >
                     تشغيل الأداة
-                    <span className="material-symbols-outlined text-xl">arrow_forward</span>
+                    <ArrowLeft className="w-4 h-4" />
                   </span>
                   <span className="text-xs sm:text-sm text-slate-400 font-bold">{tool.footerTag}</span>
                 </div>
@@ -844,7 +910,7 @@ export default function AdminDashboardPage() {
             {/* Control Bar (Screen Only) */}
             <div className="w-full flex items-center justify-between p-3 mb-3 bg-white border border-slate-200 rounded-2xl text-slate-800 shadow-xl print:hidden">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-emerald-600 text-xl">print</span>
+                <Printer className="w-5 h-5 text-emerald-600" />
                 <span className="font-bold text-xs text-slate-900">
                   {printQrModal === "stand" ? "معاينة استند طاولة الكاشير (A5)" : "معاينة بوستر حائط المحل (A4)"}
                 </span>
@@ -873,14 +939,14 @@ export default function AdminDashboardPage() {
                   onClick={() => window.print()}
                   className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-sm">print</span>
+                  <Printer className="w-4 h-4" />
                   <span>طباعة فورية (Ctrl+P)</span>
                 </button>
                 <button
                   onClick={() => setPrintQrModal(null)}
                   className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-slate-900 cursor-pointer transition"
                 >
-                  <span className="material-symbols-outlined text-base">close</span>
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -976,7 +1042,7 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between px-4 sm:px-6 py-3 bg-white border-b border-slate-200 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-                  <span className="material-symbols-outlined text-2xl">storefront</span>
+                  <Store className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900">معاينة واجهة متجر الزبائن الحية</h3>
@@ -995,7 +1061,7 @@ export default function AdminDashboardPage() {
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    <span className="material-symbols-outlined text-sm">laptop</span>
+                    <Laptop className="w-4 h-4" />
                     <span className="hidden sm:inline">كمبيوتر</span>
                   </button>
                   <button
@@ -1006,7 +1072,7 @@ export default function AdminDashboardPage() {
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    <span className="material-symbols-outlined text-sm">smartphone</span>
+                    <Smartphone className="w-4 h-4" />
                     <span className="hidden sm:inline">موبايل</span>
                   </button>
                 </div>
@@ -1018,7 +1084,7 @@ export default function AdminDashboardPage() {
                   className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800 flex items-center gap-1.5 transition border border-slate-200"
                   title="فتح في نافذة متصفح جديدة"
                 >
-                  <span className="material-symbols-outlined text-sm">open_in_new</span>
+                  <ExternalLink className="w-4 h-4" />
                   <span className="hidden sm:inline">نافذة جديدة</span>
                 </a>
 
@@ -1027,7 +1093,7 @@ export default function AdminDashboardPage() {
                   className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-500 flex items-center justify-center transition cursor-pointer border border-slate-200"
                   title="إغلاق المعاينة"
                 >
-                  <span className="material-symbols-outlined text-xl">close</span>
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>

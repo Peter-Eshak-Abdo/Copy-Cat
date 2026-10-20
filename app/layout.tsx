@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cairo } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/lib/auth";
@@ -9,10 +9,10 @@ import { SITE_CONFIG } from "@/lib/site-config";
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
-const cairo = Cairo({
-  subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+const cairo = localFont({
+  src: "./fonts/Cairo-VariableFont_wght.ttf",
   variable: "--font-cairo",
+  display: "swap",
 });
 
 export const viewport: Viewport = {
@@ -181,8 +181,6 @@ export default function RootLayout({
         <link rel="icon" href="/icon-96.png" type="image/png" sizes="96x96" />
         <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

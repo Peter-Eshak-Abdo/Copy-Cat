@@ -237,6 +237,91 @@ export function applyFaceSafeSuperResolution(
 }
 
 /**
+ * Scans image for human skin tone clusters to reliably locate face and upper torso
+ */
+function findFaceSkinCentroid(canvas: HTMLCanvasElement): {
+  found: boolean;
+  centerX: number;
+  centerY: number;
+  faceW: number;
+  faceH: number;
+} {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return {
+      found: false,
+      centerX: canvas.width / 2,
+      centerY: canvas.height * 0.28,
+      faceW: canvas.width * 0.38,
+      faceH: canvas.height * 0.28,
+    };
+  }
+
+  const w = canvas.width;
+  const h = canvas.height;
+  const scanH = Math.round(h * 0.65);
+  const step = Math.max(2, Math.floor(w / 100));
+  const imgData = ctx.getImageData(0, 0, w, scanH);
+  const data = imgData.data;
+
+  let sumX = 0;
+  let sumY = 0;
+  let count = 0;
+  let minX = w, maxX = 0, minY = scanH, maxY = 0;
+
+  for (let y = 0; y < scanH; y += step) {
+    for (let x = 0; x < w; x += step) {
+      const idx = (y * w + x) * 4;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+
+      const isSkin =
+        r > 70 &&
+        g > 40 &&
+        b > 20 &&
+        r > g &&
+        r > b &&
+        r - g > 12 &&
+        Math.abs(r - g) > 10 &&
+        r - b > 15;
+
+      if (isSkin) {
+        sumX += x;
+        sumY += y;
+        count++;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (count > 25) {
+    const avgX = sumX / count;
+    const avgY = sumY / count;
+    const detectedW = Math.max(w * 0.22, Math.min(w * 0.55, maxX - minX));
+    const detectedH = Math.max(h * 0.15, Math.min(h * 0.40, maxY - minY));
+    return {
+      found: true,
+      centerX: avgX,
+      centerY: avgY,
+      faceW: detectedW,
+      faceH: detectedH,
+    };
+  }
+
+  return {
+    found: false,
+    centerX: w / 2,
+    centerY: h * 0.28,
+    faceW: w * 0.38,
+    faceH: h * 0.28,
+  };
+}
+
+/**
  * Detects optimal Biometric Passport Crop (Head & Shoulders)
  * Standard: Head occupies 70%-78% of vertical frame height, with 7-8% headroom above hair.
  * Ensures full-body photos are cropped directly to head & shoulders just like official studio photos.
@@ -261,11 +346,11 @@ export async function detectBiometricCrop(
     const faceCenterX = ((xmin + xmax) / 2000) * cw;
     const faceCenterY = ((ymin + ymax) / 2000) * ch;
 
-    // Standard 4x6: Face occupies ~55-60% of frame height with headroom and shoulders
-    const targetCropH = Math.min(ch, Math.max(faceH / 0.58, faceW * 1.3));
+    // Standard 4x6: Face occupies ~60-65% of frame height, cutting right at the collarbones
+    const targetCropH = Math.min(ch, Math.max(faceH * 1.62, faceW * 1.35));
     const targetCropW = Math.min(cw, targetCropH * (400 / 520));
 
-    // Crown / headroom top at ~10% from top
+    // Headroom: top starts 8-10% above the hair
     const cropY = Math.max(0, Math.min(ch - targetCropH, faceCenterY - targetCropH * 0.38));
     const cropX = Math.max(0, Math.min(cw - targetCropW, faceCenterX - targetCropW / 2));
 
@@ -290,7 +375,7 @@ export async function detectBiometricCrop(
         const faceCenterX = box.x + faceW / 2;
         const faceCenterY = box.y + faceH / 2;
 
-        const targetCropH = Math.min(ch, Math.max(faceH / 0.58, faceW * 1.3));
+        const targetCropH = Math.min(ch, Math.max(faceH * 1.62, faceW * 1.35));
         const targetCropW = Math.min(cw, targetCropH * (400 / 520));
         const cropY = Math.max(0, Math.min(ch - targetCropH, faceCenterY - targetCropH * 0.38));
         const cropX = Math.max(0, Math.min(cw - targetCropW, faceCenterX - targetCropW / 2));
@@ -305,13 +390,16 @@ export async function detectBiometricCrop(
     } catch {}
   }
 
-  // 3. Fallback for standing / full-body / 3/4 portrait photos (like kid in street)
-  // When height > width, the head & shoulders are always located in the top portion
-  if (ch > cw * 1.1) {
-    const targetCropH = Math.min(ch, cw * 1.25);
-    const targetCropW = targetCropH * (400 / 520);
-    const cropX = Math.max(0, Math.min(cw - targetCropW, (cw - targetCropW) / 2));
-    const cropY = Math.max(0, Math.min(ch - targetCropH, Math.round(ch * 0.04)));
+  // 3. Smart local biometric detection for standing / full-body / 3/4 phone camera portraits
+  const skin = findFaceSkinCentroid(canvas);
+  
+  if (skin.found) {
+    // Face was detected via skin tone clustering
+    // Head occupies ~62% of frame, leaving ~8% headroom and cutting right at the collarbone/shoulders
+    const targetCropH = Math.min(ch, Math.max(skin.faceH * 1.62, cw * 0.55));
+    const targetCropW = Math.min(cw, targetCropH * (400 / 520));
+    const cropY = Math.max(0, Math.min(ch - targetCropH, skin.centerY - targetCropH * 0.38));
+    const cropX = Math.max(0, Math.min(cw - targetCropW, skin.centerX - targetCropW / 2));
 
     return {
       cropX: Math.round(cropX),
@@ -321,11 +409,28 @@ export async function detectBiometricCrop(
     };
   }
 
-  // 4. Default upper-center crop for wide or square photos
-  const targetCropH = Math.min(ch, ch * 0.9);
+  // 4. Default Upper-Third Crop for portrait photos (where face & shoulders are in top 30%)
+  if (ch > cw * 1.05) {
+    // Standard phone camera photo of a standing or seated person:
+    // The head and shoulders are located in the top 30% of the frame
+    const targetCropH = Math.min(ch * 0.30, cw * 0.65);
+    const targetCropW = targetCropH * (400 / 520);
+    const cropX = Math.max(0, (cw - targetCropW) / 2);
+    const cropY = Math.max(0, Math.round(ch * 0.05));
+
+    return {
+      cropX: Math.round(cropX),
+      cropY: Math.round(cropY),
+      cropW: Math.round(targetCropW),
+      cropH: Math.round(targetCropH),
+    };
+  }
+
+  // 5. Default upper-center crop for wide or square photos
+  const targetCropH = Math.min(ch, ch * 0.65);
   const targetCropW = targetCropH * (400 / 520);
   const cropX = Math.max(0, (cw - targetCropW) / 2);
-  const cropY = Math.max(0, Math.round(ch * 0.05));
+  const cropY = Math.max(0, Math.round(ch * 0.04));
 
   return {
     cropX: Math.round(cropX),
