@@ -44,9 +44,16 @@ export default function MultiStageOcrPage() {
   const [docTitle, setDocTitle] = useState<string>("مستند_نصوص_مستخرجة_مكتبة_كوبي_كات.docx");
   const [viewMode, setViewMode] = useState<"visual" | "raw">("visual");
 
+  // Requirement #4: Font detection, Arial fallback, and Language / Direction Settings
+  const [selectedFont, setSelectedFont] = useState<string>("Arial");
+  const [fontManuallyChanged, setFontManuallyChanged] = useState<boolean>(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("auto");
+  const [hasPageBorder, setHasPageBorder] = useState<boolean>(false);
+
   const activePage = pages[activePageIndex] || null;
 
   // Render extracted markdown text preserving tables, headings, and alignments visually
+  // Render extracted markdown text preserving tables, headings, and alignments visually (Requirement #4)
   const renderVisualDocument = (text: string) => {
     if (!text.trim()) {
       return (
@@ -55,6 +62,13 @@ export default function MultiStageOcrPage() {
         </div>
       );
     }
+
+    const isDocAr =
+      selectedLanguage === "ar"
+        ? true
+        : selectedLanguage === "en" || selectedLanguage === "fr"
+        ? false
+        : /[\u0600-\u06FF]/.test(text);
 
     const lines = text.split(/\r?\n/);
     const elements: React.ReactNode[] = [];
@@ -81,6 +95,7 @@ export default function MultiStageOcrPage() {
         });
 
         if (validRows.length > 0) {
+          const tableIsAr = /[\u0600-\u06FF]/.test(validRows.join(" ")) || isDocAr;
           const headerCells = validRows[0]
             .split("|")
             .map((c) => c.trim())
@@ -93,14 +108,14 @@ export default function MultiStageOcrPage() {
           );
 
           elements.push(
-            <div key={`table-${i}`} className="my-4 overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
-              <table className="w-full text-right text-xs border-collapse">
+            <div key={`table-${i}`} dir={tableIsAr ? "rtl" : "ltr"} className="my-4 overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
+              <table className={`w-full text-xs border-collapse ${tableIsAr ? "text-right" : "text-left"}`}>
                 <thead>
                   <tr className="bg-slate-100 border-b border-slate-200">
                     {headerCells.map((cell, cIdx) => (
                       <th
                         key={cIdx}
-                        className="p-2.5 sm:p-3 font-black text-slate-900 border-l border-slate-200 last:border-l-0"
+                        className={`p-2.5 sm:p-3 font-black text-slate-900 border-l border-slate-200 last:border-l-0 ${tableIsAr ? "text-right" : "text-left"}`}
                       >
                         {cell}
                       </th>
@@ -113,7 +128,7 @@ export default function MultiStageOcrPage() {
                       {row.map((cell, cIdx) => (
                         <td
                           key={cIdx}
-                          className="p-2.5 text-slate-800 border-l border-slate-200 last:border-l-0 leading-relaxed font-sans"
+                          className={`p-2.5 text-slate-800 border-l border-slate-200 last:border-l-0 leading-relaxed font-sans ${tableIsAr ? "text-right" : "text-left"}`}
                         >
                           {cell}
                         </td>
@@ -128,10 +143,12 @@ export default function MultiStageOcrPage() {
         continue;
       }
 
+      const lineIsAr = /[\u0600-\u06FF]/.test(line) || (isDocAr && !/^[A-Za-z0-9\s.,'?!:;()\-*]+$/.test(line));
+
       // 2. Heading Level 1
       if (line.startsWith("# ")) {
         elements.push(
-          <h2 key={`h1-${i}`} className="text-lg font-black text-slate-900 mt-4 mb-2 pb-1 border-b border-slate-200">
+          <h2 key={`h1-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className="text-lg font-black text-slate-900 mt-4 mb-2 pb-1 border-b border-slate-200 text-center">
             {line.replace(/^#\s+/, "")}
           </h2>
         );
@@ -142,7 +159,7 @@ export default function MultiStageOcrPage() {
       // 3. Heading Level 2
       if (line.startsWith("## ")) {
         elements.push(
-          <h3 key={`h2-${i}`} className="text-base font-bold text-slate-800 mt-3 mb-1.5">
+          <h3 key={`h2-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className="text-base font-bold text-slate-800 mt-3 mb-1.5 text-center">
             {line.replace(/^##\s+/, "")}
           </h3>
         );
@@ -153,7 +170,7 @@ export default function MultiStageOcrPage() {
       // 4. Heading Level 3
       if (line.startsWith("### ")) {
         elements.push(
-          <h4 key={`h3-${i}`} className="text-sm font-bold text-slate-700 mt-2 mb-1">
+          <h4 key={`h3-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className={`text-sm font-bold text-slate-700 mt-2 mb-1 ${lineIsAr ? "text-right" : "text-left"}`}>
             {line.replace(/^###\s+/, "")}
           </h4>
         );
@@ -164,7 +181,7 @@ export default function MultiStageOcrPage() {
       // 5. Short heading with colon
       if (line.length < 60 && (line.endsWith(":") || line.endsWith(":-")) && !line.includes(".")) {
         elements.push(
-          <h5 key={`h4-${i}`} className="text-xs sm:text-sm font-black text-slate-900 mt-3 mb-1">
+          <h5 key={`h4-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className={`text-xs sm:text-sm font-black text-slate-900 mt-3 mb-1 ${lineIsAr ? "text-right" : "text-left"}`}>
             {line}
           </h5>
         );
@@ -175,7 +192,7 @@ export default function MultiStageOcrPage() {
       // 6. Bullet lists
       if (line.startsWith("- ") || line.startsWith("* ") || line.startsWith("• ")) {
         elements.push(
-          <div key={`li-${i}`} className="flex items-start gap-2 mr-2 text-xs sm:text-sm text-slate-800 my-1">
+          <div key={`li-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className={`flex items-start gap-2 ${lineIsAr ? "mr-2 text-right" : "ml-2 text-left"} text-xs sm:text-sm text-slate-800 my-1`}>
             <span className="text-blue-600 font-bold">•</span>
             <span>{line.replace(/^[-*•]\s+/, "")}</span>
           </div>
@@ -184,9 +201,9 @@ export default function MultiStageOcrPage() {
         continue;
       }
 
-      // 7. Regular paragraph
+      // 7. Regular paragraph (Requirement #4: Right align for Arabic, Left align for English/French)
       elements.push(
-        <p key={`p-${i}`} className="text-xs sm:text-sm text-slate-800 leading-relaxed my-1.5 whitespace-pre-wrap">
+        <p key={`p-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className={`text-xs sm:text-sm text-slate-800 leading-relaxed my-1.5 whitespace-pre-wrap ${lineIsAr ? "text-right" : "text-left"}`}>
           {line}
         </p>
       );
@@ -346,6 +363,13 @@ export default function MultiStageOcrPage() {
         const data = await res.json();
         const pageExtracted = data.extractedText || "";
 
+        if (data.detectedFont && !fontManuallyChanged) {
+          setSelectedFont(data.detectedFont);
+        }
+        if (data.detectedLang && selectedLanguage === "auto") {
+          setSelectedLanguage(data.detectedLang);
+        }
+
         setPages((prev) =>
           prev.map((p, idx) =>
             idx === i ? { ...p, status: "done", extractedText: pageExtracted } : p
@@ -391,7 +415,7 @@ export default function MultiStageOcrPage() {
     }
   };
 
-  // Action: Export Word .docx
+  // Action: Export Word .docx (Requirement #4)
   const handleExportWord = async () => {
     if (!refinedText.trim()) {
       toast.warning("لا يوجد نص للتصدير", "يرجى استخراج نص أولاً قبل تحميل ملف Word");
@@ -402,8 +426,11 @@ export default function MultiStageOcrPage() {
       await generateOcrDocx({
         content: refinedText,
         fileName: docTitle.endsWith(".docx") ? docTitle : `${docTitle}.docx`,
+        font: selectedFont || "Arial",
+        hasPageBorder: hasPageBorder,
+        language: selectedLanguage as any,
       });
-      toast.success("تم تصدير ملف Word", "تم تحميل المستند بنجاح بتنسيق A4 المطابق للورقة والإطار المزدوج");
+      toast.success("تم تصدير ملف Word", `تم تحميل المستند بنجاح بخط ${selectedFont || "Arial"} والتنسيق المطلوب`);
     } catch {
       toast.error("خطأ في التصدير", "تعذر توليد ملف Word. يمكنك نسخ النص يدوياً.");
     }
@@ -655,6 +682,58 @@ export default function MultiStageOcrPage() {
                 </div>
               </div>
 
+              {/* Document Configuration Toolbar (Requirement #4) */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl mb-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Font Selector with Arial as default fallback */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-700">نوع الخط (Font):</span>
+                    <select
+                      value={selectedFont}
+                      onChange={(e) => {
+                        setSelectedFont(e.target.value);
+                        setFontManuallyChanged(true);
+                      }}
+                      className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 shadow-2xs"
+                    >
+                      <option value="Arial">Arial (الافتراضي العام)</option>
+                      <option value="Traditional Arabic">Traditional Arabic (عربي رسمي)</option>
+                      <option value="Times New Roman">Times New Roman</option>
+                      <option value="Calibri">Calibri</option>
+                      <option value="Amiri">Amiri (أميري)</option>
+                      <option value="Cairo">Cairo (كايرو)</option>
+                      <option value="Tahoma">Tahoma</option>
+                    </select>
+                  </div>
+
+                  {/* Language Selector */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-700">اتجاه النص:</span>
+                    <select
+                      value={selectedLanguage}
+                      onChange={(e) => setSelectedLanguage(e.target.value)}
+                      className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 shadow-2xs"
+                    >
+                      <option value="auto">تلقائي (حسب المستند)</option>
+                      <option value="ar">العربية (RTL - يمين)</option>
+                      <option value="en">English (LTR - يسار)</option>
+                      <option value="fr">Français (LTR - يسار)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Page Border Toggle */}
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={hasPageBorder}
+                    onChange={(e) => setHasPageBorder(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                  />
+                  <span>إطار رسمي للصفحة (Page Border)</span>
+                </label>
+              </div>
+
               {/* Document Title Input */}
               <div className="mb-3">
                 <input
@@ -668,16 +747,53 @@ export default function MultiStageOcrPage() {
 
               {/* Main Content Area: Visual Formatted with real tables OR Raw Textarea */}
               {viewMode === "visual" ? (
-                <div className="w-full min-h-[380px] max-h-[600px] overflow-y-auto bg-slate-50/70 border border-slate-200 rounded-xl p-4 text-slate-900 font-sans shadow-inner">
+                <div
+                  dir={
+                    selectedLanguage === "ar"
+                      ? "rtl"
+                      : selectedLanguage === "en" || selectedLanguage === "fr"
+                      ? "ltr"
+                      : /[\u0600-\u06FF]/.test(refinedText)
+                      ? "rtl"
+                      : "ltr"
+                  }
+                  style={{
+                    fontFamily:
+                      selectedFont === "Traditional Arabic"
+                        ? "'Traditional Arabic', Arial, sans-serif"
+                        : `${selectedFont}, Arial, sans-serif`,
+                  }}
+                  className="w-full min-h-[380px] max-h-[600px] overflow-y-auto bg-slate-50/70 border border-slate-200 rounded-xl p-4 text-slate-900 shadow-inner"
+                >
                   {renderVisualDocument(refinedText)}
                 </div>
               ) : (
                 <textarea
                   value={refinedText}
                   onChange={(e) => setRefinedText(e.target.value)}
+                  dir={
+                    selectedLanguage === "ar"
+                      ? "rtl"
+                      : selectedLanguage === "en" || selectedLanguage === "fr"
+                      ? "ltr"
+                      : /[\u0600-\u06FF]/.test(refinedText)
+                      ? "rtl"
+                      : "ltr"
+                  }
+                  style={{
+                    fontFamily:
+                      selectedFont === "Traditional Arabic"
+                        ? "'Traditional Arabic', Arial, sans-serif"
+                        : `${selectedFont}, Arial, sans-serif`,
+                  }}
                   placeholder="سيظهر هنا النص المستخرج من الصفحات بترتيبها بعد انتهاء القراءة والتدقيق..."
                   rows={18}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs sm:text-sm text-slate-900 leading-relaxed font-sans focus:bg-white focus:outline-none focus:border-blue-500 resize-y"
+                  className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs sm:text-sm text-slate-900 leading-relaxed focus:bg-white focus:outline-none focus:border-blue-500 resize-y ${
+                    selectedLanguage === "ar" ||
+                    (selectedLanguage === "auto" && /[\u0600-\u06FF]/.test(refinedText))
+                      ? "text-right"
+                      : "text-left"
+                  }`}
                 />
               )}
             </div>

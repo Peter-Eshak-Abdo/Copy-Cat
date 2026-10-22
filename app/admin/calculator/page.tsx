@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useToast } from "@/components/toast-provider";
 import { SITE_CONFIG } from "@/lib/site-config";
+import { openWhatsAppChat } from "@/lib/utils";
 import {
   Printer,
   Calculator,
@@ -372,8 +373,7 @@ export default function SmartCalculatorPage() {
     msg += `✨ *الإجمالي الكلي: ${grandTotalCost.toLocaleString("ar-EG")} ج.م*\n\n`;
     msg += `جاهزون للطباعة الفورية والتسليم في الموعد المحدد بإذن الله.`;
 
-    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank");
+    openWhatsAppChat(undefined, msg);
   };
 
 

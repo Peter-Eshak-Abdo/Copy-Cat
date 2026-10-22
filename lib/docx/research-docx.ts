@@ -259,15 +259,22 @@ export function getDiverseSourcesForVersion(
  * دالة مساعدة لإنشاء فقرة متوافقة 100% مع الاتجاه من اليمين إلى اليسار (RTL) في Microsoft Word
  * تضيف وسم <w:bidi/> تلقائياً لكل فقرة بدون استثناء
  */
-function bidiParagraph(options: ConstructorParameters<typeof Paragraph>[0]): Paragraph {
+function bidiParagraph(
+  options: ConstructorParameters<typeof Paragraph>[0],
+  isRtl: boolean = true
+): Paragraph {
   if (typeof options === "string") {
     return new Paragraph({
-      bidirectional: true,
+      bidirectional: isRtl,
+      alignment: isRtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
       text: options,
     });
   }
+  const defaultAlignment = isRtl ? AlignmentType.RIGHT : AlignmentType.LEFT;
+  const alignment = (options as { alignment?: (typeof AlignmentType)[keyof typeof AlignmentType] })?.alignment || defaultAlignment;
   return new Paragraph({
-    bidirectional: true,
+    bidirectional: isRtl,
+    alignment,
     ...(options as object),
   });
 }
@@ -279,6 +286,7 @@ export interface CustomResearchSource {
   category?: string;
   getCitation?: (t: string) => string;
   citation?: string;
+  url?: string;
 }
 
 export interface ResearchCoverInfo {
@@ -298,6 +306,7 @@ export interface ResearchDocxOptions {
   targetPages?: number;
   sources?: CustomResearchSource[];
   versionNumber?: number;
+  language?: string;
 }
 
 export async function generateResearchDocx(options: ResearchDocxOptions) {
@@ -314,6 +323,16 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
 
   const effectiveTargetPages = Math.max(3, Number(targetPages) || 5);
 
+  const isArabic =
+    options.language === "ar"
+      ? true
+      : options.language === "en" || options.language === "fr"
+      ? false
+      : /[\u0600-\u06FF]/.test(topic + " " + (rawText || ""));
+
+  const p = (pOpts: ConstructorParameters<typeof Paragraph>[0]): Paragraph =>
+    bidiParagraph(pOpts, isArabic);
+
   // Clean raw AI text from markdown stars & headers and ensure continuous flow with single blank line
   const normalized = normalizeResearchText(rawText);
   const cleanText = normalized.replace(/[*#]/g, "");
@@ -325,13 +344,13 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
   const children: (Paragraph | Table)[] = [];
 
   // =========================================================================
-  // 1. Cover Page (صفحة الغلاف الرسمية - RTL 100%)
+  // 1. Cover Page (صفحة الغلاف الرسمية)
   // =========================================================================
   // Top school / institution header
   if (coverInfo.schoolOrUniversity) {
     children.push(
-      bidiParagraph({
-        alignment: AlignmentType.RIGHT,
+      p({
+        alignment: isArabic ? AlignmentType.RIGHT : AlignmentType.LEFT,
         spacing: { before: 200, after: 100 },
         children: [
           new TextRun({
@@ -339,7 +358,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
             font: "Arial",
             size: 32, // 16pt
             bold: true,
-            rightToLeft: true,
+            rightToLeft: isArabic,
           }),
         ],
       }),
@@ -348,23 +367,23 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
 
   // Large Centered Title (26pt bold)
   children.push(
-    bidiParagraph({
+    p({
       alignment: AlignmentType.CENTER,
       spacing: { before: 1800, after: 800 },
       children: [
         new TextRun({
-          text: `بحث دراسي متكامل عن:\n`,
+          text: isArabic ? `بحث دراسي متكامل عن:\n` : `Comprehensive Research Paper on:\n`,
           font: "Arial",
           size: 36, // 18pt
           bold: true,
-          rightToLeft: true,
+          rightToLeft: isArabic,
         }),
         new TextRun({
           text: topic,
           font: "Arial",
           size: 52, // 26pt bold
           bold: true,
-          rightToLeft: true,
+          rightToLeft: isArabic,
           color: "000000",
         }),
       ],
@@ -376,48 +395,48 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
   if (coverInfo.studentName) {
     metaRuns.push(
       new TextRun({
-        text: `إعداد الطالب / الباحث: ${coverInfo.studentName}\n`,
+        text: isArabic ? `إعداد الطالب / الباحث: ${coverInfo.studentName}\n` : `Prepared by: ${coverInfo.studentName}\n`,
         font: "Arial",
         size: 36, // 18pt
         bold: true,
-        rightToLeft: true,
+        rightToLeft: isArabic,
       }),
     );
   }
   if (coverInfo.teacherName) {
     metaRuns.push(
       new TextRun({
-        text: `إشراف الأستاذ / المشرف: ${coverInfo.teacherName}\n`,
+        text: isArabic ? `إشراف الأستاذ / المشرف: ${coverInfo.teacherName}\n` : `Supervised by: ${coverInfo.teacherName}\n`,
         font: "Arial",
         size: 36,
         bold: true,
-        rightToLeft: true,
+        rightToLeft: isArabic,
       }),
     );
   }
   if (coverInfo.gradeOrClass) {
     metaRuns.push(
       new TextRun({
-        text: `الصف / الفرقة الدراسية: ${coverInfo.gradeOrClass}\n`,
+        text: isArabic ? `الصف / الفرقة الدراسية: ${coverInfo.gradeOrClass}\n` : `Class / Grade: ${coverInfo.gradeOrClass}\n`,
         font: "Arial",
         size: 36,
-        rightToLeft: true,
+        rightToLeft: isArabic,
       }),
     );
   }
   if (coverInfo.academicYear) {
     metaRuns.push(
       new TextRun({
-        text: `العام الدراسي: ${coverInfo.academicYear}\n`,
+        text: isArabic ? `العام الدراسي: ${coverInfo.academicYear}\n` : `Academic Year: ${coverInfo.academicYear}\n`,
         font: "Arial",
         size: 32,
-        rightToLeft: true,
+        rightToLeft: isArabic,
       }),
     );
   }
 
   children.push(
-    bidiParagraph({
+    p({
       alignment: AlignmentType.CENTER,
       spacing: { before: 1600, after: 400 },
       children: metaRuns,
@@ -425,7 +444,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
   );
 
   // Page Break after Cover Page
-  children.push(bidiParagraph({ children: [new PageBreak()] }));
+  children.push(p({ children: [new PageBreak()] }));
 
   // =========================================================================
   // 2. Scan for actual encyclopedic headings in rawLines (Available for Index & Body)
@@ -520,16 +539,16 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
 
   if (includeIndex) {
     children.push(
-      bidiParagraph({
+      p({
         alignment: AlignmentType.CENTER,
         spacing: { before: 300, after: 400 },
         children: [
           new TextRun({
-            text: "فهرس وتبويب محتويات البحث",
+            text: isArabic ? "فهرس وتبويب محتويات البحث" : "Table of Contents",
             font: "Arial",
             size: 44, // 22pt bold
             bold: true,
-            rightToLeft: true,
+            rightToLeft: isArabic,
             color: "1E3A8A",
           }),
         ],
@@ -625,15 +644,15 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
           new TableCell({
             width: { size: 75, type: WidthType.PERCENTAGE },
             children: [
-              bidiParagraph({
-                alignment: AlignmentType.RIGHT,
+              p({
+                alignment: isArabic ? AlignmentType.RIGHT : AlignmentType.LEFT,
                 children: [
                   new TextRun({
-                    text: "عنوان المبحث أو الفصل",
+                    text: isArabic ? "عنوان المبحث أو الفصل" : "Chapter / Topic Title",
                     font: "Arial",
                     size: 36, // 18pt bold
                     bold: true,
-                    rightToLeft: true,
+                    rightToLeft: isArabic,
                   }),
                 ],
               }),
@@ -642,15 +661,15 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
           new TableCell({
             width: { size: 25, type: WidthType.PERCENTAGE },
             children: [
-              bidiParagraph({
-                alignment: AlignmentType.RIGHT,
+              p({
+                alignment: isArabic ? AlignmentType.RIGHT : AlignmentType.LEFT,
                 children: [
                   new TextRun({
-                    text: "رقم الصفحة",
+                    text: isArabic ? "رقم الصفحة" : "Page",
                     font: "Arial",
                     size: 36,
                     bold: true,
-                    rightToLeft: true,
+                    rightToLeft: isArabic,
                   }),
                 ],
               }),
@@ -665,18 +684,21 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
               new TableCell({
                 width: { size: 75, type: WidthType.PERCENTAGE },
                 children: [
-                  bidiParagraph({
-                    alignment: AlignmentType.RIGHT,
+                  p({
+                    alignment: isArabic ? AlignmentType.RIGHT : AlignmentType.LEFT,
                     children: [
                       new TextRun({
                         text: item.title,
                         font: "Arial",
                         size: 32, // 16pt
-                        rightToLeft: true,
+                        rightToLeft: isArabic,
                         bold:
                           item.title.includes("الفصل") ||
+                          item.title.includes("Chapter") ||
                           item.title.includes("خاتمة") ||
-                          item.title.includes("المراجع"),
+                          item.title.includes("Conclusion") ||
+                          item.title.includes("المراجع") ||
+                          item.title.includes("References"),
                       }),
                     ],
                   }),
@@ -685,15 +707,15 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
               new TableCell({
                 width: { size: 25, type: WidthType.PERCENTAGE },
                 children: [
-                  bidiParagraph({
-                    alignment: AlignmentType.RIGHT,
+                  p({
+                    alignment: isArabic ? AlignmentType.RIGHT : AlignmentType.LEFT,
                     children: [
                       new TextRun({
                         text: item.page,
                         font: "Arial",
                         size: 32,
                         bold: true,
-                        rightToLeft: true,
+                        rightToLeft: isArabic,
                       }),
                     ],
                   }),
@@ -707,13 +729,13 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
     children.push(
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
-        visuallyRightToLeft: true,
+        visuallyRightToLeft: isArabic,
         rows: tableRows,
       }),
     );
 
     // Page break after Index
-    children.push(bidiParagraph({ children: [new PageBreak()] }));
+    children.push(p({ children: [new PageBreak()] }));
   }
 
   // =========================================================================
@@ -746,8 +768,8 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
 
     if (isMainHeading) {
       children.push(
-        bidiParagraph({
-          alignment: AlignmentType.RIGHT,
+        p({
+          alignment: isArabic ? AlignmentType.RIGHT : AlignmentType.LEFT,
           spacing: { before: 360, after: 180 }, // Exactly one blank line equivalent
           children: [
             new TextRun({
@@ -755,7 +777,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
               font: "Arial",
               size: 44, // 22pt
               bold: true,
-              rightToLeft: true,
+              rightToLeft: isArabic,
               color: "000000",
             }),
           ],
@@ -763,8 +785,8 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
       );
     } else if (isSubHeading) {
       children.push(
-        bidiParagraph({
-          alignment: AlignmentType.RIGHT,
+        p({
+          alignment: isArabic ? AlignmentType.RIGHT : AlignmentType.LEFT,
           spacing: { before: 240, after: 140 },
           children: [
             new TextRun({
@@ -772,17 +794,17 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
               font: "Arial",
               size: 40, // 20pt
               bold: true,
-              rightToLeft: true,
+              rightToLeft: isArabic,
               color: "000000",
             }),
           ],
         }),
       );
     } else {
-      // Body Text: 18pt font (36 half-points), Right-aligned, RTL continuous flow
+      // Body Text: 18pt font (36 half-points), language-aware alignment
       children.push(
-        bidiParagraph({
-          alignment: AlignmentType.RIGHT,
+        p({
+          alignment: isArabic ? AlignmentType.RIGHT : AlignmentType.LEFT,
           spacing: {
             before: 100,
             after: 140,
@@ -793,7 +815,7 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
               text: `    ${line}`,
               font: "Arial",
               size: 36, // 18pt
-              rightToLeft: true,
+              rightToLeft: isArabic,
               color: "000000",
             }),
           ],
@@ -803,22 +825,22 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
   });
 
   // =========================================================================
-  // 4. References Page (المراجع والمصادر الأكاديمية المتنوعة لكل نسخة - RTL 100%)
+  // 4. References Page (المراجع والمصادر الأكاديمية المتنوعة لكل نسخة)
   // =========================================================================
   if (includeReferences) {
-    children.push(bidiParagraph({ children: [new PageBreak()] }));
+    children.push(p({ children: [new PageBreak()] }));
 
     children.push(
-      bidiParagraph({
-        alignment: AlignmentType.RIGHT,
+      p({
+        alignment: isArabic ? AlignmentType.RIGHT : AlignmentType.LEFT,
         spacing: { before: 300, after: 300 },
         children: [
           new TextRun({
-            text: "قائمة المصادر والمراجع الأكاديمية المعتمدة",
+            text: isArabic ? "قائمة المصادر والمراجع الأكاديمية المعتمدة" : "References and Academic Sources",
             font: "Arial",
             size: 44, // 22pt bold
             bold: true,
-            rightToLeft: true,
+            rightToLeft: isArabic,
             color: "000000",
           }),
         ],
@@ -826,16 +848,18 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
     );
 
     children.push(
-      bidiParagraph({
-        alignment: AlignmentType.RIGHT,
+      p({
+        alignment: isArabic ? AlignmentType.RIGHT : AlignmentType.LEFT,
         spacing: { before: 100, after: 200 },
         children: [
           new TextRun({
-            text: "تم توثيق واستقاء محتوى هذه النسخة بالرجوع إلى أمهات الكتب والأطروحات الصادرة عن قواعد البيانات والمستودعات الأكاديمية المعتمدة:",
+            text: isArabic
+              ? "تم توثيق واستقاء محتوى هذه النسخة بالرجوع إلى أمهات الكتب والأطروحات الصادرة عن قواعد البيانات والمستودعات الأكاديمية المعتمدة:"
+              : "Content documented and sourced from accredited academic databases, repositories, and publications:",
             font: "Arial",
             size: 32, // 16pt
             italics: true,
-            rightToLeft: true,
+            rightToLeft: isArabic,
             color: "000000",
           }),
         ],
@@ -846,15 +870,15 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
     if (textRefLines.length >= 3) {
       textRefLines.forEach((refLine) => {
         children.push(
-          bidiParagraph({
-            alignment: AlignmentType.RIGHT,
+          p({
+            alignment: isArabic ? AlignmentType.RIGHT : AlignmentType.LEFT,
             spacing: { before: 120, after: 160, line: 360 },
             children: [
               new TextRun({
                 text: refLine,
                 font: "Arial",
                 size: 36, // 18pt
-                rightToLeft: true,
+                rightToLeft: isArabic,
               }),
             ],
           }),
@@ -876,15 +900,15 @@ export async function generateResearchDocx(options: ResearchDocxOptions) {
           citationText = `${idx + 1}. ${source.name} - ${source.desc || "أبحاث ورسائل جامعية محكمة"} - دراسات تخصصية في (${topic})، 2024.`;
         }
         children.push(
-          bidiParagraph({
-            alignment: AlignmentType.RIGHT,
+          p({
+            alignment: isArabic ? AlignmentType.RIGHT : AlignmentType.LEFT,
             spacing: { before: 120, after: 160, line: 360 },
             children: [
               new TextRun({
                 text: citationText,
                 font: "Arial",
                 size: 36, // 18pt
-                rightToLeft: true,
+                rightToLeft: isArabic,
               }),
             ],
           }),

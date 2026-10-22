@@ -125,10 +125,8 @@ export default function ResearchPage() {
     }));
   });
   const [showAddSourceModal, setShowAddSourceModal] = useState(false);
+  const [newSourceUrl, setNewSourceUrl] = useState("");
   const [newSourceName, setNewSourceName] = useState("");
-  const [newSourceDesc, setNewSourceDesc] = useState("");
-  const [newSourceCategory, setNewSourceCategory] = useState("دوريات محكمة وقواعد بيانات");
-  const [newSourceCitation, setNewSourceCitation] = useState("");
 
   // Live timer for research generation
   useEffect(() => {
@@ -143,13 +141,28 @@ export default function ResearchPage() {
 
   const handleAddSource = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSourceName.trim()) return;
+    if (!newSourceUrl.trim()) return;
+
+    let guessedName = "";
+    try {
+      const u = new URL(newSourceUrl.startsWith("http") ? newSourceUrl : `https://${newSourceUrl}`);
+      if (u.hostname.includes("wikipedia")) guessedName = "موسوعة ويكيبيديا العربية (Wikipedia)";
+      else if (u.hostname.includes("mawdoo3")) guessedName = "موسوعة موضوع (Mawdoo3)";
+      else if (u.hostname.includes("ekb.eg")) guessedName = "بنك المعرفة المصري (EKB)";
+      else if (u.hostname.includes("marefa")) guessedName = "موسوعة المعرفة (Marefa)";
+      else guessedName = u.hostname.replace(/^www\./, "");
+    } catch {
+      guessedName = newSourceUrl.trim();
+    }
+
+    const finalName = newSourceName.trim() || guessedName;
     const newSource: CustomResearchSource = {
       id: "source-" + Date.now(),
-      name: newSourceName.trim(),
-      desc: newSourceDesc.trim() || "مصدر أكاديمي معتمد للتوثيق والاستشهاد",
-      category: newSourceCategory.trim() || "مراجع متخصصة",
-      citation: newSourceCitation.trim() || undefined,
+      name: finalName,
+      url: newSourceUrl.trim(),
+      desc: `موقع بحثي موثق للاستقاء والتوثيق الأكاديمي (${newSourceUrl.trim()})`,
+      category: "مواقع وروابط بحثية",
+      citation: `${finalName} - استشهاد وبحث (${newSourceUrl.trim()})`,
     };
     const updated = [newSource, ...sources];
     setSources(updated);
@@ -157,10 +170,9 @@ export default function ResearchPage() {
       localStorage.setItem("copycat_custom_research_sources_v1", JSON.stringify(updated));
     } catch {}
     setShowAddSourceModal(false);
+    setNewSourceUrl("");
     setNewSourceName("");
-    setNewSourceDesc("");
-    setNewSourceCitation("");
-    toast.success("تمت إضافة المصدر بنجاح", `تم إدراج "${newSource.name}" ضمن المصادر المعتمدة.`);
+    toast.success("تمت إضافة الرابط بنجاح", `تم إدراج رابط "${finalName}" ضمن مصادر البحث.`);
   };
 
   const handleDeleteSource = (id: string, name: string) => {
@@ -226,6 +238,7 @@ export default function ResearchPage() {
             category: s.category,
             desc: s.desc,
             citation: s.citation,
+            url: s.url,
           })),
         }),
       });
@@ -303,6 +316,7 @@ export default function ResearchPage() {
         targetPages: effectivePages,
         sources,
         versionNumber: generatedVersions.length > 1 ? targetVersionIdx + 1 : undefined,
+        language: /[\u0600-\u06FF]/.test(topic + " " + (textToExport || "")) ? "ar" : "en",
       });
       toast.success(
         "تم تنزيل ملف الوورد بنجاح",
@@ -344,6 +358,7 @@ export default function ResearchPage() {
           targetPages: effectivePages,
           sources,
           versionNumber: i + 1,
+          language: /[\u0600-\u06FF]/.test(topic + " " + (v.content || "")) ? "ar" : "en",
         });
         // Small delay to allow browser to trigger each download smoothly
         await new Promise((resolve) => setTimeout(resolve, 400));
@@ -665,15 +680,14 @@ export default function ResearchPage() {
                             setActiveProvider(v.provider);
                           }
                         }}
-                        title={angleName ? `نسخة ${versionNum}: ${angleName}` : `نسخة ${versionNum}`}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
+                        title={`نسخة ${versionNum}`}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
                           selectedVersionIndex === idx
                             ? "bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-600/30"
                             : "bg-slate-50 text-slate-700 border-slate-200 hover:text-purple-700 hover:bg-purple-50"
                         }`}
                       >
                         <span>نسخة {versionNum}</span>
-                        {shortAngle && <span className="text-[10px] opacity-80">({shortAngle})</span>}
                       </button>
                     );
                   })}
@@ -686,16 +700,6 @@ export default function ResearchPage() {
                   <span className="font-bold text-slate-900 text-base">
                     معاينة نص البحث {generatedVersions.length > 1 ? `(نسخة ${selectedVersionIndex + 1})` : ""}
                   </span>
-                  {generatedVersions[selectedVersionIndex]?.angle && (
-                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 font-medium">
-                      {getAngleName(generatedVersions[selectedVersionIndex].angle)}
-                    </span>
-                  )}
-                  {activeProvider && (
-                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center gap-1 font-medium">
-                      <Server className="w-3 h-3 text-purple-600" /> تم التوليد عبر: {activeProvider}
-                    </span>
-                  )}
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
@@ -737,13 +741,24 @@ export default function ResearchPage() {
                 </div>
               </div>
 
-              <div
-                dir="rtl"
-                className="bg-white p-6 rounded-2xl border-2 border-slate-200 max-h-[600px] overflow-y-auto whitespace-pre-wrap text-black text-sm sm:text-base leading-relaxed font-sans select-text shadow-inner text-right"
-                style={{ color: "#000000", direction: "rtl", textAlign: "right" }}
-              >
-                {generatedText}
-              </div>
+              {(() => {
+                const isResearchArabic = /[\u0600-\u06FF]/.test(generatedText || topic || "");
+                return (
+                  <div
+                    dir={isResearchArabic ? "rtl" : "ltr"}
+                    className={`bg-white p-6 rounded-2xl border-2 border-slate-200 max-h-[600px] overflow-y-auto whitespace-pre-wrap text-black text-sm sm:text-base leading-relaxed font-sans select-text shadow-inner ${
+                      isResearchArabic ? "text-right" : "text-left"
+                    }`}
+                    style={{
+                      color: "#000000",
+                      direction: isResearchArabic ? "rtl" : "ltr",
+                      textAlign: isResearchArabic ? "right" : "left",
+                    }}
+                  >
+                    {generatedText}
+                  </div>
+                );
+              })()}
             </div>
           ) : isLoading ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-lg mx-auto w-full">
@@ -871,7 +886,7 @@ export default function ResearchPage() {
               onClick={() => setShowAddSourceModal(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-md shadow-purple-600/20 cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" /> إضافة مصدر جديد
+              <Plus className="w-3.5 h-3.5" /> إضافة رابط مصدر جديد
             </button>
             <button
               type="button"
@@ -910,23 +925,36 @@ export default function ResearchPage() {
                 <h4 className="text-xs font-black text-slate-900 group-hover:text-purple-900 leading-snug">
                   {source.name}
                 </h4>
-                <p className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-relaxed font-medium">{source.desc}</p>
+                {source.url ? (
+                  <a
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-purple-600 hover:underline block truncate mt-0.5 text-left"
+                    dir="ltr"
+                    title={source.url}
+                  >
+                    🔗 {source.url}
+                  </a>
+                ) : (
+                  <p className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-relaxed font-medium">{source.desc}</p>
+                )}
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Add Source Modal */}
+      {/* Add Source Modal (URL Focus - Requirement #11) */}
       {showAddSourceModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white border border-purple-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-600 flex items-center justify-center font-bold">
                   <Plus className="w-4 h-4" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">إضافة مصدر أو قاعدة بيانات بحثية</h3>
+                <h3 className="text-sm font-bold text-slate-900">إضافة رابط موقع أو مقال بحثي</h3>
               </div>
               <button
                 type="button"
@@ -939,48 +967,33 @@ export default function ResearchPage() {
 
             <form onSubmit={handleAddSource} className="space-y-3.5 text-right">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">اسم المصدر أو الدورية العلمية:</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  رابط الموقع أو المقال البحثي (URL Link): <span className="text-red-500">*</span>
+                </label>
                 <input
-                  type="text"
-                  value={newSourceName}
-                  onChange={(e) => setNewSourceName(e.target.value)}
-                  placeholder="مثال: مجلة كلية الآداب - جامعة الإسكندرية"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:border-purple-500 focus:outline-none"
+                  type="url"
+                  value={newSourceUrl}
+                  onChange={(e) => setNewSourceUrl(e.target.value)}
+                  placeholder="مثال: https://ar.wikipedia.org/wiki/... أو https://mawdoo3.com/..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:border-purple-500 focus:outline-none text-left"
+                  dir="ltr"
                   required
+                  autoFocus
                 />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">التصنيف أو التخصص:</label>
-                <input
-                  type="text"
-                  value={newSourceCategory}
-                  onChange={(e) => setNewSourceCategory(e.target.value)}
-                  placeholder="مثال: دورية محكمة / مستودع جامعي"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:border-purple-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">نبذة موجزة عن المصدر:</label>
-                <textarea
-                  rows={2}
-                  value={newSourceDesc}
-                  onChange={(e) => setNewSourceDesc(e.target.value)}
-                  placeholder="مثال: مجلة علمية فصلية محكمة تنشر أحدث الأبحاث والدراسات في العلوم الإنسانية..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:border-purple-500 focus:outline-none resize-none"
-                />
+                <span className="text-[11px] text-slate-500 block mt-1">
+                  يمكنك وضع رابط ويكيبيديا، موقع موضوع، أو أي رابط موقع أو مقال ترغب في اعتماده كمصدر للبحث.
+                </span>
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">
-                  صيغة الاستشهاد المخصصة (اختياري):
+                  اسم المصدر أو الموقع (اختياري):
                 </label>
                 <input
                   type="text"
-                  value={newSourceCitation}
-                  onChange={(e) => setNewSourceCitation(e.target.value)}
-                  placeholder="مثال: القاهرة، دراسات محكمة 2024"
+                  value={newSourceName}
+                  onChange={(e) => setNewSourceName(e.target.value)}
+                  placeholder="اختياري - يتم استخراجه تلقائياً من الرابط"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:border-purple-500 focus:outline-none"
                 />
               </div>
@@ -995,9 +1008,9 @@ export default function ResearchPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 transition flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 transition flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Plus className="w-3.5 h-3.5" /> حفظ وإدراج المصدر
+                  <Plus className="w-3.5 h-3.5" /> حفظ وإدراج الرابط
                 </button>
               </div>
             </form>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/components/toast-provider";
-import { safeOpenUrl } from "@/lib/utils";
+import { safeOpenUrl, openWhatsAppChat } from "@/lib/utils";
 import {
   ClipboardCheck,
   PlusCircle,
@@ -269,17 +269,8 @@ export default function TasksHandoverPage() {
       toast.warning("لا يوجد رقم", "لم يتم تسجيل رقم هاتف لهذا العميل");
       return;
     }
-    let cleanPhone = task.phone.replace(/[^0-9]/g, "");
-    if (cleanPhone.startsWith("0")) {
-      cleanPhone = "20" + cleanPhone.substring(1);
-    } else if (!cleanPhone.startsWith("20") && cleanPhone.length === 10) {
-      cleanPhone = "20" + cleanPhone;
-    }
-
-    const message = encodeURIComponent(
-      `أهلاً أ/ ${task.customerName}، يسعدنا إبلاغك بأن طلبك (${task.title}) في مكتبة كوبي كات Copy Cat أصبح جاهزاً للاستلام. نتشرف بزيارتك في أي وقت.`
-    );
-    safeOpenUrl(`https://wa.me/${cleanPhone}?text=${message}`);
+    const message = `أهلاً أ/ ${task.customerName}، يسعدنا إبلاغك بأن طلبك (${task.title}) في مكتبة كوبي كات Copy Cat أصبح جاهزاً للاستلام. نتشرف بزيارتك في أي وقت.`;
+    openWhatsAppChat(task.phone, message);
   };
 
   // Filtered Tasks
@@ -358,8 +349,7 @@ export default function TasksHandoverPage() {
   };
 
   const sendWhatsappHandover = () => {
-    const text = encodeURIComponent(generateHandoverReport());
-    window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
+    openWhatsAppChat(undefined, generateHandoverReport());
   };
 
   return (

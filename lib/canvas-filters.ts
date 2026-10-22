@@ -736,11 +736,36 @@ export function processImageOnCanvas(
     let g = d[i + 1];
     let b = d[i + 2];
 
-    // 1. Invert colors
+    // 1. Invert colors (Screen & medical report inversion engine - Copy-Cat Paper Whiten & Ink Deepen)
     if (invert) {
       r = 255 - r;
       g = 255 - g;
       b = 255 - b;
+
+      // Inverted screen/analysis mode (converts rainbow terminal text like pink/cyan/yellow to crisp solid black ink)
+      // and eliminates monitor glow/glare to produce 100% clean white paper background
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      let val = lum;
+
+      const whiteThreshold = Math.max(150, 180 - bDelta * 0.4);
+      const textThreshold = Math.max(80, 135 - bDelta * 0.2);
+
+      if (lum >= whiteThreshold) {
+        // Pure clean white paper background (eliminates screen glare & saves 80% ink)
+        val = 255;
+      } else if (lum <= textThreshold) {
+        // Deepen text strokes to solid rich dark black ink
+        val = Math.max(0, (lum - 15) * 0.4);
+      } else {
+        // Smooth anti-aliased edge transition between text and paper
+        const t = (lum - textThreshold) / (whiteThreshold - textThreshold);
+        val = Math.min(255, Math.max(0, 48 + t * 207));
+      }
+
+      d[i] = Math.round(val);
+      d[i + 1] = Math.round(val);
+      d[i + 2] = Math.round(val);
+      continue;
     }
 
     // 2. High-clarity Document B&W Mode for Printing (Photocopy style with grayscale photo preservation)

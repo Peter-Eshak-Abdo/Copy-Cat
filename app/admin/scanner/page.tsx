@@ -196,14 +196,14 @@ export default function ScannerPage() {
   const applyPreset = (presetName: string) => {
     setActivePreset(presetName);
     if (presetName === "invert_screen") {
-      // For black screens / medical test reports
+      // For black screens / medical test reports (High-Clarity Inversion)
       setInvert(true);
       setCamScannerMode(false);
       setScreenClarifierMode(false);
-      setSharpness(80);
+      setSharpness(100);
       setBrightness(115);
       setContrast(130);
-      triggerReprocessAll(true, false, false, 115, 130, 80);
+      triggerReprocessAll(true, false, false, 115, 130, 100);
     } else if (presetName === "screen_clarifier") {
       // Requirement #13: Photos of computer screens taken by phone (Anti-Moire & clear text)
       setInvert(false);
@@ -327,6 +327,14 @@ export default function ScannerPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition shadow-xs cursor-pointer"
+            >
+              <Upload className="w-4 h-4" />
+              <span>+ إضافة المزيد من الصور</span>
+            </button>
+
             <button
               onClick={() => setImages([])}
               className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
@@ -515,106 +523,108 @@ export default function ScannerPage() {
         </div>
       </div>
 
-      {/* Upload Box with Drag & Drop (Requirement #5 & #12) */}
-      <div
-        onClick={() => fileInputRef.current?.click()}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        className={`border-2 border-dashed transition-all rounded-2xl p-8 sm:p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-3 group ${
-          isDragging
-            ? "border-amber-400 bg-amber-950/20 scale-[1.01] shadow-2xl shadow-amber-500/10"
-            : "border-slate-200 hover:border-amber-500/60 bg-slate-50 hover:bg-white"
-        }`}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
+      {/* Upload Box with Drag & Drop - Hidden when images are uploaded (Requirement #9) */}
+      {images.length === 0 && (
         <div
-          className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform ${
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`border-2 border-dashed transition-all rounded-2xl p-8 sm:p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-3 group ${
             isDragging
-              ? "scale-125 bg-amber-500 text-slate-950"
-              : "bg-amber-500/10 text-amber-400 group-hover:scale-110"
+              ? "border-amber-400 bg-amber-950/20 scale-[1.01] shadow-2xl shadow-amber-500/10"
+              : "border-slate-200 hover:border-amber-500/60 bg-slate-50 hover:bg-white"
           }`}
         >
-          <Upload className="w-8 h-8" />
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <div
+            className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform ${
+              isDragging
+                ? "scale-125 bg-amber-500 text-slate-950"
+                : "bg-amber-500/10 text-amber-400 group-hover:scale-110"
+            }`}
+          >
+            <Upload className="w-8 h-8" />
+          </div>
+          <div>
+            <span className="text-base font-bold text-slate-900 block">
+              {isDragging ? "أفلت الصور هنا الآن!" : "اضغط هنا لرفع الصور أو اسحبها وأفلتها مباشرة (Drag & Drop)"}
+            </span>
+            <span className="text-xs text-slate-500 mt-1 block">
+              يدعم رفع حتى 30 صورة معاً (JPG, PNG, WEBP) — معالجة فورية فائقة السرعة محلياً بالمتصفح
+            </span>
+          </div>
         </div>
-        <div>
-          <span className="text-base font-bold text-slate-900 block">
-            {isDragging ? "أفلت الصور هنا الآن!" : "اضغط هنا لرفع الصور أو اسحبها وأفلتها مباشرة (Drag & Drop)"}
-          </span>
-          <span className="text-xs text-slate-500 mt-1 block">
-            يدعم رفع حتى 30 صورة معاً (JPG, PNG, WEBP) — معالجة فورية فائقة السرعة محلياً بالمتصفح
-          </span>
-        </div>
-      </div>
+      )}
 
-      {/* Processed Images Gallery Grid */}
+      {/* Processed Images Gallery Grid (Requirements #6, #7, #9) */}
       {images.length > 0 && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 gap-2">
             <span>معروض {images.length} صورة معالجة جاهزة للتنزيل والفحص</span>
-            <span className="text-amber-400 font-semibold">
+            <span className="text-amber-500 font-semibold">
               انقر على أي صورة لتكبيرها وفحص نقاء الكلمات، أو زر التدوير للضبط بزوايا دقيقة
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {images.map((img, index) => (
               <div
                 key={img.id}
-                className="bg-white border border-slate-200 hover:border-slate-200 rounded-2xl overflow-hidden p-3 flex flex-col justify-between shadow-lg relative group"
+                className="bg-white border border-slate-200 hover:border-slate-300 rounded-2xl overflow-hidden p-2.5 flex flex-col justify-between shadow-xs relative group transition-all"
               >
-                {/* Delete 'X' Button Overlay (Requirement #12) */}
+                {/* Delete 'X' Button Overlay */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setImages((prev) => prev.filter((item) => item.id !== img.id));
                   }}
-                  className="absolute top-4 left-4 z-20 w-7 h-7 rounded-full bg-red-600/90 hover:bg-red-500 text-white flex items-center justify-center shadow-lg transition-transform hover:scale-110 cursor-pointer"
-                  title="حذف هذه الصورة المضافة بالخطأ (X)"
+                  className="absolute top-3 left-3 z-20 w-6 h-6 rounded-full bg-red-600/90 hover:bg-red-500 text-white flex items-center justify-center shadow-md transition-transform hover:scale-110 cursor-pointer"
+                  title="حذف هذه الصورة (X)"
                 >
-                  <X className="w-4 h-4 stroke-[3]" />
+                  <X className="w-3.5 h-3.5 stroke-[3]" />
                 </button>
 
-                {/* Image Container with click to enlarge (Requirement #12) */}
+                {/* Compact Image Container fitting horizontal / landscape documents (Requirement #6) */}
                 <div
                   onClick={() => setEnlargedImage(img)}
-                  className="relative aspect-[3/4] bg-slate-50 rounded-xl overflow-hidden mb-3 border border-slate-200 flex items-center justify-center cursor-zoom-in group/img"
+                  className="relative h-32 sm:h-36 w-full bg-slate-50 rounded-xl overflow-hidden mb-2 border border-slate-200 flex items-center justify-center cursor-zoom-in group/img p-1"
                   title="انقر لتكبير الصورة وفحص الكلمات بملء الشاشة"
                 >
                   <NextImage
                     src={img.processedSrc}
                     alt={img.name}
                     width={400}
-                    height={533}
+                    height={400}
                     unoptimized
-                    className="w-full h-full object-contain transition-transform group-hover/img:scale-105"
+                    className="max-w-full max-h-full object-contain transition-transform group-hover/img:scale-105"
                   />
 
                   {/* Page indicator badge */}
-                  <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-white text-slate-900 font-mono text-[10px] border border-slate-200">
-                    صفحة {index + 1}
+                  <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-white/90 text-slate-900 font-mono text-[9px] font-bold border border-slate-200 shadow-2xs backdrop-blur-xs">
+                    #{index + 1}
                   </span>
 
                   {/* Hover enlarge overlay */}
-                  <div className="absolute inset-0 bg-slate-50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <span className="px-2.5 py-1 rounded-lg bg-white text-slate-900 text-xs font-bold flex items-center gap-1 border border-slate-200">
-                      <Maximize2 className="w-3.5 h-3.5 text-amber-400" />
-                      تكبير المعاينة
+                  <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                    <span className="px-2 py-1 rounded-lg bg-white/95 text-slate-900 text-[11px] font-bold flex items-center gap-1 shadow-sm">
+                      <Maximize2 className="w-3 h-3 text-blue-600" />
+                      تكبير
                     </span>
                   </div>
                 </div>
 
                 {/* Footer Controls for each image */}
-                <div className="space-y-2 pt-1 border-t border-slate-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-700 font-medium truncate max-w-[150px]" title={img.name}>
+                <div className="space-y-1.5 pt-1.5 border-t border-slate-100">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[11px] text-slate-700 font-medium truncate max-w-[100px]" title={img.name}>
                       {img.name}
                     </span>
 
@@ -624,21 +634,21 @@ export default function ScannerPage() {
                         setEditingDoc(img);
                         setFineAngle(img.rotation || 0);
                       }}
-                      className="p-1.5 text-amber-400 hover:text-amber-300 rounded-lg hover:bg-amber-950/40 transition flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                      className="p-1 text-slate-600 hover:text-blue-600 rounded-md hover:bg-slate-100 transition flex items-center gap-0.5 text-[10px] font-bold cursor-pointer"
                       title="تدوير وضبط بزوايا دقيقة"
                     >
-                      <RotateCw className="w-3.5 h-3.5" />
-                      <span>تدوير دقيق</span>
+                      <RotateCw className="w-3 h-3 text-blue-500" />
+                      <span>تدوير</span>
                     </button>
                   </div>
 
-                  {/* Dedicated Download Button Under Each Image (Requirement #12) */}
+                  {/* Dedicated Vivid Download Button (Requirement #7) */}
                   <button
                     onClick={() => handleDownloadSingleImage(img, index)}
-                    className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-200 text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow"
+                    className="w-full py-1.5 px-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>تنزيل هذه الصورة</span>
+                    <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>تنزيل الصورة</span>
                   </button>
                 </div>
               </div>

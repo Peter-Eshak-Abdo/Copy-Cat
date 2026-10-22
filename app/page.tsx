@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
-import { formatCurrency, safeOpenUrl } from "@/lib/utils";
+import { formatCurrency, safeOpenUrl, getWhatsAppUrl, openWhatsAppChat } from "@/lib/utils";
 import { useToast } from "@/components/toast-provider";
 import { INITIAL_PRODUCTS, sanitizeItem, type InventoryItem } from "@/lib/inventory";
 import { SITE_CONFIG } from "@/lib/site-config";
@@ -291,12 +291,9 @@ export default function StorefrontPage() {
 
     message += `\n💰 *الإجمالي:* ${totalCartPrice} ج.م\n`;
 
-    const encoded = encodeURIComponent(message);
-    const waUrl = `https://wa.me/${WHATSAPP_INTERNATIONAL}?text=${encoded}`;
-
-    const opened = safeOpenUrl(waUrl);
+    const opened = openWhatsAppChat(WHATSAPP_INTERNATIONAL, message);
     if (!opened) {
-      window.location.assign(waUrl);
+      window.location.assign(getWhatsAppUrl(WHATSAPP_INTERNATIONAL, message));
     }
 
     if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -322,10 +319,9 @@ export default function StorefrontPage() {
 
   const handleDirectWhatsAppOrder = (product: InventoryItem) => {
     const text = `مرحباً مكتبة كوبي كات، أود طلب:\n- ${product.name}\n- السعر: ${product.price} ج.م`;
-    const waUrl = `https://wa.me/${WHATSAPP_INTERNATIONAL}?text=${encodeURIComponent(text)}`;
-    const opened = safeOpenUrl(waUrl);
+    const opened = openWhatsAppChat(WHATSAPP_INTERNATIONAL, text);
     if (!opened) {
-      window.location.assign(waUrl);
+      window.location.assign(getWhatsAppUrl(WHATSAPP_INTERNATIONAL, text));
     }
   };
 
@@ -336,7 +332,7 @@ export default function StorefrontPage() {
         <span>⚡ {announcementText}</span>
         <span className="hidden sm:inline opacity-70">•</span>
         <a
-          href={`https://wa.me/${WHATSAPP_INTERNATIONAL}?text=${encodeURIComponent("مرحباً مكتبة كوبي كات، أود إرسال ملف للطباعة فوراً.")}`}
+          href={getWhatsAppUrl(WHATSAPP_INTERNATIONAL, "مرحباً مكتبة كوبي كات، أود إرسال ملف للطباعة فوراً.")}
           target="_blank"
           rel="noopener noreferrer"
           className="underline font-bold hover:text-blue-100 transition hidden sm:inline"
@@ -386,7 +382,7 @@ export default function StorefrontPage() {
           {/* Quick Actions */}
           <div className="flex items-center gap-2">
             <a
-              href={`https://wa.me/${WHATSAPP_INTERNATIONAL}`}
+              href={getWhatsAppUrl(WHATSAPP_INTERNATIONAL)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-xs"
@@ -441,7 +437,7 @@ export default function StorefrontPage() {
 
           <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
             <a
-              href={`https://wa.me/${WHATSAPP_INTERNATIONAL}?text=${encodeURIComponent("مرحباً مكتبة كوبي كات، أود إرسال ملف للطباعة فوراً.")}`}
+              href={getWhatsAppUrl(WHATSAPP_INTERNATIONAL, "مرحباً مكتبة كوبي كات، أود إرسال ملف للطباعة فوراً.")}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs transition"
@@ -1056,7 +1052,7 @@ export default function StorefrontPage() {
               اللوكيشن
             </a>
             <a
-              href={`https://wa.me/${WHATSAPP_INTERNATIONAL}`}
+              href={getWhatsAppUrl(WHATSAPP_INTERNATIONAL)}
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-emerald-600 font-medium"

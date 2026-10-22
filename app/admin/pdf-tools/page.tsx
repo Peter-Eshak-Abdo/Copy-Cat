@@ -67,11 +67,13 @@ export default function PdfToolsPage() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imageFiles, setImageFiles] = useState<{ file: File; preview: string }[]>([]);
   const [isConvertingImages, setIsConvertingImages] = useState<boolean>(false);
+  const [isImagesDragging, setIsImagesDragging] = useState<boolean>(false);
 
   // Tab 3: PDF to Word State
   const pdfWordInputRef = useRef<HTMLInputElement>(null);
   const [selectedWordPdf, setSelectedWordPdf] = useState<File | null>(null);
   const [isConvertingWord, setIsConvertingWord] = useState<boolean>(false);
+  const [isPdfWordDragging, setIsPdfWordDragging] = useState<boolean>(false);
   const [wordConvertedText, setWordConvertedText] = useState<string>("");
 
   // Helper: Render Page Thumbnails using pdfjs-dist
@@ -636,9 +638,12 @@ export default function PdfToolsPage() {
         title: selectedWordPdf.name.replace(/\.pdf$/i, ""),
         content: extractedText,
         fileName: `${selectedWordPdf.name.replace(/\.pdf$/i, "")}.docx`,
+        font: data.detectedFont || "Arial",
+        language: data.detectedLang || "auto",
+        hasPageBorder: false,
       });
 
-      toast.success("تم التحويل والتصدير", "تم تنزيل ملف Word منسق باللغة العربية وهوامش ضيقة وخط 18pt");
+      toast.success("تم التحويل والتصدير", "تم تنزيل ملف Word منسق بدقة وهوامش قياسية وخط نقي");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "فشل تحويل ملف PDF إلى Word";
       toast.error("خطأ", msg);
@@ -1126,25 +1131,97 @@ export default function PdfToolsPage() {
           {imageFiles.length === 0 ? (
             <div
               onClick={() => imageInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-200 hover:border-blue-500/50 rounded-2xl p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-3"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsImagesDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsImagesDragging(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsImagesDragging(false);
+                const files = Array.from(e.dataTransfer?.files || []).filter((f) =>
+                  f.type.startsWith("image/")
+                );
+                if (files.length > 0) {
+                  const newItems = files.map((f) => ({
+                    file: f,
+                    preview: URL.createObjectURL(f),
+                  }));
+                  setImageFiles((prev) => [...prev, ...newItems]);
+                  toast.success("تمت إضافة الصور", `تم إدراج ${files.length} صورة بنجاح.`);
+                }
+              }}
+              className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-3 transition-all ${
+                isImagesDragging
+                  ? "border-blue-500 bg-blue-50/60 scale-[1.01] shadow-lg"
+                  : "border-slate-200 hover:border-blue-500/50 bg-slate-50/50 hover:bg-slate-50"
+              }`}
             >
-              <ImageIcon className="w-10 h-10 text-slate-600" />
-              <span className="text-sm font-bold text-slate-700">اضغط لاختيار الصور من جهازك</span>
+              <ImageIcon className={`w-12 h-12 transition-transform ${isImagesDragging ? "scale-110 text-blue-600" : "text-slate-400"}`} />
+              <span className="text-sm font-bold text-slate-800">
+                {isImagesDragging ? "أفلت الصور هنا الآن!" : "اسحب وأفلت الصور هنا أو اضغط لاختيارها (Drag & Drop)"}
+              </span>
+              <span className="text-xs text-slate-500">يدعم رفع عدة صور معاً (JPG, PNG, WEBP) لتجميعها في ملف PDF مرتب</span>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsImagesDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsImagesDragging(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsImagesDragging(false);
+                const files = Array.from(e.dataTransfer?.files || []).filter((f) =>
+                  f.type.startsWith("image/")
+                );
+                if (files.length > 0) {
+                  const newItems = files.map((f) => ({
+                    file: f,
+                    preview: URL.createObjectURL(f),
+                  }));
+                  setImageFiles((prev) => [...prev, ...newItems]);
+                  toast.success("تمت إضافة صور إضافية", `تم إدراج ${files.length} صورة بنجاح.`);
+                }
+              }}
+              className={`grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 p-1 rounded-2xl transition-all ${
+                isImagesDragging ? "ring-2 ring-blue-500 bg-blue-50/30" : ""
+              }`}
+            >
               {imageFiles.map((item, idx) => (
                 <div key={idx} className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 p-1">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={item.preview} alt="" className="w-full aspect-square object-cover rounded-lg" />
                   <button
                     onClick={() => setImageFiles((curr) => curr.filter((_, i) => i !== idx))}
-                    className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                    className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition cursor-pointer shadow"
+                    title="حذف"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
+
+              <div
+                onClick={() => imageInputRef.current?.click()}
+                className="border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-xl flex flex-col items-center justify-center p-3 cursor-pointer text-slate-500 hover:text-blue-600 hover:bg-blue-50/40 transition gap-1 aspect-square"
+              >
+                <Plus className="w-5 h-5" />
+                <span className="text-[11px] font-bold">+ اسحب أو اختر</span>
+              </div>
             </div>
           )}
         </div>
@@ -1160,7 +1237,44 @@ export default function PdfToolsPage() {
             </p>
           </div>
 
-          <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-blue-500/50 rounded-2xl p-8 text-center bg-slate-50">
+          <div
+            onClick={(e) => {
+              if (!selectedWordPdf) {
+                pdfWordInputRef.current?.click();
+              }
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsPdfWordDragging(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsPdfWordDragging(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsPdfWordDragging(false);
+              const file = e.dataTransfer?.files?.[0];
+              if (file) {
+                if (file.name.toLowerCase().endsWith(".pdf")) {
+                  setSelectedWordPdf(file);
+                  toast.success("تم تحديد الملف", `ملف PDF: ${file.name}`);
+                } else {
+                  toast.error("صيغة غير صحيحة", "يرجى إسقاط ملف بصيغة PDF فقط");
+                }
+              }
+            }}
+            className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center transition-all cursor-pointer ${
+              isPdfWordDragging
+                ? "border-blue-500 bg-blue-50/70 scale-[1.01] shadow-xl"
+                : selectedWordPdf
+                ? "border-emerald-300 bg-emerald-50/20"
+                : "border-slate-200 hover:border-blue-500/50 bg-slate-50 hover:bg-white"
+            }`}
+          >
             <input
               ref={pdfWordInputRef}
               type="file"
@@ -1169,10 +1283,10 @@ export default function PdfToolsPage() {
               onChange={(e) => setSelectedWordPdf(e.target.files?.[0] || null)}
             />
 
-            <FileText className="w-12 h-12 text-blue-400 mb-3" />
+            <FileText className={`w-12 h-12 mb-3 transition-transform ${isPdfWordDragging ? "scale-110 text-blue-600" : "text-blue-500"}`} />
 
             {selectedWordPdf ? (
-              <div className="space-y-3">
+              <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
                 <span className="text-sm font-bold text-slate-900 block">{selectedWordPdf.name}</span>
                 <span className="text-xs text-slate-500 block">
                   الحجم: {(selectedWordPdf.size / 1024).toFixed(1)} KB
@@ -1180,14 +1294,14 @@ export default function PdfToolsPage() {
                 <div className="flex items-center justify-center gap-2">
                   <button
                     onClick={() => setSelectedWordPdf(null)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 cursor-pointer"
                   >
-                    إلغاء
+                    تغيير الملف
                   </button>
                   <button
                     onClick={handlePdfToWordConvert}
                     disabled={isConvertingWord}
-                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold flex items-center gap-2 cursor-pointer shadow-lg shadow-blue-600/30 disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold flex items-center gap-2 cursor-pointer shadow-lg shadow-blue-600/30 disabled:opacity-50"
                   >
                     {isConvertingWord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                     <span>{isConvertingWord ? "جاري استخراج وتنسيق الوورد..." : "بدء التحويل وتنزيل Word"}</span>
@@ -1195,21 +1309,44 @@ export default function PdfToolsPage() {
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => pdfWordInputRef.current?.click()}
-                className="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition cursor-pointer shadow-lg shadow-blue-600/20"
-              >
-                اختيار ملف PDF للتحويل
-              </button>
+              <div>
+                <span className="text-sm sm:text-base font-bold text-slate-900 block mb-1">
+                  {isPdfWordDragging ? "أفلت ملف الـ PDF هنا الآن!" : "اسحب وأفلت ملف PDF هنا أو اضغط للاختيار (Drag & Drop)"}
+                </span>
+                <span className="text-xs text-slate-500 block max-w-md mx-auto mb-4">
+                  تحويل ذكي فائق الدقة بالذكاء الاصطناعي مع الحفاظ على الجداول والتسطير والخطوط وهوامش Word القياسية
+                </span>
+                <button
+                  type="button"
+                  onClick={() => pdfWordInputRef.current?.click()}
+                  className="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition cursor-pointer shadow-lg shadow-blue-600/20"
+                >
+                  اختيار ملف PDF من الجهاز
+                </button>
+              </div>
             )}
           </div>
 
           {wordConvertedText && (
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-              <span className="text-xs font-bold text-emerald-400 block">معاينة النص المستخرج والمنسق:</span>
-              <pre className="text-xs text-slate-700 max-h-60 overflow-y-auto whitespace-pre-wrap font-mono p-3 bg-white rounded-xl leading-relaxed">
-                {wordConvertedText}
-              </pre>
+              <span className="text-xs font-bold text-emerald-600 block">معاينة النص المستخرج والمنسق:</span>
+              {(() => {
+                const isWordArabic = /[\u0600-\u06FF]/.test(wordConvertedText);
+                return (
+                  <pre
+                    dir={isWordArabic ? "rtl" : "ltr"}
+                    className={`text-xs text-slate-800 max-h-60 overflow-y-auto whitespace-pre-wrap font-sans p-3 bg-white rounded-xl leading-relaxed border border-slate-200 ${
+                      isWordArabic ? "text-right" : "text-left"
+                    }`}
+                    style={{
+                      direction: isWordArabic ? "rtl" : "ltr",
+                      textAlign: isWordArabic ? "right" : "left",
+                    }}
+                  >
+                    {wordConvertedText}
+                  </pre>
+                );
+              })()}
             </div>
           )}
         </div>

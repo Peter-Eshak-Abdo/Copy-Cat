@@ -12,6 +12,7 @@ import {
   WidthType,
   ShadingType,
   VerticalAlign,
+  UnderlineType,
 } from "docx";
 import { saveAs } from "file-saver";
 
@@ -20,26 +21,12 @@ export interface OcrDocxOptions {
   rawText?: string;
   content?: string;
   fileName?: string;
+  font?: string;
+  hasPageBorder?: boolean;
+  language?: "ar" | "en" | "fr" | "auto";
 }
 
-const PRIMARY_FONT = "Traditional Arabic";
-
-/**
- * Cleans raw HTML tags (e.g. <center>, <br>, <span>, <div>, ###) from text
- */
-function sanitizeText(raw: string): { text: string; isCentered: boolean } {
-  const isCentered = /<center>/i.test(raw) || /<\/center>/i.test(raw);
-  const cleaned = raw
-    .replace(/<\/?center>/gi, " ")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/?(span|div|p|strong|b|em|i)[^>]*>/gi, "")
-    .replace(/###\s*/g, "")
-    .replace(/##\s*/g, "")
-    .replace(/#\s*/g, "")
-    .trim();
-
-  return { text: cleaned, isCentered };
-}
+export const FALLBACK_FONT = "Arial";
 
 /**
  * Checks whether text contains Arabic characters
@@ -49,58 +36,142 @@ export function isArabic(text: string): boolean {
 }
 
 /**
- * Parses inline formatting like **bold text** into docx TextRuns
+ * Cleans HTML entities, markdown escapes, and technical artifacts from text
+ */
+function sanitizeText(raw: string): { text: string; isCentered: boolean } {
+  const isCentered = /<center>/i.test(raw) || /<\/center>/i.test(raw);
+  const cleaned = raw
+    .replace(/<\/?center>/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/\\([*_#[\]()-])/g, "$1") // Unescape markdown backslashes like \* or \_
+    .replace(/<\/?(span|div|p)[^>]*>/gi, "")
+    .replace(/###\s*/g, "")
+    .replace(/##\s*/g, "")
+    .replace(/#\s*/g, "")
+    .trim();
+
+  return { text: cleaned, isCentered };
+}
+
+interface InlineToken {
+  text: string;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+}
+
+/**
+ * Tokenizes text containing markdown (**bold**, *italic*) and HTML (<u>underline</u>, <b>bold</b>, <i>italic</i>)
+ */
+function tokenizeFormattedText(text: string, isParentBold: boolean = false): InlineToken[] {
+  const tokens: InlineToken[] = [];
+
+  // Match tags and markdown delimiters: <u>...</u>, <b>...</b>, <strong>...</strong>, <i>...</i>, <em>...</em>, **...**, __...__
+  const pattern = /(<u>.*?<\/u>|<b>.*?<\/b>|<strong>.*?<\/strong>|<i>.*?<\/i>|<em>.*?<\/em>|\*\*.*?\*\*|__.*?__)/gi;
+  const parts = text.split(pattern);
+
+  for (const part of parts) {
+    if (!part) continue;
+
+    const lower = part.toLowerCase();
+    if (lower.startsWith("<u>") && lower.endsWith("</u>")) {
+      const inner = part.slice(3, -4);
+      tokens.push({
+        text: inner.replace(/<[^>]+>/g, ""),
+        bold: isParentBold,
+        italic: false,
+        underline: true,
+      });
+    } else if (
+      (lower.startsWith("<b>") && lower.endsWith("</b>")) ||
+      (lower.startsWith("<strong>") && lower.endsWith("</strong>"))
+    ) {
+      const inner = lower.startsWith("<b>") ? part.slice(3, -4) : part.slice(8, -9);
+      tokens.push({
+        text: inner.replace(/<[^>]+>/g, ""),
+        bold: true,
+        italic: false,
+        underline: false,
+      });
+    } else if (
+      (lower.startsWith("<i>") && lower.endsWith("</i>")) ||
+      (lower.startsWith("<em>") && lower.endsWith("</em>"))
+    ) {
+      const inner = lower.startsWith("<i>") ? part.slice(3, -4) : part.slice(4, -5);
+      tokens.push({
+        text: inner.replace(/<[^>]+>/g, ""),
+        bold: isParentBold,
+        italic: true,
+        underline: false,
+      });
+    } else if (
+      (part.startsWith("**") && part.endsWith("**")) ||
+      (part.startsWith("__") && part.endsWith("__"))
+    ) {
+      const inner = part.slice(2, -2);
+      tokens.push({
+        text: inner.replace(/<[^>]+>/g, ""),
+        bold: true,
+        italic: false,
+        underline: false,
+      });
+    } else {
+      // Plain text chunk
+      tokens.push({
+        text: part.replace(/<[^>]+>/g, ""),
+        bold: isParentBold,
+        italic: false,
+        underline: false,
+      });
+    }
+  }
+
+  return tokens.filter((t) => t.text.length > 0);
+}
+
+/**
+ * Parses inline formatting like **bold text** and <u>underlined</u> into docx TextRuns
+ * Adheres to Requirement #4: Uses detected font or falls back to "Arial"
  */
 function parseInlineRuns(
   text: string,
   baseSize: number,
   baseColor: string,
-  isParentBold: boolean = false
+  isParentBold: boolean = false,
+  fontName: string = FALLBACK_FONT
 ): TextRun[] {
-  const isAr = isArabic(text);
+  const tokens = tokenizeFormattedText(text, isParentBold);
   const runs: TextRun[] = [];
-  const parts = text.split(/(\*\*.*?\*\*|__.*?__)/g);
 
-  for (const part of parts) {
-    if (!part) continue;
-    const partIsAr = isArabic(part);
-    const font = partIsAr ? PRIMARY_FONT : "Calibri";
-    if (
-      (part.startsWith("**") && part.endsWith("**")) ||
-      (part.startsWith("__") && part.endsWith("__"))
-    ) {
-      const inner = part.slice(2, -2).trim();
-      runs.push(
-        new TextRun({
-          text: inner,
-          bold: true,
-          size: baseSize,
-          font,
-          rightToLeft: partIsAr,
-          color: baseColor,
-        })
-      );
-    } else {
-      runs.push(
-        new TextRun({
-          text: part,
-          bold: isParentBold,
-          size: baseSize,
-          font,
-          rightToLeft: partIsAr,
-          color: baseColor,
-        })
-      );
-    }
+  for (const token of tokens) {
+    const chunkIsAr = isArabic(token.text);
+    runs.push(
+      new TextRun({
+        text: token.text,
+        bold: token.bold,
+        italics: token.italic,
+        underline: token.underline ? { type: UnderlineType.SINGLE } : undefined,
+        size: baseSize,
+        font: fontName,
+        rightToLeft: chunkIsAr,
+        color: baseColor,
+      })
+    );
   }
 
   if (runs.length === 0) {
+    const isAr = isArabic(text);
     runs.push(
       new TextRun({
         text,
         bold: isParentBold,
         size: baseSize,
-        font: isAr ? PRIMARY_FONT : "Calibri",
+        font: fontName,
         rightToLeft: isAr,
         color: baseColor,
       })
@@ -142,8 +213,7 @@ function isPhotoHeaderTable(tableLines: string[]): boolean {
 /**
  * Builds a dedicated contract header table with photo boxes on the sides and centered title in the middle
  */
-function buildContractPhotoHeader(tableLines: string[]): Table {
-  // Collect all cells
+function buildContractPhotoHeader(tableLines: string[], fontName: string = FALLBACK_FONT): Table {
   const allRowsCells: string[][] = [];
   for (const line of tableLines) {
     if (isTableSeparator(line)) continue;
@@ -154,10 +224,6 @@ function buildContractPhotoHeader(tableLines: string[]): Table {
     if (cells.length > 0) allRowsCells.push(cells);
   }
 
-  // Normalize photo header cells for Egyptian contracts:
-  // In an RTL table (visuallyRightToLeft: true), cell 0 is placed physically on the RIGHT,
-  // cell 1 is in the MIDDLE, and cell 2 is placed physically on the LEFT.
-  // In Egyptian contracts: Right box is "صورة الزوج", Middle is Title, Left box is "صورة الزوجة".
   let rightBox = "صورة الزوج";
   let middleTitle = "عقد زواج عرفي";
   let leftBox = "صورة الزوجة";
@@ -201,7 +267,6 @@ function buildContractPhotoHeader(tableLines: string[]): Table {
     const isPhotoCell = isSideBox && (content.includes("صورة") || content.length < 25);
 
     if (isPhotoCell) {
-      // Photo Placeholder Box (22% width, bordered, neat 4x6 proportion: ~35mm x 45mm)
       return new TableCell({
         width: { size: 22, type: WidthType.PERCENTAGE },
         borders: photoBorder,
@@ -221,8 +286,8 @@ function buildContractPhotoHeader(tableLines: string[]): Table {
               new TextRun({
                 text: content.replace(/\[|\]/g, "").trim(),
                 bold: true,
-                size: 26, // 13pt bold
-                font: PRIMARY_FONT,
+                size: 26,
+                font: fontName,
                 rightToLeft: true,
                 color: "1E293B",
               }),
@@ -232,7 +297,6 @@ function buildContractPhotoHeader(tableLines: string[]): Table {
       });
     }
 
-    // Center Title Cell (no border, large centered title)
     const titleLines = content.split(/\n+/).filter(Boolean);
     const titleParagraphs = titleLines.map((tLine, pIdx) => {
       const isMainHeading = pIdx > 0 || !tLine.includes("الرحمن");
@@ -244,8 +308,8 @@ function buildContractPhotoHeader(tableLines: string[]): Table {
           new TextRun({
             text: tLine.trim(),
             bold: true,
-            size: isMainHeading ? 58 : 36, // 29pt for contract title, 18pt for Basmala
-            font: PRIMARY_FONT,
+            size: isMainHeading ? 58 : 36,
+            font: fontName,
             rightToLeft: true,
             color: "0F172A",
           }),
@@ -271,11 +335,15 @@ function buildContractPhotoHeader(tableLines: string[]): Table {
 
 /**
  * Converts a standard block of markdown table lines into a clean DOCX Table
+ * Sets RTL for Arabic tables and LTR for Latin (French/English) tables
  */
-function buildDocxTable(tableLines: string[]): Table | null {
+function buildDocxTable(tableLines: string[], fontName: string = FALLBACK_FONT): Table | null {
   if (isPhotoHeaderTable(tableLines)) {
-    return buildContractPhotoHeader(tableLines);
+    return buildContractPhotoHeader(tableLines, fontName);
   }
+
+  const combinedTableText = tableLines.join(" ");
+  const tableIsAr = isArabic(combinedTableText);
 
   const rows: TableRow[] = [];
   let isFirstRow = true;
@@ -294,6 +362,8 @@ function buildDocxTable(tableLines: string[]): Table | null {
 
     const cells: TableCell[] = rawCells.map((cellContent) => {
       const isHeader = isFirstRow;
+      const cellIsAr = isArabic(cellContent);
+
       return new TableCell({
         width: {
           size: cellWidthPercent,
@@ -319,10 +389,10 @@ function buildDocxTable(tableLines: string[]): Table | null {
         },
         children: [
           new Paragraph({
-            bidirectional: isArabic(cellContent),
+            bidirectional: cellIsAr,
             alignment: isHeader
               ? AlignmentType.CENTER
-              : isArabic(cellContent)
+              : cellIsAr
               ? AlignmentType.RIGHT
               : AlignmentType.LEFT,
             spacing: { before: 40, after: 40, line: 240 },
@@ -330,7 +400,8 @@ function buildDocxTable(tableLines: string[]): Table | null {
               cellContent,
               isHeader ? 24 : 22,
               isHeader ? "0F172A" : "334155",
-              isHeader
+              isHeader,
+              fontName
             ),
           }),
         ],
@@ -352,7 +423,7 @@ function buildDocxTable(tableLines: string[]): Table | null {
   if (rows.length === 0) return null;
 
   return new Table({
-    visuallyRightToLeft: true,
+    visuallyRightToLeft: tableIsAr,
     width: {
       size: 100,
       type: WidthType.PERCENTAGE,
@@ -362,21 +433,32 @@ function buildDocxTable(tableLines: string[]): Table | null {
 }
 
 /**
- * Generate high-fidelity DOCX document preserving exact layout, tables, font hierarchy, and styles
+ * Generate high-fidelity DOCX document preserving exact layout, tables, font hierarchy, and styles.
+ * Adheres strictly to Requirement #4:
+ * - Detects/uses font or falls back to "Arial".
+ * - For Arabic: RTL direction and align Right.
+ * - For French / English / Latin: LTR direction and align Left.
+ * - Leaves out arbitrary double borders unless requested (hasPageBorder === true).
  */
 export async function generateOcrDocx({
   title,
   rawText,
   content,
   fileName = "CopyCat_Extracted_Document.docx",
+  font,
+  hasPageBorder = false,
+  language = "auto",
 }: OcrDocxOptions) {
   const fullText = rawText || content || "";
   const lines = fullText.split(/\r?\n/).map((l) => l.trimEnd());
-  const docIsArabic = isArabic(fullText);
+  const docIsArabic = language === "ar" ? true : language === "en" || language === "fr" ? false : isArabic(fullText);
+
+  // Requirement #4: Use detected font or fallback to "Arial"
+  const activeFont = font && font.trim() && font.trim().toLowerCase() !== "auto" ? font.trim() : FALLBACK_FONT;
 
   const docChildren: (Paragraph | Table)[] = [];
 
-  // Filter out unwanted auto-generated technical filenames (e.g. f2f62128..., مستند_مستخرج_...)
+  // Filter out auto-generated technical filenames
   const isAutoFilename =
     !title ||
     title.startsWith("مستند_مستخرج") ||
@@ -395,7 +477,7 @@ export async function generateOcrDocx({
             text: title.trim(),
             bold: true,
             size: 36, // 18pt
-            font: isTitleAr ? PRIMARY_FONT : "Calibri",
+            font: activeFont,
             color: "0F172A",
             rightToLeft: isTitleAr,
           }),
@@ -416,6 +498,27 @@ export async function generateOcrDocx({
       continue;
     }
 
+    // Explicit Page Break marker from OCR / PDF split
+    if (
+      trimmed === "---" ||
+      trimmed === "\\pagebreak" ||
+      trimmed.startsWith("═══════") ||
+      trimmed.includes("الصفحة رقم (") ||
+      trimmed.startsWith("--- Page")
+    ) {
+      // If it's a page separator header, handle page break
+      if (docChildren.length > 0) {
+        docChildren.push(
+          new Paragraph({
+            pageBreakBefore: true,
+            children: [],
+          })
+        );
+      }
+      i++;
+      continue;
+    }
+
     // 1. Check for Table block
     if (isTableRow(trimmed)) {
       const tableLines: string[] = [];
@@ -424,7 +527,7 @@ export async function generateOcrDocx({
         i++;
       }
 
-      const tableComponent = buildDocxTable(tableLines);
+      const tableComponent = buildDocxTable(tableLines, activeFont);
       if (tableComponent) {
         docChildren.push(tableComponent);
         docChildren.push(
@@ -443,7 +546,10 @@ export async function generateOcrDocx({
       continue;
     }
 
-    const lineIsAr = isArabic(cleanLine) || docIsArabic;
+    // Determine direction and alignment:
+    // If line has Arabic -> RTL & Align Right
+    // If Latin (French / English) -> LTR & Align Left
+    const lineIsAr = isArabic(cleanLine) || (docIsArabic && !/^[A-Za-z0-9\s.,'?!:;()\-*]+$/.test(cleanLine));
 
     // 2. Heading Level 1 (# Heading)
     if (trimmed.startsWith("# ") || cleanLine.startsWith("بسم الله")) {
@@ -453,14 +559,14 @@ export async function generateOcrDocx({
           bidirectional: isArabic(headingText),
           alignment: AlignmentType.CENTER,
           spacing: { before: 140, after: 80, line: 260 },
-          children: parseInlineRuns(headingText, 32, "0F172A", true), // 16pt
+          children: parseInlineRuns(headingText, 32, "0F172A", true, activeFont),
         })
       );
       i++;
       continue;
     }
 
-    // 3. Heading Level 2 (## Heading or contract title)
+    // 3. Heading Level 2 (## Heading)
     if (trimmed.startsWith("## ") || cleanLine.includes("عقد زواج") || cleanLine.includes("عقد إيجار")) {
       const headingText = cleanLine.replace(/^##\s+/, "");
       docChildren.push(
@@ -468,7 +574,7 @@ export async function generateOcrDocx({
           bidirectional: isArabic(headingText),
           alignment: AlignmentType.CENTER,
           spacing: { before: 120, after: 80, line: 260 },
-          children: parseInlineRuns(headingText, 36, "0F172A", true), // 18pt bold
+          children: parseInlineRuns(headingText, 36, "0F172A", true, activeFont),
         })
       );
       i++;
@@ -487,19 +593,20 @@ export async function generateOcrDocx({
         new Paragraph({
           bidirectional: isArabic(headingText),
           alignment: AlignmentType.CENTER,
-          spacing: { before: 180, after: 70, line: 280 },
-          children: parseInlineRuns(headingText, 36, "0F172A", true), // 18pt bold centered
+          spacing: { before: 160, after: 70, line: 280 },
+          children: parseInlineRuns(headingText, 32, "0F172A", true, activeFont),
         })
       );
       i++;
       continue;
     }
 
-    // 5. Short heading with colon (e.g. "أولاً: السيد/", "ثانياً: السيدة/")
+    // 5. Short heading with colon (e.g. "أولاً: السيد/", "Question 1:", "Remarque :")
     const isPartyOrShortLabel =
-      cleanLine.length < 50 &&
+      cleanLine.length < 60 &&
       (cleanLine.endsWith(":") || cleanLine.endsWith(":-")) &&
-      !cleanLine.includes(".");
+      !cleanLine.includes(".") &&
+      !cleanLine.includes(",");
 
     if (isPartyOrShortLabel) {
       docChildren.push(
@@ -507,7 +614,7 @@ export async function generateOcrDocx({
           bidirectional: lineIsAr,
           alignment: lineIsAr ? AlignmentType.RIGHT : AlignmentType.LEFT,
           spacing: { before: 90, after: 50, line: 280 },
-          children: parseInlineRuns(cleanLine, 29, "0F172A", true), // 14.5pt bold
+          children: parseInlineRuns(cleanLine, 28, "0F172A", true, activeFont),
         })
       );
       i++;
@@ -521,13 +628,13 @@ export async function generateOcrDocx({
         new Paragraph({
           bidirectional: false,
           alignment: AlignmentType.CENTER,
-          spacing: { before: 160, after: 40 },
+          spacing: { before: 140, after: 40 },
           children: [
             new TextRun({
               text: cleanLine,
               bold: true,
-              size: 24, // 12pt
-              font: PRIMARY_FONT,
+              size: 22,
+              font: activeFont,
               color: "475569",
             }),
           ],
@@ -552,17 +659,17 @@ export async function generateOcrDocx({
           indent: lineIsAr
             ? { right: convertMillimetersToTwip(4) }
             : { left: convertMillimetersToTwip(4) },
-          spacing: { before: 50, after: 60, line: 280 },
+          spacing: { before: 40, after: 50, line: 260 },
           children: [
             new TextRun({
               text: prefix,
               bold: true,
-              size: 27, // 13.5pt
-              font: lineIsAr ? PRIMARY_FONT : "Calibri",
+              size: 26,
+              font: activeFont,
               rightToLeft: lineIsAr,
               color: "0F172A",
             }),
-            ...parseInlineRuns(listContent, 27, "0F172A", false),
+            ...parseInlineRuns(listContent, 26, "0F172A", false, activeFont),
           ],
         })
       );
@@ -570,18 +677,57 @@ export async function generateOcrDocx({
       continue;
     }
 
-    // 8. Regular Content Paragraph (13.5pt Traditional Arabic with 1.25x line spacing)
+    // 8. Regular Content Paragraph
+    // Requirement #4: Align Right for Arabic, Align Left for English / French
     docChildren.push(
       new Paragraph({
         bidirectional: lineIsAr,
-        alignment: tagCentered ? AlignmentType.CENTER : lineIsAr ? AlignmentType.RIGHT : AlignmentType.LEFT,
-        spacing: { before: 50, after: 70, line: 290 }, // 1.25x line spacing - gracefully fills ~90% of page!
-        children: parseInlineRuns(cleanLine, 27, "0F172A", false), // 13.5pt crisp Traditional Arabic
+        alignment: tagCentered
+          ? AlignmentType.CENTER
+          : lineIsAr
+          ? AlignmentType.RIGHT
+          : AlignmentType.LEFT,
+        spacing: { before: 40, after: 60, line: 280 },
+        children: parseInlineRuns(cleanLine, 26, "0F172A", false, activeFont),
       })
     );
 
     i++;
   }
+
+  // Page borders config: only applied if hasPageBorder is true (e.g. legal contracts)
+  const pageBordersConfig = hasPageBorder
+    ? {
+        pageBorders: {
+          display: "allPages" as const,
+          zOrder: "front" as const,
+        },
+        pageBorderTop: {
+          style: BorderStyle.DOUBLE,
+          size: 12,
+          color: "1E293B",
+          space: 14,
+        },
+        pageBorderBottom: {
+          style: BorderStyle.DOUBLE,
+          size: 12,
+          color: "1E293B",
+          space: 14,
+        },
+        pageBorderLeft: {
+          style: BorderStyle.DOUBLE,
+          size: 12,
+          color: "1E293B",
+          space: 14,
+        },
+        pageBorderRight: {
+          style: BorderStyle.DOUBLE,
+          size: 12,
+          color: "1E293B",
+          space: 14,
+        },
+      }
+    : undefined;
 
   const doc = new Document({
     sections: [
@@ -589,47 +735,17 @@ export async function generateOcrDocx({
         properties: {
           page: {
             size: {
-              width: convertMillimetersToTwip(210), // A4: 210mm
-              height: convertMillimetersToTwip(297), // A4: 297mm
+              width: convertMillimetersToTwip(210), // A4 width
+              height: convertMillimetersToTwip(297), // A4 height
             },
-            // Professional tight margins (12mm) to ensure 1-page contracts fit completely
+            // Clean standard printable margins (15mm)
             margin: {
-              top: convertMillimetersToTwip(12),
-              bottom: convertMillimetersToTwip(12),
-              left: convertMillimetersToTwip(12),
-              right: convertMillimetersToTwip(12),
+              top: convertMillimetersToTwip(15),
+              bottom: convertMillimetersToTwip(15),
+              left: convertMillimetersToTwip(15),
+              right: convertMillimetersToTwip(15),
             },
-            // Elegant double page border for legal contracts and official documents
-            borders: {
-              pageBorders: {
-                display: "allPages",
-                zOrder: "front",
-              },
-              pageBorderTop: {
-                style: BorderStyle.DOUBLE,
-                size: 12,
-                color: "1E293B",
-                space: 14,
-              },
-              pageBorderBottom: {
-                style: BorderStyle.DOUBLE,
-                size: 12,
-                color: "1E293B",
-                space: 14,
-              },
-              pageBorderLeft: {
-                style: BorderStyle.DOUBLE,
-                size: 12,
-                color: "1E293B",
-                space: 14,
-              },
-              pageBorderRight: {
-                style: BorderStyle.DOUBLE,
-                size: 12,
-                color: "1E293B",
-                space: 14,
-              },
-            },
+            borders: pageBordersConfig,
           },
         },
         children: docChildren,

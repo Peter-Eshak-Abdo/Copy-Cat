@@ -51,19 +51,42 @@ export async function POST(req: NextRequest) {
     const cleanBase64 = rawData.replace(/^data:[a-zA-Z0-9/+-]+;base64,/, "");
 
     const prompt = `
-أنت خبير فائق الاحترافية في تحويل وتنسيق مستندات الـ PDF والأوراق العربية إلى مستندات Word منسقة بدقة تامة (Arabic PDF/Document to Formatted Word Specialist).
-المهمة:
+أنت خبير فائق الاحترافية في تحويل وتنسيق مستندات الـ PDF والأوراق بجميع اللغات (عربية، إنجليزية، فرنسية، وغيرها) إلى مستندات Word منسقة بدقة واحترافية متناهية (Universal High-Fidelity Document to Word Specialist).
+
+المهمة الأساسية:
 حلل هذا المستند واقرأ كل النصوص والبيانات واستخرجها مع الحفاظ التام والدقيق على الهيكل والتنسيق الأصلي للمستند بنسبة 100%:
-1. العناوين: حافظ على التسلسل الهرمي الدقيق للعناوين (# للعنوان الرئيسي، ## للعناوين الفرعية، ### للأقسام).
-2. الجداول: إذا كان المستند يحتوي على أي جدول أو بيانات مجدولة، التزم تماماً بإخراجه كجدول Markdown حقيقي كامل ومنظم بأعمدة وصفوف واضحة (| العمود 1 | العمود 2 |)، ولا تقم أبداً بتحويل الجداول إلى أسطر نصية عادية.
-3. التنسيق والخطوط: حافظ على تمييز الكلمات والعبارات العريضة (Bold عبر **الكلمة**) والنصوص العادية، والقوائم النقطية والرقمية.
-4. الأرقام والتواريخ: استخرج كل الأرقام والبيانات بدقة تامة وباللغة الأصلية الواردة بها.
-5. المحاذاة والترتيب: حافظ على الترتيب المكاني والمنطقي للفقرات كما هو في المستند تماماً.
-6. أخرج النص المنسق كاملاً فقط دون أي مقدمات أو تحيات أو هوامش إضافية من عندك.
+
+1. بيانات الوثيقة والخط واللغة (في أول سطرين تماماً):
+- اكتشف لغة المستند الأساسية (مثل ar أو en أو fr).
+- اكتشف نوع الخط الأكثر ملائمة لنص المستند (مثل: Arial, Calibri, Times New Roman, Traditional Arabic, Amiri, Tahoma).
+واكتبهما في أول سطرين هكذا:
+[FONT: اسم_الخط]
+[LANG: ar أو en أو fr]
+
+2. العناوين والتنسيق:
+- حافظ على العناوين الرئيسية والفرعية (# للرئيسي، ## للفرعي، ### للأقسام).
+- إذا كان هناك عنوان أو نص تحته خط في الأصل، ضعه بين وسمي <u>النص</u>.
+- حافظ على تمييز الكلمات والعبارات العريضة باستخدام **الكلمة**.
+
+3. أسئلة الامتحانات والخيارات المتعددة (Multiple Choice / QCM):
+- في أسئلة الاختيار من متعدد والخيارات الأفقية (مثل: * Option 1     * Option 2     * Option 3)، اكتب الخيارات واضحة مع مسافات نظيفة، ولا تضع وسوم &nbsp; إطلاقاً، ولا تضع باك سلاش قبل النجمة (اكتب * وليس \\*).
+
+4. الجداول والبيانات المنظمة:
+- إذا كان المستند يحتوي على أي جدول أو أعمدة مجدولة، أخرجه كجدول Markdown حقيقي كامل ومنظم (| عمود 1 | عمود 2 |).
+
+5. فواصل الصفحات:
+- إذا كان المستند يحتوي على أكثر من صفحة، ضع علامة الفاصل:
+---
+بين كل صفحة وأخرى.
+
+6. المحظورات والتنبيهات الحاسمة:
+- ممنوع منعاً باتاً كتابة كيانات HTML مثل &nbsp; أو &amp; أو &lt;.
+- ممنوع الهروب بعلامة الباك سلاش (لا تكتب \\* ولا \\_ ولا \\#، بل اكتب الرمز مباشرة).
+- أخرج المحتوى الصافي مباشرة بعد سطري [FONT] و [LANG] بدون أي مقدمات أو تحيات أو شروحات.
 `;
 
     let formattedText = "";
-    const models = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-2.5-flash"];
+    const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
 
     for (const model of models) {
       try {
@@ -98,10 +121,34 @@ export async function POST(req: NextRequest) {
       throw new Error("تعذر استخراج وتنسيق نصوص المستند.");
     }
 
+    // Extract detected font & language
+    let detectedFont = "Arial";
+    let detectedLang = "auto";
+
+    const fontMatch = formattedText.match(/\[FONT:\s*([^\]]+)\]/i);
+    if (fontMatch) {
+      detectedFont = fontMatch[1].trim();
+      formattedText = formattedText.replace(/\[FONT:\s*[^\]]+\]/i, "").trim();
+    }
+
+    const langMatch = formattedText.match(/\[LANG:\s*([^\]]+)\]/i);
+    if (langMatch) {
+      detectedLang = langMatch[1].trim().toLowerCase();
+      formattedText = formattedText.replace(/\[LANG:\s*[^\]]+\]/i, "").trim();
+    }
+
+    // Clean any remaining markdown escape artifacts or &nbsp;
+    formattedText = formattedText
+      .replace(/&nbsp;/gi, " ")
+      .replace(/\\([*_#[\]()-])/g, "$1")
+      .trim();
+
     return NextResponse.json({
       success: true,
       text: formattedText,
       formattedText,
+      detectedFont,
+      detectedLang,
       fileName,
     });
   } catch (err: unknown) {

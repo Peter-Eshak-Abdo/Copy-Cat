@@ -86,6 +86,57 @@ export function safeOpenUrl(url: string, target = "_blank"): boolean {
 }
 
 /**
+ * Normalizes phone numbers to standard international format (Egyptian 01xxxxxxxxx -> 201xxxxxxxxx)
+ */
+export function formatWhatsAppPhone(phone?: string): string {
+  if (!phone) return "";
+  let clean = phone.replace(/[^0-9]/g, "");
+  if (clean.startsWith("0")) {
+    clean = "20" + clean.substring(1);
+  } else if (!clean.startsWith("20") && clean.length === 10) {
+    clean = "20" + clean;
+  }
+  return clean;
+}
+
+/**
+ * Builds the optimal WhatsApp URL:
+ * - On PC/Desktop: Uses web.whatsapp.com/send directly so it bypasses intermediate landing pages
+ *   ("Continue to WhatsApp Web") and opens the specific chat directly even if WhatsApp Web is already open.
+ * - On Mobile: Uses wa.me to open the native WhatsApp mobile application.
+ */
+export function getWhatsAppUrl(phone?: string, text?: string): string {
+  const cleanPhone = formatWhatsAppPhone(phone);
+  const encodedText = text ? encodeURIComponent(text) : "";
+
+  const isMobile =
+    typeof navigator !== "undefined" &&
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    if (cleanPhone) {
+      return `https://wa.me/${cleanPhone}${encodedText ? `?text=${encodedText}` : ""}`;
+    }
+    return `https://wa.me/?text=${encodedText}`;
+  } else {
+    // Desktop: Direct to web.whatsapp.com to open chat and prefill text directly
+    const queryParts: string[] = [];
+    if (cleanPhone) queryParts.push(`phone=${cleanPhone}`);
+    if (encodedText) queryParts.push(`text=${encodedText}`);
+    const qs = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
+    return `https://web.whatsapp.com/send${qs}`;
+  }
+}
+
+/**
+ * Safely opens WhatsApp chat with target contact and optional pre-filled message
+ */
+export function openWhatsAppChat(phone?: string, text?: string): boolean {
+  const url = getWhatsAppUrl(phone, text);
+  return safeOpenUrl(url);
+}
+
+/**
  * Compresses an image file to a lightweight WebP Data URL (client-side, 100% free, ~25KB)
  */
 export function compressImageToWebP(

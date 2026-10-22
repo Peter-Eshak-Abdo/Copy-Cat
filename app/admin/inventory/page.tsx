@@ -25,7 +25,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
-import { formatCurrency, safeOpenUrl, compressImageToWebP } from "@/lib/utils";
+import { formatCurrency, safeOpenUrl, compressImageToWebP, openWhatsAppChat } from "@/lib/utils";
 import { useToast } from "@/components/toast-provider";
 import { type InventoryItem, INITIAL_PRODUCTS, sanitizeItem } from "@/lib/inventory";
 import { SITE_CONFIG } from "@/lib/site-config";
@@ -511,8 +511,7 @@ export default function InventoryPage() {
   // Notify Engineer via WhatsApp for replenishment
   const handleNotifyEngineer = (item: InventoryItem) => {
     const textMsg = `طلب توريد من مكتبة كوبي كات:\nالمهندس المحترم، نرجو توريد صنف "${item.name}" (سعر البيع الحالي: ${item.price} ج.م).\nشكراً لتعاونكم الدائم.`;
-    const url = `https://wa.me/${ENGINEER_PHONE_INTL}?text=${encodeURIComponent(textMsg)}`;
-    const opened = safeOpenUrl(url);
+    const opened = openWhatsAppChat(ENGINEER_PHONE_INTL, textMsg);
     if (!opened) {
       toast.info(
         "تم إنشاء رابط الواتساب",
