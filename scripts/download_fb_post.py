@@ -4,12 +4,11 @@ import time
 import json
 import argparse
 import re
-from pathlib import Path
 from urllib.parse import urlparse
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from PIL import Image
-from io import BytesIO
 from playwright.sync_api import sync_playwright
 
 USER_DATA_DIR = "fb_profile"
@@ -24,34 +23,42 @@ def is_valid_photo_url(url: str) -> bool:
     if not url:
         return False
     u = url.lower()
-    if any(bad in u for bad in ["rsrc.php", "emoji.php", "static.xx", "favicon", "/badges/", "/icons/"]):
+    if any(bad in u for bad in [
+        "rsrc.php", "emoji.php", "static.xx", "favicon", "/badges/", "/icons/",
+        "s150x150", "p50x50", "p100x100", "s50x50", "p32x32", "cp0"
+    ]):
         return False
     return "fbcdn.net" in u or "facebook.com" in u
 
 
 def sanitize_filename(name: str) -> str:
-    return re.sub(r'[\\/*?:"<>|]', "_", name).strip()
+    cleaned = re.sub(r'[\\/*?:"<>|]', "_", name).strip()
+    return cleaned if cleaned else "ملزمة_فيسبوك"
 
 
-def download_image(url: str, output_path: str, cookies_dict: dict = None) -> bool:
+def download_single_image(args_tuple) -> tuple[int, str | None]:
+    idx, img_url, file_path, cookies_dict = args_tuple
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/128.0.0.0 Safari/537.36"
+            "Chrome/130.0.0.0 Safari/537.36"
         ),
         "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
         "Referer": "https://www.facebook.com/",
     }
-    try:
-        resp = requests.get(url, headers=headers, cookies=cookies_dict, timeout=25)
-        if resp.status_code == 200 and len(resp.content) > 3000:
-            with open(output_path, "wb") as f:
-                f.write(resp.content)
-            return True
-    except Exception as e:
-        log_json("log", {"level": "warn", "message": f"Failed to download image {url[:60]}: {e}"})
-    return False
+    for attempt in range(2):
+        try:
+            resp = requests.get(img_url, headers=headers, cookies=cookies_dict, timeout=30)
+            if resp.status_code == 200 and len(resp.content) > 3000:
+                with open(file_path, "wb") as f:
+                    f.write(resp.content)
+                return idx, file_path
+        except Exception as e:
+            if attempt == 1:
+                log_json("log", {"level": "warn", "message": f"تعذر تحميل الصورة {idx}: {e}"})
+            time.sleep(1)
+    return idx, None
 
 
 def compile_images_to_pdf(image_paths: list[str], output_pdf: str) -> bool:
@@ -74,7 +81,7 @@ def compile_images_to_pdf(image_paths: list[str], output_pdf: str) -> bool:
                 else:
                     pil_images.append(im)
             except Exception as ex:
-                log_json("log", {"level": "warn", "message": f"Skipping corrupt image {img_path}: {ex}"})
+                log_json("log", {"level": "warn", "message": f"تخطي صورة غير صالحة {img_path}: {ex}"})
 
         if not pil_images:
             return False
@@ -85,12 +92,56 @@ def compile_images_to_pdf(image_paths: list[str], output_pdf: str) -> bool:
         first_img.save(output_pdf, save_all=True, append_images=other_imgs, resolution=150.0, quality=90)
         return True
     except Exception as e:
-        log_json("error", {"message": f"PDF compilation error: {e}"})
+        log_json("error", {"message": f"خطأ في تجميع الـ PDF: {e}"})
         return False
 
 
+def extract_post_identifiers(url: str) -> dict:
+    ids = {
+        "pfbid": None,
+        "story_fbid": None,
+        "post_id": None,
+        "fbid": None,
+        "pcb_id": None,
+        "author_slug": None,
+    }
+    if not url:
+        return ids
+
+    pfbid_m = re.search(r'pfbid[a-zA-Z0-9]+', url)
+    if pfbid_m:
+        ids["pfbid"] = pfbid_m.group(0)
+
+    story_m = re.search(r'story_fbid=([a-zA-Z0-9]+)', url)
+    if story_m:
+        ids["story_fbid"] = story_m.group(1)
+
+    post_m = (
+        re.search(r'/(?:permalink|posts)/([a-zA-Z0-9]+)', url) or
+        re.search(r'/groups/[^/]+/posts/([a-zA-Z0-9]+)', url)
+    )
+    if post_m:
+        ids["post_id"] = post_m.group(1)
+
+    fbid_m = re.search(r'[?&](?:fbid|id)=([a-zA-Z0-9]+)', url)
+    if fbid_m:
+        ids["fbid"] = fbid_m.group(1)
+
+    pcb_m = re.search(r'set=pcb\.([a-zA-Z0-9]+)', url)
+    if pcb_m:
+        ids["pcb_id"] = pcb_m.group(1)
+
+    auth_m = re.search(r'facebook\.com/([^/?#]+)/(?:posts|photos)', url)
+    if auth_m:
+        cand = auth_m.group(1)
+        if cand not in ("share", "photo", "groups", "pages", "watch", "media", "story.php", "permalink.php"):
+            ids["author_slug"] = cand
+
+    return ids
+
+
 def scrape_post_images(post_url: str, output_dir: str, pdf_name: str, max_photos: int = 150, headless: bool = True):
-    log_json("status", {"message": "جاري تشغيل المتصفح والدخول بحساب فيس بوك..."})
+    log_json("status", {"message": "جاري تشغيل محرك فيسبوك المتطور وقراءة المنشور..."})
 
     profile_path = os.path.abspath(USER_DATA_DIR)
     os.makedirs(profile_path, exist_ok=True)
@@ -100,7 +151,7 @@ def scrape_post_images(post_url: str, output_dir: str, pdf_name: str, max_photos
         browser_context = p.chromium.launch_persistent_context(
             user_data_dir=profile_path,
             headless=headless,
-            viewport={"width": 1280, "height": 850},
+            viewport={"width": 1400, "height": 900},
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--no-sandbox",
@@ -113,13 +164,13 @@ def scrape_post_images(post_url: str, output_dir: str, pdf_name: str, max_photos
         log_json("status", {"message": f"جاري فتح الرابط: {post_url}..."})
         try:
             page.goto(post_url, wait_until="domcontentloaded", timeout=45000)
-            time.sleep(3)
+            time.sleep(3.5)
         except Exception as e:
             log_json("error", {"message": f"تعذر فتح الرابط: {e}"})
             browser_context.close()
             return
 
-        # Check if login or cookie consent is requested
+        # Dismiss any cookie banner or dialogs
         try:
             decline_btns = page.query_selector_all('button[aria-label*="Decline"], button[aria-label*="رفض"]')
             if decline_btns:
@@ -128,54 +179,153 @@ def scrape_post_images(post_url: str, output_dir: str, pdf_name: str, max_photos
         except:
             pass
 
-        log_json("status", {"message": "جاري تحليل المنشور والبحث عن الصور..."})
+        current_url = page.url
+        log_json("log", {"level": "info", "message": f"عنوان الصفحة المستقر: {current_url}"})
 
-        # Determine if we're already in theatre mode or need to click first photo
-        is_theatre = "/photo" in page.url or "theater" in page.url or "fbid=" in page.url
+        # Combine clues from original post URL and settled redirected URL
+        initial_ids = extract_post_identifiers(post_url)
+        settled_ids = extract_post_identifiers(current_url)
+
+        target_pfbid = settled_ids["pfbid"] or initial_ids["pfbid"]
+        target_post_id = settled_ids["post_id"] or initial_ids["post_id"] or settled_ids["story_fbid"] or initial_ids["story_fbid"]
+        target_pcb_id = settled_ids["pcb_id"] or initial_ids["pcb_id"]
+        target_author = settled_ids["author_slug"] or initial_ids["author_slug"]
+
+        is_theatre = (
+            ("/photo/" in current_url or "/photo.php" in current_url or "theater" in current_url) and
+            "story_fbid" not in current_url and
+            "story.php" not in current_url and
+            "permalink.php" not in current_url
+        )
+
+        detected_post_title = None
 
         if not is_theatre:
-            post_id_match = re.search(r'/(?:permalink|posts|story_fbid)/(\d+)', post_url) or re.search(r'[?&](?:fbid|id|story_fbid)=(\d+)', post_url)
-            target_post_id = post_id_match.group(1) if post_id_match else None
+            log_json("status", {"message": "جاري العثور على ألبوم صور المنشور الأصلي..."})
+            target_link_href = None
+            target_article_elem = None
 
-            # Find photo links specific to this post
-            all_links = page.query_selector_all('a[href*="/photo"], a[href*="photo.php"]')
-            target_link = None
-            if target_post_id:
-                for l in all_links:
-                    href = l.get_attribute("href") or ""
-                    if target_post_id in href or "set=pcb" in href:
-                        target_link = l
-                        break
+            # Scan all articles to pinpoint the EXACT one matching the target post
+            articles = page.query_selector_all('div[role="article"]')
 
-            if not target_link and all_links:
-                target_link = all_links[0]
-
-            if target_link:
-                log_json("status", {"message": "تم العثور على ألبوم/صور المنشور، جاري الدخول لوضع العرض الكامل..."})
+            for art in articles:
                 try:
-                    target_link.click()
-                    time.sleep(3.5)
-                except:
-                    pass
+                    art_links = [a.get_attribute("href") or "" for a in art.query_selector_all("a")]
+                    matches = False
 
-        # We will collect high-res URLs in exact sequential order
+                    if target_pfbid and any(target_pfbid in h for h in art_links):
+                        matches = True
+                    elif target_post_id and any(target_post_id in h for h in art_links):
+                        matches = True
+                    elif target_pcb_id and any(f"pcb.{target_pcb_id}" in h for h in art_links):
+                        matches = True
+                    elif target_author and any(f"/{target_author}/" in h for h in art_links) and any("set=pcb." in h or "/photo" in h for h in art_links):
+                        matches = True
+
+                    if matches:
+                        # Extract photo links from this specific article
+                        pcb_links = [h for h in art_links if "set=pcb." in h]
+                        photo_links = [h for h in art_links if "/photo" in h or "photo.php" in h]
+
+                        if pcb_links:
+                            target_link_href = pcb_links[0]
+                            target_article_elem = art
+                            break
+                        elif photo_links:
+                            target_link_href = photo_links[0]
+                            target_article_elem = art
+                            break
+                except Exception:
+                    continue
+
+            # Fallback 1: Direct target PCB or post photo links on the whole page
+            if not target_link_href and target_pcb_id:
+                pcb_links = page.query_selector_all(f'a[href*="set=pcb.{target_pcb_id}"]')
+                if pcb_links:
+                    target_link_href = pcb_links[0].get_attribute("href")
+
+            if not target_link_href and target_post_id:
+                pcb_links = page.query_selector_all(f'a[href*="set=pcb.{target_post_id}"]')
+                if pcb_links:
+                    target_link_href = pcb_links[0].get_attribute("href")
+                else:
+                    post_photo_links = page.query_selector_all(f'a[href*="{target_post_id}"][href*="photo"]')
+                    if post_photo_links:
+                        target_link_href = post_photo_links[0].get_attribute("href")
+
+            # Fallback 2: Album set links (set=a.)
+            if not target_link_href:
+                album_links = page.query_selector_all('a[href*="set=a."]')
+                if album_links:
+                    target_link_href = album_links[0].get_attribute("href")
+
+            # Fallback 3: Check inside div[role="main"]
+            if not target_link_href:
+                main_elem = page.query_selector('div[role="main"]')
+                if main_elem:
+                    main_photos = main_elem.query_selector_all('a[href*="set=pcb."], a[href*="/photo"]')
+                    if main_photos:
+                        target_link_href = main_photos[0].get_attribute("href")
+
+            # Extract smart title from target article or page title
+            try:
+                if target_article_elem:
+                    art_text = target_article_elem.inner_text() or ""
+                    lines = [ln.strip() for ln in art_text.split("\n") if ln.strip()]
+                    for ln in lines:
+                        if len(ln) > 6 and not any(skip in ln for skip in ["أعجبني", "تعليق", "مشاركة", "·", "ساعة", "دقيقة", "أمس", "رد"]):
+                            detected_post_title = ln[:60]
+                            break
+                if not detected_post_title:
+                    raw_title = page.title()
+                    # Strip notification badges like "(20+) " and " | Facebook"
+                    clean_title = re.sub(r'^\(\d+\+?\)\s*', '', raw_title)
+                    clean_title = re.sub(r'\s*\|\s*Facebook.*$', '', clean_title).strip()
+                    if clean_title and len(clean_title) > 3:
+                        detected_post_title = clean_title[:60]
+            except Exception:
+                pass
+
+            if target_link_href:
+                if target_link_href.startswith("/"):
+                    target_link_href = "https://www.facebook.com" + target_link_href
+                log_json("status", {"message": "تم العثور على ألبوم صور المنشور الأصلي بنجاح! جاري الدخول لوضع العرض الكامل..."})
+                try:
+                    page.goto(target_link_href, wait_until="domcontentloaded", timeout=30000)
+                    time.sleep(3.0)
+                except Exception as ex:
+                    log_json("log", {"level": "warn", "message": f"Navigation to photo link failed: {ex}"})
+            else:
+                log_json("log", {"level": "warn", "message": "لم يتم العثور على رابط ألبوم محدد، محاولة البحث عن الصور داخل العرض الحالي..."})
+
         collected_urls: list[str] = []
-        seen_urls = set()
+        seen_base_urls = set()
         stagnant_count = 0
+        first_fbid = None
 
-        # Extract browser cookies for requests
         cookies = browser_context.cookies()
         cookies_dict = {c["name"]: c["value"] for c in cookies}
 
-        log_json("status", {"message": "جاري تتبع وتقليب صور المنشور بالترتيب..."})
+        log_json("status", {"message": "جاري تتبع وتقليب صور الملزمة بالترتيب وبأعلى دقة..."})
 
         for step in range(max_photos):
-            # Attempt to find the main high-res photo in theatre view
+            # Extract fbid from current theatre URL
+            fbid_match = re.search(r'[?&]fbid=(\d+)', page.url)
+            curr_fbid = fbid_match.group(1) if fbid_match else None
+
+            if curr_fbid:
+                if first_fbid is None:
+                    first_fbid = curr_fbid
+                elif curr_fbid == first_fbid and len(collected_urls) > 3:
+                    log_json("status", {"message": f"تم استعراض ألبوم الصور بالكامل والعودة للبداية بنجاح! ({len(collected_urls)} صورة)"})
+                    break
+
+            # Find main theatre image
             img_candidates = page.query_selector_all(
-                'div[role="dialog"] img[src*="fbcdn"], '
-                'div[role="main"] img[src*="fbcdn"], '
+                'div[data-pagelet="MediaViewerRoot"] img, '
+                'div[role="main"] img, '
                 'img[data-visualcompletion="media-vc-image"], '
-                'div[data-pagelet="MediaViewerRoot"] img'
+                'div[role="dialog"] img'
             )
 
             found_src = None
@@ -187,13 +337,13 @@ def scrape_post_images(post_url: str, output_dir: str, pdf_name: str, max_photos
                     if src and is_valid_photo_url(src):
                         box = img.bounding_box()
                         area = (box["width"] * box["height"]) if box else 0
-                        if area > max_area:
+                        if area > max_area and area > 35000:
                             max_area = area
                             found_src = src
                 except:
                     continue
 
-            # Fallback if no theatre image found: grab largest image on page
+            # Fallback if specific selectors didn't match
             if not found_src:
                 all_imgs = page.query_selector_all('img[src*="fbcdn"]')
                 for img in all_imgs:
@@ -201,20 +351,19 @@ def scrape_post_images(post_url: str, output_dir: str, pdf_name: str, max_photos
                     if src and is_valid_photo_url(src):
                         box = img.bounding_box()
                         area = (box["width"] * box["height"]) if box else 0
-                        if area > max_area and area > 10000:
+                        if area > max_area and area > 20000:
                             max_area = area
                             found_src = src
 
             if found_src:
                 base_key = found_src.split("?")[0]
-                # Deduplicate by base URL
-                if base_key not in seen_urls:
-                    seen_urls.add(base_key)
+                if base_key not in seen_base_urls:
+                    seen_base_urls.add(base_key)
                     collected_urls.append(found_src)
                     stagnant_count = 0
                     log_json("progress", {
                         "current": len(collected_urls),
-                        "message": f"تم اكتشاف صورة رقم {len(collected_urls)}...",
+                        "message": f"تم استخراج صفحة/صورة {len(collected_urls)}...",
                         "image_url": found_src,
                     })
                 else:
@@ -222,51 +371,34 @@ def scrape_post_images(post_url: str, output_dir: str, pdf_name: str, max_photos
             else:
                 stagnant_count += 1
 
-            # Try clicking Next photo button in theatre overlay, thumbnail tray, or keyboard navigation
+            if stagnant_count >= 6:
+                log_json("status", {"message": f"تم الانتهاء من جمع كافة صور المنشور المتاحة ({len(collected_urls)} صورة)."})
+                break
+
+            # Navigate to Next photo
             clicked = False
             next_btn = page.query_selector(
-                'div[aria-label="Next photo"], '
                 'div[aria-label="الصورة التالية"], '
+                'div[aria-label="Next photo"], '
                 'div[aria-label="صورة تالية"], '
-                'div[aria-label*="Next"], '
                 'div[aria-label*="التالية"], '
-                'div[role="button"][aria-label*="التالية"], '
-                'div[role="button"][aria-label*="Next"], '
-                'div[data-visualcompletion="ignore-dynamic-extra"] div[role="button"]'
+                'div[aria-label*="Next"]'
             )
             if next_btn:
                 try:
-                    next_btn.click(timeout=1500)
+                    next_btn.click(timeout=1200)
                     clicked = True
-                    time.sleep(1.2)
+                    time.sleep(1.0)
                 except:
                     pass
 
-            # In Arabic Facebook layouts, ArrowLeft moves to the NEXT photo (RTL)
+            # Fallback keyboard navigation: in Arabic RTL layouts, ArrowLeft goes to next
             if not clicked:
                 try:
                     page.keyboard.press("ArrowLeft")
-                    time.sleep(0.8)
-                    # Also try ArrowRight as fallback
-                    page.keyboard.press("ArrowRight")
-                    time.sleep(0.8)
+                    time.sleep(1.0)
                 except:
                     pass
-
-            # Also check if there are clickable thumbnail gallery items in theater tray
-            if stagnant_count >= 2:
-                try:
-                    tray_thumbs = page.query_selector_all('div[data-pagelet="MediaViewerRoot"] [role="list"] a, div[role="dialog"] a[href*="/photo"], div[role="tablist"] [role="tab"]')
-                    if tray_thumbs and len(tray_thumbs) > len(collected_urls):
-                        target_thumb = tray_thumbs[len(collected_urls)]
-                        target_thumb.click(timeout=1500)
-                        time.sleep(1.2)
-                except:
-                    pass
-
-            if stagnant_count >= 8:
-                log_json("status", {"message": f"تم استخراج جميع صور المنشور بنجاح ({len(collected_urls)} صورة)."})
-                break
 
         browser_context.close()
 
@@ -274,54 +406,87 @@ def scrape_post_images(post_url: str, output_dir: str, pdf_name: str, max_photos
             log_json("error", {"message": "لم يتم العثور على صور في الرابط المحدد. يرجى التحقق من خصوصية المنشور أو الرابط."})
             return
 
-        # Download all photos sequentially
+        # Parallel high-speed download of all photos preserving exact order
         log_json("status", {"message": f"جاري تحميل {len(collected_urls)} صورة بأعلى دقة متوفرة..."})
 
-        downloaded_files: list[str] = []
+        download_tasks = []
         for idx, img_url in enumerate(collected_urls, start=1):
             file_name = f"page_{idx:03d}.jpg"
             file_path = os.path.join(output_dir, file_name)
+            download_tasks.append((idx, img_url, file_path, cookies_dict))
 
-            ok = download_image(img_url, file_path, cookies_dict)
-            if ok:
-                downloaded_files.append(file_path)
-                log_json("download_progress", {
-                    "downloaded": len(downloaded_files),
-                    "total": len(collected_urls),
-                    "file_name": file_name,
-                    "rel_url": f"{output_dir.replace('public/', '/')}/{file_name}".replace("\\", "/"),
-                })
+        downloaded_results = {}
+        with ThreadPoolExecutor(max_workers=6) as executor:
+            futures = [executor.submit(download_single_image, task) for task in download_tasks]
+            for fut in futures:
+                idx, saved_path = fut.result()
+                if saved_path:
+                    downloaded_results[idx] = saved_path
+                    norm_out = output_dir.replace("\\", "/")
+                    file_name = os.path.basename(saved_path)
+                    if "uploads/fb_posts/" in norm_out:
+                        sub_path = norm_out[norm_out.find("uploads/fb_posts/"):]
+                        rel_url = f"/{sub_path}/{file_name}".replace("//", "/")
+                    else:
+                        folder_name = os.path.basename(norm_out)
+                        rel_url = f"/api/admin/fb-download?download=1&dir={folder_name}&file={file_name}"
+
+                    log_json("download_progress", {
+                        "downloaded": len(downloaded_results),
+                        "total": len(collected_urls),
+                        "file_name": file_name,
+                        "rel_url": rel_url,
+                    })
+
+        # Sort downloaded files strictly by page number
+        sorted_indices = sorted(downloaded_results.keys())
+        downloaded_files = [downloaded_results[i] for i in sorted_indices]
 
         if not downloaded_files:
             log_json("error", {"message": "فشل تحميل الصور من خوادم فيس بوك."})
             return
 
         # Compile into PDF
-        pdf_filename = sanitize_filename(pdf_name)
-        if not pdf_filename.endswith(".pdf"):
-            pdf_filename += ".pdf"
+        pdf_title = sanitize_filename(pdf_name)
+        if not pdf_title.endswith(".pdf"):
+            pdf_title += ".pdf"
 
-        pdf_full_path = os.path.join(output_dir, pdf_filename)
+        # If user left title default and we detected a real title, use detected title
+        if ("ملزمة_فيسبوك" in pdf_title or "ملزمة فيسبوك" in pdf_title) and detected_post_title:
+            clean_detected = sanitize_filename(detected_post_title)
+            pdf_title = f"{clean_detected}.pdf"
+
+        pdf_full_path = os.path.join(output_dir, pdf_title)
         log_json("status", {"message": f"جاري دمج الـ {len(downloaded_files)} صورة في ملف PDF فائق الجودة للطباعة..."})
 
         success = compile_images_to_pdf(downloaded_files, pdf_full_path)
 
         if success:
-            web_pdf_url = f"{output_dir.replace('public/', '/')}/{pdf_filename}".replace("\\", "/")
-            if not web_pdf_url.startswith("/"):
-                web_pdf_url = "/" + web_pdf_url
+            norm_out = output_dir.replace("\\", "/")
+            if "uploads/fb_posts/" in norm_out:
+                sub_path = norm_out[norm_out.find("uploads/fb_posts/"):]
+                web_pdf_url = f"/{sub_path}/{pdf_title}".replace("//", "/")
+                rel_images = [
+                    f"/{sub_path}/{os.path.basename(f)}".replace("//", "/")
+                    for f in downloaded_files
+                ]
+            else:
+                folder_name = os.path.basename(norm_out)
+                web_pdf_url = f"/api/admin/fb-download?download=1&dir={folder_name}&file={pdf_title}"
+                rel_images = [
+                    f"/api/admin/fb-download?download=1&dir={folder_name}&file={os.path.basename(f)}"
+                    for f in downloaded_files
+                ]
 
-            rel_images = [
-                f"{output_dir.replace('public/', '/')}/{os.path.basename(f)}".replace("\\", "/")
-                for f in downloaded_files
-            ]
+            final_display_title = (detected_post_title or pdf_title.replace(".pdf", "")).replace("_", " ")
 
             log_json("completed", {
                 "total_images": len(downloaded_files),
                 "pdf_url": web_pdf_url,
-                "pdf_filename": pdf_filename,
+                "pdf_filename": pdf_title,
                 "pdf_path": pdf_full_path,
                 "images": rel_images,
+                "title": final_display_title,
                 "message": f"تم سحب ودمج {len(downloaded_files)} صورة بنجاح في ملف PDF جاهز للطباعة فوراً!",
             })
         else:

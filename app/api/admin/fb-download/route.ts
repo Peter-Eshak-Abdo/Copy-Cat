@@ -10,11 +10,17 @@ import { isAllowedFacebookUrl } from "@/lib/security";
 const LOCAL_POSTS_ROOT = path.join(process.cwd(), "public", "uploads", "fb_posts");
 
 function getPythonExecutable(): string | null {
-  const winVenv = path.join(process.cwd(), ".venv", "Scripts", "python.exe");
-  if (fs.existsSync(winVenv)) return winVenv;
+  const candidates = [
+    path.join(process.cwd(), ".venv", "Scripts", "python.exe"),
+    path.join(process.cwd(), ".venv", "bin", "python"),
+    path.resolve(".venv", "Scripts", "python.exe"),
+    "P:\\Projects\\Copy-Cat\\.venv\\Scripts\\python.exe",
+    "C:\\Python313\\python.exe",
+  ];
 
-  const posixVenv = path.join(process.cwd(), ".venv", "bin", "python");
-  if (fs.existsSync(posixVenv)) return posixVenv;
+  for (const cand of candidates) {
+    if (fs.existsSync(cand)) return cand;
+  }
 
   return null;
 }
@@ -358,8 +364,13 @@ export async function POST(req: NextRequest) {
 
     // Check if Local Python virtual environment is available with playwright
     const pythonExecutable = getPythonExecutable();
-    const scriptPath = path.join(process.cwd(), "scripts", "download_fb_post.py");
-    const hasPythonScript = !!pythonExecutable && fs.existsSync(scriptPath);
+    const scriptCandidates = [
+      path.join(process.cwd(), "scripts", "download_fb_post.py"),
+      path.resolve("scripts", "download_fb_post.py"),
+      "P:\\Projects\\Copy-Cat\\scripts\\download_fb_post.py",
+    ];
+    const scriptPath = scriptCandidates.find((p) => fs.existsSync(p)) || null;
+    const hasPythonScript = !!pythonExecutable && !!scriptPath;
 
     const stream = new ReadableStream({
       async start(controller) {

@@ -162,7 +162,7 @@ export default function FacebookPostToolsPage() {
                 pdfUrl: data.pdf_url,
                 pdfFilename: data.pdf_filename,
                 totalImages: data.total_images,
-                title: docTitle || "ملزمة فيسبوك",
+                title: data.title || docTitle || "ملزمة فيسبوك",
               });
               setLogs((prev) => [...prev, `✅ ${data.message}`]);
               toast.success("تم تجهيز ملف PDF بنجاح!", `تم دمج ${data.total_images} صفحة بالترتيب.`);
@@ -637,7 +637,7 @@ export default function FacebookPostToolsPage() {
       </div>
 
       {/* History of Downloaded Documents */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
+      {/* <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FolderDown className="w-5 h-5 text-blue-400" />
@@ -718,7 +718,7 @@ export default function FacebookPostToolsPage() {
             ))}
           </div>
         )}
-      </div>
+      </div> */}
     </div>
   );
 }
