@@ -11,6 +11,9 @@ import {
   TableCell,
   WidthType,
   BorderStyle,
+  HeightRule,
+  LineRuleType,
+  TableLayoutType,
 } from "docx";
 import fileSaver from "file-saver";
 const saveAs = (fileSaver)?.saveAs || fileSaver;
@@ -47,21 +50,25 @@ export async function generatePassportPhotosDocx(
   const defaultFilename =
     filename || (layoutCount === 9 ? "CopyCat_Photos_9x_A5.docx" : "CopyCat_Photos_4x_A6.docx");
 
-  // A6: 105mm x 148mm (4 photos: 2 columns x 2 rows)
-  // A5: 148mm x 210mm (9 photos: 3 columns x 3 rows)
+  // A6: 105mm x 148mm (4 photos: 2 x 2) | A5: 148mm x 210mm (9 photos: 3 x 3)
   const isA5 = layoutCount === 9;
   const pageWidthMm = isA5 ? 148 : 105;
   const pageHeightMm = isA5 ? 210 : 148;
-  const loopCount = layoutCount;
-  const itemsPerRow = isA5 ? 3 : 2;
+  const cols = isA5 ? 3 : 2;
+  const rows = isA5 ? 3 : 2;
 
-  // 4.0 cm width x 5.2 cm height in points (40mm / 25.4 * 96 = ~151px, 52mm / 25.4 * 96 = ~196px)
-  const imgWidth = 151;
-  const imgHeight = 196;
+  // Exact 40mm x 52mm prints. Gaps match the shop's reference sheet: a narrow column gap and a wider
+  // row gap for scissor cutting, sized so every photo of the grid stays on ONE page.
+  const photoWmm = 40;
+  const photoHmm = 52;
+  const gapXmm = isA5 ? 6 : 5;
+  const gapYmm = isA5 ? 10 : 15;
+  const topMarginMm = 6;
+  const gridWmm = cols * photoWmm + (cols - 1) * gapXmm;
+  const sideMarginMm = (pageWidthMm - gridWmm) / 2;
 
-  // Exact 18mm cutting gap between photos for easy scissor cutting
-  const cuttingMargin18mmTwips = convertMillimetersToTwip(18); // 18mm = 1020 twips
-  const halfCuttingMarginTwips = Math.round(cuttingMargin18mmTwips / 2); // 9mm for cell sides
+  // docx ImageRun sizes are in 96-dpi pixels
+  const mmToPx = (mm: number) => Math.round((mm / 25.4) * 96);
 
   const noBorders = {
     top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
@@ -69,75 +76,90 @@ export async function generatePassportPhotosDocx(
     left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
     right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
   };
+  const zeroMargins = { top: 0, bottom: 0, left: 0, right: 0 };
+  const emptyCell = (widthMm: number) =>
+    new TableCell({
+      borders: noBorders,
+      margins: zeroMargins,
+      width: { size: convertMillimetersToTwip(widthMm), type: WidthType.DXA },
+      children: [new Paragraph({ spacing: { before: 0, after: 0, line: 20, lineRule: LineRuleType.EXACT }, children: [] })],
+    });
+
+  // Column layout: photo | gap | photo [| gap | photo]
+  const columnWidthsMm: number[] = [];
+  for (let c = 0; c < cols; c++) {
+    columnWidthsMm.push(photoWmm);
+    if (c < cols - 1) columnWidthsMm.push(gapXmm);
+  }
 
   const sections = persons.map((person) => {
     const imgBytes = base64ToUint8Array(person.imageDataUrl);
-    const tableRows: TableRow[] = [];
-    let currentRowCells: TableCell[] = [];
+    const showName = !!(person.includeName && person.name && person.name.trim());
 
-    for (let c = 0; c < loopCount; c++) {
-      const cellChildren: Paragraph[] = [
+    const photoCell = () => {
+      const children: Paragraph[] = [
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          spacing: { before: 40, after: 40 },
+          spacing: { before: 0, after: 0 },
           children: [
             new ImageRun({
               data: imgBytes,
-              transformation: {
-                width: imgWidth,
-                height: imgHeight,
-              },
+              transformation: { width: mmToPx(photoWmm), height: mmToPx(photoHmm) },
               type: person.imageDataUrl.includes("image/png") ? "png" : "jpg",
             }),
           ],
         }),
       ];
-
-      // Optional name under photo
-      if (person.includeName && person.name && person.name.trim()) {
-        cellChildren.push(
+      if (showName) {
+        children.push(
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 20, after: 40 },
+            spacing: { before: 20, after: 0 },
             children: [
-              new TextRun({
-                text: person.name.trim(),
-                font: "Arial",
-                size: 24, // 12pt
-                bold: true,
-                rightToLeft: true,
-              }),
+              new TextRun({ text: person.name.trim(), font: "Arial", size: 18, bold: true, rightToLeft: true }),
             ],
           })
         );
       }
+      return new TableCell({
+        borders: noBorders,
+        margins: zeroMargins,
+        width: { size: convertMillimetersToTwip(photoWmm), type: WidthType.DXA },
+        children,
+      });
+    };
 
-      currentRowCells.push(
-        new TableCell({
-          borders: noBorders,
-          margins: {
-            top: 60,
-            bottom: cuttingMargin18mmTwips, // 18mm white gap at the bottom for easy scissor cutting
-            left: halfCuttingMarginTwips,
-            right: halfCuttingMarginTwips,
-          },
-          children: cellChildren,
+    const tableRows: TableRow[] = [];
+    for (let r = 0; r < rows; r++) {
+      const cells: TableCell[] = [];
+      for (let c = 0; c < cols; c++) {
+        cells.push(photoCell());
+        if (c < cols - 1) cells.push(emptyCell(gapXmm));
+      }
+      tableRows.push(
+        new TableRow({
+          cantSplit: true,
+          height: { value: convertMillimetersToTwip(photoHmm), rule: HeightRule.ATLEAST },
+          children: cells,
         })
       );
-
-      if ((c + 1) % itemsPerRow === 0 || c === loopCount - 1) {
+      if (r < rows - 1) {
         tableRows.push(
           new TableRow({
-            children: currentRowCells,
+            cantSplit: true,
+            // A printed name already takes part of the cutting gap
+            height: { value: convertMillimetersToTwip(showName ? gapYmm - 5 : gapYmm), rule: HeightRule.EXACT },
+            children: columnWidthsMm.map((w) => emptyCell(w)),
           })
         );
-        currentRowCells = [];
       }
     }
 
     const table = new Table({
       alignment: AlignmentType.CENTER,
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      layout: TableLayoutType.FIXED,
+      width: { size: convertMillimetersToTwip(gridWmm), type: WidthType.DXA },
+      columnWidths: columnWidthsMm.map((w) => convertMillimetersToTwip(w)),
       borders: noBorders,
       rows: tableRows,
     });
@@ -150,10 +172,12 @@ export async function generatePassportPhotosDocx(
             height: convertMillimetersToTwip(pageHeightMm),
           },
           margin: {
-            top: convertMillimetersToTwip(5),
-            bottom: convertMillimetersToTwip(5),
-            left: convertMillimetersToTwip(5),
-            right: convertMillimetersToTwip(5),
+            top: convertMillimetersToTwip(topMarginMm),
+            bottom: convertMillimetersToTwip(4),
+            left: convertMillimetersToTwip(sideMarginMm),
+            right: convertMillimetersToTwip(sideMarginMm),
+            header: 0,
+            footer: 0,
           },
         },
       },

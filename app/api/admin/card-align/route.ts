@@ -1,141 +1,68 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
-import fs from "fs";
-import path from "path";
+import { geminiVisionJson, getGeminiApiKey } from "@/lib/gemini";
 
-function getApiKey(): string | undefined {
-  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
-  if (process.env.GOOGLE_API_KEY) return process.env.GOOGLE_API_KEY;
-  try {
-    const envPath = path.join(process.cwd(), ".env.local");
-    if (fs.existsSync(envPath)) {
-      const content = fs.readFileSync(envPath, "utf-8");
-      const match = content.match(/GEMINI_API_KEY=([^\r\n]+)/);
-      if (match && match[1].trim()) return match[1].trim();
-    }
-  } catch {}
-  return undefined;
-}
+type Pt = { x: number; y: number };
+
+const CORNER_PROMPT =
+  "Point to the 4 corners of the plastic ID card in this image. If a finger covers a corner, point to where " +
+  "the card corner actually is (extend the straight card edges). The answer should follow the json format: " +
+  '[{"point": [y, x], "label": "top_left"}, ...] with labels top_left, top_right, bottom_right, bottom_left ' +
+  "(as seen in the image) and points normalized to 0-1000.";
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageBase64, mimeType = "image/jpeg" } = await req.json();
+    const { imageBase64 } = await req.json();
 
     if (!imageBase64) {
       return NextResponse.json({ error: "لم يتم تقديم بيانات الصورة." }, { status: 400 });
     }
-
-    const cleanBase64 = imageBase64.replace(/^data:[a-zA-Z0-9/+-]+;base64,/, "");
-
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      return NextResponse.json({
-        success: false,
-        error: "مفتاح GEMINI_API_KEY غير مهيأ في الخادم.",
-        corners: {
-          tl: { x: 0.04, y: 0.06 },
-          tr: { x: 0.96, y: 0.06 },
-          br: { x: 0.96, y: 0.94 },
-          bl: { x: 0.04, y: 0.94 },
-        },
-      });
+    if (!getGeminiApiKey()) {
+      return NextResponse.json({ success: false, error: "مفتاح GEMINI_API_KEY غير مهيأ في الخادم." });
     }
 
-    const ai = new GoogleGenAI({ apiKey });
-
-    const prompt = `
-You are a computer vision specialist in document alignment and identity card detection.
-Detect the 4 physical corners of the rectangular ID card (such as Egyptian National ID, Driver's License, Residence Card) in this image.
-
-CRITICAL INSTRUCTIONS:
-1. Locate the true 4 corners of the rectangular plastic card:
-   - "tl": Top-Left corner { "x": float_0_to_1, "y": float_0_to_1 }
-   - "tr": Top-Right corner { "x": float_0_to_1, "y": float_0_to_1 }
-   - "br": Bottom-Right corner { "x": float_0_to_1, "y": float_0_to_1 }
-   - "bl": Bottom-Left corner { "x": float_0_to_1, "y": float_0_to_1 }
-2. FINGERS & HANDS OCCLUSION HANDLING:
-   If human fingers, thumbs, or hands are holding the card edge, DO NOT include the fingers! Predict and extrapolate where the true straight physical border of the card passes beneath or around the fingers.
-3. Coordinates must be normalized floats between 0.0 and 1.0 (relative to image width and height).
-4. Return ONLY a valid JSON object without any markdown tags or backticks:
-{
-  "corners": {
-    "tl": { "x": 0.05, "y": 0.08 },
-    "tr": { "x": 0.95, "y": 0.08 },
-    "br": { "x": 0.95, "y": 0.92 },
-    "bl": { "x": 0.05, "y": 0.92 }
-  },
-  "card_type": "egyptian_id_front" | "egyptian_id_back" | "id_card",
-  "confidence": 0.95
-}
-`;
-
-    const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
-    let rawText = "";
-
-    for (const model of modelsToTry) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  inlineData: {
-                    mimeType,
-                    data: cleanBase64,
-                  },
-                },
-                { text: prompt },
-              ],
-            },
-          ],
-        });
-        rawText = response.text ? response.text.trim() : "";
-        if (rawText) break;
-      } catch (err) {
-        console.warn(`Card align attempt failed on ${model}:`, err);
+    const answer = await geminiVisionJson(CORNER_PROMPT, imageBase64);
+    const list = Array.isArray(answer) ? answer : [];
+    const byLabel: Record<string, Pt> = {};
+    for (const e of list as Array<{ point?: unknown; label?: unknown }>) {
+      if (
+        Array.isArray(e?.point) &&
+        e.point.length === 2 &&
+        e.point.every((v) => typeof v === "number") &&
+        typeof e.label === "string"
+      ) {
+        const [y, x] = e.point as number[];
+        byLabel[e.label] = { x: Math.max(0, Math.min(1, x / 1000)), y: Math.max(0, Math.min(1, y / 1000)) };
       }
     }
 
-    if (rawText) {
-      const cleanJson = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
-      try {
-        const parsed = JSON.parse(cleanJson);
-        if (parsed.corners && parsed.corners.tl && parsed.corners.tr && parsed.corners.br && parsed.corners.bl) {
-          // Clamp points between 0 and 1
-          const clampPt = (pt: { x: number; y: number }) => ({
-            x: Math.max(0, Math.min(1, Math.round(pt.x * 1000) / 1000)),
-            y: Math.max(0, Math.min(1, Math.round(pt.y * 1000) / 1000)),
-          });
-
-          return NextResponse.json({
-            success: true,
-            corners: {
-              tl: clampPt(parsed.corners.tl),
-              tr: clampPt(parsed.corners.tr),
-              br: clampPt(parsed.corners.br),
-              bl: clampPt(parsed.corners.bl),
-            },
-            card_type: parsed.card_type || "id_card",
-            confidence: parsed.confidence || 0.95,
-          });
-        }
-      } catch (parseErr) {
-        console.warn("Failed to parse Gemini card alignment JSON:", parseErr, rawText);
-      }
+    const { top_left: tl, top_right: tr, bottom_right: br, bottom_left: bl } = byLabel;
+    if (!tl || !tr || !br || !bl) {
+      // No usable answer: the client falls back to OpenCV edge detection
+      return NextResponse.json({ success: false, error: "تعذر تحديد أركان البطاقة." });
     }
 
-    // Fallback default quad
+    // Perspective makes real cards trapezoids, so the points are used as given (no parallelogram "repair")
+    const corners = { tl, tr, br, bl };
+    const clamp = (p: Pt) => ({
+      x: Math.round(Math.max(0, Math.min(1, p.x)) * 1000) / 1000,
+      y: Math.round(Math.max(0, Math.min(1, p.y)) * 1000) / 1000,
+    });
+
+    // Reject degenerate answers (card smaller than 8% of the photo)
+    const area =
+      Math.abs(
+        (corners.tl.x * corners.tr.y - corners.tr.x * corners.tl.y) +
+          (corners.tr.x * corners.br.y - corners.br.x * corners.tr.y) +
+          (corners.br.x * corners.bl.y - corners.bl.x * corners.br.y) +
+          (corners.bl.x * corners.tl.y - corners.tl.x * corners.bl.y)
+      ) / 2;
+    if (area < 0.08) {
+      return NextResponse.json({ success: false, error: "تعذر تحديد أركان البطاقة." });
+    }
+
     return NextResponse.json({
       success: true,
-      corners: {
-        tl: { x: 0.04, y: 0.06 },
-        tr: { x: 0.96, y: 0.06 },
-        br: { x: 0.96, y: 0.94 },
-        bl: { x: 0.04, y: 0.94 },
-      },
-      fallback: true,
+      corners: { tl: clamp(corners.tl), tr: clamp(corners.tr), br: clamp(corners.br), bl: clamp(corners.bl) },
     });
   } catch (error) {
     console.error("Error in card-align route:", error);

@@ -326,9 +326,80 @@ function findFaceSkinCentroid(canvas: HTMLCanvasElement): {
  * Standard: Head occupies 70%-78% of vertical frame height, with 7-8% headroom above hair.
  * Ensures full-body photos are cropped directly to head & shoulders just like official studio photos.
  */
+export type HeadBox = [number, number, number, number];
+
+/**
+ * Studio 4x6 frame around a head box [ymin, xmin, ymax, xmax] (0..1000, top of hair -> chin, ear to ear),
+ * measured on the shop's reference print: hair top ~3% below the frame edge, chin at ~78%, so the head
+ * fills ~75% of the height (and at most ~74% of the width); collar and shoulders below the chin.
+ * Returned in pixels and NOT clamped to the image.
+ */
+export function headFrameRect(box: HeadBox, imgW: number, imgH: number) {
+  const [ymin, xmin, ymax, xmax] = box;
+  const headTop = (ymin / 1000) * imgH;
+  const headH = ((ymax - ymin) / 1000) * imgH;
+  const headW = ((xmax - xmin) / 1000) * imgW;
+  const headCenterX = ((xmin + xmax) / 2000) * imgW;
+  const h = Math.max(headH / 0.75, (headW / 0.74) * (520 / 400));
+  const w = h * (400 / 520);
+  return { x: headCenterX - w / 2, y: headTop - h * 0.03, w, h };
+}
+
+/** Rotates a canvas clockwise by 90 / 180 / 270 degrees */
+export function rotateCanvasClockwise(src: HTMLCanvasElement, degrees: number): HTMLCanvasElement {
+  const quarter = (((Math.round(degrees / 90) % 4) + 4) % 4) as 0 | 1 | 2 | 3;
+  if (quarter === 0) return src;
+  const out = document.createElement("canvas");
+  out.width = quarter % 2 ? src.height : src.width;
+  out.height = quarter % 2 ? src.width : src.height;
+  const ctx = out.getContext("2d");
+  if (!ctx) return src;
+  ctx.translate(out.width / 2, out.height / 2);
+  ctx.rotate((quarter * Math.PI) / 2);
+  ctx.drawImage(src, -src.width / 2, -src.height / 2);
+  return out;
+}
+
+/**
+ * Cuts the head-and-shoulders area (frame + 20% margin) out of the FULL-resolution photo, so a far-away
+ * subject is not reduced to a blurry ~100px head by an upfront downscale. Returns the region (long side
+ * capped at maxSide) and the head box re-expressed in region coordinates.
+ */
+export function extractHeadRegion(
+  full: HTMLCanvasElement,
+  box: HeadBox,
+  maxSide = 1400
+): { canvas: HTMLCanvasElement; box: HeadBox } {
+  const W = full.width;
+  const H = full.height;
+  const f = headFrameRect(box, W, H);
+  const x0 = Math.max(0, Math.floor(f.x - f.w * 0.2));
+  const y0 = Math.max(0, Math.floor(f.y - f.h * 0.2));
+  const x1 = Math.min(W, Math.ceil(f.x + f.w * 1.2));
+  const y1 = Math.min(H, Math.ceil(f.y + f.h * 1.2));
+  const rw = Math.max(1, x1 - x0);
+  const rh = Math.max(1, y1 - y0);
+  const scale = Math.min(1, maxSide / Math.max(rw, rh));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(rw * scale);
+  canvas.height = Math.round(rh * scale);
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(full, x0, y0, rw, rh, 0, 0, canvas.width, canvas.height);
+  }
+
+  const [ymin, xmin, ymax, xmax] = box;
+  const toY = (v: number) => (((v / 1000) * H - y0) / rh) * 1000;
+  const toX = (v: number) => (((v / 1000) * W - x0) / rw) * 1000;
+  return { canvas, box: [toY(ymin), toX(xmin), toY(ymax), toX(xmax)] };
+}
+
 export async function detectBiometricCrop(
   canvas: HTMLCanvasElement,
-  explicitBox?: [number, number, number, number]
+  explicitBox?: [number, number, number, number],
+  allowOverflow = false
 ): Promise<{
   cropX: number;
   cropY: number;
@@ -338,27 +409,26 @@ export async function detectBiometricCrop(
   const cw = canvas.width;
   const ch = canvas.height;
 
-  // 1. If explicit AI face box is provided from Gemini [ymin, xmin, ymax, xmax] (0..1000)
+  // 1. Explicit AI head box from Gemini [ymin, xmin, ymax, xmax] (0..1000): top of hair -> chin, ear to ear
   if (explicitBox && explicitBox.length === 4) {
-    const [ymin, xmin, ymax, xmax] = explicitBox;
-    const faceH = ((ymax - ymin) / 1000) * ch;
-    const faceW = ((xmax - xmin) / 1000) * cw;
-    const faceCenterX = ((xmin + xmax) / 2000) * cw;
-    const faceCenterY = ((ymin + ymax) / 2000) * ch;
+    const frame = headFrameRect(explicitBox, cw, ch);
+    const targetCropH = frame.h;
+    const targetCropW = frame.w;
+    let cropY = frame.y;
+    let cropX = frame.x;
 
-    // Standard 4x6: Face occupies ~60-65% of frame height, cutting right at the collarbones
-    const targetCropH = Math.min(ch, Math.max(faceH * 1.62, faceW * 1.35));
-    const targetCropW = Math.min(cw, targetCropH * (400 / 520));
-
-    // Headroom: top starts 8-10% above the hair
-    const cropY = Math.max(0, Math.min(ch - targetCropH, faceCenterY - targetCropH * 0.38));
-    const cropX = Math.max(0, Math.min(cw - targetCropW, faceCenterX - targetCropW / 2));
+    // A cut-out (transparent background) can extend past the photo edges: the overflow becomes studio white.
+    // An opaque photo must stay inside its own pixels.
+    if (!allowOverflow) {
+      cropY = Math.max(0, Math.min(ch - Math.min(ch, targetCropH), cropY));
+      cropX = Math.max(0, Math.min(cw - Math.min(cw, targetCropW), cropX));
+    }
 
     return {
       cropX: Math.round(cropX),
       cropY: Math.round(cropY),
-      cropW: Math.round(targetCropW),
-      cropH: Math.round(targetCropH),
+      cropW: Math.round(allowOverflow ? targetCropW : Math.min(cw, targetCropW)),
+      cropH: Math.round(allowOverflow ? targetCropH : Math.min(ch, targetCropH)),
     };
   }
 
@@ -484,8 +554,17 @@ export async function enhanceAndFramePassportPhoto(
   if (!srcCtx) return img.src;
   srcCtx.drawImage(img, 0, 0);
 
+  // A background-removed cut-out has transparent corners; its crop may then extend past the photo edges
+  const corners = [
+    [0, 0],
+    [srcCanvas.width - 1, 0],
+    [0, srcCanvas.height - 1],
+    [srcCanvas.width - 1, srcCanvas.height - 1],
+  ];
+  const isCutout = corners.some(([x, y]) => srcCtx.getImageData(x, y, 1, 1).data[3] < 128);
+
   // 1. Biometric head & shoulders detection (handles full-body photos like standing kids)
-  const bioCrop = await detectBiometricCrop(srcCanvas, options.aiBox);
+  const bioCrop = await detectBiometricCrop(srcCanvas, options.aiBox, isCutout);
 
   const croppedCanvas = document.createElement("canvas");
   croppedCanvas.width = bioCrop.cropW;
@@ -505,11 +584,11 @@ export async function enhanceAndFramePassportPhoto(
     );
   }
 
-  // 2. Reconstruct cropped shoulders and head if needed
-  const reconstructedCanvas = reconstructPortraitSubject(
-    croppedCtx ? croppedCanvas : srcCanvas,
-    { autoCompleteCropped }
-  );
+  // 2. Reconstruct cropped shoulders and head if needed. A head-box crop is already framed on purpose
+  // (shoulders deliberately run off both sides), so it must not be padded or given a synthetic hair dome.
+  const reconstructedCanvas = reconstructPortraitSubject(croppedCtx ? croppedCanvas : srcCanvas, {
+    autoCompleteCropped: autoCompleteCropped && !options.aiBox,
+  });
 
   // 3. Apply Face-Safe Chroma-Preserving Super Resolution
   if (superResolution) {
@@ -543,9 +622,10 @@ export async function enhanceAndFramePassportPhoto(
   finalCtx.drawImage(reconstructedCanvas, dx, dy, dw, dh);
 
   // C. 1.5pt crisp solid black border (Requirement #8)
+  // 40mm = 113pt across 400px, so 1.5pt is ~5px
   finalCtx.strokeStyle = "#000000";
-  finalCtx.lineWidth = 3; // 1.5pt crisp border
-  finalCtx.strokeRect(1.5, 1.5, targetW - 3, targetH - 3);
+  finalCtx.lineWidth = 5;
+  finalCtx.strokeRect(2.5, 2.5, targetW - 5, targetH - 5);
 
   return finalCanvas.toDataURL("image/jpeg", 0.96);
 }
@@ -592,8 +672,8 @@ export function renderFramedPassportCanvas(
 
   // 1.5pt crisp solid black border
   ctx.strokeStyle = "#000000";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(1.5, 1.5, targetW - 3, targetH - 3);
+  ctx.lineWidth = 5;
+  ctx.strokeRect(2.5, 2.5, targetW - 5, targetH - 5);
 
   return canvas.toDataURL("image/jpeg", 0.96);
 }

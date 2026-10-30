@@ -3,7 +3,7 @@
 import React, { useState, useRef, useMemo } from "react";
 import { useToast } from "@/components/toast-provider";
 import { readFileAsDataURL } from "@/lib/utils";
-import { generateOcrDocx } from "@/lib/docx/ocr-docx";
+import { generateOcrDocx, PageBorderKind } from "@/lib/docx/ocr-docx";
 import {
   Layers,
   ImagePlus,
@@ -21,6 +21,19 @@ import {
   Download,
 } from "lucide-react";
 
+
+// Strips inline markup for the on-screen preview and lays out " || " trailing labels at the far edge
+function previewLine(text: string): React.ReactNode {
+  const clean = text.replace(/<\/?u>/gi, "").replace(/\*\*/g, "");
+  const parts = clean.split(/\s*\|\|\s*/);
+  if (parts.length < 2) return clean;
+  return (
+    <span className="flex justify-between gap-4">
+      <span>{parts.slice(0, -1).join(" ")}</span>
+      <span className="shrink-0">{parts[parts.length - 1]}</span>
+    </span>
+  );
+}
 
 interface OcrPageItem {
   id: string;
@@ -48,7 +61,9 @@ export default function MultiStageOcrPage() {
   const [selectedFont, setSelectedFont] = useState<string>("Arial");
   const [fontManuallyChanged, setFontManuallyChanged] = useState<boolean>(false);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("auto");
-  const [hasPageBorder, setHasPageBorder] = useState<boolean>(false);
+  // Page frame and body weight are detected from the scan, and can be overridden before export
+  const [borderStyle, setBorderStyle] = useState<PageBorderKind>("none");
+  const [boldBody, setBoldBody] = useState<boolean>(false);
 
   const activePage = pages[activePageIndex] || null;
 
@@ -160,7 +175,7 @@ export default function MultiStageOcrPage() {
       if (line.startsWith("## ")) {
         elements.push(
           <h3 key={`h2-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className="text-base font-bold text-slate-800 mt-3 mb-1.5 text-center">
-            {line.replace(/^##\s+/, "")}
+            {previewLine(line.replace(/^##\s+/, ""))}
           </h3>
         );
         i++;
@@ -171,7 +186,7 @@ export default function MultiStageOcrPage() {
       if (line.startsWith("### ")) {
         elements.push(
           <h4 key={`h3-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className={`text-sm font-bold text-slate-700 mt-2 mb-1 ${lineIsAr ? "text-right" : "text-left"}`}>
-            {line.replace(/^###\s+/, "")}
+            {previewLine(line.replace(/^###\s+/, ""))}
           </h4>
         );
         i++;
@@ -204,7 +219,7 @@ export default function MultiStageOcrPage() {
       // 7. Regular paragraph (Requirement #4: Right align for Arabic, Left align for English/French)
       elements.push(
         <p key={`p-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className={`text-xs sm:text-sm text-slate-800 leading-relaxed my-1.5 whitespace-pre-wrap ${lineIsAr ? "text-right" : "text-left"}`}>
-          {line}
+          {previewLine(line)}
         </p>
       );
       i++;
@@ -369,6 +384,13 @@ export default function MultiStageOcrPage() {
         if (data.detectedLang && selectedLanguage === "auto") {
           setSelectedLanguage(data.detectedLang);
         }
+        if (i === 0) {
+          if (["none", "single", "double", "decorative"].includes(data.detectedBorder)) {
+            setBorderStyle(data.detectedBorder);
+          }
+          // Framed legal forms are printed bold almost without exception
+          setBoldBody(data.detectedWeight === "bold" || data.detectedBorder === "decorative");
+        }
 
         setPages((prev) =>
           prev.map((p, idx) =>
@@ -427,8 +449,9 @@ export default function MultiStageOcrPage() {
         content: refinedText,
         fileName: docTitle.endsWith(".docx") ? docTitle : `${docTitle}.docx`,
         font: selectedFont || "Arial",
-        hasPageBorder: hasPageBorder,
-        language: selectedLanguage as any,
+        borderStyle,
+        boldBody,
+        language: selectedLanguage as "ar" | "en" | "fr" | "auto",
       });
       toast.success("تم تصدير ملف Word", `تم تحميل المستند بنجاح بخط ${selectedFont || "Arial"} والتنسيق المطلوب`);
     } catch {
@@ -697,6 +720,7 @@ export default function MultiStageOcrPage() {
                       className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 shadow-2xs"
                     >
                       <option value="Arial">Arial (الافتراضي العام)</option>
+                      <option value="Simplified Arabic">Simplified Arabic (عقود ومحررات)</option>
                       <option value="Traditional Arabic">Traditional Arabic (عربي رسمي)</option>
                       <option value="Times New Roman">Times New Roman</option>
                       <option value="Calibri">Calibri</option>
@@ -722,16 +746,32 @@ export default function MultiStageOcrPage() {
                   </div>
                 </div>
 
-                {/* Page Border Toggle */}
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={hasPageBorder}
-                    onChange={(e) => setHasPageBorder(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
-                  />
-                  <span>إطار رسمي للصفحة (Page Border)</span>
-                </label>
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Page Border (auto-detected from the scan) */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-700">إطار الصفحة:</span>
+                    <select
+                      value={borderStyle}
+                      onChange={(e) => setBorderStyle(e.target.value as PageBorderKind)}
+                      className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 shadow-2xs"
+                    >
+                      <option value="none">بدون إطار</option>
+                      <option value="single">خط مفرد</option>
+                      <option value="double">خط مزدوج</option>
+                      <option value="decorative">إطار مزخرف (عقود)</option>
+                    </select>
+                  </div>
+
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={boldBody}
+                      onChange={(e) => setBoldBody(e.target.checked)}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                    />
+                    <span>نص عريض (Bold)</span>
+                  </label>
+                </div>
               </div>
 
               {/* Document Title Input */}

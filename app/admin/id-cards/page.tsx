@@ -211,8 +211,21 @@ export default function IdCardsPage() {
       try {
         const originalSrc = await readAndOptimizeImage(file);
 
-        // 1. Auto-detect corners using OpenCV or native Canvas Sobel edge detection
-        const autoQuad = await new Promise<QuadCorners>((resolve) => {
+        // 1. AI corners first: edge detectors latch onto fingers, desk grain and backgrounds, while the
+        // vision model finds the card itself and extends its edges under a thumb.
+        let aiQuad: QuadCorners | null = null;
+        try {
+          const res = await fetch("/api/admin/card-align", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageBase64: originalSrc }),
+          });
+          const data = await res.json();
+          if (data.success && data.corners) aiQuad = data.corners;
+        } catch {}
+
+        // 2. Fallback: OpenCV or native Canvas Sobel edge detection
+        const autoQuad = aiQuad ?? await new Promise<QuadCorners>((resolve) => {
           const img = new Image();
           img.crossOrigin = "anonymous";
           img.src = originalSrc;
@@ -254,7 +267,7 @@ export default function IdCardsPage() {
           };
         });
 
-        // 2. Automatically process with quad perspective warp, CamScanner Retinex whitening & high sharpness
+        // 3. Automatically process with quad perspective warp, CamScanner Retinex whitening & high sharpness
         const initialBrightness = 118;
         const initialContrast = 105;
         const initialSharpness = 45;

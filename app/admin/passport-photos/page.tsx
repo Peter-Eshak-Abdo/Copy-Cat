@@ -19,7 +19,57 @@ import {
 import { generatePassportPhotosDocx } from "@/lib/docx/passport-docx";
 import { useToast } from "@/components/toast-provider";
 import { getFriendlyErrorMessage, readFileAsDataURL } from "@/lib/utils";
-import { enhanceAndFramePassportPhoto } from "@/lib/portrait-enhancer";
+import {
+  enhanceAndFramePassportPhoto,
+  extractHeadRegion,
+  rotateCanvasClockwise,
+  HeadBox,
+} from "@/lib/portrait-enhancer";
+
+/** Decodes a photo (EXIF orientation applied by the browser) onto a canvas, long side capped at maxSide */
+async function loadImageToCanvas(file: Blob, maxSide: number): Promise<HTMLCanvasElement> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = reject;
+      el.src = url;
+    });
+    const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function downscaleCanvas(src: HTMLCanvasElement, maxSide: number): HTMLCanvasElement {
+  const scale = Math.min(1, maxSide / Math.max(src.width, src.height));
+  if (scale === 1) return src;
+  const out = document.createElement("canvas");
+  out.width = Math.round(src.width * scale);
+  out.height = Math.round(src.height * scale);
+  const ctx = out.getContext("2d");
+  if (ctx) {
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(src, 0, 0, out.width, out.height);
+  }
+  return out;
+}
+
+function canvasToPreviewDataUrl(src: HTMLCanvasElement, maxSide: number): string {
+  return downscaleCanvas(src, maxSide).toDataURL("image/jpeg", 0.9);
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/jpeg", 0.95)
+  );
+}
 
 export interface PhotoPerson {
   id: string;
@@ -217,47 +267,10 @@ export default function PassportPhotosPage() {
 
     // 4. Solid 1.5pt crisp black border around perimeter
     ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(1.5, 1.5, targetW - 3, targetH - 3);
+    ctx.lineWidth = 5;
+    ctx.strokeRect(2.5, 2.5, targetW - 5, targetH - 5);
 
     return canvas.toDataURL("image/jpeg", 0.96);
-  };
-
-  const downscaleImageIfNeeded = async (file: File, maxDim = 1200): Promise<Blob> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        let { width, height } = img;
-        if (width <= maxDim && height <= maxDim) {
-          resolve(file);
-          return;
-        }
-        if (width > height) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          resolve(file);
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => resolve(blob || file), "image/jpeg", 0.92);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        resolve(file);
-      };
-      img.src = url;
-    });
   };
 
   const processFiles = async (fileList: File[]) => {
@@ -267,81 +280,101 @@ export default function PassportPhotosPage() {
     setStatusMessage("جاري عزل وتبييض الخلفية وتأطير الصورة 4×6...");
 
     try {
-      // Client-side WebAssembly background removal
-      let removeBgFn: ((b: Blob) => Promise<Blob>) | null = null;
+      // Client-side WebAssembly background removal (ISNet). fp16 halves the first-run model download.
+      type ImglyModule = typeof import("@imgly/background-removal");
+      let imgly: ImglyModule | null = null;
       try {
-        const mod = await import("@imgly/background-removal");
-        removeBgFn = mod.removeBackground;
+        imgly = await import("@imgly/background-removal");
       } catch {
         // Fallback
       }
+      const imglyConfig = { model: "isnet_fp16" as const, output: { format: "image/png" as const } };
 
       for (let i = 0; i < fileList.length; i++) {
         const file = fileList[i];
         setStatusMessage(`جاري تجهيز صورة (${i + 1} من ${fileList.length})...`);
 
-        // Downscale large phone camera photos before AI removal to speed up processing 4x
-        const preprocessedBlob = await downscaleImageIfNeeded(file, 1200);
+        // 1. Find the head (and the photo's orientation) on a light preview of the full photo
+        let fullCanvas = await loadImageToCanvas(file, 4000);
+        const detectHead = async (canvas: HTMLCanvasElement) => {
+          try {
+            const res = await fetch("/api/enhance-portrait", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "detect_face", imageBase64: canvasToPreviewDataUrl(canvas, 1200) }),
+            });
+            if (!res.ok) return null;
+            const d = await res.json();
+            return {
+              box: Array.isArray(d.box_2d) && d.box_2d.length === 4 ? (d.box_2d as HeadBox) : undefined,
+              rotation: typeof d.rotation === "number" ? d.rotation : 0,
+            };
+          } catch {
+            return null;
+          }
+        };
+        setStatusMessage(`جاري تحديد الوجه واتجاه الصورة (${i + 1} من ${fileList.length})...`);
+        let detection = await detectHead(fullCanvas);
+        if (detection?.rotation) {
+          // Sideways / upside-down phone shots are stood upright, then the head is located again
+          fullCanvas = rotateCanvasClockwise(fullCanvas, detection.rotation);
+          detection = await detectHead(fullCanvas);
+        }
+
+        // 2. Work on the head-and-shoulders region cut from the full-resolution photo
+        let aiFaceBox: HeadBox | undefined = undefined;
+        let workCanvas: HTMLCanvasElement;
+        if (detection?.box) {
+          const region = extractHeadRegion(fullCanvas, detection.box);
+          workCanvas = region.canvas;
+          aiFaceBox = region.box;
+        } else {
+          workCanvas = downscaleCanvas(fullCanvas, 1200);
+        }
+        const preprocessedBlob = await canvasToBlob(workCanvas);
+        const preprocessedDataUrl = await readFileAsDataURL(new File([preprocessedBlob], file.name));
         let processedBlob: Blob = preprocessedBlob;
         let cutoutDataUrl: string | undefined = undefined;
 
-        if (removeBgFn) {
+        // 1. Server cut-out (remove.bg / Photoroom when a key is configured): studio-grade hair edges
+        setStatusMessage(`جاري عزل الخلفية (${i + 1} من ${fileList.length})...`);
+        try {
+          const serverBgRes = await fetch("/api/admin/remove-bg", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageBase64: preprocessedDataUrl }),
+          });
+          if (serverBgRes.ok) {
+            const serverBgData = await serverBgRes.json();
+            if (typeof serverBgData.cutoutBase64 === "string" && serverBgData.cutoutBase64.length > 0) {
+              cutoutDataUrl = serverBgData.cutoutBase64 as string;
+              processedBlob = await (await fetch(cutoutDataUrl)).blob();
+            }
+          }
+        } catch {}
+
+        // 2. In-browser model. The first run downloads the model (~40MB), so no short timeout here:
+        // a timeout used to silently return the photo with its original background.
+        if (!cutoutDataUrl && imgly) {
           try {
-            const bgPromise = removeBgFn(preprocessedBlob);
+            setStatusMessage(`جاري عزل الخلفية بالذكاء الاصطناعي داخل المتصفح (${i + 1} من ${fileList.length})...`);
+            const bgPromise = imgly.removeBackground(preprocessedBlob, imglyConfig);
             const timeoutPromise = new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error("Timeout")), 30000)
+              setTimeout(() => reject(new Error("Timeout")), 180000)
             );
             processedBlob = await Promise.race([bgPromise, timeoutPromise]);
             cutoutDataUrl = await readFileAsDataURL(new File([processedBlob], file.name));
-          } catch {
+          } catch (bgErr) {
+            console.warn("Background removal failed:", bgErr);
             processedBlob = preprocessedBlob;
           }
         }
 
-        // Secondary fallback: Try server endpoint /api/admin/remove-bg if client timed out or failed
         if (!cutoutDataUrl) {
-          try {
-            const serverBgRes = await fetch("/api/admin/remove-bg", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                imageBase64: await readFileAsDataURL(new File([preprocessedBlob], file.name)),
-              }),
-            });
-            if (serverBgRes.ok) {
-              const serverBgData = await serverBgRes.json();
-              if (typeof serverBgData.cutoutBase64 === "string" && serverBgData.cutoutBase64.length > 0) {
-                const base64Url: string = serverBgData.cutoutBase64;
-                cutoutDataUrl = base64Url;
-                const resp = await fetch(base64Url);
-                processedBlob = await resp.blob();
-              }
-            }
-          } catch {}
+          toast.warning("تعذر عزل الخلفية", `تم تأطير ${file.name} بخلفيته الأصلية.`);
         }
 
         const originalDataUrl = await readFileAsDataURL(file);
-
-        // Auto-detect biometric face bounds via AI endpoint if available
-        let aiFaceBox: [number, number, number, number] | undefined = undefined;
-        try {
-          const faceRes = await fetch("/api/enhance-portrait", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "detect_face",
-              imageBase64: originalDataUrl,
-            }),
-          });
-          if (faceRes.ok) {
-            const faceData = await faceRes.json();
-            if (Array.isArray(faceData.box_2d) && faceData.box_2d.length === 4) {
-              aiFaceBox = faceData.box_2d;
-            }
-          }
-        } catch {
-          // Fallback to internal biometric detection
-        }
 
         // Frame to 40mm x 52mm studio standard with white background and pure client canvas
         const framedDataUrl = await enhanceAndFramePassportPhoto(processedBlob, {

@@ -118,7 +118,8 @@ def extract_post_identifiers(url: str) -> dict:
 
     post_m = (
         re.search(r'/(?:permalink|posts)/([a-zA-Z0-9]+)', url) or
-        re.search(r'/groups/[^/]+/posts/([a-zA-Z0-9]+)', url)
+        re.search(r'/groups/[^/]+/posts/([a-zA-Z0-9]+)', url) or
+        re.search(r'/share/p/([a-zA-Z0-9]+)', url)
     )
     if post_m:
         ids["post_id"] = post_m.group(1)

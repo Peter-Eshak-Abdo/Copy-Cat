@@ -10,12 +10,22 @@ import { isAllowedFacebookUrl } from "@/lib/security";
 const LOCAL_POSTS_ROOT = path.join(process.cwd(), "public", "uploads", "fb_posts");
 
 function getPythonExecutable(): string | null {
+  // Never attempt local Python child_process in serverless environments (Vercel / AWS Lambda)
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return null;
+  }
+
+  // 1. Check custom path provided via environment variable
+  if (process.env.PYTHON_PATH && fs.existsSync(process.env.PYTHON_PATH)) {
+    return process.env.PYTHON_PATH;
+  }
+
+  // 2. Check local project virtual environments dynamically
   const candidates = [
     path.join(process.cwd(), ".venv", "Scripts", "python.exe"),
     path.join(process.cwd(), ".venv", "bin", "python"),
     path.resolve(".venv", "Scripts", "python.exe"),
-    "P:\\Projects\\Copy-Cat\\.venv\\Scripts\\python.exe",
-    "C:\\Python313\\python.exe",
+    path.resolve(".venv", "bin", "python"),
   ];
 
   for (const cand of candidates) {
@@ -227,6 +237,7 @@ function extractFacebookImageUrls(html: string): string[] {
       u.includes("s384x384") ||
       u.includes("p384x384") ||
       u.includes("t1.30497") ||
+      u.includes("t39.30808-1") ||
       u.includes("cp0") ||
       u.includes(".kf")
     );
@@ -367,7 +378,6 @@ export async function POST(req: NextRequest) {
     const scriptCandidates = [
       path.join(process.cwd(), "scripts", "download_fb_post.py"),
       path.resolve("scripts", "download_fb_post.py"),
-      "P:\\Projects\\Copy-Cat\\scripts\\download_fb_post.py",
     ];
     const scriptPath = scriptCandidates.find((p) => fs.existsSync(p)) || null;
     const hasPythonScript = !!pythonExecutable && !!scriptPath;
@@ -464,40 +474,38 @@ export async function POST(req: NextRequest) {
         });
 
         try {
-          // Normalize base URLs
+          // Normalize base URLs and follow redirects to canonical post URL (handles /share/p/... shortlinks)
           const cleanBaseUrl = url!.replace(/(\?|&)fbclid=[^&]*/, "");
-          const mobileUrl = cleanBaseUrl
-            .replace("www.facebook.com", "m.facebook.com")
-            .replace("web.facebook.com", "m.facebook.com");
+          let canonicalUrl = cleanBaseUrl;
 
-          // Multiple realistic client profiles without bot-triggering Sec-Ch headers
+          try {
+            const headResp = await fetch(cleanBaseUrl, {
+              method: "HEAD",
+              redirect: "follow",
+              headers: {
+                "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+                Accept: "*/*",
+              },
+            });
+            if (headResp.ok && headResp.url) {
+              canonicalUrl = headResp.url;
+            }
+          } catch (headErr) {
+            console.warn("Canonical resolution fallback:", headErr);
+          }
+
+          // Generate Facebook official Embed Plugin endpoint (renders multi-photo cards publicly without login)
+          const embedUrl = `https://www.facebook.com/plugins/post.php?href=${encodeURIComponent(canonicalUrl)}&show_text=true&width=750`;
+
+          // Multiple realistic client profiles and official embed cards
           const fetchAttempts: {
             name: string;
             url: string;
             headers: Record<string, string>;
           }[] = [
             {
-              name: "النسخة الخفيفة (Facebook Mobile Web)",
-              url: mobileUrl,
-              headers: {
-                "User-Agent":
-                  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
-                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
-              },
-            },
-            {
-              name: "محرك Meta لاستعراض الروابط (Facebook Externalhit)",
-              url: cleanBaseUrl,
-              headers: {
-                "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
-                Accept: "*/*",
-                "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
-              },
-            },
-            {
-              name: "نسخة سطح المكتب النقية (Clean Desktop)",
-              url: cleanBaseUrl,
+              name: "محرك بطاقات فيسبوك المضمنة (Facebook Embed Plugin)",
+              url: embedUrl,
               headers: {
                 "User-Agent":
                   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -506,8 +514,27 @@ export async function POST(req: NextRequest) {
               },
             },
             {
+              name: "نسخة سطح المكتب النقية (Clean Desktop)",
+              url: canonicalUrl,
+              headers: {
+                "User-Agent":
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
+              },
+            },
+            {
+              name: "محرك Meta لاستعراض الروابط (Facebook Externalhit)",
+              url: canonicalUrl,
+              headers: {
+                "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+                Accept: "*/*",
+                "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
+              },
+            },
+            {
               name: "محرك الفهرسة ومحركات البحث (Search Indexer)",
-              url: cleanBaseUrl,
+              url: canonicalUrl,
               headers: {
                 "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
                 Accept: "*/*",
@@ -516,7 +543,22 @@ export async function POST(req: NextRequest) {
             },
           ];
 
-          let imageUrls: string[] = [];
+          // If original cleanBaseUrl differs from canonicalUrl, add cleanBaseUrl as secondary desktop attempt
+          if (cleanBaseUrl !== canonicalUrl) {
+            fetchAttempts.push({
+              name: "الرابط المباشر (Direct Shortlink Desktop)",
+              url: cleanBaseUrl,
+              headers: {
+                "User-Agent":
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
+              },
+            });
+          }
+
+          const seenBases = new Set<string>();
+          const imageUrls: string[] = [];
 
           for (const attempt of fetchAttempts) {
             try {
@@ -526,13 +568,27 @@ export async function POST(req: NextRequest) {
               });
 
               if (resp.ok) {
+                // If Facebook redirected to login screen, skip this attempt
+                if (resp.url.includes("/login/") || resp.url.includes("login.php")) {
+                  continue;
+                }
+
                 const html = await resp.text();
                 const extracted = extractFacebookImageUrls(html);
-                if (extracted.length > imageUrls.length) {
-                  imageUrls = extracted;
-                  if (imageUrls.length >= maxPhotos) {
-                    break;
+
+                for (const imgUrl of extracted) {
+                  const baseKey = imgUrl.split("?")[0];
+                  if (!seenBases.has(baseKey)) {
+                    seenBases.add(baseKey);
+                    imageUrls.push(imgUrl);
+                    if (imageUrls.length >= maxPhotos) {
+                      break;
+                    }
                   }
+                }
+
+                if (imageUrls.length >= maxPhotos) {
+                  break;
                 }
               }
             } catch (attemptErr) {
