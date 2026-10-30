@@ -10,7 +10,6 @@ import {
   TableRow,
   TableCell,
   WidthType,
-  ShadingType,
   VerticalAlign,
   UnderlineType,
   Tab,
@@ -20,8 +19,13 @@ import {
   PageBorderOffsetFrom,
   LineRuleType,
   LeaderType,
+  Math as OMath,
+  ImageRun,
+  ParagraphChild,
 } from "docx";
 import { saveAs } from "file-saver";
+import JSZip from "jszip";
+import { latexToPieces, latexToPlain, patchEquationRunFonts, splitMath } from "./latex-math";
 
 export type PageBorderKind = "none" | "single" | "double" | "decorative";
 
@@ -37,7 +41,21 @@ export interface OcrDocxOptions {
   /** The original body text is printed bold (common in Egyptian contracts) */
   boldBody?: boolean;
   language?: "ar" | "en" | "fr" | "auto";
+  /** Figures cropped from the scan, keyed by the number in their "[شكل n]" / "[FIGURE n]" line */
+  figures?: Record<number, OcrFigure>;
 }
+
+export interface OcrFigure {
+  /** PNG or JPEG data URL of the cropped figure */
+  dataUrl: string;
+  widthPx: number;
+  heightPx: number;
+  /** Figure width as a fraction of the scanned page width (keeps its printed size) */
+  widthFrac: number;
+}
+
+/** "[شكل 3]" / "[FIGURE 3]" placeholder line for a cropped figure */
+export const FIGURE_LINE = /^\[(?:شكل|FIGURE|Figure)\s*(\d+)\]$/;
 
 export const FALLBACK_FONT = "Arial";
 
@@ -79,6 +97,8 @@ function sanitizeText(raw: string): { text: string; isCentered: boolean } {
     .replace(/&quot;/gi, '"')
     .replace(/\\([*_#[\]()-])/g, "$1") // Unescape markdown backslashes like \* or \_
     .replace(/<\/?(span|div|p)[^>]*>/gi, "")
+    // Heading size ratio ("{1.8}") is layout data, never printed
+    .replace(/\s*\{\s*\d+(?:\.\d+)?\s*\}/g, "")
     .replace(/###\s*/g, "")
     .replace(/##\s*/g, "")
     .replace(/#\s*/g, "")
@@ -173,24 +193,37 @@ function parseInlineRuns(
   baseColor: string,
   isParentBold: boolean = false,
   fontName: string = FALLBACK_FONT
-): TextRun[] {
+): ParagraphChild[] {
   const tokens = tokenizeFormattedText(text, isParentBold);
-  const runs: TextRun[] = [];
+  const runs: ParagraphChild[] = [];
+  // In an Arabic line, operator / digit runs between equations ("+", " = ") must be right-to-left too:
+  // left-to-right they merged with the equations into one LTR block and printed "١/٤ = ٣/٤ +"
+  const lineIsRtl = isArabic(text);
+
+  const textRun = (t: string, token: InlineToken) =>
+    new TextRun({
+      text: t,
+      bold: token.bold,
+      italics: token.italic,
+      underline: token.underline ? { type: UnderlineType.SINGLE } : undefined,
+      size: baseSize,
+      font: fontName,
+      rightToLeft: isArabic(t) || (lineIsRtl && !/[A-Za-z]/.test(t)),
+      color: baseColor,
+    });
 
   for (const token of tokens) {
-    const chunkIsAr = isArabic(token.text);
-    runs.push(
-      new TextRun({
-        text: token.text,
-        bold: token.bold,
-        italics: token.italic,
-        underline: token.underline ? { type: UnderlineType.SINGLE } : undefined,
-        size: baseSize,
-        font: fontName,
-        rightToLeft: chunkIsAr,
-        color: baseColor,
-      })
-    );
+    // $...$ math: fractions / powers / roots become Word equations, the rest stays text in reading order
+    for (const part of splitMath(token.text)) {
+      if (!part.math) {
+        if (part.s) runs.push(textRun(part.s, token));
+        continue;
+      }
+      for (const piece of latexToPieces(part.s)) {
+        if (piece.kind === "text") runs.push(textRun(piece.text, token));
+        else runs.push(new OMath({ children: piece.components }));
+      }
+    }
   }
 
   if (runs.length === 0) {
@@ -217,7 +250,8 @@ let measureCtx: CanvasRenderingContext2D | null | undefined;
  * Width of a text run in mm. Uses canvas text shaping (the shop PCs have the Office Arabic fonts
  * installed), falling back to average glyph widths when no canvas is available.
  */
-function measureTextMm(text: string, sizeHalfPts: number, bold: boolean, fontName: string): number {
+function measureTextMm(rawText: string, sizeHalfPts: number, bold: boolean, fontName: string): number {
+  const text = splitMath(rawText).map((p) => (p.math ? latexToPlain(p.s) : p.s)).join("");
   const sizePx = (sizeHalfPts / 2) * (96 / 72);
   if (measureCtx === undefined) {
     measureCtx = typeof document !== "undefined" ? document.createElement("canvas").getContext("2d") : null;
@@ -257,7 +291,8 @@ function fitDotLeaders(text: string, widthMm: number, sizeHalfPts: number, bold:
 }
 
 /** Line starts that always open a new paragraph on legal forms (ordinals, numbered parties, ID lines) */
-const NEW_ITEM_START = /^(أولاً|ثانياً|ثالثاً|رابعاً|خامساً|ويحمل|وتحمل|[0-9٠-٩]+\s*[-.)/]|[-*•]\s)/;
+const NEW_ITEM_START =
+  /^(\*\*)?(أولاً|ثانياً|ثالثاً|رابعاً|خامساً|ويحمل|وتحمل|السؤال|س\s*[0-9٠-٩]+|\(?[0-9٠-٩]+\s*[-.)/]|\([أ-ي]{1,2}\)|[أ-ي]\s*[-)]|[A-Za-z][.)]\s|[-*•]\s|\[)/;
 
 /**
  * Re-joins visual lines that the OCR emitted one per printed line back into paragraphs, so Word can
@@ -269,6 +304,8 @@ function mergeWrappedLines(lines: string[]): string[] {
   const isStructural = (l: string) =>
     !l ||
     l.startsWith("#") ||
+    /<center>/i.test(l) ||
+    /^\[/.test(l) ||
     isTableRow(l) ||
     l.includes("||") ||
     /\.{4,}|…/.test(l) ||
@@ -285,6 +322,24 @@ function mergeWrappedLines(lines: string[]): string[] {
     }
   }
   return out;
+}
+
+/**
+ * "$\frac{١}{٤} + \frac{٣}{٤} = .........$": a dotted answer blank written inside the maths is moved out
+ * of it, so it is sized and placed like any other blank (inside, it was stretched mid-equation).
+ */
+function liftBlanksOutOfMath(line: string): string {
+  return splitMath(line)
+    .map((part) => {
+      if (!part.math) return part.s;
+      return part.s
+        .split(/(\.{3,}|…+)/)
+        .map((seg, k) => (k % 2 === 1 ? ` ${seg} ` : seg.trim() ? `$${seg.trim()}$` : ""))
+        .join("")
+        .replace(/\s{2,}/g, " ");
+    })
+    .join("")
+    .replace(/\s+$/, "");
 }
 
 /** Splits "lead || trailing label" into its two parts; trail is "" when there is no marker */
@@ -485,28 +540,20 @@ function buildDocxTable(
     if (rawCells.length === 0) continue;
 
     const cellWidthPercent = Math.max(10, Math.floor(100 / rawCells.length));
+    // Printed tables (exam grids, schedules, forms) use thin black rules; bold comes only from ** in a cell
+    const rule = { style: BorderStyle.SINGLE, size: 6, color: "000000" };
 
     const cells: TableCell[] = rawCells.map((cellContent) => {
-      const isHeader = isFirstRow;
       const cellIsAr = isArabic(cellContent);
+      // Short entries (numbers, single words) sit centred in their cell as on printed grids
+      const plainLen = cellContent.replace(/<[^>]+>|\*\*|\$/g, "").trim().length;
 
       return new TableCell({
         width: {
           size: cellWidthPercent,
           type: WidthType.PERCENTAGE,
         },
-        shading: isHeader
-          ? {
-              fill: "F8FAFC",
-              type: ShadingType.CLEAR,
-            }
-          : undefined,
-        borders: {
-          top: { style: BorderStyle.SINGLE, size: 4, color: "CBD5E1" },
-          bottom: { style: BorderStyle.SINGLE, size: 4, color: "CBD5E1" },
-          left: { style: BorderStyle.SINGLE, size: 4, color: "CBD5E1" },
-          right: { style: BorderStyle.SINGLE, size: 4, color: "CBD5E1" },
-        },
+        borders: { top: rule, bottom: rule, left: rule, right: rule },
         margins: {
           top: convertMillimetersToTwip(2),
           bottom: convertMillimetersToTwip(2),
@@ -516,19 +563,9 @@ function buildDocxTable(
         children: [
           new Paragraph({
             bidirectional: cellIsAr,
-            alignment: isHeader
-              ? AlignmentType.CENTER
-              : cellIsAr
-              ? AlignmentType.RIGHT
-              : AlignmentType.LEFT,
+            alignment: plainLen <= 25 ? AlignmentType.CENTER : cellIsAr ? AlignmentType.RIGHT : AlignmentType.LEFT,
             spacing: { before: 40, after: 40, line: 240 },
-            children: parseInlineRuns(
-              cellContent,
-              isHeader ? 24 : 22,
-              isHeader ? "0F172A" : "334155",
-              isHeader,
-              fontName
-            ),
+            children: parseInlineRuns(cellContent, SIZE_BODY - 2, "000000", false, fontName),
           }),
         ],
       });
@@ -540,10 +577,7 @@ function buildDocxTable(
         children: cells,
       })
     );
-
-    if (isFirstRow) {
-      isFirstRow = false;
-    }
+    isFirstRow = false;
   }
 
   if (rows.length === 0) return null;
@@ -609,9 +643,10 @@ export function buildOcrDocument({
   borderStyle,
   boldBody = false,
   language = "auto",
+  figures,
 }: OcrDocxOptions): Document {
   const fullText = rawText || content || "";
-  const lines = mergeWrappedLines(fullText.split(/\r?\n/).map((l) => l.trimEnd()));
+  const lines = mergeWrappedLines(fullText.split(/\r?\n/).map((l) => liftBlanksOutOfMath(l.trimEnd())));
   const docIsArabic = language === "ar" ? true : language === "en" || language === "fr" ? false : isArabic(fullText);
 
   const activeFont = font && font.trim() && font.trim().toLowerCase() !== "auto" ? font.trim() : FALLBACK_FONT;
@@ -657,6 +692,28 @@ export function buildOcrDocument({
     text: string,
     opts: { bold: boolean; isAr: boolean; centered?: boolean; before?: number; after?: number }
   ) => {
+    // Three or more " || " parts are side-by-side items (multiple-choice options, columns): equal tab columns
+    const columns = text.split(TRAILING_SPLIT).filter((p) => p.trim().length > 0);
+    const hasMath = /\$[^$]+\$/.test(text);
+    // An exact line height clips stacked fractions and powers, so maths lines may grow
+    const lineSpacing = { line: LINE_BODY, lineRule: hasMath ? LineRuleType.AT_LEAST : LINE_RULE };
+    if (columns.length >= 3) {
+      const runs: ParagraphChild[] = [];
+      columns.forEach((col, k) => {
+        if (k > 0) runs.push(new TextRun({ children: [new Tab()], size: SIZE_BODY, font: activeFont, bold: opts.bold }));
+        runs.push(...parseInlineRuns(col.trim(), SIZE_BODY, "000000", opts.bold, activeFont));
+      });
+      return new Paragraph({
+        bidirectional: opts.isAr,
+        alignment: opts.isAr ? AlignmentType.RIGHT : AlignmentType.LEFT,
+        tabStops: columns.slice(1).map((_, k) => ({
+          type: TabStopType.START,
+          position: Math.round(((k + 1) * textWidthTwip) / columns.length),
+        })),
+        spacing: { before: opts.before ?? 0, after: opts.after ?? 0, ...lineSpacing },
+        children: runs,
+      });
+    }
     const [rawLead, trail] = splitTrailing(text);
     // A blank that closes the line (or runs up to the trailing label) becomes a tab with a dot leader:
     // Word then draws the dots exactly up to the far margin / label whatever the font metrics are.
@@ -678,7 +735,9 @@ export function buildOcrDocument({
     const plain = `${lead} ${trail}`.replace(/<[^>]+>|\*\*/g, "");
     const widthMm = measureTextMm(plain, SIZE_BODY, opts.bold, activeFont);
     // Arabic prose is justified edge to edge in the original (Word stretches it with kashida).
-    // A paragraph that fits on one line is "distributed" when it is nearly full, so it also spans the width.
+    // On legal forms (framed / bold body) every line spans the width, so a nearly full one-line paragraph is
+    // "distributed" too; elsewhere that spread single lines (exam questions) into widely spaced words.
+    const legalForm = boldBody || frame === "decorative";
     const alignment = opts.centered
       ? AlignmentType.CENTER
       : !opts.isAr
@@ -687,7 +746,7 @@ export function buildOcrDocument({
       ? AlignmentType.RIGHT
       : widthMm > textWidthMm
       ? AlignmentType.JUSTIFIED
-      : widthMm > textWidthMm * 0.8
+      : legalForm && widthMm > textWidthMm * 0.8
       ? AlignmentType.DISTRIBUTE
       : AlignmentType.RIGHT;
     return new Paragraph({
@@ -696,8 +755,35 @@ export function buildOcrDocument({
       tabStops: hasTab
         ? [{ type: TabStopType.END, position: textWidthTwip, leader: leader ? LeaderType.DOT : undefined }]
         : undefined,
-      spacing: { before: opts.before ?? 0, after: opts.after ?? 0, line: LINE_BODY, lineRule: LINE_RULE },
+      spacing: { before: opts.before ?? 0, after: opts.after ?? 0, ...lineSpacing },
       children: runs,
+    });
+  };
+
+  // Heading size from the "{1.4}" ratio the OCR appends (text height relative to body text)
+  const headingSize = (line: string, fallback: number) => {
+    const m = line.match(/\{\s*(\d+(?:\.\d+)?)\s*\}\s*(<\/center>)?\s*$/);
+    if (!m) return fallback;
+    const ratio = Math.min(2.4, Math.max(1, parseFloat(m[1])));
+    return Math.round((SIZE_BODY * ratio) / 2) * 2;
+  };
+  const stripSizeTag = (line: string) => line.replace(/\s*\{\s*\d+(?:\.\d+)?\s*\}/, "");
+
+  const figureParagraph = (fig: OcrFigure) => {
+    // Printed size: the figure keeps its share of the page width, never wider than the text block
+    const widthMm = Math.min(textWidthMm, Math.max(25, fig.widthFrac * PAGE_W_MM));
+    const heightMm = (widthMm * fig.heightPx) / Math.max(1, fig.widthPx);
+    const mmToPx = (mm: number) => Math.round((mm / 25.4) * 96);
+    return new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 60, after: 60 },
+      children: [
+        new ImageRun({
+          type: fig.dataUrl.startsWith("data:image/png") ? "png" : "jpg",
+          data: dataUrlToBytes(fig.dataUrl),
+          transformation: { width: mmToPx(widthMm), height: mmToPx(heightMm) },
+        }),
+      ],
     });
   };
 
@@ -742,7 +828,17 @@ export function buildOcrDocument({
       continue;
     }
 
-    const { text: cleanLine, isCentered: tagCentered } = sanitizeText(trimmed);
+    // Figure cropped from the scan; an unresolved "[FIGURE: y, x, y, x]" box is dropped, never printed
+    const bare = trimmed.replace(/<\/?center>/gi, "").trim();
+    const figMatch = bare.match(FIGURE_LINE);
+    if (figMatch || /^\[FIGURE:[^\]]*\]$/i.test(bare)) {
+      const fig = figMatch ? figures?.[Number(figMatch[1])] : undefined;
+      if (fig) docChildren.push(figureParagraph(fig));
+      i++;
+      continue;
+    }
+
+    const { text: cleanLine, isCentered: tagCentered } = sanitizeText(stripSizeTag(trimmed));
     if (!cleanLine) {
       i++;
       continue;
@@ -751,13 +847,13 @@ export function buildOcrDocument({
     const lineIsAr = isArabic(cleanLine) || (docIsArabic && !/^[A-Za-z0-9\s.,'?!:;()\-*]+$/.test(cleanLine));
 
     // 2. Heading Level 1 (# Heading / Basmala)
-    if (/^#\s/.test(trimmed) || cleanLine.startsWith("بسم الله")) {
+    if (/^#\s/.test(bare) || cleanLine.startsWith("بسم الله")) {
       docChildren.push(
         new Paragraph({
           bidirectional: isArabic(cleanLine),
           alignment: AlignmentType.CENTER,
           spacing: { before: 0, after: 60, line: 240 },
-          children: parseInlineRuns(cleanLine, SIZE_BASMALA, "000000", true, activeFont),
+          children: parseInlineRuns(cleanLine, headingSize(bare, SIZE_BASMALA), "000000", true, activeFont),
         })
       );
       i++;
@@ -765,13 +861,13 @@ export function buildOcrDocument({
     }
 
     // 3. Heading Level 2 (## Title)
-    if (/^##\s/.test(trimmed) || cleanLine.includes("عقد زواج") || cleanLine.includes("عقد إيجار")) {
+    if (/^##\s/.test(bare) || (cleanLine.length < 40 && (cleanLine.includes("عقد زواج") || cleanLine.includes("عقد إيجار")))) {
       docChildren.push(
         new Paragraph({
           bidirectional: isArabic(cleanLine),
           alignment: AlignmentType.CENTER,
           spacing: { before: 60, after: 160, line: 240 },
-          children: parseInlineRuns(cleanLine, SIZE_TITLE, "000000", true, activeFont),
+          children: parseInlineRuns(cleanLine, headingSize(bare, SIZE_TITLE), "000000", true, activeFont),
         })
       );
       i++;
@@ -779,18 +875,20 @@ export function buildOcrDocument({
     }
 
     // 4. Contract clauses & articles ("البند الأول", "المادة الأولى")
-    const isClauseHeading =
-      /^###\s/.test(trimmed) ||
+    const isContractClause =
       /^(<u>)?\s*البند\s+(الأول|الثاني|الثالث|الرابع|الخامس|السادس|السابع|الثامن|التاسع|العاشر)/.test(cleanLine) ||
       /^(<u>)?\s*المادة\s+(الأولى|الثانية|الثالثة|الرابعة|الخامسة)/.test(cleanLine);
+    const isClauseHeading = /^###\s/.test(bare) || isContractClause;
 
     if (isClauseHeading) {
+      // Contract clauses are centred on the printed forms; other section headings keep their side
+      const centered = tagCentered || isContractClause;
       docChildren.push(
         new Paragraph({
           bidirectional: isArabic(cleanLine),
-          alignment: AlignmentType.CENTER,
+          alignment: centered ? AlignmentType.CENTER : lineIsAr ? AlignmentType.RIGHT : AlignmentType.LEFT,
           spacing: { before: 40, after: 0, line: 240 },
-          children: parseInlineRuns(cleanLine, SIZE_CLAUSE, "000000", true, activeFont),
+          children: parseInlineRuns(cleanLine, headingSize(bare, SIZE_CLAUSE), "000000", true, activeFont),
         })
       );
       i++;
@@ -830,7 +928,7 @@ export function buildOcrDocument({
       !cleanLine.includes(",");
 
     if (isPartyOrShortLabel) {
-      docChildren.push(bodyParagraph(cleanLine, { bold: true, isAr: lineIsAr }));
+      docChildren.push(bodyParagraph(cleanLine, { bold: boldBody, isAr: lineIsAr, centered: tagCentered }));
       i++;
       continue;
     }
@@ -873,7 +971,29 @@ export function buildOcrDocument({
   });
 }
 
-export async function generateOcrDocx(options: OcrDocxOptions) {
+function dataUrlToBytes(dataUrl: string): Uint8Array {
+  const b64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+  if (typeof Buffer !== "undefined") return new Uint8Array(Buffer.from(b64, "base64"));
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
+  return bytes;
+}
+
+/** Packs the document and applies the equation font fix (see patchEquationRunFonts) */
+export async function packOcrDocx(options: OcrDocxOptions): Promise<Blob> {
   const blob = await Packer.toBlob(buildOcrDocument(options));
-  saveAs(blob, options.fileName || "CopyCat_Extracted_Document.docx");
+  const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+  const xml = await zip.file("word/document.xml")?.async("string");
+  if (!xml || !xml.includes("<m:r>")) return blob;
+  const font = options.font && options.font.trim() && options.font.toLowerCase() !== "auto" ? options.font.trim() : FALLBACK_FONT;
+  zip.file("word/document.xml", patchEquationRunFonts(xml, font, SIZE_BODY));
+  return zip.generateAsync({
+    type: "blob",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+}
+
+export async function generateOcrDocx(options: OcrDocxOptions) {
+  saveAs(await packOcrDocx(options), options.fileName || "CopyCat_Extracted_Document.docx");
 }

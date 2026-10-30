@@ -9,6 +9,15 @@
  * 4. Exact 4.0 x 5.2 cm studio standard framing with 1.5pt solid black border and white background
  */
 
+/**
+ * Output frame: 40mm x 52mm at ~380dpi. 400x520 printed at only 254dpi, which looked soft on the 4x6 sheet.
+ * Pan offsets stored on photos are in the old 400px units and are scaled by FRAME_W / 400.
+ */
+export const FRAME_W = 600;
+export const FRAME_H = 780;
+/** 1.5pt black border: 40mm = 113.4pt across FRAME_W px */
+export const FRAME_BORDER_PX = Math.round((FRAME_W / 113.4) * 1.5);
+
 export interface PortraitEnhanceOptions {
   autoCompleteCropped?: boolean;  // Reconstruct cut shoulders & head
   superResolution?: boolean;       // Enhance sharpness & high frequency details
@@ -17,6 +26,7 @@ export interface PortraitEnhanceOptions {
   shoulderMargin?: number;         // Side margin (default 0.06)
   brightnessDelta?: number;        // Slight face fill-light (-50 to +50)
   aiBox?: [number, number, number, number]; // Normalized [ymin, xmin, ymax, xmax] 0..1000
+  aiEnhanced?: boolean;            // Already restored by an AI model: lighter sharpening
 }
 
 /**
@@ -234,6 +244,156 @@ export function applyFaceSafeSuperResolution(
   }
 
   ctx.putImageData(imgData, 0, 0);
+}
+
+/**
+ * Automatic studio tone correction, the always-available quality step (no API needed):
+ * 1. Levels: stretches the head area's 0.5%..99.5% luminance range (gain capped at ~1.38)
+ * 2. White balance from near-neutral pixels (walls, white clothes, eyes); the face itself is never used as
+ *    the reference, which would grey out the skin. Gains are capped at +-10%.
+ * 3. Exposure: a dark or washed-out face is pulled toward a studio mid-tone with a gamma curve.
+ * Transparent pixels (a removed background) are skipped. Mutates `d` (RGBA) in place.
+ */
+export function autoTonePixels(d: Uint8ClampedArray, w: number, h: number, box?: HeadBox): void {
+  const lumOf = (i: number) => 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+
+  // Region measured for levels / exposure: the head box, or the central area without one
+  const [ry0, rx0, ry1, rx1] = box
+    ? [box[0] / 1000, box[1] / 1000, box[2] / 1000, box[3] / 1000]
+    : [0.15, 0.25, 0.65, 0.75];
+  const x0 = Math.max(0, Math.floor(rx0 * w));
+  const x1 = Math.min(w, Math.ceil(rx1 * w));
+  const y0 = Math.max(0, Math.floor(ry0 * h));
+  const y1 = Math.min(h, Math.ceil(ry1 * h));
+  const step = Math.max(1, Math.floor(Math.sqrt(((x1 - x0) * (y1 - y0)) / 40000)));
+
+  const hist = new Uint32Array(256);
+  // Exposure is judged on skin only: dark hair filling the head box would otherwise read as "underexposed"
+  const skinHist = new Uint32Array(256);
+  let count = 0;
+  let skinCount = 0;
+  for (let y = y0; y < y1; y += step) {
+    for (let x = x0; x < x1; x += step) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] < 128) continue;
+      const l = Math.round(lumOf(i));
+      hist[l]++;
+      count++;
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      if (r > 95 && g > 40 && b > 20 && r > g && r > b && r - Math.min(g, b) > 15) {
+        skinHist[l]++;
+        skinCount++;
+      }
+    }
+  }
+  if (count < 100) return;
+
+  const percentile = (p: number) => {
+    let acc = 0;
+    for (let v = 0; v < 256; v++) {
+      acc += hist[v];
+      if (acc >= count * p) return v;
+    }
+    return 255;
+  };
+  const lo = Math.min(percentile(0.005), 25);
+  const hi = Math.max(percentile(0.995), 185);
+  const levels = (v: number) => Math.min(255, Math.max(0, ((v - lo) * 255) / (hi - lo)));
+
+  // Median skin luminance after levels decides the exposure curve (studio skin sits around 150-195)
+  let gamma = 1;
+  if (skinCount > count * 0.05) {
+    let acc = 0;
+    let median = 128;
+    for (let v = 0; v < 256; v++) {
+      acc += skinHist[v];
+      if (acc >= skinCount / 2) {
+        median = Math.max(1, levels(v));
+        break;
+      }
+    }
+    if (median < 135) gamma = Math.min(1, Math.max(0.7, Math.log(150 / 255) / Math.log(median / 255)));
+    else if (median > 215) gamma = Math.max(1, Math.min(1.2, Math.log(195 / 255) / Math.log(median / 255)));
+  }
+
+  // White balance from near-neutral pixels anywhere in the photo
+  const wbStep = Math.max(1, Math.floor(Math.sqrt((w * h) / 60000)));
+  let nr = 0, ng = 0, nb = 0, neutral = 0, sampled = 0;
+  for (let y = 0; y < h; y += wbStep) {
+    for (let x = 0; x < w; x += wbStep) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] < 128) continue;
+      sampled++;
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      const l = lumOf(i);
+      if (Math.max(r, g, b) - Math.min(r, g, b) < 25 && l > 50 && l < 240) {
+        nr += r;
+        ng += g;
+        nb += b;
+        neutral++;
+      }
+    }
+  }
+  let gains = [1, 1, 1];
+  if (sampled > 0 && neutral > sampled * 0.03) {
+    const avg = (nr + ng + nb) / (3 * neutral);
+    gains = [nr, ng, nb].map((c) => {
+      const g = avg / (c / neutral);
+      // Applied at 60% strength and capped, so a coloured wall cannot tint the skin
+      return 1 + (Math.min(1.1, Math.max(0.9, g)) - 1) * 0.6;
+    });
+  }
+
+  const luts = gains.map((g) => {
+    const lut = new Uint8ClampedArray(256);
+    for (let v = 0; v < 256; v++) {
+      const lv = levels(Math.min(255, v * g));
+      lut[v] = Math.round(255 * Math.pow(lv / 255, gamma));
+    }
+    return lut;
+  });
+
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] === 0) continue;
+    d[i] = luts[0][d[i]];
+    d[i + 1] = luts[1][d[i + 1]];
+    d[i + 2] = luts[2][d[i + 2]];
+  }
+}
+
+/** Canvas wrapper around autoTonePixels */
+export function autoEnhanceCanvas(canvas: HTMLCanvasElement, box?: HeadBox): void {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  autoTonePixels(imgData.data, canvas.width, canvas.height, box);
+  ctx.putImageData(imgData, 0, 0);
+}
+
+/**
+ * Downscale by repeated halving: a single large drawImage step aliases fine detail (hair, eyelashes)
+ * and makes the print look soft.
+ */
+function resizeStepwise(src: HTMLCanvasElement, dw: number, dh: number): HTMLCanvasElement {
+  let cur = src;
+  while (cur.width / 2 >= dw && cur.height / 2 >= dh) {
+    const half = document.createElement("canvas");
+    half.width = Math.round(cur.width / 2);
+    half.height = Math.round(cur.height / 2);
+    const hctx = half.getContext("2d");
+    if (!hctx) break;
+    hctx.imageSmoothingQuality = "high";
+    hctx.drawImage(cur, 0, 0, half.width, half.height);
+    cur = half;
+  }
+  const out = document.createElement("canvas");
+  out.width = dw;
+  out.height = dh;
+  const octx = out.getContext("2d");
+  if (!octx) return cur;
+  octx.imageSmoothingQuality = "high";
+  octx.drawImage(cur, 0, 0, dw, dh);
+  return out;
 }
 
 /**
@@ -590,14 +750,9 @@ export async function enhanceAndFramePassportPhoto(
     autoCompleteCropped: autoCompleteCropped && !options.aiBox,
   });
 
-  // 3. Apply Face-Safe Chroma-Preserving Super Resolution
-  if (superResolution) {
-    applyFaceSafeSuperResolution(reconstructedCanvas, preserveIdentity ? 0.45 : 0.65);
-  }
-
-  // 4. Official 4.0cm x 5.2cm Frame (400 x 520 px)
-  const targetW = 400;
-  const targetH = 520;
+  // 3. Official 4.0cm x 5.2cm Frame
+  const targetW = FRAME_W;
+  const targetH = FRAME_H;
 
   const finalCanvas = document.createElement("canvas");
   finalCanvas.width = targetW;
@@ -619,13 +774,19 @@ export async function enhanceAndFramePassportPhoto(
   // Position head with natural headroom near the top
   const dy = Math.max(targetH - dh, Math.min(0, Math.round(targetH * 0.05)));
 
-  finalCtx.drawImage(reconstructedCanvas, dx, dy, dw, dh);
+  finalCtx.drawImage(resizeStepwise(reconstructedCanvas, dw, dh), dx, dy);
 
-  // C. 1.5pt crisp solid black border (Requirement #8)
-  // 40mm = 113pt across 400px, so 1.5pt is ~5px
+  // C. Luminance-only sharpening at print resolution (sharpening before the downscale was averaged away).
+  // An AI-restored photo is already crisp and only gets a light touch.
+  if (superResolution) {
+    const strength = options.aiEnhanced ? 0.15 : preserveIdentity ? 0.3 : 0.45;
+    applyFaceSafeSuperResolution(finalCanvas, strength);
+  }
+
+  // D. 1.5pt crisp solid black border (Requirement #8)
   finalCtx.strokeStyle = "#000000";
-  finalCtx.lineWidth = 5;
-  finalCtx.strokeRect(2.5, 2.5, targetW - 5, targetH - 5);
+  finalCtx.lineWidth = FRAME_BORDER_PX;
+  finalCtx.strokeRect(FRAME_BORDER_PX / 2, FRAME_BORDER_PX / 2, targetW - FRAME_BORDER_PX, targetH - FRAME_BORDER_PX);
 
   return finalCanvas.toDataURL("image/jpeg", 0.96);
 }
@@ -641,8 +802,8 @@ export function renderFramedPassportCanvas(
   panY: number,
   zoom: number,
   rotation: number,
-  targetW = 400,
-  targetH = 520
+  targetW = FRAME_W,
+  targetH = FRAME_H
 ): string {
   const canvas = document.createElement("canvas");
   canvas.width = targetW;
@@ -672,8 +833,8 @@ export function renderFramedPassportCanvas(
 
   // 1.5pt crisp solid black border
   ctx.strokeStyle = "#000000";
-  ctx.lineWidth = 5;
-  ctx.strokeRect(2.5, 2.5, targetW - 5, targetH - 5);
+  ctx.lineWidth = FRAME_BORDER_PX;
+  ctx.strokeRect(FRAME_BORDER_PX / 2, FRAME_BORDER_PX / 2, targetW - FRAME_BORDER_PX, targetH - FRAME_BORDER_PX);
 
   return canvas.toDataURL("image/jpeg", 0.96);
 }

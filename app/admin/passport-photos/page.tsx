@@ -20,11 +20,16 @@ import { generatePassportPhotosDocx } from "@/lib/docx/passport-docx";
 import { useToast } from "@/components/toast-provider";
 import { getFriendlyErrorMessage, readFileAsDataURL } from "@/lib/utils";
 import {
+  autoEnhanceCanvas,
   enhanceAndFramePassportPhoto,
   extractHeadRegion,
   rotateCanvasClockwise,
+  FRAME_BORDER_PX,
+  FRAME_H,
+  FRAME_W,
   HeadBox,
 } from "@/lib/portrait-enhancer";
+import { detectHeadLocally } from "@/lib/face-fallback";
 
 /** Decodes a photo (EXIF orientation applied by the browser) onto a canvas, long side capped at maxSide */
 async function loadImageToCanvas(file: Blob, maxSide: number): Promise<HTMLCanvasElement> {
@@ -65,10 +70,90 @@ function canvasToPreviewDataUrl(src: HTMLCanvasElement, maxSide: number): string
   return downscaleCanvas(src, maxSide).toDataURL("image/jpeg", 0.9);
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+function canvasToBlob(canvas: HTMLCanvasElement, type = "image/jpeg"): Promise<Blob> {
   return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/jpeg", 0.95)
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), type, 0.95)
   );
+}
+
+/**
+ * remove.bg's free calls return a preview-size cut-out (~0.25MP). Its alpha channel is scaled up and used
+ * as a mask over the full-resolution photo, so the face keeps its sharpness and only the edge mask is upscaled.
+ */
+async function applyCutoutMask(photo: HTMLCanvasElement, cutoutDataUrl: string): Promise<HTMLCanvasElement> {
+  const cutout = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = cutoutDataUrl;
+  });
+  const out = document.createElement("canvas");
+  out.width = photo.width;
+  out.height = photo.height;
+  const ctx = out.getContext("2d");
+  if (!ctx) return photo;
+  ctx.drawImage(photo, 0, 0);
+  ctx.globalCompositeOperation = "destination-in";
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(cutout, 0, 0, out.width, out.height);
+  ctx.globalCompositeOperation = "source-over";
+  return out;
+}
+
+/**
+ * Server AI restoration (/api/admin/enhance-photo: Gemini image -> Replicate CodeFormer). Image models
+ * answer in fixed aspect ratios, so the photo is padded to 3:4, sent, and the padding cropped back off.
+ * Returns a canvas the size of `photo`, or null when no provider was available (the caller keeps going).
+ */
+async function aiRestorePhoto(photo: HTMLCanvasElement): Promise<HTMLCanvasElement | null> {
+  const ratio = 3 / 4;
+  const padW = Math.max(photo.width, Math.round(photo.height * ratio));
+  const padH = Math.max(photo.height, Math.round(photo.width / ratio));
+  const ox = Math.round((padW - photo.width) / 2);
+  const oy = Math.round((padH - photo.height) / 2);
+  const padded = document.createElement("canvas");
+  padded.width = padW;
+  padded.height = padH;
+  const pctx = padded.getContext("2d");
+  if (!pctx) return null;
+  pctx.fillStyle = "#ffffff";
+  pctx.fillRect(0, 0, padW, padH);
+  pctx.drawImage(photo, ox, oy);
+
+  try {
+    const res = await fetch("/api/admin/enhance-photo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageBase64: canvasToPreviewDataUrl(padded, 1536) }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (typeof data.imageBase64 !== "string") return null;
+
+    const restored = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = data.imageBase64;
+    });
+    // A result in another aspect ratio was re-framed by the model and would misplace the head box
+    if (Math.abs(restored.naturalWidth / restored.naturalHeight - padW / padH) > 0.03) return null;
+
+    const sx = restored.naturalWidth / padW;
+    const sy = restored.naturalHeight / padH;
+    // An upscaling model (CodeFormer x2) keeps its extra detail, up to twice the input size
+    const k = Math.min(2, Math.max(1, sx));
+    const out = document.createElement("canvas");
+    out.width = Math.round(photo.width * k);
+    out.height = Math.round(photo.height * k);
+    const octx = out.getContext("2d");
+    if (!octx) return null;
+    octx.imageSmoothingQuality = "high";
+    octx.drawImage(restored, ox * sx, oy * sy, photo.width * sx, photo.height * sy, 0, 0, out.width, out.height);
+    return out;
+  } catch {
+    return null;
+  }
 }
 
 export interface PhotoPerson {
@@ -95,6 +180,8 @@ export default function PassportPhotosPage() {
   const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [globalIncludeName] = useState(false);
+  // AI restoration can be turned off for photos where any generative change to the face is unacceptable
+  const [aiEnhance, setAiEnhance] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
 
   // Full-size preview modal
@@ -180,8 +267,10 @@ export default function PassportPhotosPage() {
     saturation?: number;
     whiteBackground?: boolean;
   }): Promise<string> => {
-    const targetW = 400;
-    const targetH = 520;
+    const targetW = FRAME_W;
+    const targetH = FRAME_H;
+    // Pan offsets are stored in the original 400px frame units
+    const panScale = FRAME_W / 400;
 
     const canvas = document.createElement("canvas");
     canvas.width = targetW;
@@ -204,7 +293,7 @@ export default function PassportPhotosPage() {
 
     ctx.save();
     // Center of canvas
-    ctx.translate(targetW / 2 + panX, targetH / 2 + panY);
+    ctx.translate(targetW / 2 + panX * panScale, targetH / 2 + panY * panScale);
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(zoom, zoom);
 
@@ -267,8 +356,8 @@ export default function PassportPhotosPage() {
 
     // 4. Solid 1.5pt crisp black border around perimeter
     ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 5;
-    ctx.strokeRect(2.5, 2.5, targetW - 5, targetH - 5);
+    ctx.lineWidth = FRAME_BORDER_PX;
+    ctx.strokeRect(FRAME_BORDER_PX / 2, FRAME_BORDER_PX / 2, targetW - FRAME_BORDER_PX, targetH - FRAME_BORDER_PX);
 
     return canvas.toDataURL("image/jpeg", 0.96);
   };
@@ -290,6 +379,7 @@ export default function PassportPhotosPage() {
       }
       const imglyConfig = { model: "isnet_fp16" as const, output: { format: "image/png" as const } };
 
+      let quotaWarned = false;
       for (let i = 0; i < fileList.length; i++) {
         const file = fileList[i];
         setStatusMessage(`جاري تجهيز صورة (${i + 1} من ${fileList.length})...`);
@@ -320,6 +410,16 @@ export default function PassportPhotosPage() {
           fullCanvas = rotateCanvasClockwise(fullCanvas, detection.rotation);
           detection = await detectHead(fullCanvas);
         }
+        if (!detection?.box) {
+          // Fallback when every Gemini model failed: BlazeFace in the browser (also finds the orientation)
+          setStatusMessage(`جاري تحديد الوجه داخل المتصفح (${i + 1} من ${fileList.length})...`);
+          const local = await detectHeadLocally(fullCanvas);
+          if (local) {
+            fullCanvas = rotateCanvasClockwise(fullCanvas, local.rotation);
+            detection = { box: local.box, rotation: 0 };
+          }
+          // Otherwise the skin-tone heuristic in enhanceAndFramePassportPhoto is the last resort
+        }
 
         // 2. Work on the head-and-shoulders region cut from the full-resolution photo
         let aiFaceBox: HeadBox | undefined = undefined;
@@ -331,8 +431,23 @@ export default function PassportPhotosPage() {
         } else {
           workCanvas = downscaleCanvas(fullCanvas, 1200);
         }
+
+        // 3. Quality: AI restoration when a provider is available, then the local tone correction always
+        let aiEnhanced = false;
+        if (aiEnhance) {
+          setStatusMessage(`جاري تحسين جودة الصورة بالذكاء الاصطناعي، قد يستغرق حتى دقيقتين (${i + 1} من ${fileList.length})...`);
+          const restored = await aiRestorePhoto(workCanvas);
+          if (restored) {
+            workCanvas = restored;
+            aiEnhanced = true;
+          }
+        }
+        autoEnhanceCanvas(workCanvas, aiFaceBox);
+
         const preprocessedBlob = await canvasToBlob(workCanvas);
-        const preprocessedDataUrl = await readFileAsDataURL(new File([preprocessedBlob], file.name));
+        // The cut-out only supplies a mask (applied to the full-size canvas), so the upload stays small
+        // enough for the host's request-size limit
+        const preprocessedDataUrl = canvasToPreviewDataUrl(workCanvas, 1600);
         let processedBlob: Blob = preprocessedBlob;
         let cutoutDataUrl: string | undefined = undefined;
 
@@ -347,8 +462,19 @@ export default function PassportPhotosPage() {
           if (serverBgRes.ok) {
             const serverBgData = await serverBgRes.json();
             if (typeof serverBgData.cutoutBase64 === "string" && serverBgData.cutoutBase64.length > 0) {
-              cutoutDataUrl = serverBgData.cutoutBase64 as string;
-              processedBlob = await (await fetch(cutoutDataUrl)).blob();
+              const fullResCutout = await applyCutoutMask(workCanvas, serverBgData.cutoutBase64 as string);
+              processedBlob = await canvasToBlob(fullResCutout, "image/png");
+              cutoutDataUrl = fullResCutout.toDataURL("image/png");
+            } else if (
+              Array.isArray(serverBgData.quotaExhausted) &&
+              serverBgData.quotaExhausted.length > 0 &&
+              !quotaWarned
+            ) {
+              quotaWarned = true;
+              toast.warning(
+                "انتهى رصيد remove.bg المجاني لهذا الشهر",
+                "سيتم عزل الخلفية داخل المتصفح. لجودة أعلى اشحن رصيداً من remove.bg/dashboard."
+              );
             }
           }
         } catch {}
@@ -382,6 +508,7 @@ export default function PassportPhotosPage() {
           superResolution: true,
           preserveIdentity: true,
           aiBox: aiFaceBox,
+          aiEnhanced,
         });
 
         setPersons((prev) => [
@@ -780,10 +907,23 @@ export default function PassportPhotosPage() {
             {isDragging ? "أفلت الصور الشخصية هنا الآن!" : "اضغط لرفع الصور الشخصية أو اسحبها وأفلتها هنا"}
           </h3>
           <p className="text-slate-500 text-xs">
-            يتم عزل الخلفية وتبييضها وتأطير الصورة 4×6 فورياً داخل المتصفح بنسبة 100% دون خوادم سحابية
+            يتم تحسين الجودة وعزل الخلفية وتبييضها وتأطير الصورة 4×6 تلقائياً
           </p>
         </div>
       </div>
+
+      <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer w-fit">
+        <input
+          type="checkbox"
+          checked={aiEnhance}
+          onChange={(e) => setAiEnhance(e.target.checked)}
+          className="w-4 h-4 accent-emerald-500 cursor-pointer"
+        />
+        <Wand2 className="w-4 h-4 text-emerald-500" />
+        <span>
+          تحسين الجودة بالذكاء الاصطناعي (عند إيقافه يُطبق تحسين الإضاءة والألوان والحدة المحلي فقط)
+        </span>
+      </label>
 
       {isProcessingBg && (
         <div className="p-4 rounded-2xl bg-white border border-slate-200 flex items-center gap-3 text-xs text-emerald-400 font-bold">

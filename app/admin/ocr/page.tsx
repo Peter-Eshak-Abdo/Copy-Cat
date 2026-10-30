@@ -3,7 +3,11 @@
 import React, { useState, useRef, useMemo } from "react";
 import { useToast } from "@/components/toast-provider";
 import { readFileAsDataURL } from "@/lib/utils";
-import { generateOcrDocx, PageBorderKind } from "@/lib/docx/ocr-docx";
+import { generateOcrDocx, PageBorderKind, FIGURE_LINE, type OcrFigure } from "@/lib/docx/ocr-docx";
+import { splitMath } from "@/lib/docx/latex-math";
+import { cropFigures, prepareOcrImage, tesseractOcr } from "@/lib/ocr-client";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 import {
   Layers,
   ImagePlus,
@@ -22,15 +26,48 @@ import {
 } from "lucide-react";
 
 
-// Strips inline markup for the on-screen preview and lays out " || " trailing labels at the far edge
+/** Text with $...$ maths rendered by KaTeX (fractions, powers, roots) */
+function withMath(text: string): React.ReactNode {
+  const parts = splitMath(text);
+  if (parts.length === 1 && !parts[0].math) return text;
+  return parts.map((part, k) =>
+    part.math ? (
+      <span
+        key={k}
+        dir="ltr"
+        className="inline-block mx-0.5"
+        // KaTeX output is generated markup (trust is off), not user HTML
+        dangerouslySetInnerHTML={{ __html: katex.renderToString(part.s, { throwOnError: false, strict: "ignore" }) }}
+      />
+    ) : (
+      <React.Fragment key={k}>{part.s}</React.Fragment>
+    )
+  );
+}
+
+// Strips inline markup for the on-screen preview; " || " items are laid out like the Word export:
+// two parts = trailing label at the far edge, three or more = equal columns (multiple-choice options)
 function previewLine(text: string): React.ReactNode {
-  const clean = text.replace(/<\/?u>/gi, "").replace(/\*\*/g, "");
-  const parts = clean.split(/\s*\|\|\s*/);
-  if (parts.length < 2) return clean;
+  const clean = text
+    .replace(/<\/?u>/gi, "")
+    .replace(/<\/?center>/gi, "")
+    .replace(/\*\*/g, "")
+    .replace(/\s*\{\s*\d+(?:\.\d+)?\s*\}\s*$/, "");
+  const parts = clean.split(/\s*\|\|\s*/).filter((p) => p.trim());
+  if (parts.length < 2) return withMath(clean);
+  if (parts.length >= 3) {
+    return (
+      <span className="grid gap-2" style={{ gridTemplateColumns: `repeat(${parts.length}, minmax(0, 1fr))` }}>
+        {parts.map((p, k) => (
+          <span key={k}>{withMath(p)}</span>
+        ))}
+      </span>
+    );
+  }
   return (
     <span className="flex justify-between gap-4">
-      <span>{parts.slice(0, -1).join(" ")}</span>
-      <span className="shrink-0">{parts[parts.length - 1]}</span>
+      <span>{withMath(parts[0])}</span>
+      <span className="shrink-0">{withMath(parts[1])}</span>
     </span>
   );
 }
@@ -64,6 +101,10 @@ export default function MultiStageOcrPage() {
   // Page frame and body weight are detected from the scan, and can be overridden before export
   const [borderStyle, setBorderStyle] = useState<PageBorderKind>("none");
   const [boldBody, setBoldBody] = useState<boolean>(false);
+  // Figures cropped from the scans, keyed by the number in their "[شكل n]" line
+  const [figures, setFigures] = useState<Record<number, OcrFigure>>({});
+  // Second pass: the same model re-reads the page image against its own draft
+  const [verifyPass, setVerifyPass] = useState<boolean>(true);
 
   const activePage = pages[activePageIndex] || null;
 
@@ -90,8 +131,25 @@ export default function MultiStageOcrPage() {
     let i = 0;
 
     while (i < lines.length) {
-      const line = lines[i].trim();
-      if (!line) {
+      const rawLine = lines[i].trim();
+      if (!rawLine) {
+        i++;
+        continue;
+      }
+      const centered = /<center>/i.test(rawLine);
+      const line = rawLine.replace(/<\/?center>/gi, "").trim();
+
+      const figMatch = line.match(FIGURE_LINE);
+      if (figMatch) {
+        const fig = figures[Number(figMatch[1])];
+        elements.push(
+          fig ? (
+            // eslint-disable-next-line @next/next/no-img-element -- data URL cropped in the browser
+            <img key={`fig-${i}`} src={fig.dataUrl} alt={line} className="mx-auto my-2 max-h-72 border border-slate-200 rounded" />
+          ) : (
+            <div key={`fig-${i}`} className="my-2 text-center text-xs text-slate-400">{line}</div>
+          )
+        );
         i++;
         continue;
       }
@@ -132,7 +190,7 @@ export default function MultiStageOcrPage() {
                         key={cIdx}
                         className={`p-2.5 sm:p-3 font-black text-slate-900 border-l border-slate-200 last:border-l-0 ${tableIsAr ? "text-right" : "text-left"}`}
                       >
-                        {cell}
+                        {previewLine(cell)}
                       </th>
                     ))}
                   </tr>
@@ -145,7 +203,7 @@ export default function MultiStageOcrPage() {
                           key={cIdx}
                           className={`p-2.5 text-slate-800 border-l border-slate-200 last:border-l-0 leading-relaxed font-sans ${tableIsAr ? "text-right" : "text-left"}`}
                         >
-                          {cell}
+                          {previewLine(cell)}
                         </td>
                       ))}
                     </tr>
@@ -164,7 +222,7 @@ export default function MultiStageOcrPage() {
       if (line.startsWith("# ")) {
         elements.push(
           <h2 key={`h1-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className="text-lg font-black text-slate-900 mt-4 mb-2 pb-1 border-b border-slate-200 text-center">
-            {line.replace(/^#\s+/, "")}
+            {previewLine(line.replace(/^#\s+/, ""))}
           </h2>
         );
         i++;
@@ -197,7 +255,7 @@ export default function MultiStageOcrPage() {
       if (line.length < 60 && (line.endsWith(":") || line.endsWith(":-")) && !line.includes(".")) {
         elements.push(
           <h5 key={`h4-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className={`text-xs sm:text-sm font-black text-slate-900 mt-3 mb-1 ${lineIsAr ? "text-right" : "text-left"}`}>
-            {line}
+            {previewLine(line)}
           </h5>
         );
         i++;
@@ -209,7 +267,7 @@ export default function MultiStageOcrPage() {
         elements.push(
           <div key={`li-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className={`flex items-start gap-2 ${lineIsAr ? "mr-2 text-right" : "ml-2 text-left"} text-xs sm:text-sm text-slate-800 my-1`}>
             <span className="text-blue-600 font-bold">•</span>
-            <span>{line.replace(/^[-*•]\s+/, "")}</span>
+            <span>{previewLine(line.replace(/^[-*•]\s+/, ""))}</span>
           </div>
         );
         i++;
@@ -218,7 +276,7 @@ export default function MultiStageOcrPage() {
 
       // 7. Regular paragraph (Requirement #4: Right align for Arabic, Left align for English/French)
       elements.push(
-        <p key={`p-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className={`text-xs sm:text-sm text-slate-800 leading-relaxed my-1.5 whitespace-pre-wrap ${lineIsAr ? "text-right" : "text-left"}`}>
+        <p key={`p-${i}`} dir={lineIsAr ? "rtl" : "ltr"} className={`text-xs sm:text-sm text-slate-800 leading-relaxed my-1.5 whitespace-pre-wrap ${centered ? "text-center" : lineIsAr ? "text-right" : "text-left"}`}>
           {previewLine(line)}
         </p>
       );
@@ -334,7 +392,7 @@ export default function MultiStageOcrPage() {
     }
   };
 
-  // Multi-page sequential extraction
+  // Multi-page sequential extraction: extract -> same-model verification against the image -> figure crops
   const handleProcessOcr = async () => {
     if (pages.length === 0) {
       if (fileInputRef.current) fileInputRef.current.click();
@@ -349,87 +407,87 @@ export default function MultiStageOcrPage() {
 
     setIsProcessing(true);
     setRefinedText("");
+    setFigures({});
 
     let combinedRaw = "";
+    const allFigures: Record<number, OcrFigure> = {};
+    let figureCount = 0;
+
+    const callOcr = async (body: object) => {
+      const res = await fetch("/api/ocr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, data };
+    };
 
     try {
       for (let i = 0; i < pages.length; i++) {
         setActivePageIndex(i);
-        setPages((prev) =>
-          prev.map((p, idx) => (idx === i ? { ...p, status: "processing" } : p))
-        );
-
+        setPages((prev) => prev.map((p, idx) => (idx === i ? { ...p, status: "processing" } : p)));
         toast.info("جاري المعالجة", `جاري استخراج نصوص الصفحة (${i + 1} من ${pages.length})...`);
 
-        const res = await fetch("/api/ocr", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "extract",
-            imageBase64: pages[i].dataUrl,
-          }),
-        });
+        const image = await prepareOcrImage(pages[i].dataUrl);
+        let pageText = "";
+        const extract = await callOcr({ action: "extract", imageBase64: image }).catch(() => ({ ok: false, data: {} }));
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || `فشل استخراج نصوص الصفحة رقم ${i + 1}`);
-        }
+        if (extract.ok && extract.data.extractedText) {
+          const data = extract.data;
+          pageText = data.extractedText;
 
-        const data = await res.json();
-        const pageExtracted = data.extractedText || "";
-
-        if (data.detectedFont && !fontManuallyChanged) {
-          setSelectedFont(data.detectedFont);
-        }
-        if (data.detectedLang && selectedLanguage === "auto") {
-          setSelectedLanguage(data.detectedLang);
-        }
-        if (i === 0) {
-          if (["none", "single", "double", "decorative"].includes(data.detectedBorder)) {
-            setBorderStyle(data.detectedBorder);
+          if (data.detectedFont && !fontManuallyChanged) setSelectedFont(data.detectedFont);
+          if (data.detectedLang && selectedLanguage === "auto") setSelectedLanguage(data.detectedLang);
+          if (i === 0) {
+            if (["none", "single", "double", "decorative"].includes(data.detectedBorder)) {
+              setBorderStyle(data.detectedBorder);
+            }
+            // Framed legal forms are printed bold almost without exception
+            setBoldBody(data.detectedWeight === "bold" || data.detectedBorder === "decorative");
           }
-          // Framed legal forms are printed bold almost without exception
-          setBoldBody(data.detectedWeight === "bold" || data.detectedBorder === "decorative");
+          if (data.lowAccuracy) {
+            toast.warning(
+              "تم الاستخراج بموديل احتياطي أقل دقة",
+              `موديلات Gemini غير متاحة الآن، فراجع نص الصفحة ${i + 1} جيداً قبل الطباعة.`
+            );
+          }
+
+          // 2. Verification: the model that made the draft re-reads the page image against it
+          if (verifyPass && !data.lowAccuracy) {
+            toast.info("جاري المراجعة", `مراجعة الصفحة ${i + 1} حرفاً بحرف مقابل الصورة...`);
+            const verify = await callOcr({ action: "verify", imageBase64: image, draft: pageText, provider: data.provider }).catch(
+              () => ({ ok: false, data: {} })
+            );
+            if (verify.ok && verify.data.verified && verify.data.verifiedText) pageText = verify.data.verifiedText;
+          }
+        } else {
+          // 3. Every server model failed: Tesseract in the browser (plain text only)
+          toast.warning("موديلات الذكاء الاصطناعي غير متاحة", `جاري القراءة داخل المتصفح للصفحة ${i + 1} (نص فقط، بدقة أقل)...`);
+          pageText = await tesseractOcr(image);
         }
 
-        setPages((prev) =>
-          prev.map((p, idx) =>
-            idx === i ? { ...p, status: "done", extractedText: pageExtracted } : p
-          )
-        );
+        // 4. Figures, shapes and drawings are cropped from the scan into the document
+        const isAr = /[؀-ۿ]/.test(pageText);
+        const cropped = await cropFigures(image, pageText, figureCount + 1, isAr);
+        pageText = cropped.text;
+        Object.assign(allFigures, cropped.figures);
+        figureCount += Object.keys(cropped.figures).length;
+        setFigures({ ...allFigures });
+
+        setPages((prev) => prev.map((p, idx) => (idx === i ? { ...p, status: "done", extractedText: pageText } : p)));
 
         if (pages.length > 1) {
-          combinedRaw += `\n\n════════════════════════════════════════\n📄 الصفحة رقم (${i + 1}):\n════════════════════════════════════════\n\n${pageExtracted}`;
+          combinedRaw += `\n\n════════════════════════════════════════\n📄 الصفحة رقم (${i + 1}):\n════════════════════════════════════════\n\n${pageText}`;
         } else {
-          combinedRaw += pageExtracted;
+          combinedRaw += pageText;
         }
-
         setRefinedText(combinedRaw);
       }
 
-      // Stage 2: Linguistic refinement
-      toast.info("جاري التدقيق اللغوي", "جاري مراجعة وتنسيق الألفاظ وصياغة البنود...");
-
-      const res2 = await fetch("/api/ocr", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "refine",
-          textToRefine: combinedRaw,
-        }),
-      });
-
-      if (res2.ok) {
-        const data2 = await res2.json();
-        const refined = data2.refinedText || combinedRaw;
-        setRefinedText(refined);
-      }
-
-      toast.success(
-        "اكتمل الاستخراج بنجاح",
-        `تم استخراج وتدقيق نصوص ${pages.length} صفحة بنجاح وجاهزة للتصدير للوورد.`
-      );
+      toast.success("اكتمل الاستخراج بنجاح", `تم استخراج ومراجعة ${pages.length} صفحة وجاهزة للتصدير للوورد.`);
     } catch (err: unknown) {
+      setPages((prev) => prev.map((p) => (p.status === "processing" ? { ...p, status: "error" } : p)));
       const msg = err instanceof Error ? err.message : "حدث خطأ أثناء معالجة الصفحات";
       toast.error("فشل الاستخراج", msg);
     } finally {
@@ -452,6 +510,7 @@ export default function MultiStageOcrPage() {
         borderStyle,
         boldBody,
         language: selectedLanguage as "ar" | "en" | "fr" | "auto",
+        figures,
       });
       toast.success("تم تصدير ملف Word", `تم تحميل المستند بنجاح بخط ${selectedFont || "Arial"} والتنسيق المطلوب`);
     } catch {
@@ -770,6 +829,19 @@ export default function MultiStageOcrPage() {
                       className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
                     />
                     <span>نص عريض (Bold)</span>
+                  </label>
+
+                  <label
+                    className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none"
+                    title="يقرأ نفس الموديل الصورة مرة ثانية ويقارنها بالنص حرفاً بحرف. أدق لكنه أبطأ ويستهلك طلباً إضافياً."
+                  >
+                    <input
+                      type="checkbox"
+                      checked={verifyPass}
+                      onChange={(e) => setVerifyPass(e.target.checked)}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                    />
+                    <span>مراجعة ثانية مقابل الصورة</span>
                   </label>
                 </div>
               </div>

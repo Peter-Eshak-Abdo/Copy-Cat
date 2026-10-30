@@ -10,6 +10,7 @@ import {
   TableCell,
   WidthType,
   BorderStyle,
+  LineRuleType,
 } from "docx";
 import fileSaver from "file-saver";
 const saveAs = (fileSaver)?.saveAs || fileSaver;
@@ -118,9 +119,26 @@ export async function generateIdCardsDocx(
     const hasFront = Boolean(pair.front);
     const hasBack = Boolean(pair.back);
 
-    if (hasFront && hasBack && layout === "single_sheet") {
-      const frontBytes = base64ToUint8Array(pair.front!);
-      const backBytes = base64ToUint8Array(pair.back!);
+    // A side that is missing (a card without a scanned back) keeps an empty slot of the card's size, so the
+    // other side stays exactly where a full pair would print it
+    const cardSlot = (src: string | null | undefined) =>
+      src
+        ? new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new ImageRun({
+                data: base64ToUint8Array(src),
+                transformation: { width: cardWidthPx, height: cardHeightPx },
+                type: src.includes("image/png") ? "png" : "jpg",
+              }),
+            ],
+          })
+        : new Paragraph({
+            spacing: { line: convertMillimetersToTwip(54), lineRule: LineRuleType.EXACT },
+            children: [],
+          });
+
+    if ((hasFront || hasBack) && layout === "single_sheet") {
 
       if (duplexAlignment === "horizontal") {
         // Horizontal Duplex alignment: Front & Back side-by-side
@@ -141,16 +159,7 @@ export async function generateIdCardsDocx(
                     right: convertMillimetersToTwip(4),
                   },
                   children: [
-                    new Paragraph({
-                      alignment: AlignmentType.CENTER,
-                      children: [
-                        new ImageRun({
-                          data: frontBytes,
-                          transformation: { width: cardWidthPx, height: cardHeightPx },
-                          type: pair.front?.includes("image/png") ? "png" : "jpg",
-                        }),
-                      ],
-                    }),
+                    cardSlot(pair.front),
                   ],
                 }),
                 new TableCell({
@@ -163,16 +172,7 @@ export async function generateIdCardsDocx(
                     right: convertMillimetersToTwip(4),
                   },
                   children: [
-                    new Paragraph({
-                      alignment: AlignmentType.CENTER,
-                      children: [
-                        new ImageRun({
-                          data: backBytes,
-                          transformation: { width: cardWidthPx, height: cardHeightPx },
-                          type: pair.back?.includes("image/png") ? "png" : "jpg",
-                        }),
-                      ],
-                    }),
+                    cardSlot(pair.back),
                   ],
                 }),
               ],
@@ -199,16 +199,7 @@ export async function generateIdCardsDocx(
                     right: 0,
                   },
                   children: [
-                    new Paragraph({
-                      alignment: AlignmentType.CENTER,
-                      children: [
-                        new ImageRun({
-                          data: frontBytes,
-                          transformation: { width: cardWidthPx, height: cardHeightPx },
-                          type: pair.front?.includes("image/png") ? "png" : "jpg",
-                        }),
-                      ],
-                    }),
+                    cardSlot(pair.front),
                   ],
                 }),
               ],
@@ -225,16 +216,7 @@ export async function generateIdCardsDocx(
                     right: 0,
                   },
                   children: [
-                    new Paragraph({
-                      alignment: AlignmentType.CENTER,
-                      children: [
-                        new ImageRun({
-                          data: backBytes,
-                          transformation: { width: cardWidthPx, height: cardHeightPx },
-                          type: pair.back?.includes("image/png") ? "png" : "jpg",
-                        }),
-                      ],
-                    }),
+                    cardSlot(pair.back),
                   ],
                 }),
               ],

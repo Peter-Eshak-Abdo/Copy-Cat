@@ -1,221 +1,134 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
-import fs from "fs";
-import path from "path";
-import { VISION_MODELS } from "@/lib/gemini";
+import { transcribeImage } from "@/lib/vision-text";
 
-function getApiKey(): string | undefined {
-  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
-  if (process.env.GOOGLE_API_KEY) return process.env.GOOGLE_API_KEY;
-  try {
-    const envPath = path.join(process.cwd(), ".env.local");
-    if (fs.existsSync(envPath)) {
-      const content = fs.readFileSync(envPath, "utf-8");
-      const match = content.match(/GEMINI_API_KEY=([^\r\n]+)/);
-      if (match && match[1].trim()) {
-        return match[1].trim();
-      }
-    }
-  } catch {}
-  return undefined;
+export const maxDuration = 300;
+
+/**
+ * Markup the transcription uses; lib/docx/ocr-docx.ts turns it back into a Word layout. Shared by the
+ * extract and verify prompts so both speak exactly the same format.
+ */
+const MARKUP_RULES = `
+قواعد الصيغة (إلزامية):
+- كل سطر مطبوع في الأصل = سطر مستقل بنفس الترتيب من أعلى الصفحة لأسفلها.
+- <center> و </center> فقط للسطر الموسَّط فعلاً في منتصف الصفحة. السطر الملاصق لبداية السطر (يمين الصفحة في العربي) لا يوضع في center حتى لو كان قصيراً.
+- العناوين حسب الشكل المطبوع فقط وليس حسب المعنى: # لأول سطر مميز أعلى الصفحة (مثل بسم الله الرحمن الرحيم)، ## للعنوان الرئيسي للمستند، ### لسطر عنوان قصير مستقل أكبر أو أعرض من النص (مثل: البند الأول). وفي آخر سطر العنوان اكتب نسبة ارتفاع حروفه إلى حروف النص العادي بين أقواس معقوفة، مثل: ## <u>عقد زواج عرفي</u> {1.9} أو ### <u>البند الأول</u> {1.3} (ضع <u> فقط إذا كان العنوان تحته خط في الأصل)
+- سطر سؤال أو بند يكمل كلامه في نفس السطر (مثل: السؤال الأول: اختر الإجابة الصحيحة...) هو نص عادي وليس عنواناً؛ إذا كان عريضاً ضعه بين ** ** فقط.
+- النص العريض بين ** ** ، والنص الذي تحته خط بين <u> </u>.
+- عناصر موزعة على نفس السطر بمسافات (يمين ويسار الترويسة، اختيارات (أ) (ب) (ج) (د)، أعمدة نص، وصف في آخر السطر مثل (طرف أول زوج)): افصل بينها بالرمز " || " بترتيب القراءة. مثال:
+  (أ) ١ || (ب) ٢ || (ج) ٣ || (د) صفر
+- فراغات النقاط تُكتب نقاطاً بعدد يتناسب مع طول الفراغ (نصف سطر ≈ 30 نقطة، ربع سطر ≈ 15، فراغ قصير ≈ 8).
+- الجداول بصيغة Markdown (| خلية | خلية |) مع سطر الفصل |---| بعد الصف الأول، وكل خلية فارغة تبقى فارغة، وعدد الأعمدة ثابت في كل الصفوف.
+- الرياضيات: أي تعبير فيه كسر أو أس أو جذر أو رمز رياضي خاص يُكتب بصيغة LaTeX بين علامتي $ $، مع الإبقاء على الحروف والأرقام كما هي مطبوعة تماماً (أرقام عربية ٣ أو إنجليزية 3، وحروف مثل س ص). أمثلة:
+  $\\frac{٣}{٤}$ ، العدد الكسري $٢\\frac{١}{٣}$ ، $س^{٢}$ ، $\\sqrt{٤٩}$ ، $\\sqrt[٣]{٨}$ ، $\\times$ $\\div$ $\\pm$ $\\le$ $\\ge$ $\\ne$ $\\perp$ $\\parallel$ $\\cong$ $\\angle$ $٦٠^{\\circ}$ $\\pi$
+  أما الأرقام والعمليات البسيطة بدون كسر أو أس أو جذر فتُكتب نصاً عادياً بدون $.
+- الأشكال الهندسية والرسوم البيانية والصور والشعارات والأختام والتوقيعات المرسومة: سطر مستقل في مكانها بالصيغة [FIGURE: ymin, xmin, ymax, xmax] حيث الإحداثيات من 0 إلى 1000 بالنسبة للصورة كاملة، والمربع يشمل الشكل كاملاً بكل الحروف والأرقام المكتوبة عليه. لا تكتب النصوص الموجودة داخل الشكل نفسه.
+- مربعات الصور الشخصية أعلى العقود (صورة الزوج / صورة الزوجة) تُكتب كجدول ترويسة: | صورة الزوج | # بسم الله الرحمن الرحيم<br>## <u>عقد زواج عرفي</u> | صورة الزوجة |
+- رقم الصفحة أسفل الورقة مثل (١) يُكتب في سطر مستقل في النهاية.
+- ممنوع: كيانات HTML مثل &nbsp; ، الباك سلاش قبل * أو # ، علامات \`\`\` ، أي شرح أو تعليق أو مقدمة.
+`;
+
+const EXTRACT_PROMPT = `
+أنت متخصص في نسخ المستندات الضوئي بدقة حرفية كاملة (عربي / English / Français): عقود، أحكام، استمارات، أوراق امتحانات بها كسور ومعادلات وأشكال وجداول، ومستندات نصية طويلة.
+
+المطلوب: انسخ كل محتوى الصفحة حرفاً بحرف بحيث يمكن إعادة طباعتها في Word مطابقة للأصل.
+
+الدقة أولاً:
+- انسخ كل كلمة ورقم وعلامة ترقيم كما هي تماماً. لا تصحح ولا تكمل ولا تختصر ولا تترجم ولا تعيد الصياغة، حتى لو كان في الأصل خطأ إملائي.
+- لا تحذف أي سطر، ولا تضف أي نص غير موجود (لا عناوين ولا "نموذج إجابة" ولا حلول).
+- حافظ على شكل الأرقام كما طُبعت (٠١٢٣ أو 0123) وعلى ترتيب الأسئلة والاختيارات.
+- إذا كانت كلمة غير مقروءة فعلاً اكتب مكانها [؟].
+
+أول أربعة أسطر من إجابتك بيانات الصفحة:
+[FONT: اسم_الخط]   ← الأقرب للأصل: Simplified Arabic أو Traditional Arabic أو Arial أو Times New Roman أو Calibri أو Amiri أو Tahoma
+[LANG: ar أو en أو fr]
+[BORDER: none أو single أو double أو decorative]   ← decorative لإطار مزخرف/نباتي حول الورقة، single أو double لإطار خطي
+[WEIGHT: bold أو normal]   ← bold فقط إذا كان نص الفقرات العادية نفسه عريضاً
+${MARKUP_RULES}
+بعد الأسطر الأربعة اكتب المحتوى مباشرة.
+`;
+
+const verifyPrompt = (draft: string) => `
+أنت مراجع دقة لنسخة ضوئية. أمامك صورة الصفحة الأصلية، وتحتها نسخة نصية مستخرجة منها.
+
+قارن النسخة بالصورة سطراً بسطر وحرفاً بحرف، وصحح كل ما يختلف عن الأصل:
+- الكلمات أو الحروف أو الأرقام المقروءة خطأ، وعلامات الترقيم.
+- أي سطر أو كلمة أو خلية جدول ناقصة، وأي نص مضاف غير موجود في الصورة (احذفه).
+- ترتيب الأسطر والاختيارات وأعمدة الجداول.
+- الكسور والأسس والجذور والرموز الرياضية (تأكد من البسط والمقام والأس).
+- مربعات [FIGURE: ...] يجب أن تحيط بالأشكال بالكامل.
+لا تغير أي شيء صحيح، ولا تصحح أخطاء موجودة فعلاً في الأصل المطبوع.
+ممنوع منعاً باتاً حل الأسئلة أو ملء الفراغات أو خانات الجداول الفارغة أو إضافة أي إجابة: الفراغ المنقط يبقى نقاطاً كما هو.
+${MARKUP_RULES}
+أخرج النسخة الكاملة المصححة فقط بنفس الصيغة (بدون أسطر [FONT] و [LANG] و [BORDER] و [WEIGHT])، بدون أي تعليق. وإذا كانت النسخة مطابقة تماماً أخرجها كما هي.
+
+النسخة المستخرجة:
+"""
+${draft}
+"""
+`;
+
+function cleanTranscript(text: string): string {
+  return text
+    .replace(/^```[a-z]*\s*/i, "")
+    .replace(/```\s*$/, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\\([*_#[\]-])/g, "$1")
+    .trim();
+}
+
+function takeMeta(text: string, key: string): [string | null, string] {
+  const re = new RegExp(`\\[${key}:\\s*([^\\]]+)\\]`, "i");
+  const m = text.match(re);
+  return m ? [m[1].trim(), text.replace(re, "").trim()] : [null, text];
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { action, imageBase64, mimeType = "image/jpeg", textToRefine } = body;
-
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "مفتاح الذكاء الاصطناعي (GEMINI_API_KEY) غير مهيأ في الخادم. يرجى التأكد من إضافته في ملف .env.local" },
-        { status: 500 }
-      );
+    const { action, imageBase64, draft, provider } = await req.json();
+    if (!imageBase64) {
+      return NextResponse.json({ error: "لم يتم إرسال بيانات الصورة." }, { status: 400 });
     }
 
-    const ai = new GoogleGenAI({ apiKey });
-
-    // Action 1: Extract text from image (Vision OCR - Printed & Handwritten)
     if (action === "extract") {
-      if (!imageBase64) {
-        return NextResponse.json({ error: "لم يتم إرسال بيانات الصورة." }, { status: 400 });
+      const result = await transcribeImage(EXTRACT_PROMPT, imageBase64);
+      if (!result) {
+        // Every server model failed: the page falls back to in-browser Tesseract
+        return NextResponse.json({ error: "تعذر الوصول لأي موديل ذكاء اصطناعي.", allProvidersFailed: true }, { status: 503 });
       }
 
-      // Clean base64 header if present
-      const cleanBase64 = imageBase64.replace(/^data:[a-zA-Z0-9/+-]+;base64,/, "");
-
-      const prompt = `
-أنت خبير فائق الدقة في التعرف الضوئي واستخراج النصوص وتنسيق الوثائق الرسمية والأحكام القضائية والمستندات القانونية والأكاديمية بجميع اللغات (Arabic, English, French Document OCR Specialist).
-
-المهمة:
-اقرأ هذه الوثيقة بعناية فائقة واستخرج كل النصوص والمحتويات مع الحفاظ التام والدقيق على الهيكل البصري الأصلي للورقة بنسبة 100% بحيث يمكن إعادة طباعتها في Word مطابقة للأصل:
-
-1. بيانات الوثيقة (في أول أربعة أسطر تماماً):
-[FONT: اسم_الخط]   ← الخط الأقرب للأصل (Traditional Arabic, Simplified Arabic, Arial, Times New Roman, Calibri, Amiri, Tahoma). العقود والمستندات العربية الرسمية غالباً Simplified Arabic أو Traditional Arabic.
-[LANG: ar أو en أو fr]
-[BORDER: none أو single أو double أو decorative]   ← decorative إذا كان للصفحة إطار مزخرف/نباتي/فني حول الورقة، single أو double لإطار خطي، none بدون إطار.
-[WEIGHT: bold أو normal]   ← bold إذا كان نص الفقرات العادية نفسه مكتوباً بخط عريض (وليس العناوين فقط).
-
-2. ترويسة الوثائق والعقود:
-- السطر الأول المركزي (مثل بسم الله الرحمن الرحيم) اكتبه بعلامة # والعنوان الرئيسي (مثل عقد زواج عرفي) بعلامة ## ، وإذا كان العنوان تحته خط في الأصل ضعه داخل <u></u>.
-- إذا كانت الوثيقة تحتوي على مربعات صور في الأعلى (مثل عقود الزواج: صورة الزوج على اليمين وصورة الزوجة على اليسار)، صغها كجدول ترويسة واحد بالترتيب من اليمين لليسار:
-| صورة الزوج | # بسم الله الرحمن الرحيم<br>## <u>عقد زواج عرفي</u> | صورة الزوجة |
-
-3. نصوص الوثيقة والفقرات:
-- حافظ على النصوص كاملة دون أي حذف، وكل سطر في الأصل يكون سطراً مستقلاً بنفس الترتيب.
-- عناوين البنود (مثل البند الأول) اكتبها بعلامة ### ، وإذا كان تحتها خط ضعها داخل <u></u>.
-- إذا كان نص تحته خط في الأصل ضعه بين وسمي <u>النص</u>. ميز النصوص العريضة داخل السطر بـ **الكلمة**.
-- نقاط الفراغات: اكتب عدداً من النقاط يتناسب مع طول الفراغ في الأصل (فراغ يمتد لنصف السطر تقريباً ≈ 30 نقطة، ربع سطر ≈ 15 نقطة، فراغ قصير ≈ 8 نقاط) لكي يملأ السطر كما في الأصل بدون أن ينكسر لسطرين.
-- إذا كان في نهاية السطر وصف منفصل مدفوع لأقصى الطرف الآخر من السطر (مثل: (طرف أول زوج) أو (شاهد أول) أو (طرف ثاني زوجة))، افصله عن باقي السطر بالرمز " || " هكذا:
-ويحمل بطاقة رقم قومي: ............................ || (طرف أول زوج)
-- النقاط المرقمة مثل ١- أو 2- اكتبها كما هي بنفس الأرقام (عربية أو هندية) كما في الأصل.
-- رقم الصفحة في أسفل الورقة مثل (١) اكتبه في سطر مستقل في النهاية.
-
-4. الجداول والقوائم:
-- الجداول وقوائم البيانات ومحاضر الجلسات صغها في جدول Markdown نظيف ومترابط (| عمود 1 | عمود 2 |).
-
-5. القواعد الصارمة:
-- ممنوع كتابة أي كيانات HTML مثل &nbsp; أو &amp;.
-- ممنوع الهروب بالباك سلاش (لا تكتب \\* بل اكتب * مباشرة).
-- أخرج المحتوى الصافي فوراً بعد أسطر [FONT] و [LANG] و [BORDER] و [WEIGHT] بدون أي مقدمات أو شروحات أو علامات \`\`\`.
-`;
-
-      let extractedText = "";
-      const modelsToTry = VISION_MODELS;
-      let lastError: unknown = null;
-
-      for (const model of modelsToTry) {
-        try {
-          const response = await ai.models.generateContent({
-            model,
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  {
-                    inlineData: {
-                      mimeType,
-                      data: cleanBase64,
-                    },
-                  },
-                  { text: prompt },
-                ],
-              },
-            ],
-          });
-          extractedText = response.text ? response.text.trim() : "";
-          if (extractedText) break;
-        } catch (e) {
-          lastError = e;
-          await new Promise((r) => setTimeout(r, 800));
-        }
-      }
-
-      if (!extractedText) {
-        throw lastError || new Error("لم يتمكن الذكاء الاصطناعي من قراءة أي نص في هذه الصورة.");
-      }
-
-      // Extract detected font & language
-      let detectedFont = "Arial";
-      let detectedLang = "ar";
-      let detectedBorder = "none";
-      let detectedWeight = "normal";
-
-      const fontMatch = extractedText.match(/\[FONT:\s*([^\]]+)\]/i);
-      if (fontMatch) {
-        detectedFont = fontMatch[1].trim();
-        extractedText = extractedText.replace(/\[FONT:\s*[^\]]+\]/i, "").trim();
-      }
-
-      const langMatch = extractedText.match(/\[LANG:\s*([^\]]+)\]/i);
-      if (langMatch) {
-        detectedLang = langMatch[1].trim().toLowerCase();
-        extractedText = extractedText.replace(/\[LANG:\s*[^\]]+\]/i, "").trim();
-      }
-
-      const borderMatch = extractedText.match(/\[BORDER:\s*([^\]]+)\]/i);
-      if (borderMatch) {
-        detectedBorder = borderMatch[1].trim().toLowerCase();
-        extractedText = extractedText.replace(/\[BORDER:\s*[^\]]+\]/i, "").trim();
-      }
-
-      const weightMatch = extractedText.match(/\[WEIGHT:\s*([^\]]+)\]/i);
-      if (weightMatch) {
-        detectedWeight = weightMatch[1].trim().toLowerCase();
-        extractedText = extractedText.replace(/\[WEIGHT:\s*[^\]]+\]/i, "").trim();
-      }
-
-      // Clean HTML entities, backslashes or stray code fences
-      extractedText = extractedText
-        .replace(/^```[a-z]*\s*/i, "")
-        .replace(/```\s*$/, "")
-        .replace(/&nbsp;/gi, " ")
-        .replace(/\\([*_#[\]()-])/g, "$1")
-        .trim();
+      const meta: Record<string, string | null> = {};
+      let text = cleanTranscript(result.text);
+      for (const key of ["FONT", "LANG", "BORDER", "WEIGHT"]) [meta[key], text] = takeMeta(text, key);
+      const { FONT: font, LANG: lang, BORDER: border, WEIGHT: weight } = meta;
 
       return NextResponse.json({
         success: true,
-        extractedText,
-        detectedFont,
-        detectedLang,
-        detectedBorder,
-        detectedWeight,
-        stage: "extracted",
+        extractedText: text,
+        detectedFont: font || "Arial",
+        detectedLang: (lang || "ar").toLowerCase(),
+        detectedBorder: (border || "none").toLowerCase(),
+        detectedWeight: (weight || "normal").toLowerCase(),
+        provider: result.provider,
+        lowAccuracy: result.lowAccuracy,
       });
     }
 
-    // Action 2: Contextual grammar & Arabic text refinement
-    if (action === "refine") {
-      if (!textToRefine || !textToRefine.trim()) {
-        return NextResponse.json({ error: "لا يوجد نص للتدقيق." }, { status: 400 });
+    // Second pass: the draft is checked against the page image itself (a text-only proofread cannot see
+    // what was actually printed and tends to "fix" correct text)
+    if (action === "verify") {
+      if (!draft || !String(draft).trim()) {
+        return NextResponse.json({ error: "لا يوجد نص للمراجعة." }, { status: 400 });
       }
-
-      const refinePrompt = `
-أنت مدقق لغوي وقانوني وأكاديمي محترف.
-أمامك نص مستخرج من وثيقة أو حكم قضائي أو استمارة أو عقد بواسطة ماسح ضوئي (OCR).
-
-المطلوب:
-1. صحح أي أخطاء إملائية أو لغوية طفيفة ناتجة عن الماسح الضوئي.
-2. حافظ تماماً وبشكل صارم على:
-   - نقاط الفراغات (...........) بدون حذف.
-   - الجداول والبنود وعناوينها (### البند الأول أو /1 أو /2).
-   - وسوم التسطير <u> والنصوص العريضة **.
-   - الفاصل " || " الذي يفصل الوصف المدفوع لنهاية السطر (مثل || (طرف أول زوج)) بدون حذف أو نقل.
-   - ترتيب الأسطر وتقسيمها كما هو تماماً (لا تدمج سطرين ولا تقسم سطراً).
-3. لا تضع وسوم HTML غريبة مثل div أو span أو center.
-4. لا تضع كيانات &nbsp; ولا باك سلاش قبل الرموز (اكتب * وليس \\*).
-5. أرجع النص المصحح فقط بدون أي شروحات أو مقدمات.
-
-النص:
-"""
-${textToRefine}
-"""
-`;
-
-      let refinedText = textToRefine;
-      for (const model of VISION_MODELS) {
-        try {
-          const response = await ai.models.generateContent({
-            model,
-            contents: [{ role: "user", parts: [{ text: refinePrompt }] }],
-          });
-          if (response.text && response.text.trim()) {
-            refinedText = response.text.trim();
-            break;
-          }
-        } catch {}
+      // Only the model that made the draft may revise it (see transcribeImage); unavailable = keep the draft
+      const result = typeof provider === "string" ? await transcribeImage(verifyPrompt(String(draft)), imageBase64, provider) : null;
+      if (!result || result.lowAccuracy) {
+        return NextResponse.json({ success: true, verifiedText: draft, verified: false });
       }
-
-      refinedText = refinedText
-        .replace(/&nbsp;/gi, " ")
-        .replace(/\\([*_#[\]()-])/g, "$1")
-        .trim();
-
-      return NextResponse.json({
-        success: true,
-        refinedText,
-        stage: "refined",
-      });
+      let text = cleanTranscript(result.text);
+      for (const key of ["FONT", "LANG", "BORDER", "WEIGHT"]) text = takeMeta(text, key)[1];
+      // Guard against a truncated answer replacing a full page
+      const verified = text.length > String(draft).length * 0.6;
+      return NextResponse.json({ success: true, verifiedText: verified ? text : draft, verified, provider: result.provider });
     }
 
     return NextResponse.json({ error: "إجراء غير معروف." }, { status: 400 });

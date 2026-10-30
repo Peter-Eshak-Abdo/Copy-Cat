@@ -18,6 +18,8 @@ async function tryRemoveBg(buffer: Buffer, apiKey: string): Promise<Buffer | nul
   });
   if (!resp.ok) {
     console.warn("remove.bg failed:", resp.status, await resp.text().catch(() => ""));
+    // 402: the monthly free calls and paid credits are used up
+    if (resp.status === 402) throw new Error("quota");
     return null;
   }
   return Buffer.from(await resp.arrayBuffer());
@@ -65,6 +67,7 @@ export async function POST(req: NextRequest) {
       ["hf-rmbg", process.env.HF_TOKEN || process.env.HUGGINGFACE_API_KEY, tryHuggingFace],
     ];
 
+    const quotaExhausted: string[] = [];
     for (const [name, key, run] of providers) {
       if (!key) continue;
       try {
@@ -77,7 +80,8 @@ export async function POST(req: NextRequest) {
           });
         }
       } catch (err) {
-        console.warn(`${name} background removal failed, trying next provider:`, err);
+        if (err instanceof Error && err.message === "quota") quotaExhausted.push(name);
+        else console.warn(`${name} background removal failed, trying next provider:`, err);
       }
     }
 
@@ -86,6 +90,7 @@ export async function POST(req: NextRequest) {
       success: true,
       message: "الخلفية جاهزة للمعالجة والتبييض.",
       provider: "client-canvas",
+      quotaExhausted,
     });
   } catch (error) {
     console.error("Error in remove-bg route:", error);

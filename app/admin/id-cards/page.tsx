@@ -26,6 +26,7 @@ import { processImageOnCanvas, CropRect, QuadCorners, Point2D, detectCardCorners
 import { detectCardCornersOpenCV } from "@/lib/opencv-loader";
 import { useToast } from "@/components/toast-provider";
 import { readFileAsDataURL, getFriendlyErrorMessage } from "@/lib/utils";
+import { pairCardSides, type ScannedSide } from "@/lib/card-pairing";
 
 interface CardSide {
   id: string;
@@ -199,6 +200,8 @@ export default function IdCardsPage() {
     if (!fileList || fileList.length === 0) return;
 
     const loadedSides: CardSide[] = [];
+    // Front/back + national number read by the AI for each loaded side (same order as loadedSides)
+    const scanned: ScannedSide[] = [];
     let invalidCount = 0;
 
     for (let i = 0; i < fileList.length; i++) {
@@ -214,6 +217,7 @@ export default function IdCardsPage() {
         // 1. AI corners first: edge detectors latch onto fingers, desk grain and backgrounds, while the
         // vision model finds the card itself and extends its edges under a thumb.
         let aiQuad: QuadCorners | null = null;
+        let sideInfo: ScannedSide = { side: "unknown", nationalId: null };
         try {
           const res = await fetch("/api/admin/card-align", {
             method: "POST",
@@ -222,6 +226,8 @@ export default function IdCardsPage() {
           });
           const data = await res.json();
           if (data.success && data.corners) aiQuad = data.corners;
+          if (data.side === "front" || data.side === "back") sideInfo = { side: data.side, nationalId: data.nationalId };
+          else if (data.nationalId) sideInfo = { side: "unknown", nationalId: data.nationalId };
         } catch {}
 
         // 2. Fallback: OpenCV or native Canvas Sobel edge detection
@@ -297,37 +303,31 @@ export default function IdCardsPage() {
           bakedContrast: initialContrast,
           bakedSharpness: initialSharpness,
           thresholdMode: false,
-          sideType: i % 2 === 0 ? "front" : "back",
+          sideType: sideInfo.side === "back" ? "back" : "front",
           quad: autoQuad,
           camScannerMode: true,
         });
+        scanned.push(sideInfo);
       } catch (err) {
         console.error(`Error reading card image ${file.name}:`, err);
         invalidCount++;
       }
     }
 
-    // Pair up consecutively
-    const newPairs: CardPair[] = [];
-    for (let i = 0; i < loadedSides.length; i += 2) {
-      const front = loadedSides[i] || null;
-      const back = loadedSides[i + 1] || null;
-      const pairIndex = Math.floor(i / 2) + 1;
-
-      newPairs.push({
-        pairId: Math.random().toString(36).substring(2, 9),
-        cardName: `بطاقة رقم ${pairs.length + pairIndex}`,
-        front,
-        back,
-      });
-    }
+    // Front with its own back by national number; a card without a scanned back keeps that side empty
+    const newPairs: CardPair[] = pairCardSides(scanned).map((p, idx) => ({
+      pairId: Math.random().toString(36).substring(2, 9),
+      cardName: `بطاقة رقم ${pairs.length + idx + 1}${p.nationalId ? ` (${p.nationalId})` : ""}`,
+      front: p.front !== null ? { ...loadedSides[p.front], sideType: "front" } : null,
+      back: p.back !== null ? { ...loadedSides[p.back], sideType: "back" } : null,
+    }));
 
     setPairs((prev) => [...prev, ...newPairs]);
 
     if (newPairs.length > 0) {
       toast.success(
         "تم استيراد صور البطاقات وتحديد أركانها بنجاح",
-        `تمت إضافة ${loadedSides.length} وجه (${newPairs.length} بطاقة) مع الكشف التلقائي للأركان بـ OpenCV.`
+        `تمت إضافة ${loadedSides.length} صورة (${newPairs.length} بطاقة): تم ترتيب كل وجه مع ظهره بالرقم القومي، والبطاقة التي ليس لها ظهر تُركت بظهر فارغ.`
       );
     }
     if (invalidCount > 0) {
