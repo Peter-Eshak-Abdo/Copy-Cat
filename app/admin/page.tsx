@@ -180,7 +180,7 @@ function getCurrentShift(date: Date = new Date()): {
   if (totalMinutes >= 510 && totalMinutes < 960) {
     return {
       id: "morning",
-      label: "شفت صباحي",
+      label: "شيفت الصبح",
       timeRange: "08:30 ص - 04:00 م",
     };
   }
@@ -188,7 +188,7 @@ function getCurrentShift(date: Date = new Date()): {
   // من 4:00 عصراً حتى 11:30 مساءً = شفت مسائي
   return {
     id: "evening",
-    label: "شفت مسائي",
+    label: "شيفت بالليل",
     timeRange: "04:00 م - 11:30 م",
   };
 }
@@ -209,10 +209,10 @@ interface WorkstationTool {
 const WORKSTATION_TOOLS: WorkstationTool[] = [
   {
     id: "calculator",
-    title: "حاسبة المطبعة والملازم الذكية",
-    desc: "حساب دقيق لورق الملازم (وش وضهر)، أزرار تسعير الورقة، وإضافات التجليد والسلوفان مع حاسبة عامة سريعة بنظام Numpad.",
-    badge: "حساب وش وظهر دقيق",
-    footerTag: "تسعير مخصص للمكتبة",
+    title: "حاسبة سعر الملازم",
+    desc: "بتحسب سعر الملزمة (وش وضهر) والتجليد والسلوفان، وفيها آلة حاسبة عادية.",
+    badge: "وش وضهر",
+    footerTag: "بأسعار المكتبة",
     icon: "calculate",
     href: "/admin/calculator",
     colorClass: "text-blue-600",
@@ -233,10 +233,10 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
   // },
   {
     id: "pdf-tools",
-    title: "استوديو وأدوات الـ PDF المتقدمة",
-    desc: "حذف صفحات الملازم من المنتصف والأطراف، تجميع الصور في ملف PDF، وتحويل المستندات العربية إلى Word بمسافات ضيقة وخط 18pt.",
-    badge: "تعديل PDF أوفلاين",
-    footerTag: "حذف صفحات & صور لـ PDF",
+    title: "أدوات PDF",
+    desc: "امسح صفحات من الملزمة، جمّع صور في ملف PDF، وحوّل PDF عربي لـ Word.",
+    badge: "من غير نت",
+    footerTag: "مسح صفحات وصور لـ PDF",
     icon: "picture_as_pdf",
     href: "/admin/pdf-tools",
     colorClass: "text-rose-600",
@@ -245,10 +245,10 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
   },
   {
     id: "ocr",
-    title: "الماسح الضوئي الذكي (Multi-Page OCR)",
-    desc: "استخراج نصوص الأوراق والملازم وتدقيقها لغوياً ونحوياً بدقة عالية وتصدير ملف Word جاهز للطباعة والتحرير.",
-    badge: "تدقيق لغوي ذكي",
-    footerTag: "تصدير Word بخط 18pt",
+    title: "صورة لـ Word (OCR)",
+    desc: "صوّر الورقة (مطبوعة أو بخط الإيد) وهتطلعلك ملف Word بنفس الشكل والجداول، حتى لو الصورة بالعرض أو مقلوبة.",
+    badge: "مطبوع وخط إيد",
+    footerTag: "بيطلع Word",
     icon: "psychology",
     href: "/admin/ocr",
     colorClass: "text-amber-600",
@@ -257,10 +257,10 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
   },
   {
     id: "lan-transfer",
-    title: "مركز النقل السريع الداخلي (LAN Transfer)",
-    desc: "نقل فوري للملفات والملازم الكبيرة بين أجهزة المكتبة عبر كابل الشبكة المحلية أو الراوتر بدون استهلاك باقة الإنترنت وبسرعات خيالية.",
-    badge: "0 استهلاك نت",
-    footerTag: "سرعة كابل الشبكة القصوى",
+    title: "نقل ملفات بين الأجهزة",
+    desc: "ابعت الملفات الكبيرة بين أجهزة المكتبة على نفس الراوتر من غير ما تصرف من باقة النت.",
+    badge: "من غير باقة",
+    footerTag: "سريع جداً",
     icon: "share",
     href: "/admin/lan-transfer",
     colorClass: "text-cyan-600",
@@ -269,10 +269,10 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
   },
   {
     id: "id-cards",
-    title: "مصنع البطاقات والمستندات (A5)",
-    desc: "قص وتجهيز بطاقات الرقم القومي، رخص القيادة، وشهادات الميلاد وش وظهر على ورقة A5 فورية بالألوان الطبيعية الأصلية 100%.",
-    badge: "تصدير Word A5",
-    footerTag: "ألوان طبيعية 100%",
+    title: "البطايق (وش وضهر)",
+    desc: "ارفع صور البطايق بأي ترتيب، وهو يقصها ويعدلها ويحط كل وش مع ضهره بالرقم القومي في ورقة جاهزة للطباعة.",
+    badge: "Word A4 / A5",
+    footerTag: "وش مع ضهره",
     icon: "badge",
     href: "/admin/id-cards",
     colorClass: "text-emerald-600",
@@ -281,10 +281,10 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
   },
   {
     id: "passport-photos",
-    title: "استوديو الصور الشخصية (4x6)",
-    desc: "عزل الخلفية تلقائياً، ضبط الرأس والكتفين بيومترياً، إزالة الظلال، ورص 8 صور بجودة عالية جاهزة للطابعة الملونة.",
-    badge: "معيار بيومتري 4x6",
-    footerTag: "رص 8 صور 4x6",
+    title: "الصور الشخصية 4×6",
+    desc: "بيشيل الخلفية ويخليها بيضا، ويظبط الراس والكتاف، ويرص الصور في ورقة جاهزة للطباعة.",
+    badge: "مقاس 4×6",
+    footerTag: "4 أو 9 صور في الورقة",
     icon: "photo_camera",
     href: "/admin/passport-photos",
     colorClass: "text-sky-600",
@@ -293,10 +293,10 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
   },
   {
     id: "scanner",
-    title: "ماسح المستندات وتوفير الحبر",
-    desc: "قلب ألوان لقطات الشاشة الداكنة (Dark Mode Invert) وتبييض خلفية الورق الأصفر والظلال لتوفير الحبر الأسود مع نصوص عالية الحدة.",
-    badge: "توفير 70% حبر",
-    footerTag: "تبييض فوري ونقي",
+    title: "سكانر وتوفير الحبر",
+    desc: "بيقلب الشاشات السودا لأبيض، وبيبيّض الورق الأصفر ويشيل الضل عشان الطباعة متصرفش حبر.",
+    badge: "حبر أقل",
+    footerTag: "تبييض الورق",
     icon: "invert_colors",
     href: "/admin/scanner",
     colorClass: "text-teal-600",
@@ -305,10 +305,10 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
   },
   {
     id: "research",
-    title: "مولد الأبحاث المدرسية والجامعية",
-    desc: "صياغة وتنسيق الأبحاث A4 بهوامش ضيقة، فهارس ومراجع أكاديمية موثقة، غلاف رسمي للمدرسة أو الجامعة وتصدير Word جاهز فوراً.",
-    badge: "أكاديمي معتمد",
-    footerTag: "تنسيق Word A4 قياسي",
+    title: "عمل الأبحاث",
+    desc: "اكتب عنوان البحث، وهيطلعلك ملف Word فيه غلاف وفهرس ومراجع جاهز للطباعة. تقدر تطلب كذا نسخة مختلفة.",
+    badge: "لحد 15 نسخة",
+    footerTag: "Word مقاس A4",
     icon: "auto_stories",
     href: "/admin/research",
     colorClass: "text-purple-600",
@@ -317,10 +317,10 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
   },
   {
     id: "shortcuts",
-    title: "روابط وسيرفرات العمل اليومية",
-    desc: "دليل الخدمات الحكومية، بوابات التنسيق والجامعات، منصات التقديم لوظائف المعلمين، ومواقع فحص وحساب التكلفة السريعة.",
-    badge: "وصول سريع بضغطة زر",
-    footerTag: "24 بوابة حكومية",
+    title: "مواقع بنستخدمها كل يوم",
+    desc: "روابط المواقع الحكومية والتنسيق والجامعات والتقديم على الوظايف.",
+    badge: "بدوسة واحدة",
+    footerTag: "24 موقع",
     icon: "language",
     href: "/admin/shortcuts",
     colorClass: "text-slate-600",
@@ -329,10 +329,10 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
   },
   {
     id: "inventory",
-    title: "إدارة المخزن والكتالوج (حصر)",
-    desc: "متابعة رصيد باكتات الورق 70g و 80g، خراطيش الحبر، السلك الحلزوني، وتحديث فوري لأسعار التوريد والبيع للزبائن.",
-    badge: "حصر المنتجات والمخزون",
-    footerTag: "تحديث الأسعار والموردين",
+    title: "المخزن والأسعار",
+    desc: "تابع الورق والحبر والسلك اللي في المخزن، وغيّر أسعار الشرا والبيع.",
+    badge: "جرد المخزن",
+    footerTag: "الأسعار والموردين",
     icon: "inventory",
     href: "/admin/inventory",
     colorClass: "text-emerald-700",
@@ -341,10 +341,10 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
   },
   {
     id: "photos",
-    title: "بنك ومكتبة صور المنتجات (Photo Pool)",
-    desc: "مستودع يجمع صور صفحة فيسبوك والصور الملتقطة بكاميرا الهاتف لربط وتخصيص صور المنتجات والكتالوج في أي وقت بضغطة واحدة.",
-    badge: "مكتبة صور متجددة",
-    footerTag: "تصوير & ربط بالكتالوج",
+    title: "صور المنتجات",
+    desc: "كل صور المنتجات من صفحة فيسبوك ومن كاميرا الموبايل في مكان واحد، وتقدر تحط أي صورة لأي منتج.",
+    badge: "كل الصور",
+    footerTag: "صوّر واربط بالمنتج",
     icon: "photo_library",
     href: "/admin/photos",
     colorClass: "text-emerald-600",
@@ -353,10 +353,10 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
   },
   {
     id: "instapay",
-    title: "سجل وتحويلات إنستا باي (InstaPay)",
-    desc: "تسجيل تحويلات الزبائن بالاسم والهاتف والمبلغ لحين وصول الباشمهندس للمكتبة وتأكيد استلام المبالغ بحساب البنك بنقرة واحدة.",
-    badge: "تأكيد فوري للتحويلات",
-    footerTag: "تسجيل وتأكيد",
+    title: "تحويلات إنستا باي",
+    desc: "سجّل تحويل الزبون (الاسم والرقم والمبلغ) لحد ما الباشمهندس يتأكد إن الفلوس وصلت.",
+    badge: "متابعة التحويلات",
+    footerTag: "سجّل وأكّد",
     icon: "credit_card",
     href: "/admin/instapay",
     colorClass: "text-violet-600",
@@ -365,10 +365,10 @@ const WORKSTATION_TOOLS: WorkstationTool[] = [
   },
   {
     id: "fb-post-tools",
-    title: "سحب بوستات وملازم فيسبوك PDF",
-    desc: "ضع رابط أي منشور فيسبوك (مثلاً 80 صورة ملزمة أو مذكرة) لسحب كافة الصور بالترتيب ودمجها فوراً في ملف PDF عالي الدقة جاهز للطباعة.",
-    badge: "سحب بوستات كاملة",
-    footerTag: "دمج صفحات بالترتيب",
+    title: "ملازم فيسبوك لـ PDF",
+    desc: "الزق رابط بوست فيسبوك عام فيه صور ملزمة، أو ارفع الصور بنفسك، وهتتجمع بالترتيب في ملف PDF.",
+    badge: "بوست كامل",
+    footerTag: "بالترتيب",
     icon: "picture_as_pdf",
     href: "/admin/fb-post-tools",
     colorClass: "text-blue-600",
@@ -451,7 +451,7 @@ export default function AdminDashboardPage() {
     } catch {}
     setDraggedIndex(null);
     setDragOverIndex(null);
-    toast.success("تم ترتيب الأدوات بنجاح", "تم حفظ ترتيب أدوات العمل محلياً لهذا الجهاز.");
+    toast.success("الترتيب اتحفظ", "ترتيب الأدوات اتحفظ على الجهاز ده.");
   };
 
   const handleDragEnd = () => {
@@ -464,7 +464,7 @@ export default function AdminDashboardPage() {
     try {
       localStorage.removeItem("copycat_workstation_tools_order_v2");
     } catch {}
-    toast.info("استعادة الترتيب", "تمت استعادة الترتيب الافتراضي لجميع الأدوات.");
+    toast.info("الترتيب رجع", "الأدوات رجعت لترتيبها الأصلي.");
   };
 
   // Shift & Real metrics calculations
@@ -516,14 +516,14 @@ export default function AdminDashboardPage() {
       pwaPrompt.prompt();
       const choice = await pwaPrompt.userChoice;
       if (choice.outcome === "accepted") {
-        toast.success("تم تثبيت التطبيق بنجاح!", "لوحة إدارة مكتبة كوبي كات تعمل الآن كتطبيق مستقل على سطح المكتب.");
+        toast.success("البرنامج اتثبت", "صفحة الأدمن بقت برنامج على سطح المكتب.");
         setPwaPrompt(null);
         setIsPwaInstalled(true);
       }
     } else {
       toast.info(
-        "تثبيت نسخة الأدمن PWA على كمبيوتر المكتبة",
-        "يمكنك الضغط على أيقونة التثبيت (⊕ في شريط عنوان المتصفح Chrome/Edge) لتثبيت لوحة الإدارة مباشرة وتفتح تلقائياً على /admin."
+        "تثبيت صفحة الأدمن على الكمبيوتر",
+        "دوس على علامة التثبيت (⊕) في شريط العنوان في Chrome أو Edge، وصفحة الأدمن هتبقى برنامج على سطح المكتب."
       );
     }
   };
@@ -533,7 +533,7 @@ export default function AdminDashboardPage() {
     localStorage.setItem("copycat_announcement_banner", bannerInput.trim());
     setBannerText(bannerInput.trim());
     setIsEditingBanner(false);
-    toast.success("تم تحديث إعلان المتجر", "تم حفظ النص الجديد وسيطبق فوراً على شريط المتجر العلوي.");
+    toast.success("الإعلان اتغير", "الكلام الجديد هيظهر فوق في صفحة الزباين.");
   };
 
   return (
@@ -546,10 +546,10 @@ export default function AdminDashboardPage() {
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              أدوات وماكينات العمل اليومية
+              أدوات الشغل
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-semibold mt-0.5">
-              💡 يمكنك سحب وإفلات أي أداة (Drag & Drop) لإعادة ترتيبها بحرية حسب تفضيلك اليومي
+              💡 تقدر تسحب أي أداة وتحطها في المكان اللي يريحك
             </p>
           </div>
         </div>
@@ -565,7 +565,7 @@ export default function AdminDashboardPage() {
             }`}
           >
             {showOverview ? <ChevronUp className="w-4 h-4" /> : <BarChart3 className="w-4 h-4" />}
-            <span>{showOverview ? "إخفاء ملخص الشفت والإحصائيات ▲" : "عرض ملخص الشفت والإحصائيات ▼"}</span>
+            <span>{showOverview ? "خبّي ملخص الشيفت ▲" : "وريني ملخص الشيفت ▼"}</span>
             {activeOrdersCount > 0 && !showOverview && (
               <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-xs font-bold mr-1">
                 {activeOrdersCount} أوردر
@@ -576,16 +576,16 @@ export default function AdminDashboardPage() {
           <button
             onClick={handleResetOrder}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 transition cursor-pointer"
-            title="إعادة ترتيب الأدوات للوضع الافتراضي الأصلي"
+            title="رجّع الأدوات لترتيبها الأصلي"
           >
             <RotateCcw className="w-4 h-4" />
-            <span className="hidden sm:inline">إعادة الترتيب</span>
+            <span className="hidden sm:inline">رجّع الترتيب</span>
           </button>
 
           <button
             onClick={() => setPrintQrModal("stand")}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs sm:text-sm border border-emerald-200 transition cursor-pointer"
-            title="طباعة بوستر أو استند كيو آر واتساب المكتبة"
+            title="اطبع بوستر كود واتساب المكتبة"
           >
             <Printer className="w-4 h-4 text-emerald-600" />
             <span>بوستر واتساب</span>
@@ -594,10 +594,10 @@ export default function AdminDashboardPage() {
           <button
             onClick={() => setIsPreviewModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs sm:text-sm border border-blue-200 transition cursor-pointer"
-            title="معاينة واجهة متجر الزبائن"
+            title="افتح صفحة الزباين"
           >
             <Eye className="w-4 h-4 text-blue-600" />
-            <span>متجر الزبائن</span>
+            <span>صفحة الزباين</span>
           </button>
         </div>
       </div>
@@ -620,10 +620,10 @@ export default function AdminDashboardPage() {
                   </span>
                 </div>
                 <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                  مركز العمليات ومطبعة كوبي كات
+                  أدوات مكتبة كوبي كات
                 </h2>
                 <p className="text-sm text-slate-500 max-w-2xl leading-relaxed">
-                  منصة إدارة أوردرات الطباعة وتسليم الشفت، استخراج النصوص، حاسبة الملازم، وأدوات المستندات الذكية.
+                  كل اللي محتاجه في الشغل: الأوردرات، تسليم الشيفت، صورة لـ Word، حاسبة الملازم، البطايق والصور.
                 </p>
               </div>
 
@@ -632,10 +632,10 @@ export default function AdminDashboardPage() {
                 <button
                   onClick={handleInstallPwa}
                   className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs transition cursor-pointer"
-                  title="تثبيت لوحة الأدمن كتطبيق مستقل على كمبيوتر المكتبة (PWA)"
+                  title="ثبّت صفحة الأدمن كبرنامج على الكمبيوتر"
                 >
                   <Monitor className="w-4 h-4 text-emerald-600" />
-                  <span>{isPwaInstalled ? "تطبيق الأدمن مثبت ✓" : "تثبيت أدمن المكتبة PWA"}</span>
+                  <span>{isPwaInstalled ? "البرنامج متثبت ✓" : "ثبّت كبرنامج"}</span>
                 </button>
 
                 <Link
@@ -643,14 +643,14 @@ export default function AdminDashboardPage() {
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-xs"
                 >
                   <Calculator className="w-4 h-4" />
-                  <span>حاسبة الملازم والطباعة</span>
+                  <span>حاسبة الملازم</span>
                 </Link>
                 <Link
                   href="/admin/tasks"
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition border border-slate-200"
                 >
                   <ClipboardCheck className="w-4 h-4 text-slate-600" />
-                  <span>مهام وأوردرات الشفت</span>
+                  <span>أوردرات الشيفت</span>
                 </Link>
               </div>
             </div>
@@ -664,8 +664,8 @@ export default function AdminDashboardPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs sm:text-sm font-bold text-slate-900">شريط إعلان وخصم المتجر العلوي:</span>
-                  <span className="text-xs text-slate-400">يظهر أعلى متجر الزبائن مباشرة</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-900">الإعلان اللي فوق في صفحة الزباين:</span>
+                  <span className="text-xs text-slate-400">بيظهر أول حاجة للزبون</span>
                 </div>
                 {isEditingBanner ? (
                   <div className="flex items-center gap-2 mt-2 w-full">
@@ -679,7 +679,7 @@ export default function AdminDashboardPage() {
                       onClick={handleSaveBanner}
                       className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shrink-0 cursor-pointer"
                     >
-                      حفظ التعديل ✓
+                      احفظ ✓
                     </button>
                     <button
                       onClick={() => setIsEditingBanner(false)}
@@ -704,7 +704,7 @@ export default function AdminDashboardPage() {
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold shrink-0 transition cursor-pointer"
               >
                 <Edit2 className="w-4 h-4" />
-                <span>تعديل الإعلان</span>
+                <span>غيّر الإعلان</span>
               </button>
             )}
           </div>
@@ -714,7 +714,7 @@ export default function AdminDashboardPage() {
             {/* Card 1: Active Orders */}
             <div className="flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500">أوردرات اليوم النشطة</span>
+                <span className="text-xs font-semibold text-slate-500">أوردرات النهارده الشغالة</span>
                 <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100">
                   <Receipt className="w-5 h-5 text-blue-600" />
                 </div>
@@ -723,19 +723,19 @@ export default function AdminDashboardPage() {
                 <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
                   {activeOrdersCount}
                 </span>
-                <span className="text-xs font-bold text-blue-600">أوردر مسجل</span>
+                <span className="text-xs font-bold text-blue-600">أوردر</span>
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                 <span className="inline-flex items-center gap-1 text-xs text-slate-500">
                   {inProgressCount > 0 ? (
                     <>
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping"></span>
-                      {inProgressCount} جاري تنفيذها بالماكينات
+                      {inProgressCount} شغالين على المكن
                     </>
                   ) : (
                     <>
                       <CheckCheck className="w-4 h-4 text-emerald-600" />
-                      جميع الأوردرات مسجلة وجاهزة
+                      كل الأوردرات متسجلة
                     </>
                   )}
                 </span>
@@ -748,7 +748,7 @@ export default function AdminDashboardPage() {
             {/* Card 2: Printed Sheets Total */}
             <div className="flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500">إجمالي النسخ المطبوعة اليوم</span>
+                <span className="text-xs font-semibold text-slate-500">اتطبع النهارده</span>
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
                   <Printer className="w-5 h-5 text-indigo-600" />
                 </div>
@@ -762,7 +762,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                 <span className="inline-flex items-center gap-1 text-xs text-slate-500">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  {readyCount > 0 ? `${readyCount} أوردر جاهز للتسليم` : `${completedCount} أوردر مكتمل`}
+                  {readyCount > 0 ? `${readyCount} أوردر جاهز يتسلم` : `${completedCount} أوردر خلص`}
                 </span>
                 <span className="text-xs text-slate-400 font-medium">{currentShift.label}</span>
               </div>
@@ -774,7 +774,7 @@ export default function AdminDashboardPage() {
               className="group flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-violet-300 hover:shadow-md transition cursor-pointer"
             >
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500">تحويلات إنستا باي المعلقة</span>
+                <span className="text-xs font-semibold text-slate-500">تحويلات إنستا باي لسه متأكدتش</span>
                 <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-colors border border-violet-100">
                   <CreditCard className="w-5 h-5 text-violet-600" />
                 </div>
@@ -787,10 +787,10 @@ export default function AdminDashboardPage() {
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                 <span className="text-xs text-amber-600 font-bold">
-                  {getPendingInstaPaySummary().count > 0 ? `${getPendingInstaPaySummary().count} بانتظار التأكيد` : "لا توجد مبالغ معلقة"}
+                  {getPendingInstaPaySummary().count > 0 ? `${getPendingInstaPaySummary().count} مستنيين تأكيد` : "مفيش فلوس مستنية"}
                 </span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 font-bold flex items-center gap-0.5">
-                  <span>فتح السجل</span>
+                  <span>افتح السجل</span>
                   <ArrowLeft className="w-3.5 h-3.5" />
                 </span>
               </div>
@@ -799,7 +799,7 @@ export default function AdminDashboardPage() {
             {/* Card 4: Shift Completion & Progress */}
             <div className="flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500">معدل إنجاز أوردرات الشفت</span>
+                <span className="text-xs font-semibold text-slate-500">أوردرات الشيفت اللي خلصت</span>
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100">
                   <PieChart className="w-5 h-5 text-emerald-600" />
                 </div>
@@ -821,8 +821,8 @@ export default function AdminDashboardPage() {
                 </div>
                 <span className="text-[11px] text-slate-400 mt-1">
                   {tasks.length > 0
-                    ? `${inProgressCount} أوردر جاري تنفيذه حالياً`
-                    : "جاهز لبدء استقبال أوردرات الشفت الجديدة"}
+                    ? `${inProgressCount} أوردر شغالين فيه دلوقتي`
+                    : "جاهز لأوردرات الشيفت"}
                 </span>
               </div>
             </div>
@@ -869,7 +869,7 @@ export default function AdminDashboardPage() {
                     {/* Drag Handle Indicator */}
                     <div
                       className="p-1.5 rounded-xl text-slate-300 group-hover:text-slate-500 hover:bg-slate-100 cursor-grab active:cursor-grabbing transition-colors"
-                      title="اسحب البطاقة لتغيير ترتيبها (Drag & Drop)"
+                      title="اسحب الأداة عشان تغير مكانها"
                       onClick={(e) => e.preventDefault()}
                     >
                       <GripVertical className="w-5 h-5" />
@@ -892,7 +892,7 @@ export default function AdminDashboardPage() {
                   <span
                     className={`text-sm sm:text-base font-black ${tool.colorClass} flex items-center gap-1.5 group-hover:translate-x-[-4px] transition-transform`}
                   >
-                    تشغيل الأداة
+                    افتح
                     <ArrowLeft className="w-4 h-4" />
                   </span>
                   <span className="text-xs sm:text-sm text-slate-400 font-bold">{tool.footerTag}</span>
@@ -912,7 +912,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center gap-2">
                 <Printer className="w-5 h-5 text-emerald-600" />
                 <span className="font-bold text-xs text-slate-900">
-                  {printQrModal === "stand" ? "معاينة استند طاولة الكاشير (A5)" : "معاينة بوستر حائط المحل (A4)"}
+                  {printQrModal === "stand" ? "استاند الكاشير (A5)" : "بوستر الحيطة (A4)"}
                 </span>
                 <div className="flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200 mr-2">
                   <button
@@ -940,7 +940,7 @@ export default function AdminDashboardPage() {
                   className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
                 >
                   <Printer className="w-4 h-4" />
-                  <span>طباعة فورية (Ctrl+P)</span>
+                  <span>اطبع (Ctrl+P)</span>
                 </button>
                 <button
                   onClick={() => setPrintQrModal(null)}
@@ -1045,8 +1045,8 @@ export default function AdminDashboardPage() {
                   <Store className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">معاينة واجهة متجر الزبائن الحية</h3>
-                  <p className="text-xs text-slate-500">شاهد كيف تبدو العروض والأسعار والمنتجات للعميل الآن</p>
+                  <h3 className="text-base font-bold text-slate-900">صفحة الزباين</h3>
+                  <p className="text-xs text-slate-500">ده اللي الزبون بيشوفه دلوقتي</p>
                 </div>
               </div>
 
@@ -1082,7 +1082,7 @@ export default function AdminDashboardPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800 flex items-center gap-1.5 transition border border-slate-200"
-                  title="فتح في نافذة متصفح جديدة"
+                  title="افتحها في صفحة جديدة"
                 >
                   <ExternalLink className="w-4 h-4" />
                   <span className="hidden sm:inline">نافذة جديدة</span>
@@ -1091,7 +1091,7 @@ export default function AdminDashboardPage() {
                 <button
                   onClick={() => setIsPreviewModalOpen(false)}
                   className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-500 flex items-center justify-center transition cursor-pointer border border-slate-200"
-                  title="إغلاق المعاينة"
+                  title="اقفل"
                 >
                   <X className="w-5 h-5" />
                 </button>

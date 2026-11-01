@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import NextImage from "next/image";
 import {
   Upload,
@@ -29,7 +29,125 @@ import {
   FRAME_W,
   HeadBox,
 } from "@/lib/portrait-enhancer";
-import { detectHeadLocally } from "@/lib/face-fallback";
+import { detectHeadLocally, warmUpFaceDetector } from "@/lib/face-fallback";
+
+/** Height of the optional name strip at the bottom of the photo: 8mm of the 52mm print */
+const NAME_STRIP_MM = 8;
+
+/**
+ * Same 40x52mm photo with its bottom 8mm turned into a white strip carrying the name (the photo keeps its
+ * printed size; the frame crops the lowest part of the shoulders instead).
+ */
+async function composeNameStrip(framedDataUrl: string, name: string): Promise<string> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = reject;
+    el.src = framedDataUrl;
+  });
+  const W = img.naturalWidth;
+  const H = img.naturalHeight;
+  const strip = Math.round((H * NAME_STRIP_MM) / 52);
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return framedDataUrl;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(img, 0, 0, W, H - strip, 0, 0, W, H - strip);
+  // Thin rule between photo and name, then the name sized to fit the strip
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, H - strip - 1, W, 2);
+  let size = Math.round(strip * 0.55);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.direction = "rtl";
+  const fit = () => {
+    ctx.font = `bold ${size}px Arial, "Segoe UI", sans-serif`;
+    return ctx.measureText(name).width;
+  };
+  while (size > 12 && fit() > W * 0.9) size -= 2;
+  ctx.fillText(name, W / 2, H - strip / 2 + 1);
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = FRAME_BORDER_PX;
+  ctx.strokeRect(FRAME_BORDER_PX / 2, FRAME_BORDER_PX / 2, W - FRAME_BORDER_PX, H - FRAME_BORDER_PX);
+  return canvas.toDataURL("image/jpeg", 0.96);
+}
+
+/** The photo as printed: with the name strip when the person has it switched on */
+function printedImage(p: PhotoPerson): string {
+  return p.includeName && p.namedDataUrl ? p.namedDataUrl : p.imageDataUrl;
+}
+
+/**
+ * Head box [ymin, xmin, ymax, xmax] (0..1000) estimated from a cut-out's alpha mask, for photos where no
+ * face detector answered (full-body shots, quota used up): the head is the narrow top of the silhouette,
+ * and it ends where the outline widens into the shoulders.
+ */
+function headBoxFromMask(cutout: HTMLCanvasElement): HeadBox | undefined {
+  const scale = Math.min(1, 400 / Math.max(cutout.width, cutout.height));
+  const w = Math.max(1, Math.round(cutout.width * scale));
+  const h = Math.max(1, Math.round(cutout.height * scale));
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d");
+  if (!ctx) return undefined;
+  ctx.drawImage(cutout, 0, 0, w, h);
+  const a = ctx.getImageData(0, 0, w, h).data;
+  const rows: Array<{ l: number; r: number } | null> = [];
+  for (let y = 0; y < h; y++) {
+    let l = -1;
+    let r = -1;
+    for (let x = 0; x < w; x++) {
+      if (a[(y * w + x) * 4 + 3] > 128) {
+        if (l < 0) l = x;
+        r = x;
+      }
+    }
+    rows.push(l < 0 ? null : { l, r });
+  }
+  const top = rows.findIndex((r) => r && r.r - r.l > w * 0.02);
+  if (top < 0) return undefined;
+  let headW = 0;
+  let bottom = h - 1;
+  for (let y = top; y < h; y++) {
+    const row = rows[y];
+    if (!row) continue;
+    const width = row.r - row.l;
+    // Past a head-sized stretch, a row much wider than the head so far is the shoulders
+    if (y - top > headW * 0.9 && headW > 0 && width > headW * 1.45) {
+      bottom = y;
+      break;
+    }
+    headW = Math.max(headW, width);
+  }
+  const headRows = rows.slice(top, bottom).filter(Boolean) as Array<{ l: number; r: number }>;
+  if (headRows.length < 3) return undefined;
+  const l = Math.min(...headRows.map((r) => r.l));
+  const r = Math.max(...headRows.map((r) => r.r));
+  // The outline ends at the neck; the chin sits a little above that
+  const chin = top + (bottom - top) * 0.92;
+  return [(top / h) * 1000, (l / w) * 1000, (chin / h) * 1000, (r / w) * 1000];
+}
+
+/** A cut-out that kept almost every pixel (or none) did not actually remove the background */
+function maskLooksValid(cutout: HTMLCanvasElement): boolean {
+  const w = 120;
+  const h = Math.max(1, Math.round((cutout.height / cutout.width) * 120));
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d");
+  if (!ctx) return true;
+  ctx.drawImage(cutout, 0, 0, w, h);
+  const a = ctx.getImageData(0, 0, w, h).data;
+  let opaque = 0;
+  for (let i = 3; i < a.length; i += 4) if (a[i] > 128) opaque++;
+  const share = opaque / (w * h);
+  return share > 0.03 && share < 0.97;
+}
 
 /** Decodes a photo (EXIF orientation applied by the browser) onto a canvas, long side capped at maxSide */
 async function loadImageToCanvas(file: Blob, maxSide: number): Promise<HTMLCanvasElement> {
@@ -171,6 +289,9 @@ export interface PhotoPerson {
   rotation: number;
   whiteBackground: boolean;
   includeName?: boolean;
+  /** imageDataUrl with the name strip, rebuilt whenever the photo or the name changes */
+  namedDataUrl?: string;
+  namedFor?: string;
 }
 
 export default function PassportPhotosPage() {
@@ -180,8 +301,34 @@ export default function PassportPhotosPage() {
   const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [globalIncludeName] = useState(false);
-  // AI restoration can be turned off for photos where any generative change to the face is unacceptable
-  const [aiEnhance, setAiEnhance] = useState(true);
+  // AI restoration (free Hugging Face spaces) can take 1-2 minutes a photo, so it is opt-in
+  const [aiEnhance, setAiEnhance] = useState(false);
+  // In-browser tools downloaded in the background when the page opens (see the warm-up effect)
+  const [toolsState, setToolsState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+
+  // Warm-up: the face detector (~1MB) and the background-removal model (~40MB) start downloading while the
+  // page is idle, and the service worker keeps them, so a slow line pays for them once and the fallback is
+  // ready the moment remove.bg or Gemini cannot answer
+  useEffect(() => {
+    let cancelled = false;
+    const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    if (conn?.saveData) return;
+    const start = () => {
+      if (cancelled) return;
+      setToolsState("loading");
+      warmUpFaceDetector();
+      import("@imgly/background-removal")
+        .then((m) => m.preload({ model: "isnet_fp16", output: { format: "image/png" } }))
+        .then(() => !cancelled && setToolsState("ready"))
+        .catch(() => !cancelled && setToolsState("failed"));
+    };
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+    const id = w.requestIdleCallback ? w.requestIdleCallback(start) : window.setTimeout(start, 1500);
+    return () => {
+      cancelled = true;
+      if (!w.requestIdleCallback) window.clearTimeout(id);
+    };
+  }, []);
   const [isDragging, setIsDragging] = useState(false);
 
   // Full-size preview modal
@@ -362,187 +509,256 @@ export default function PassportPhotosPage() {
     return canvas.toDataURL("image/jpeg", 0.96);
   };
 
+  // Upload queue: photos added while others are being prepared join the running job (a second upload used
+  // to start a parallel run that interrupted the first one)
+  const queueRef = useRef<File[]>([]);
+  const runningRef = useRef(false);
+  const doneRef = useRef(0);
+  const totalRef = useRef(0);
+  const quotaWarnedRef = useRef(false);
+  const [progress, setProgress] = useState<{ total: number; done: number } | null>(null);
+
   const processFiles = async (fileList: File[]) => {
     if (!fileList || fileList.length === 0) return;
+    const images = fileList.filter((f) => f.type.startsWith("image/"));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (images.length === 0) {
+      toast.warning("الملف ده مش صورة", "اختار صور بس (JPG أو PNG)");
+      return;
+    }
 
+    queueRef.current.push(...images);
+    totalRef.current += images.length;
+    setProgress({ total: totalRef.current, done: doneRef.current });
+    if (runningRef.current) {
+      toast.info("ضفناهم على الشغل", `${images.length} صورة زيادة، هنظبطهم بعد اللي شغالين فيهم.`);
+      return;
+    }
+
+    runningRef.current = true;
     setIsProcessingBg(true);
-    setStatusMessage("جاري عزل وتبييض الخلفية وتأطير الصورة 4×6...");
+    toast.info("استلمنا الصور", `${images.length} صورة، بنظبطهم دلوقتي واحدة واحدة...`);
+
+    // Client-side WebAssembly background removal (ISNet). fp16 halves the first-run model download.
+    type ImglyModule = typeof import("@imgly/background-removal");
+    let imgly: ImglyModule | null = null;
+    try {
+      imgly = await import("@imgly/background-removal");
+    } catch {
+      // Fallback
+    }
+    const imglyConfig = { model: "isnet_fp16" as const, output: { format: "image/png" as const } };
+    let started = 0;
+    let ready = 0;
+    let failed = 0;
+
+    // Two photos at a time: most of the wait is the network (Gemini, remove.bg), not this computer
+    const worker = async () => {
+      while (queueRef.current.length > 0) {
+        const file = queueRef.current.shift()!;
+        const index = ++started;
+        const pos = () => `(صورة ${index} من ${totalRef.current})`;
+        try {
+            setStatusMessage(`بنفتح الصورة ${pos()}...`);
+
+            // 1. Find the head (and the photo's orientation) on a light preview of the full photo
+            let fullCanvas = await loadImageToCanvas(file, 3000);
+            const detectHead = async (canvas: HTMLCanvasElement) => {
+              try {
+                const res = await fetch("/api/enhance-portrait", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "detect_face", imageBase64: canvasToPreviewDataUrl(canvas, 1024) }),
+                  // A busy model must not hold the photo for a minute: the in-browser detector takes over
+                  signal: AbortSignal.timeout(20_000),
+                });
+                if (!res.ok) return null;
+                const d = await res.json();
+                return {
+                  box: Array.isArray(d.box_2d) && d.box_2d.length === 4 ? (d.box_2d as HeadBox) : undefined,
+                  rotation: typeof d.rotation === "number" ? d.rotation : 0,
+                };
+              } catch {
+                return null;
+              }
+            };
+            setStatusMessage(`بندوّر على الوش ونعدل اتجاه الصورة ${pos()}...`);
+            let detection = await detectHead(fullCanvas);
+            if (detection?.rotation) {
+              // Sideways / upside-down phone shots are stood upright, then the head is located again
+              fullCanvas = rotateCanvasClockwise(fullCanvas, detection.rotation);
+              detection = await detectHead(fullCanvas);
+            }
+            if (!detection?.box) {
+              // Fallback when every Gemini model failed: BlazeFace in the browser (also finds the orientation)
+              setStatusMessage(`بندوّر على الوش من على الجهاز ${pos()}...`);
+              const local = await detectHeadLocally(fullCanvas);
+              if (local) {
+                fullCanvas = rotateCanvasClockwise(fullCanvas, local.rotation);
+                detection = { box: local.box, rotation: 0 };
+              }
+              // Otherwise the skin-tone heuristic in enhanceAndFramePassportPhoto is the last resort
+            }
+
+            // 2. Work on the head-and-shoulders region cut from the full-resolution photo
+            let aiFaceBox: HeadBox | undefined = undefined;
+            let workCanvas: HTMLCanvasElement;
+            if (detection?.box) {
+              const region = extractHeadRegion(fullCanvas, detection.box);
+              workCanvas = region.canvas;
+              aiFaceBox = region.box;
+            } else {
+              workCanvas = downscaleCanvas(fullCanvas, 1200);
+            }
+
+            // 3. Quality: AI restoration when a provider is available, then the local tone correction always
+            let aiEnhanced = false;
+            if (aiEnhance) {
+              setStatusMessage(`بنحسّن جودة الصورة بالذكاء الاصطناعي، ممكن ياخد لحد دقيقتين ${pos()}...`);
+              const restored = await aiRestorePhoto(workCanvas);
+              if (restored) {
+                workCanvas = restored;
+                aiEnhanced = true;
+              }
+            }
+            autoEnhanceCanvas(workCanvas, aiFaceBox);
+
+            const preprocessedBlob = await canvasToBlob(workCanvas);
+            // The cut-out only supplies a mask (applied to the full-size canvas), so the upload stays small
+            // enough for the host's request-size limit
+            const preprocessedDataUrl = canvasToPreviewDataUrl(workCanvas, 1600);
+            let processedBlob: Blob = preprocessedBlob;
+            let cutoutDataUrl: string | undefined = undefined;
+            let maskCanvas: HTMLCanvasElement | null = null;
+
+            // 1. Server cut-out (remove.bg / Photoroom when a key is configured): studio-grade hair edges
+            setStatusMessage(`بنشيل الخلفية ${pos()}...`);
+            try {
+              const serverBgRes = await fetch("/api/admin/remove-bg", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ imageBase64: preprocessedDataUrl }),
+                signal: AbortSignal.timeout(45_000),
+              });
+              if (serverBgRes.ok) {
+                const serverBgData = await serverBgRes.json();
+                if (typeof serverBgData.cutoutBase64 === "string" && serverBgData.cutoutBase64.length > 0) {
+                  const fullResCutout = await applyCutoutMask(workCanvas, serverBgData.cutoutBase64 as string);
+                  if (maskLooksValid(fullResCutout)) {
+                    processedBlob = await canvasToBlob(fullResCutout, "image/png");
+                    cutoutDataUrl = fullResCutout.toDataURL("image/png");
+                    maskCanvas = fullResCutout;
+                  } else {
+                    console.warn(`remove.bg returned an unusable mask for ${file.name}`);
+                  }
+                } else if (Array.isArray(serverBgData.errors) && serverBgData.errors.length > 0) {
+                  console.warn(`Server background removal failed for ${file.name}:`, serverBgData.errors);
+                }
+                if (
+                  Array.isArray(serverBgData.quotaExhausted) &&
+                  serverBgData.quotaExhausted.length > 0 &&
+                  !quotaWarnedRef.current
+                ) {
+                  quotaWarnedRef.current = true;
+                  toast.warning(
+                    "رصيد remove.bg المجاني خلص الشهر ده",
+                    "هنشيل الخلفية من على الجهاز. لو عايز جودة أعلى اشحن رصيد من remove.bg/dashboard."
+                  );
+                }
+              }
+            } catch {}
+
+            // 2. In-browser model. The first run downloads the model (~40MB), so no short timeout here:
+            // a timeout used to silently return the photo with its original background.
+            if (!cutoutDataUrl && imgly) {
+              try {
+                setStatusMessage(`بنشيل الخلفية من على الجهاز (أول مرة بتاخد وقت) ${pos()}...`);
+                const bgPromise = imgly.removeBackground(preprocessedBlob, imglyConfig);
+                const timeoutPromise = new Promise<never>((_, reject) =>
+                  setTimeout(() => reject(new Error("Timeout")), 180000)
+                );
+                processedBlob = await Promise.race([bgPromise, timeoutPromise]);
+                cutoutDataUrl = await readFileAsDataURL(new File([processedBlob], file.name));
+                maskCanvas = await loadImageToCanvas(processedBlob, 1600);
+              } catch (bgErr) {
+                console.warn("Background removal failed:", bgErr);
+                processedBlob = preprocessedBlob;
+              }
+            }
+
+            if (!cutoutDataUrl) {
+              toast.warning("الخلفية متشالتش", `${file.name} اتظبطت بخلفيتها الأصلية.`);
+            }
+
+            // No face detector answered: the cut-out's outline still shows where the head is, so a full-body
+            // shot is cropped to head and shoulders instead of being framed whole
+            if (!aiFaceBox && maskCanvas) {
+              const maskBox = headBoxFromMask(maskCanvas);
+              if (maskBox) {
+                // Same head-and-shoulders area cut from the full-resolution photo and from the mask (both
+                // share the photo's proportions), so a small far-away head is not upscaled from 1200px
+                const region = extractHeadRegion(fullCanvas, maskBox);
+                const maskRegion = extractHeadRegion(maskCanvas, maskBox);
+                autoEnhanceCanvas(region.canvas, region.box);
+                const masked = await applyCutoutMask(region.canvas, maskRegion.canvas.toDataURL("image/png"));
+                processedBlob = await canvasToBlob(masked, "image/png");
+                cutoutDataUrl = masked.toDataURL("image/png");
+                aiFaceBox = region.box;
+              }
+            }
+
+            const originalDataUrl = await readFileAsDataURL(file);
+
+            // Frame to 40mm x 52mm studio standard with white background and pure client canvas
+            const framedDataUrl = await enhanceAndFramePassportPhoto(processedBlob, {
+              autoCompleteCropped: true,
+              superResolution: true,
+              preserveIdentity: true,
+              aiBox: aiFaceBox,
+              aiEnhanced,
+            });
+
+            setPersons((prev) => [
+              ...prev,
+              {
+                id: Math.random().toString(36).substring(2, 9),
+                name: file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " "),
+                imageDataUrl: framedDataUrl,
+                originalDataUrl,
+                cutoutDataUrl,
+                brightness: 100,
+                contrast: 100,
+                saturation: 100,
+                panX: 0,
+                panY: 0,
+                zoom: 1.0,
+                rotation: 0,
+                whiteBackground: true,
+                includeName: globalIncludeName,
+              },
+            ]);
+          ready++;
+        } catch (err) {
+          console.error("Passport photos process error:", err);
+          failed++;
+        }
+        doneRef.current++;
+        setProgress({ total: totalRef.current, done: doneRef.current });
+      }
+    };
 
     try {
-      // Client-side WebAssembly background removal (ISNet). fp16 halves the first-run model download.
-      type ImglyModule = typeof import("@imgly/background-removal");
-      let imgly: ImglyModule | null = null;
-      try {
-        imgly = await import("@imgly/background-removal");
-      } catch {
-        // Fallback
-      }
-      const imglyConfig = { model: "isnet_fp16" as const, output: { format: "image/png" as const } };
+      await Promise.all([worker(), worker()]);
 
-      let quotaWarned = false;
-      for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
-        setStatusMessage(`جاري تجهيز صورة (${i + 1} من ${fileList.length})...`);
-
-        // 1. Find the head (and the photo's orientation) on a light preview of the full photo
-        let fullCanvas = await loadImageToCanvas(file, 4000);
-        const detectHead = async (canvas: HTMLCanvasElement) => {
-          try {
-            const res = await fetch("/api/enhance-portrait", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "detect_face", imageBase64: canvasToPreviewDataUrl(canvas, 1200) }),
-            });
-            if (!res.ok) return null;
-            const d = await res.json();
-            return {
-              box: Array.isArray(d.box_2d) && d.box_2d.length === 4 ? (d.box_2d as HeadBox) : undefined,
-              rotation: typeof d.rotation === "number" ? d.rotation : 0,
-            };
-          } catch {
-            return null;
-          }
-        };
-        setStatusMessage(`جاري تحديد الوجه واتجاه الصورة (${i + 1} من ${fileList.length})...`);
-        let detection = await detectHead(fullCanvas);
-        if (detection?.rotation) {
-          // Sideways / upside-down phone shots are stood upright, then the head is located again
-          fullCanvas = rotateCanvasClockwise(fullCanvas, detection.rotation);
-          detection = await detectHead(fullCanvas);
-        }
-        if (!detection?.box) {
-          // Fallback when every Gemini model failed: BlazeFace in the browser (also finds the orientation)
-          setStatusMessage(`جاري تحديد الوجه داخل المتصفح (${i + 1} من ${fileList.length})...`);
-          const local = await detectHeadLocally(fullCanvas);
-          if (local) {
-            fullCanvas = rotateCanvasClockwise(fullCanvas, local.rotation);
-            detection = { box: local.box, rotation: 0 };
-          }
-          // Otherwise the skin-tone heuristic in enhanceAndFramePassportPhoto is the last resort
-        }
-
-        // 2. Work on the head-and-shoulders region cut from the full-resolution photo
-        let aiFaceBox: HeadBox | undefined = undefined;
-        let workCanvas: HTMLCanvasElement;
-        if (detection?.box) {
-          const region = extractHeadRegion(fullCanvas, detection.box);
-          workCanvas = region.canvas;
-          aiFaceBox = region.box;
-        } else {
-          workCanvas = downscaleCanvas(fullCanvas, 1200);
-        }
-
-        // 3. Quality: AI restoration when a provider is available, then the local tone correction always
-        let aiEnhanced = false;
-        if (aiEnhance) {
-          setStatusMessage(`جاري تحسين جودة الصورة بالذكاء الاصطناعي، قد يستغرق حتى دقيقتين (${i + 1} من ${fileList.length})...`);
-          const restored = await aiRestorePhoto(workCanvas);
-          if (restored) {
-            workCanvas = restored;
-            aiEnhanced = true;
-          }
-        }
-        autoEnhanceCanvas(workCanvas, aiFaceBox);
-
-        const preprocessedBlob = await canvasToBlob(workCanvas);
-        // The cut-out only supplies a mask (applied to the full-size canvas), so the upload stays small
-        // enough for the host's request-size limit
-        const preprocessedDataUrl = canvasToPreviewDataUrl(workCanvas, 1600);
-        let processedBlob: Blob = preprocessedBlob;
-        let cutoutDataUrl: string | undefined = undefined;
-
-        // 1. Server cut-out (remove.bg / Photoroom when a key is configured): studio-grade hair edges
-        setStatusMessage(`جاري عزل الخلفية (${i + 1} من ${fileList.length})...`);
-        try {
-          const serverBgRes = await fetch("/api/admin/remove-bg", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ imageBase64: preprocessedDataUrl }),
-          });
-          if (serverBgRes.ok) {
-            const serverBgData = await serverBgRes.json();
-            if (typeof serverBgData.cutoutBase64 === "string" && serverBgData.cutoutBase64.length > 0) {
-              const fullResCutout = await applyCutoutMask(workCanvas, serverBgData.cutoutBase64 as string);
-              processedBlob = await canvasToBlob(fullResCutout, "image/png");
-              cutoutDataUrl = fullResCutout.toDataURL("image/png");
-            } else if (
-              Array.isArray(serverBgData.quotaExhausted) &&
-              serverBgData.quotaExhausted.length > 0 &&
-              !quotaWarned
-            ) {
-              quotaWarned = true;
-              toast.warning(
-                "انتهى رصيد remove.bg المجاني لهذا الشهر",
-                "سيتم عزل الخلفية داخل المتصفح. لجودة أعلى اشحن رصيداً من remove.bg/dashboard."
-              );
-            }
-          }
-        } catch {}
-
-        // 2. In-browser model. The first run downloads the model (~40MB), so no short timeout here:
-        // a timeout used to silently return the photo with its original background.
-        if (!cutoutDataUrl && imgly) {
-          try {
-            setStatusMessage(`جاري عزل الخلفية بالذكاء الاصطناعي داخل المتصفح (${i + 1} من ${fileList.length})...`);
-            const bgPromise = imgly.removeBackground(preprocessedBlob, imglyConfig);
-            const timeoutPromise = new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error("Timeout")), 180000)
-            );
-            processedBlob = await Promise.race([bgPromise, timeoutPromise]);
-            cutoutDataUrl = await readFileAsDataURL(new File([processedBlob], file.name));
-          } catch (bgErr) {
-            console.warn("Background removal failed:", bgErr);
-            processedBlob = preprocessedBlob;
-          }
-        }
-
-        if (!cutoutDataUrl) {
-          toast.warning("تعذر عزل الخلفية", `تم تأطير ${file.name} بخلفيته الأصلية.`);
-        }
-
-        const originalDataUrl = await readFileAsDataURL(file);
-
-        // Frame to 40mm x 52mm studio standard with white background and pure client canvas
-        const framedDataUrl = await enhanceAndFramePassportPhoto(processedBlob, {
-          autoCompleteCropped: true,
-          superResolution: true,
-          preserveIdentity: true,
-          aiBox: aiFaceBox,
-          aiEnhanced,
-        });
-
-        setPersons((prev) => [
-          ...prev,
-          {
-            id: Math.random().toString(36).substring(2, 9),
-            name: file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " "),
-            imageDataUrl: framedDataUrl,
-            originalDataUrl,
-            cutoutDataUrl,
-            brightness: 100,
-            contrast: 100,
-            saturation: 100,
-            panX: 0,
-            panY: 0,
-            zoom: 1.0,
-            rotation: 0,
-            whiteBackground: true,
-            includeName: globalIncludeName,
-          },
-        ]);
-      }
-
-      toast.success(
-        "تم تجهيز وتأطير الصور بنجاح",
-        `تمت معالجة وتأطير ${fileList.length} صورة شخصية بالكامل داخل المتصفح بمقاس 40×52 مم.`
-      );
-    } catch (err) {
-      console.error("Passport photos process error:", err);
-      toast.error("خطأ", "تعذر إكمال معالجة بعض الصور.");
+      if (ready > 0) toast.success("الصور جاهزة", `${ready} صورة اتظبطت بمقاس 4×6 (40×52 مم).`);
+      if (failed > 0) toast.error("في صور ماتظبطتش", `${failed} صورة حصل فيها مشكلة. جرب ترفعها تاني.`);
     } finally {
+      runningRef.current = false;
+      doneRef.current = 0;
+      totalRef.current = 0;
+      setProgress(null);
       setIsProcessingBg(false);
       setStatusMessage("");
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -578,6 +794,25 @@ export default function PassportPhotosPage() {
       }
     }
   };
+
+  /** Name strip switch / name text; the strip image is rebuilt by the effect below */
+  const setPersonName = (id: string, updates: { includeName?: boolean; name?: string }) => {
+    setPersons((curr) => curr.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+  };
+
+  // Keeps every switched-on name strip in step with its photo and name (debounced while typing)
+  useEffect(() => {
+    const stale = persons.filter((p) => p.includeName && p.name.trim() && p.namedFor !== `${p.imageDataUrl.length}|${p.name}`);
+    if (stale.length === 0) return;
+    const timer = window.setTimeout(async () => {
+      for (const p of stale) {
+        const key = `${p.imageDataUrl.length}|${p.name}`;
+        const named = await composeNameStrip(p.imageDataUrl, p.name.trim()).catch(() => undefined);
+        if (named) setPersons((curr) => curr.map((x) => (x.id === p.id ? { ...x, namedDataUrl: named, namedFor: key } : x)));
+      }
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [persons]);
 
   const removePerson = (id: string) => {
     setPersons((prev) => prev.filter((p) => p.id !== id));
@@ -658,7 +893,7 @@ export default function PassportPhotosPage() {
     );
 
     setFramingTarget(null);
-    toast.success("تم تأطير وحفظ الصورة بنجاح", "تم تثبيت الكادر 4×6 بالمقاسات البيومترية الدقيقة والألوان المعدلة.");
+    toast.success("الصورة اتحفظت", "القص والألوان الجديدة اتحفظوا بمقاس 4×6.");
   };
 
   /**
@@ -701,7 +936,7 @@ export default function PassportPhotosPage() {
     const img = new Image();
     await new Promise<void>((resolve) => {
       img.onload = () => resolve();
-      img.src = person.imageDataUrl;
+      img.src = printedImage(person);
     });
 
     for (let r = 0; r < rows; r++) {
@@ -776,7 +1011,7 @@ export default function PassportPhotosPage() {
     const paper = gridPreview.layoutCount === 9 ? "A5" : "A6";
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
-      toast.warning("يرجى السماح بالنوافذ المنبثقة للطباعة المباشرة");
+      toast.warning("اسمح للموقع يفتح نوافذ جديدة (Pop-ups) عشان الطباعة تشتغل");
       return;
     }
 
@@ -784,7 +1019,7 @@ export default function PassportPhotosPage() {
       <!DOCTYPE html>
       <html dir="rtl">
         <head>
-          <title>طباعة شبكة الصور الشخصية (${paper}) - Copy-Cat</title>
+          <title>طباعة الصور الشخصية (${paper}) - Copy-Cat</title>
           <style>
             @page {
               size: ${paper} portrait;
@@ -818,16 +1053,20 @@ export default function PassportPhotosPage() {
     if (persons.length === 0) return;
     setIsGeneratingDocx(true);
     try {
-      await generatePassportPhotosDocx(persons, layoutCount);
+      // The name is already printed inside the photo strip, so Word gets the final image and no extra line
+      await generatePassportPhotosDocx(
+        persons.map((p) => ({ ...p, imageDataUrl: printedImage(p), includeName: false })),
+        layoutCount
+      );
       toast.success(
-        "تم تصدير ملف الوورد بنجاح",
-        `تم تجهيز شبكة ${layoutCount} صور بمقاس 40×52 مم وإطار 1.5 ومسافات قص 18mm.`
+        "ملف Word نزل",
+        `${layoutCount} صور في الورقة، كل صورة 40×52 مم وحواليها مسافة للقص.`
       );
     } catch (err) {
       console.error("Docx generation error:", err);
       toast.error(
-        "حدث خطأ أثناء إنشاء ملف الوورد",
-        getFriendlyErrorMessage(err, "يرجى المحاولة مرة أخرى.")
+        "ملف Word منزلش",
+        getFriendlyErrorMessage(err, "جرب تاني.")
       );
     } finally {
       setIsGeneratingDocx(false);
@@ -839,10 +1078,10 @@ export default function PassportPhotosPage() {
       {/* Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-black text-slate-800">تجهيز وطباعة الصور الشخصية</span>
+          <span className="text-sm font-black text-slate-800">الصور الشخصية (4×6)</span>
           {persons.length > 0 && (
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-100">
-              {persons.length} شخص
+              {persons.length} صورة
             </span>
           )}
         </div>
@@ -853,7 +1092,7 @@ export default function PassportPhotosPage() {
               onClick={() => setPersons([])}
               className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
             >
-              مسح الكل
+              امسح الكل
             </button>
           )}
 
@@ -863,7 +1102,7 @@ export default function PassportPhotosPage() {
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-xs transition disabled:opacity-50 cursor-pointer"
           >
             <FileDown className="w-4 h-4" />
-            <span>تصدير (4 صور A6)</span>
+            <span>نزّل Word (4 صور على A6)</span>
           </button>
 
           <button
@@ -872,7 +1111,7 @@ export default function PassportPhotosPage() {
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition disabled:opacity-50 cursor-pointer"
           >
             <FileDown className="w-4 h-4" />
-            <span>تصدير (9 صور A5)</span>
+            <span>نزّل Word (9 صور على A5)</span>
           </button>
         </div>
       </div>
@@ -904,10 +1143,10 @@ export default function PassportPhotosPage() {
 
         <div>
           <h3 className="text-base font-bold text-slate-900 mb-1">
-            {isDragging ? "أفلت الصور الشخصية هنا الآن!" : "اضغط لرفع الصور الشخصية أو اسحبها وأفلتها هنا"}
+            {isDragging ? "سيب الصور هنا" : "دوس هنا وارفع الصور الشخصية، أو اسحبها وسيبها هنا"}
           </h3>
           <p className="text-slate-500 text-xs">
-            يتم تحسين الجودة وعزل الخلفية وتبييضها وتأطير الصورة 4×6 تلقائياً
+            البرنامج بيحسّن الصورة ويشيل الخلفية ويخليها بيضا ويقصها مقاس 4×6 لوحده. تقدر ترفع صور زيادة وهو شغال.
           </p>
         </div>
       </div>
@@ -921,14 +1160,37 @@ export default function PassportPhotosPage() {
         />
         <Wand2 className="w-4 h-4 text-emerald-500" />
         <span>
-          تحسين الجودة بالذكاء الاصطناعي (عند إيقافه يُطبق تحسين الإضاءة والألوان والحدة المحلي فقط)
+          حسّن الجودة بالذكاء الاصطناعي (أبطأ بكتير: ممكن دقيقة أو اتنين لكل صورة. لو مقفول بيظبط الإضاءة والألوان والحدة بس)
         </span>
       </label>
 
+      {toolsState === "loading" && (
+        <p className="text-xs text-slate-500">⏳ بننزّل أدوات الصور على الجهاز في الخلفية (مرة واحدة بس، وبعد كده بتشتغل على طول)...</p>
+      )}
+      {toolsState === "ready" && (
+        <p className="text-xs text-emerald-700 font-bold">✓ أدوات الصور متنزلة على الجهاز: لو remove.bg مردش، الخلفية هتتشال من على الجهاز على طول.</p>
+      )}
+
       {isProcessingBg && (
-        <div className="p-4 rounded-2xl bg-white border border-slate-200 flex items-center gap-3 text-xs text-emerald-400 font-bold">
-          <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <span>{statusMessage}</span>
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3" role="status" aria-live="polite">
+          <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            {progress && (
+              <p className="text-sm font-bold text-emerald-900">
+                استلمنا {progress.total} صورة، وبنظبطهم دلوقتي ({progress.done} من {progress.total} خلصوا)
+              </p>
+            )}
+            <p className="text-xs font-bold text-emerald-700">{statusMessage}</p>
+            <p className="text-xs text-emerald-700">لو عندك صور تانية ارفعها عادي، هتتضاف على الشغل ومش هتوقف اللي شغالين فيه.</p>
+            {progress && (
+              <div className="h-1.5 rounded-full bg-emerald-100 overflow-hidden">
+                <div
+                  className="h-full bg-emerald-600 transition-all duration-500"
+                  style={{ width: `${Math.max(5, (progress.done / Math.max(1, progress.total)) * 100)}%` }}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -937,10 +1199,10 @@ export default function PassportPhotosPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs text-slate-500 px-1">
             <span>
-              تم تجهيز <strong className="text-slate-900 font-bold">{persons.length} شخصية</strong> بمقاس الاستوديو الدقيق (40mm × 52mm)
+              جاهز <strong className="text-slate-900 font-bold">{persons.length} صورة</strong> مقاس 4×6 (40 × 52 مم)
             </span>
             <span className="text-emerald-400 font-bold">
-              إطار أسود 1.5pt • مسافات قص 18mm مع علامات القص لسهولة القص بالمقص
+              كل صورة ليها برواز أسود رفيع ومسافة للقص بالمقص
             </span>
           </div>
 
@@ -954,20 +1216,20 @@ export default function PassportPhotosPage() {
                   {/* Top Bar */}
                   <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
                     <span className="font-bold bg-slate-100 px-2.5 py-1 rounded-md text-emerald-400">
-                      شخصية #{index + 1}
+                      صورة {index + 1}
                     </span>
                     <div className="flex items-center gap-1.5">
                       <button
-                        onClick={() => setPreviewModalUrl(person.imageDataUrl)}
+                        onClick={() => setPreviewModalUrl(printedImage(person))}
                         className="p-1.5 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-                        title="تكبير ومعاينة"
+                        title="كبّر الصورة"
                       >
                         <Maximize2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => removePerson(person.id)}
                         className="p-1.5 text-rose-600 hover:text-rose-700 rounded-lg hover:bg-rose-50 transition cursor-pointer"
-                        title="حذف"
+                        title="امسح"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -977,7 +1239,7 @@ export default function PassportPhotosPage() {
                   {/* Photo Display (40mm x 52mm aspect ratio) */}
                   <div className="aspect-[40/52] max-w-[200px] mx-auto bg-white rounded-xl overflow-hidden mb-3 border-2 border-slate-950 flex items-center justify-center p-0.5 shadow-lg relative">
                     <NextImage
-                      src={person.imageDataUrl}
+                      src={printedImage(person)}
                       alt={person.name}
                       width={200}
                       height={260}
@@ -990,7 +1252,7 @@ export default function PassportPhotosPage() {
                   <div className="space-y-2 bg-slate-50/70 p-3 rounded-2xl border border-slate-200 text-[11px]">
                     {/* Brightness */}
                     <div className="flex items-center gap-2">
-                      <span className="w-14 text-slate-500 font-bold">التفتيح:</span>
+                      <span className="w-14 text-slate-500 font-bold">الإضاءة:</span>
                       <input
                         type="range"
                         min="50"
@@ -1026,7 +1288,7 @@ export default function PassportPhotosPage() {
 
                     {/* Saturation */}
                     <div className="flex items-center gap-2">
-                      <span className="w-14 text-slate-500 font-bold">التشبع:</span>
+                      <span className="w-14 text-slate-500 font-bold">الألوان:</span>
                       <input
                         type="range"
                         min="0"
@@ -1043,15 +1305,38 @@ export default function PassportPhotosPage() {
                     </div>
                   </div>
 
+                  {/* Name strip under the photo (8mm of the 52mm), per photo */}
+                  <div className="mt-3 p-3 rounded-2xl border border-slate-200 bg-white space-y-2">
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!person.includeName}
+                        onChange={(e) => setPersonName(person.id, { includeName: e.target.checked })}
+                        className="w-4 h-4 accent-emerald-600 cursor-pointer"
+                      />
+                      <span>اكتب الاسم تحت الصورة</span>
+                    </label>
+                    {person.includeName && (
+                      <input
+                        type="text"
+                        value={person.name}
+                        onChange={(e) => setPersonName(person.id, { name: e.target.value })}
+                        placeholder="اكتب الاسم هنا"
+                        dir="rtl"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-500"
+                      />
+                    )}
+                  </div>
+
                   {/* 4:6 Crop / Framing Tool Button */}
                   <button
                     type="button"
                     onClick={() => openFramingModal(person)}
-                    className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white text-xs font-black border border-emerald-500/30 transition cursor-pointer shadow-sm"
-                    title="قص وتأطير الرأس والأكتاف بنسبة أبعاد 4:6"
+                    className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black transition cursor-pointer shadow-sm"
+                    title="عدّل القص (الراس والكتاف)"
                   >
                     <Focus className="w-4 h-4" />
-                    <span>أداة القص والتأطير 4:6 (Crop Tool)</span>
+                    <span>عدّل القص</span>
                   </button>
 
                   {/* Grid Print Buttons */}
@@ -1059,21 +1344,21 @@ export default function PassportPhotosPage() {
                     <button
                       type="button"
                       onClick={() => openGridSheetModal(person, 4)}
-                      className="py-1.5 px-2 rounded-xl bg-blue-950/40 hover:bg-blue-600 text-blue-300 hover:text-white text-[11px] font-bold border border-blue-900/50 transition cursor-pointer flex items-center justify-center gap-1"
-                      title="معاينة وطباعة 4 صور على ورقة A6 مع مسافات قص 18mm"
+                      className="py-2 px-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1"
+                      title="شوف واطبع 4 صور على ورقة A6"
                     >
-                      <Printer className="w-3 h-3" />
-                      <span>شبكة 4 صور (A6)</span>
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>اطبع 4 صور (A6)</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => openGridSheetModal(person, 9)}
-                      className="py-1.5 px-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-600 text-emerald-300 hover:text-white text-[11px] font-bold border border-emerald-900/50 transition cursor-pointer flex items-center justify-center gap-1"
-                      title="معاينة وطباعة 9 صور على ورقة A5 مع مسافات قص 18mm"
+                      className="py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1"
+                      title="شوف واطبع 9 صور على ورقة A5"
                     >
-                      <Printer className="w-3 h-3" />
-                      <span>شبكة 9 صور (A5)</span>
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>اطبع 9 صور (A5)</span>
                     </button>
                   </div>
                 </div>
@@ -1082,7 +1367,7 @@ export default function PassportPhotosPage() {
                   <span className="flex items-center gap-1 text-emerald-400">
                     <CheckCircle2 className="w-3 h-3" /> مقاس 40 × 52 مم
                   </span>
-                  <span>إطار 1.5pt • فراغ قص 18mm</span>
+                  <span>برواز رفيع ومسافة للقص</span>
                 </div>
               </div>
             ))}
@@ -1101,10 +1386,10 @@ export default function PassportPhotosPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900">
-                    أداة قص وتأطير الصورة الشخصية (نسبة ثابتة 4:6)
+                    عدّل قص الصورة الشخصية
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    اسحب الصورة بالماوس لتوسيط الوجه بدقة، واضبط التكبير والتدوير والإضاءة
+                    اسحب الصورة بالماوس لحد ما الوش ييجي في النص، وظبط التكبير واللف والإضاءة
                   </p>
                 </div>
               </div>
@@ -1209,27 +1494,27 @@ export default function PassportPhotosPage() {
 
                 {/* Biometric labels inside viewport */}
                 <span className="absolute top-1 right-2 text-[9px] font-bold text-emerald-700 bg-emerald-100/90 px-1 rounded pointer-events-none">
-                  قمة الرأس
+                  أعلى الراس
                 </span>
                 <span className="absolute top-[39%] right-2 text-[9px] font-bold text-amber-800 bg-amber-100/90 px-1 rounded pointer-events-none">
-                  مستوى العينين
+                  العينين
                 </span>
                 <span className="absolute top-[67%] right-2 text-[9px] font-bold text-amber-800 bg-amber-100/90 px-1 rounded pointer-events-none">
-                  أسفل الذقن
+                  آخر الدقن
                 </span>
                 <span className="absolute top-[83%] right-2 text-[9px] font-bold text-blue-800 bg-blue-100/90 px-1 rounded pointer-events-none">
-                  الأكتاف
+                  الكتاف
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 mt-2 text-center">
-                اسحب الصورة بالماوس داخل الكادر لتوسيط الوجه • نسبة الأبعاد محكومة بدقة 4:6 (40mm × 52mm)
+                اسحب الصورة بالماوس عشان تحط الوش في النص. المقاس ثابت 4×6 (40 × 52 مم)
               </p>
             </div>
 
             {/* Adjustments: Zoom, Rotation, Brightness, Contrast, Saturation */}
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 text-xs">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-700">أدوات التحكم في الكادر والألوان:</span>
+                <span className="font-bold text-slate-700">القص والألوان:</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -1244,7 +1529,7 @@ export default function PassportPhotosPage() {
                   className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-emerald-400 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
                 >
                   <RefreshCw className="w-3 h-3" />
-                  <span>إعادة ضبط</span>
+                  <span>رجّعها زي الأول</span>
                 </button>
               </div>
 
@@ -1253,7 +1538,7 @@ export default function PassportPhotosPage() {
                 <div>
                   <div className="flex justify-between text-[11px] text-slate-500 mb-1">
                     <span className="flex items-center gap-1">
-                      <ZoomIn className="w-3 h-3" /> نسبة التكبير:
+                      <ZoomIn className="w-3 h-3" /> التكبير:
                     </span>
                     <span className="text-emerald-400 font-mono font-bold">{Math.round(zoom * 100)}%</span>
                   </div>
@@ -1272,7 +1557,7 @@ export default function PassportPhotosPage() {
                 <div>
                   <div className="flex justify-between text-[11px] text-slate-500 mb-1">
                     <span className="flex items-center gap-1">
-                      <RotateCw className="w-3 h-3" /> تدوير الصورة:
+                      <RotateCw className="w-3 h-3" /> لف الصورة:
                     </span>
                     <span className="text-emerald-400 font-mono font-bold">
                       {framingRotation > 0 ? `+${framingRotation}` : framingRotation}°
@@ -1292,7 +1577,7 @@ export default function PassportPhotosPage() {
                 {/* Brightness */}
                 <div>
                   <div className="flex justify-between text-[11px] text-slate-500 mb-1">
-                    <span>التفتيح (Brightness):</span>
+                    <span>الإضاءة:</span>
                     <span className="text-emerald-400 font-mono font-bold">{framingBrightness}%</span>
                   </div>
                   <input
@@ -1308,7 +1593,7 @@ export default function PassportPhotosPage() {
                 {/* Contrast */}
                 <div>
                   <div className="flex justify-between text-[11px] text-slate-500 mb-1">
-                    <span>التباين (Contrast):</span>
+                    <span>التباين:</span>
                     <span className="text-emerald-400 font-mono font-bold">{framingContrast}%</span>
                   </div>
                   <input
@@ -1324,7 +1609,7 @@ export default function PassportPhotosPage() {
                 {/* Saturation */}
                 <div className="sm:col-span-2">
                   <div className="flex justify-between text-[11px] text-slate-500 mb-1">
-                    <span>التشبع اللوني (Saturation):</span>
+                    <span>الألوان:</span>
                     <span className="text-emerald-400 font-mono font-bold">{framingSaturation}%</span>
                   </div>
                   <input
@@ -1342,7 +1627,7 @@ export default function PassportPhotosPage() {
               <label className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 cursor-pointer hover:border-emerald-500/40 transition">
                 <div className="flex items-center gap-2">
                   <Wand2 className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-bold text-slate-900">تبييض الخلفية تلقائياً (#FFFFFF)</span>
+                  <span className="text-xs font-bold text-slate-900">خلّي الخلفية بيضا</span>
                 </div>
                 <input
                   type="checkbox"
@@ -1368,7 +1653,7 @@ export default function PassportPhotosPage() {
                 className="flex-1 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white transition cursor-pointer shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5"
               >
                 <Focus className="w-4 h-4" />
-                <span>اعتماد الكادر والقص (Save 4x6)</span>
+                <span>احفظ</span>
               </button>
             </div>
           </div>
@@ -1389,7 +1674,7 @@ export default function PassportPhotosPage() {
                     معاينة شبكة {gridPreview.layoutCount} صور على ورقة {gridPreview.layoutCount === 9 ? "A5" : "A6"}
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    مقاس الصورة المطبوعة بالضبط: 40mm × 52mm • إطار 1.5pt • مسافات قص 18mm مع علامات القص
+                    الصورة بتتطبع 40 × 52 مم بالظبط، وحواليها برواز رفيع ومسافة للقص
                   </p>
                 </div>
               </div>
@@ -1416,7 +1701,7 @@ export default function PassportPhotosPage() {
                 onClick={() => setGridPreview(null)}
                 className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
               >
-                إغلاق
+                اقفل
               </button>
               <button
                 type="button"
@@ -1442,7 +1727,7 @@ export default function PassportPhotosPage() {
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-base font-extrabold text-slate-900">معاينة تفاصيل الصورة الشخصية (40mm × 52mm)</h3>
+            <h3 className="text-base font-extrabold text-slate-900">الصورة الشخصية (40 × 52 مم)</h3>
 
             <div className="w-64 h-84 mx-auto bg-white rounded-2xl p-2 border-4 border-slate-950 shadow-2xl flex items-center justify-center">
               <NextImage
@@ -1456,14 +1741,14 @@ export default function PassportPhotosPage() {
             </div>
 
             <p className="text-xs text-slate-500">
-              خلفية بيضاء نقية، إطار أسود 1.5، ونسبة أبعاد 4:6 قياسية.
+              خلفية بيضا وبرواز أسود رفيع، مقاس 4×6.
             </p>
 
             <button
               onClick={() => setPreviewModalUrl(null)}
               className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs cursor-pointer transition"
             >
-              إغلاق
+              اقفل
             </button>
           </div>
         </div>

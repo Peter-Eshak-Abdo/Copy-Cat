@@ -151,12 +151,12 @@ export default function PhotoPoolPage() {
           description: data.description,
           aiAdvice: data.aiAdvice,
         });
-        toast.success("تم فحص وتحديد الصنف بواسطة Gemini", `الاسم المقترح: ${data.suggestedTitle}`);
+        toast.success("عرفنا المنتج", `الاسم المقترح: ${data.suggestedTitle}`);
       } else {
-        toast.error("تنبيه", data.error || "تعذر التحليل بواسطة Gemini");
+        toast.error("معرفناش المنتج", data.error || "Gemini مردش، جرب تاني");
       }
     } catch {
-      toast.error("خطأ", "تعذر الاتصال بخدمة التحليل");
+      toast.error("مقدرناش نوصل", "جرب تاني بعد شوية");
     } finally {
       setIsEnhancingProcess(false);
     }
@@ -177,14 +177,14 @@ export default function PhotoPoolPage() {
       });
       const data = await resp.json();
       if (data.success) {
-        toast.success("تم حفظ الصورة المحسنة في البنك بنجاح!", "أصبحت الصورة متاحة الآن بجودة استوديو احترافية.");
+        toast.success("الصورة اتحفظت", "الصورة المتحسنة بقت موجودة مع باقي الصور.");
         setEnhancingPhoto(null);
         fetchPhotos();
       } else {
-        toast.error("فشل الحفظ", data.error || "تعذر الحفظ في البنك");
+        toast.error("متحفظتش", data.error || "جرب تاني");
       }
     } catch (err) {
-      toast.error("خطأ", (err as Error).message || "فشل الاتصال");
+      toast.error("حصلت مشكلة", (err as Error).message || "النت فصل");
     } finally {
       setIsEnhancingProcess(false);
     }
@@ -199,10 +199,10 @@ export default function PhotoPoolPage() {
       if (data.success && Array.isArray(data.photos)) {
         setPhotos(data.photos);
       } else {
-        toast.error("خطأ", data.error || "تعذر جلب الصور");
+        toast.error("الصور مظهرتش", data.error || "جرب تاني");
       }
     } catch {
-      toast.error("خطأ", "تعذر الاتصال بمركز إدارة الصور");
+      toast.error("الصور مظهرتش", "السيرفر مردش");
     } finally {
       setIsLoading(false);
     }
@@ -254,13 +254,13 @@ export default function PhotoPoolPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success("تم الرفع بنجاح!", data.message || `تمت إضافة ${data.count} صور جديدة`);
+        toast.success("الصور اترفعت", data.message || `ضفنا ${data.count} صورة`);
         await fetchPhotos();
       } else {
-        toast.error("فشل الرفع", data.error || "حدث خطأ أثناء رفع الصور");
+        toast.error("الصور مترفعتش", data.error || "جرب تاني");
       }
     } catch {
-      toast.error("خطأ", "تعذر الاتصال بالسيرفر لرفع الصور");
+      toast.error("الصور مترفعتش", "السيرفر مردش");
     } finally {
       setIsUploading(false);
       if (cameraInputRef.current) cameraInputRef.current.value = "";
@@ -271,7 +271,7 @@ export default function PhotoPoolPage() {
   // Handle deleting a photo from pool
   const handleDeletePhoto = async (photo: PoolPhoto, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`هل أنت متأكد من حذف الصورة ${photo.filename} نهائياً من بنك الصور؟`)) return;
+    if (!confirm(`متأكد إنك عايز تمسح ${photo.filename} خالص؟`)) return;
 
     try {
       const res = await fetch(`/api/admin/photos?filename=${encodeURIComponent(photo.filename)}`, {
@@ -279,7 +279,7 @@ export default function PhotoPoolPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success("تم الحذف", `تم حذف الصورة ${photo.filename} بنجاح`);
+        toast.success("اتمسحت", `${photo.filename}`);
         setPhotos((prev) => prev.filter((p) => p.filename !== photo.filename));
 
         // Clean link if existed
@@ -290,17 +290,17 @@ export default function PhotoPoolPage() {
           localStorage.setItem("copycat_photo_pool_links", JSON.stringify(updatedLinks));
         }
       } else {
-        toast.error("خطأ", data.error || "تعذر حذف الصورة");
+        toast.error("متمسحتش", data.error || "جرب تاني");
       }
     } catch {
-      toast.error("خطأ", "تعذر الاتصال بالسيرفر لحذف الصورة");
+      toast.error("متمسحتش", "السيرفر مردش");
     }
   };
 
   // Assign photo to selected product
   const handleConfirmAssignment = async () => {
     if (!assigningPhoto || !selectedProductId) {
-      toast.error("بيانات ناقصة", "يرجى تحديد صنف من القائمة لربط الصورة به.");
+      toast.error("اختار منتج", "اختار المنتج اللي الصورة دي بتاعته.");
       return;
     }
 
@@ -369,15 +369,15 @@ export default function PhotoPoolPage() {
       }
 
       toast.success(
-        "تم ربط الصورة بالمنتج بنجاح!",
-        `تم تعيينها ${linkAsPrimary ? "كصورة رئيسية" : "في معرض صور"} الصنف: "${targetProduct.name}"`
+        "الصورة اتحطت على المنتج",
+        `${linkAsPrimary ? "الصورة الأساسية" : "في صور"} "${targetProduct.name}"`
       );
 
       setAssigningPhoto(null);
       setSelectedProductId(null);
       setProductSearch("");
     } catch {
-      toast.error("خطأ", "تعذر حفظ ربط الصورة بالمنتج");
+      toast.error("متحفظش", "الصورة متحطتش على المنتج، جرب تاني");
     }
   };
 
@@ -387,12 +387,12 @@ export default function PhotoPoolPage() {
     const linkInfo = linkMap[photoUrl];
     if (!linkInfo) return;
 
-    if (confirm(`هل تريد فك ارتباط هذه الصورة بالصنف "${linkInfo.productName}"؟`)) {
+    if (confirm(`عايز تشيل الصورة دي من "${linkInfo.productName}"؟`)) {
       const updated = { ...linkMap };
       delete updated[photoUrl];
       setLinkMap(updated);
       localStorage.setItem("copycat_photo_pool_links", JSON.stringify(updated));
-      toast.info("تم فك الارتباط", `تمت إزالة ربط الصورة بالصنف "${linkInfo.productName}".`);
+      toast.info("اتشالت", `الصورة اتشالت من "${linkInfo.productName}".`);
     }
   };
 
@@ -445,7 +445,7 @@ export default function PhotoPoolPage() {
       <div className="w-full mb-space-lg">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-md pb-space-md border-b border-surface-container-high/40">
           <div className="flex items-center gap-2">
-            <span className="text-base font-black text-on-surface">بنك ومكتبة صور المنتجات</span>
+            <span className="text-base font-black text-on-surface">صور المنتجات</span>
             <span className="text-label-sm font-label-code px-2 py-0.5 rounded-full bg-primary/20 text-primary font-bold">
               {photos.length} صورة
             </span>
@@ -478,7 +478,7 @@ export default function PhotoPoolPage() {
               className="flex items-center gap-2 px-space-md py-space-sm rounded-xl bg-primary text-on-primary font-bold shadow-md hover:bg-primary/90 transition-all cursor-pointer disabled:opacity-50"
             >
               <Camera className="w-5 h-5" />
-              <span>تصوير بالكاميرا الآن</span>
+              <span>صوّر بالكاميرا</span>
             </button>
 
             {/* Bulk Upload Files */}
@@ -488,7 +488,7 @@ export default function PhotoPoolPage() {
               className="flex items-center gap-2 px-space-md py-space-sm rounded-xl bg-secondary-container text-on-secondary-container font-bold hover:bg-secondary transition-all cursor-pointer disabled:opacity-50"
             >
               <Upload className="w-5 h-5" />
-              <span>رفع مجموعة صور</span>
+              <span>ارفع صور</span>
             </button>
 
             {/* Refresh / Sync */}
@@ -496,7 +496,7 @@ export default function PhotoPoolPage() {
               onClick={fetchPhotos}
               disabled={isLoading}
               className="flex items-center gap-1 px-space-sm py-space-sm rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
-              title="تحديث ومزامنة الصور"
+              title="حدّث"
             >
               <RefreshCw className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`} />
             </button>
@@ -506,23 +506,23 @@ export default function PhotoPoolPage() {
         {/* Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-space-sm mt-space-md">
           <div className="p-space-sm rounded-xl bg-surface-container-low border border-surface-container-high/40">
-            <span className="text-body-xs font-label-code text-on-surface-variant block">إجمالي الصور المتاحة</span>
+            <span className="text-body-xs font-label-code text-on-surface-variant block">كل الصور</span>
             <span className="text-headline-sm font-bold text-primary">{photos.length}</span>
           </div>
 
           <div className="p-space-sm rounded-xl bg-surface-container-low border border-surface-container-high/40">
-            <span className="text-body-xs font-label-code text-on-surface-variant block">صور مرتبطة بمنتجات</span>
+            <span className="text-body-xs font-label-code text-on-surface-variant block">صور عليها منتج</span>
             <span className="text-headline-sm font-bold text-emerald-500">{assignedCount}</span>
           </div>
 
           <div className="p-space-sm rounded-xl bg-surface-container-low border border-surface-container-high/40">
-            <span className="text-body-xs font-label-code text-on-surface-variant block">صور بحاجة لتخصيص</span>
+            <span className="text-body-xs font-label-code text-on-surface-variant block">صور لسه من غير منتج</span>
             <span className="text-headline-sm font-bold text-amber-500">{unassignedCount}</span>
           </div>
 
           <div className="p-space-sm rounded-xl bg-surface-container-low border border-surface-container-high/40">
-            <span className="text-body-xs font-label-code text-on-surface-variant block">أصناف الكتالوج المسجلة</span>
-            <span className="text-headline-sm font-bold text-on-surface">{catalogItems.length} صنف</span>
+            <span className="text-body-xs font-label-code text-on-surface-variant block">المنتجات</span>
+            <span className="text-headline-sm font-bold text-on-surface">{catalogItems.length} منتج</span>
           </div>
         </div>
 
@@ -548,7 +548,7 @@ export default function PhotoPoolPage() {
                   : "bg-surface-container hover:bg-surface-container-high text-on-surface"
               }`}
             >
-              ⚠️ بحاجة لربط ({unassignedCount})
+              ⚠️ من غير منتج ({unassignedCount})
             </button>
             <button
               onClick={() => setStatusFilter("assigned")}
@@ -558,7 +558,7 @@ export default function PhotoPoolPage() {
                   : "bg-surface-container hover:bg-surface-container-high text-on-surface"
               }`}
             >
-              ✓ مرتبطة ({assignedCount})
+              ✓ عليها منتج ({assignedCount})
             </button>
 
             <span className="h-4 w-px bg-surface-container-high mx-1" />
@@ -570,7 +570,7 @@ export default function PhotoPoolPage() {
                 sourceFilter === "all" ? "text-primary font-bold" : "text-on-surface-variant"
               }`}
             >
-              كل المصادر
+              من أي مكان
             </button>
             <button
               onClick={() => setSourceFilter("facebook")}
@@ -586,7 +586,7 @@ export default function PhotoPoolPage() {
                 sourceFilter === "upload" ? "text-primary font-bold" : "text-on-surface-variant"
               }`}
             >
-              تصوير الكاميرا
+              الكاميرا
             </button>
           </div>
 
@@ -595,7 +595,7 @@ export default function PhotoPoolPage() {
             <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
             <input
               type="text"
-              placeholder="بحث باسم الصورة أو اسم المنتج..."
+              placeholder="دوّر باسم الصورة أو المنتج..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-3 pr-9 py-1.5 text-body-sm bg-surface-container border border-surface-container-high rounded-xl text-on-surface focus:outline-none focus:border-primary"
@@ -617,14 +617,14 @@ export default function PhotoPoolPage() {
         {isLoading ? (
           <div className="py-24 text-center">
             <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-space-sm" />
-            <p className="font-body-md text-body-md text-on-surface-variant">جاري تحميل وفهرسة صور المكتبة...</p>
+            <p className="font-body-md text-body-md text-on-surface-variant">بنجيب الصور...</p>
           </div>
         ) : filteredPhotos.length === 0 ? (
           <div className="py-20 text-center rounded-2xl bg-surface-container-low border border-surface-container-high/40 p-space-xl">
             <AlertCircle className="w-12 h-12 text-on-surface-variant mx-auto mb-space-sm opacity-50" />
-            <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">لا توجد صور مطابقة</h3>
+            <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">مفيش صور</h3>
             <p className="font-body-md text-body-md text-on-surface-variant mt-1 max-w-md mx-auto">
-              لم يتم العثور على أي صور وفقاً لمعايير البحث الحالية. يمكنك تصوير صور جديدة بالكاميرا أو رفعها من جهازك.
+              مفيش صور بالبحث ده. صوّر بالكاميرا أو ارفع صور من الجهاز.
             </p>
             <div className="flex items-center justify-center gap-space-xs mt-space-md">
               <button
@@ -632,7 +632,7 @@ export default function PhotoPoolPage() {
                 className="flex items-center gap-1 px-space-md py-space-sm rounded-xl bg-primary text-on-primary font-bold"
               >
                 <Camera className="w-4 h-4" />
-                <span>التقاط صورة بالكاميرا</span>
+                <span>صوّر بالكاميرا</span>
               </button>
               <button
                 onClick={() => {
@@ -642,7 +642,7 @@ export default function PhotoPoolPage() {
                 }}
                 className="px-space-md py-space-sm rounded-xl bg-surface-container text-on-surface"
               >
-                إعادة ضبط الفلاتر
+                شيل الفلاتر
               </button>
             </div>
           </div>
@@ -696,14 +696,14 @@ export default function PhotoPoolPage() {
                           setPreviewPhoto(photo);
                         }}
                         className="p-2 rounded-full bg-surface-container/90 text-on-surface hover:bg-surface-bright"
-                        title="معاينة بكامل الشاشة"
+                        title="كبّر"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
                         onClick={(e) => handleDeletePhoto(photo, e)}
                         className="p-2 rounded-full bg-rose-500/90 text-white hover:bg-rose-600"
-                        title="حذف الصورة"
+                        title="امسح"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -723,19 +723,19 @@ export default function PhotoPoolPage() {
                           <button
                             onClick={(e) => handleUnlink(photo.url, e)}
                             className="text-on-surface-variant hover:text-rose-500 text-[10px] underline ml-1"
-                            title="فك الارتباط"
+                            title="شيلها من المنتج"
                           >
                             فك
                           </button>
                         </div>
                         <span className="text-[10px] text-on-surface-variant truncate">
-                          {linkInfo.category} • {linkInfo.isPrimary ? "صورة رئيسية" : "في المعرض"}
+                          {linkInfo.category} • {linkInfo.isPrimary ? "الصورة الأساسية" : "صورة زيادة"}
                         </span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1 text-[11px] text-amber-500 bg-amber-500/10 px-2 py-1 rounded-lg">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">غير مخصصة لأي صنف</span>
+                        <span className="truncate">مش على أي منتج</span>
                       </div>
                     )}
 
@@ -744,10 +744,10 @@ export default function PhotoPoolPage() {
                       <button
                         onClick={() => openEnhancerModal(photo)}
                         className="py-1.5 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 bg-linear-to-r from-violet-600/20 to-primary/20 hover:from-violet-600/30 hover:to-primary/30 text-primary border border-primary/30 transition-all cursor-pointer"
-                        title="تحسين الإضاءة وإزالة اصفرار التصوير بالموبايل وتوضيح الصنف بالذكاء الاصطناعي"
+                        title="حسّن الإضاءة وشيل الصفار من صورة الموبايل"
                       >
                         <Wand2 className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span>تحسين AI ✨</span>
+                        <span>حسّن ✨</span>
                       </button>
 
                       <button
@@ -769,7 +769,7 @@ export default function PhotoPoolPage() {
                         }`}
                       >
                         <Link2 className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{isLinked ? "تعديل التخصيص" : "ربط بمنتج"}</span>
+                        <span className="truncate">{isLinked ? "غيّر المنتج" : "حطها على منتج"}</span>
                       </button>
                     </div>
                   </div>
@@ -792,10 +792,10 @@ export default function PhotoPoolPage() {
                 </div>
                 <div>
                   <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">
-                    ربط الصورة بمنتج من كتالوج المكتبة
+                    حط الصورة على منتج
                   </h3>
                   <p className="text-body-xs text-on-surface-variant">
-                    اختر الصنف المطلوب لتعيين هذه الصورة له فوراً في المتجر والمخزن.
+                    اختار المنتج، والصورة هتظهر عليه في صفحة الزباين والمخزن.
                   </p>
                 </div>
               </div>
@@ -832,7 +832,7 @@ export default function PhotoPoolPage() {
                         onChange={() => setLinkAsPrimary(true)}
                         className="text-primary focus:ring-primary"
                       />
-                      <span>🌟 تعيين كصورة رئيسية للمنتج (Main Image)</span>
+                      <span>🌟 الصورة الأساسية للمنتج</span>
                     </label>
                     <label className="flex items-center gap-2 text-body-xs text-on-surface cursor-pointer">
                       <input
@@ -842,7 +842,7 @@ export default function PhotoPoolPage() {
                         onChange={() => setLinkAsPrimary(false)}
                         className="text-primary focus:ring-primary"
                       />
-                      <span>🖼️ إضافة إلى معرض صور الصنف (Gallery)</span>
+                      <span>🖼️ صورة زيادة للمنتج</span>
                     </label>
                   </div>
                 </div>
@@ -851,13 +851,13 @@ export default function PhotoPoolPage() {
               {/* Search Box */}
               <div>
                 <label className="block text-body-xs font-bold text-on-surface-variant mb-1">
-                  ابحث عن الصنف في الكتالوج ({catalogItems.length} صنف مسجل):
+                  دوّر على المنتج ({catalogItems.length} منتج):
                 </label>
                 <div className="relative">
                   <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
                   <input
                     type="text"
-                    placeholder="اكتب اسم الصنف (مثل: قص ولزق، ورق تصوير، كشكول، قلم...)"
+                    placeholder="اكتب اسم المنتج (كشكول، قلم، ورق تصوير...)"
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
                     autoFocus
@@ -870,7 +870,7 @@ export default function PhotoPoolPage() {
               <div className="space-y-1 max-h-60 overflow-y-auto border border-surface-container-high/40 rounded-xl p-1 bg-surface-container-lowest">
                 {filteredProducts.length === 0 ? (
                   <div className="p-4 text-center text-on-surface-variant text-body-xs">
-                    لم يتم العثور على أصناف مطابقة لكلمة البحث.
+                    مفيش منتج بالاسم ده.
                   </div>
                 ) : (
                   filteredProducts.map((p) => {
@@ -911,7 +911,7 @@ export default function PhotoPoolPage() {
                               <Check className="w-4 h-4" />
                             </div>
                           ) : (
-                            <span className="text-[11px] text-primary hover:underline">اختيار</span>
+                            <span className="text-[11px] text-primary hover:underline">اختار</span>
                           )}
                         </div>
                       </div>
@@ -935,7 +935,7 @@ export default function PhotoPoolPage() {
                 className="flex items-center gap-2 px-space-lg py-space-xs rounded-xl bg-primary text-on-primary font-bold text-body-sm hover:bg-primary/90 transition-all disabled:opacity-40 cursor-pointer"
               >
                 <Check className="w-4 h-4" />
-                <span>تأكيد وحفظ الربط بالمنتج</span>
+                <span>احفظ</span>
               </button>
             </div>
           </div>
@@ -954,13 +954,13 @@ export default function PhotoPoolPage() {
                 </div>
                 <div>
                   <h2 className="font-headline-sm text-base sm:text-lg font-bold flex items-center gap-2">
-                    <span>استوديو تحسين وتوضيح صور المنتجات (Gemini & Studio Clarifier)</span>
+                    <span>حسّن صورة المنتج</span>
                     <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
-                      ذكاء اصطناعي محلي
+                      على الجهاز
                     </span>
                   </h2>
                   <p className="text-xs text-on-surface-variant">
-                    معالجة فورية لتصوير الموبايل: إزالة اصفرار إضاءة المحل، تزهية ألوان الأدوات المكتبية، وتوضيح الباركود والنصوص.
+                    بيشيل الصفار من إضاءة المحل، ويخلي الألوان أحلى، ويوضح الباركود والكلام.
                   </p>
                 </div>
               </div>
@@ -979,11 +979,11 @@ export default function PhotoPoolPage() {
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold flex items-center gap-1.5 text-primary">
                     <Sparkles className="w-4 h-4" />
-                    <span>معاينة النتيجة بعد التحسين</span>
+                    <span>بعد التحسين</span>
                   </span>
                   <div className="flex items-center gap-2 text-[11px] text-on-surface-variant">
                     <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-200 px-2 py-0.5 rounded-md font-mono font-bold">
-                      0 KB على Supabase (تخزين محلي 100%)
+                      مش بتترفع على النت
                     </span>
                   </div>
                 </div>
@@ -994,20 +994,20 @@ export default function PhotoPoolPage() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={enhancedPreviewUrl}
-                      alt="معاينة محسنة"
+                      alt="بعد التحسين"
                       className="w-full h-full object-contain"
                     />
                   ) : (
                     <div className="flex flex-col items-center gap-2 text-on-surface-variant">
                       <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                      <span className="text-xs">جاري معالجة الصورة في الاستوديو...</span>
+                      <span className="text-xs">بنحسّن الصورة...</span>
                     </div>
                   )}
 
                   {/* Top Floating Badge */}
                   <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 text-slate-900 text-[11px] font-bold flex items-center gap-1.5 shadow-lg">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>معالجة إضاءة استوديو + Unsharp Mask</span>
+                    <span>إضاءة أحسن وحدة أكتر</span>
                   </div>
                 </div>
 
@@ -1022,7 +1022,7 @@ export default function PhotoPoolPage() {
                     />
                   </div>
                   <div className="flex-1 text-xs">
-                    <div className="font-bold text-on-surface">الصورة الأصلية الملتقطة بالموبايل</div>
+                    <div className="font-bold text-on-surface">الصورة الأصلية</div>
                     <div className="text-on-surface-variant text-[11px] mt-0.5">
                       {enhancingPhoto.filename} • {(enhancingPhoto.sizeBytes / 1024).toFixed(0)} KB
                     </div>
@@ -1037,7 +1037,7 @@ export default function PhotoPoolPage() {
                     }}
                     className="text-[11px] px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface border border-surface-container-high transition-all"
                   >
-                    {enhancedPreviewUrl === enhancingPhoto.url ? "إظهار النتيجة المحسنة" : "مقارنة بالأصل"}
+                    {enhancedPreviewUrl === enhancingPhoto.url ? "وريني بعد التحسين" : "قارن بالأصل"}
                   </button>
                 </div>
               </div>
@@ -1049,13 +1049,13 @@ export default function PhotoPoolPage() {
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-xs flex items-center gap-1.5 text-on-surface">
                       <Sliders className="w-4 h-4 text-primary" />
-                      <span>معايرات إضاءة الاستوديو للموبايل</span>
+                      <span>الإضاءة والألوان</span>
                     </h3>
                     <button
                       onClick={resetEnhancerOptions}
                       className="text-[11px] text-on-surface-variant hover:text-primary transition-colors underline"
                     >
-                      إعادة الضبط
+                      رجّع زي الأول
                     </button>
                   </div>
 
@@ -1064,7 +1064,7 @@ export default function PhotoPoolPage() {
                     <label className="flex items-center justify-between text-xs cursor-pointer p-1.5 rounded-lg hover:bg-surface-container">
                       <span className="flex items-center gap-1.5">
                         <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
-                        <span>موازنة الإضاءة وإزالة الصفرة (White Balance)</span>
+                        <span>شيل الصفار</span>
                       </span>
                       <input
                         type="checkbox"
@@ -1077,7 +1077,7 @@ export default function PhotoPoolPage() {
                     <label className="flex items-center justify-between text-xs cursor-pointer p-1.5 rounded-lg hover:bg-surface-container">
                       <span className="flex items-center gap-1.5">
                         <PackageCheck className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>توضيح وقراءة ملصقات الباركود والنصوص</span>
+                        <span>وضّح الباركود والكلام</span>
                       </span>
                       <input
                         type="checkbox"
@@ -1092,7 +1092,7 @@ export default function PhotoPoolPage() {
                   <div className="space-y-2.5 pt-2 border-t border-surface-container-high/40 text-xs">
                     <div>
                       <div className="flex justify-between text-[11px] mb-1">
-                        <span className="text-on-surface-variant">تزهية ألوان الأدوات المكتبية (Vibrance)</span>
+                        <span className="text-on-surface-variant">الألوان</span>
                         <span className="font-bold font-mono text-primary">{enhancerOptions.vibranceBoost}%</span>
                       </div>
                       <input
@@ -1107,7 +1107,7 @@ export default function PhotoPoolPage() {
 
                     <div>
                       <div className="flex justify-between text-[11px] mb-1">
-                        <span className="text-on-surface-variant">عمق وتباين الإضاءة (Contrast)</span>
+                        <span className="text-on-surface-variant">التباين</span>
                         <span className="font-bold font-mono text-primary">{enhancerOptions.contrastBoost}%</span>
                       </div>
                       <input
@@ -1122,7 +1122,7 @@ export default function PhotoPoolPage() {
 
                     <div>
                       <div className="flex justify-between text-[11px] mb-1">
-                        <span className="text-on-surface-variant">حدة الحواف والتفاصيل (Sharpness)</span>
+                        <span className="text-on-surface-variant">الحدة</span>
                         <span className="font-bold font-mono text-primary">{enhancerOptions.sharpness}%</span>
                       </div>
                       <input
@@ -1137,7 +1137,7 @@ export default function PhotoPoolPage() {
 
                     <div>
                       <div className="flex justify-between text-[11px] mb-1">
-                        <span className="text-on-surface-variant">مستوى السطوع (Brightness)</span>
+                        <span className="text-on-surface-variant">الإضاءة</span>
                         <span className="font-bold font-mono text-primary">
                           {(enhancerOptions.brightnessDelta ?? 0) > 0 ? `+${enhancerOptions.brightnessDelta}` : (enhancerOptions.brightnessDelta ?? 0)}
                         </span>
@@ -1159,14 +1159,14 @@ export default function PhotoPoolPage() {
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-xs flex items-center gap-1.5 text-violet-300">
                       <Bot className="w-4 h-4 text-violet-400" />
-                      <span>التعرف الذكي على الصنف بواسطة Gemini Vision</span>
+                      <span>اعرف المنتج بالذكاء الاصطناعي</span>
                     </h3>
                   </div>
 
                   {!geminiAnalysis ? (
                     <div className="text-xs space-y-2">
                       <p className="text-on-surface-variant text-[11px] leading-relaxed">
-                        دع Gemini يحلل صورة المنتج للتعرف على نوع الصنف (كشكول، قلم، مسطرة، آلة حاسبة) واقتراح اسم ووصف بيع جاهز.
+                        الذكاء الاصطناعي بيشوف الصورة ويقولك المنتج ده إيه (كشكول، قلم، مسطرة...) ويقترح اسم ووصف.
                       </p>
                       <button
                         onClick={handleRunGeminiAnalysis}
@@ -1176,12 +1176,12 @@ export default function PhotoPoolPage() {
                         {isEnhancingProcess ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin text-violet-300" />
-                            <span>جاري تحليل وتحديد الصنف بواسطة Gemini...</span>
+                            <span>بنشوف المنتج ده إيه...</span>
                           </>
                         ) : (
                           <>
                             <Sparkles className="w-4 h-4 text-violet-300" />
-                            <span>تحليل بالذكاء الاصطناعي (Gemini Vision)</span>
+                            <span>اعرف المنتج</span>
                           </>
                         )}
                       </button>
@@ -1202,7 +1202,7 @@ export default function PhotoPoolPage() {
                         {geminiAnalysis.aiAdvice && (
                           <div className="pt-1.5 border-t border-surface-container-high/40 text-[10px] text-amber-300/90 flex items-start gap-1">
                             <Lightbulb className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-400" />
-                            <span>نصيحة العرض: {geminiAnalysis.aiAdvice}</span>
+                            <span>نصيحة: {geminiAnalysis.aiAdvice}</span>
                           </div>
                         )}
                       </div>
@@ -1211,7 +1211,7 @@ export default function PhotoPoolPage() {
                         disabled={isEnhancingProcess}
                         className="text-[11px] text-violet-400 hover:text-violet-300 underline"
                       >
-                        إعادة الفحص بـ Gemini
+                        جرب تاني
                       </button>
                     </div>
                   )}
@@ -1235,12 +1235,12 @@ export default function PhotoPoolPage() {
                 {isEnhancingProcess ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>جاري حفظ الصورة المحسنة...</span>
+                    <span>بنحفظ...</span>
                   </>
                 ) : (
                   <>
                     <Check className="w-4 h-4" />
-                    <span>حفظ النسخة المحسنة في مستودع الصور 💾</span>
+                    <span>احفظ الصورة المتحسنة 💾</span>
                   </>
                 )}
               </button>

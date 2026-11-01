@@ -95,7 +95,7 @@ export default function LanTransferPage() {
     setDeviceName(newName);
     try {
       localStorage.setItem("copycat_device_name", newName);
-      toast.success("تم تجديد اسم الجهاز", `الاسم الجديد: ${newName}`);
+      toast.success("اسم الجهاز اتغير", `الاسم الجديد: ${newName}`);
     } catch {}
   };
 
@@ -185,19 +185,19 @@ export default function LanTransferPage() {
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "تعذر رفع الملف إلى شبكة المكتبة.");
+        throw new Error(errJson.error || "الملف متبعتش.");
       }
 
       const data = await res.json();
       if (data.success && data.file) {
         setSharedFiles((prev) => [data.file, ...prev.filter((f) => f.id !== data.file.id)]);
         setTransferProgress(100);
-        toast.success("تم الإرسال على الشبكة 🚀", `الملف "${file.name}" متاح الآن للتحميل على أجهزة المكتبة.`);
+        toast.success("الملف اتبعت 🚀", `"${file.name}" بقى موجود على كل أجهزة المكتبة.`);
         void fetchSharedFiles();
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "فشل نقل الملف عبر الشبكة";
-      toast.error("خطأ في النقل", msg);
+      const msg = err instanceof Error ? err.message : "الملف متبعتش";
+      toast.error("الملف متبعتش", msg);
     } finally {
       setIsTransferring(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -206,7 +206,7 @@ export default function LanTransferPage() {
 
   const handleDownloadFile = (item: SharedItem) => {
     if (!item.downloadUrl) {
-      toast.warning("تنبيه", "رابط تحميل الملف غير متوفر");
+      toast.warning("مش لاقيين الملف", "رابط التحميل مش موجود");
       return;
     }
 
@@ -216,7 +216,7 @@ export default function LanTransferPage() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    toast.success("بدء التحميل", `جاري تنزيل "${item.name}"...`);
+    toast.success("بننزل الملف", `"${item.name}"...`);
   };
 
   const handleDeleteItem = async (id: string) => {
@@ -226,10 +226,10 @@ export default function LanTransferPage() {
         method: "DELETE",
       });
       if (res.ok) {
-        toast.success("تم الحذف", "تم حذف الملف من غرفة النقل المشتركة.");
+        toast.success("اتمسح", "الملف اتمسح من على كل الأجهزة.");
       }
     } catch {
-      toast.error("خطأ", "تعذر حذف الملف من الخادم.");
+      toast.error("متمسحش", "الملف متمسحش، جرب تاني.");
     }
   };
 
@@ -253,15 +253,15 @@ export default function LanTransferPage() {
         totalCopies: 1,
         completedCopies: 0,
         bindingType: "عادي",
-        notes: `أُرسل عبر سلك الشبكة / LAN من "${item.sender}". الحجم: ${formatFileSize(item.size)}`,
+        notes: `اتبعت من جهاز "${item.sender}". الحجم: ${formatFileSize(item.size)}`,
         status: "pending" as const,
         createdAt: now,
       };
       localStorage.setItem("copycat_tasks_v1", JSON.stringify([newTask, ...existing]));
-      toast.success("أُرسل لطابور الطباعة 🖨️", `تم تسجيل مهمة طباعة "${item.name}" في جدول مهام التسليم (/admin/tasks).`);
+      toast.success("اتضاف لشغل الطباعة 🖨️", `"${item.name}" اتضاف في صفحة الأوردرات.`);
     } catch (err) {
       console.error(err);
-      toast.error("خطأ", "تعذر تسجيل المهمة في طابور الطباعة.");
+      toast.error("الأوردر متحفظش", "جرب تاني.");
     }
   }, [toast]);
 
@@ -299,11 +299,11 @@ export default function LanTransferPage() {
             <button
               type="button"
               onClick={regenerateDeviceName}
-              title="توليد اسم جديد"
+              title="اسم جديد"
               className="p-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 transition cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-bold"
             >
               <Dices className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">اسم عشوائي</span>
+              <span className="hidden sm:inline">اسم جديد</span>
             </button>
           </div>
         </div>
@@ -311,7 +311,7 @@ export default function LanTransferPage() {
         {/* Shared Room Input with Manual Refresh */}
         <div className="flex items-center gap-2">
           <HardDrive className="w-4 h-4 text-slate-500 shrink-0" />
-          <span className="text-xs font-bold text-slate-700 whitespace-nowrap">غرفة النقل:</span>
+          <span className="text-xs font-bold text-slate-700 whitespace-nowrap">الأوضة:</span>
           <div className="flex-1 flex items-center gap-1.5">
             <input
               type="text"
@@ -324,7 +324,7 @@ export default function LanTransferPage() {
               type="button"
               onClick={() => fetchSharedFiles()}
               disabled={isRefreshing}
-              title="تحديث يدوياً"
+              title="حدّث"
               className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer shrink-0"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-blue-600" : ""}`} />
@@ -354,10 +354,10 @@ export default function LanTransferPage() {
 
         <div>
           <h3 className="text-sm font-bold text-slate-900">
-            اسحب أي ملفات هنا أو اضغط للاختيار للنقل السريع
+            اسحب أي ملفات وسيبها هنا، أو دوس واختارها
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            نقل فوري بين أجهزة المكتبة المتصلة بنفس الشبكة
+            الملفات بتروح على طول لكل أجهزة المكتبة اللي على نفس الراوتر
           </p>
         </div>
 
@@ -366,7 +366,7 @@ export default function LanTransferPage() {
             <div className="flex justify-between text-xs text-slate-500">
               <span className="flex items-center gap-1 text-blue-600 font-bold">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                <span>جاري النقل...</span>
+                <span>بنبعت...</span>
               </span>
               <span className="font-mono">{transferProgress}%</span>
             </div>
@@ -385,7 +385,7 @@ export default function LanTransferPage() {
         <div className="flex items-center justify-between pb-3 border-b border-slate-200">
           <div className="flex items-center gap-2">
             <HardDrive className="w-4 h-4 text-blue-600" />
-            <h2 className="font-bold text-sm text-slate-900">الملفات المتبادلة</h2>
+            <h2 className="font-bold text-sm text-slate-900">الملفات اللي اتبعتت</h2>
           </div>
           <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-xl">
             {sharedFiles.length} {sharedFiles.length === 1 ? "ملف" : "ملفات"}
@@ -395,7 +395,7 @@ export default function LanTransferPage() {
         {sharedFiles.length === 0 ? (
           <div className="py-8 text-center text-slate-600">
             <Share2 className="w-8 h-8 mx-auto opacity-30 mb-2" />
-            <p className="text-xs font-bold">لا توجد ملفات في الغرفة حالياً</p>
+            <p className="text-xs font-bold">لسه مفيش ملفات</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -424,25 +424,25 @@ export default function LanTransferPage() {
                   <button
                     onClick={() => handleSendToPrintQueue(item)}
                     className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center gap-1 transition cursor-pointer border border-emerald-200"
-                    title="إرسال لطابور الطباعة"
+                    title="ضيفه لشغل الطباعة"
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">طباعة</span>
+                    <span className="hidden sm:inline">اطبع</span>
                   </button>
 
                   <button
                     onClick={() => handleDownloadFile(item)}
                     className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1 transition cursor-pointer shadow-xs"
-                    title="تحميل الملف للجهاز"
+                    title="نزّل الملف"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>تحميل</span>
+                    <span>نزّل</span>
                   </button>
 
                   <button
                     onClick={() => handleDeleteItem(item.id)}
                     className="p-1.5 rounded-lg hover:bg-red-50 text-slate-600 hover:text-red-600 transition cursor-pointer"
-                    title="حذف من الغرفة"
+                    title="امسح"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

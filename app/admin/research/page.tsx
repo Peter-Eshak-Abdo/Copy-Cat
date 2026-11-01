@@ -160,8 +160,8 @@ export default function ResearchPage() {
       id: "source-" + Date.now(),
       name: finalName,
       url: newSourceUrl.trim(),
-      desc: `موقع بحثي موثق للاستقاء والتوثيق الأكاديمي (${newSourceUrl.trim()})`,
-      category: "مواقع وروابط بحثية",
+      desc: `مصدر للبحث (${newSourceUrl.trim()})`,
+      category: "مواقع ومصادر",
       citation: `${finalName} - استشهاد وبحث (${newSourceUrl.trim()})`,
     };
     const updated = [newSource, ...sources];
@@ -172,7 +172,7 @@ export default function ResearchPage() {
     setShowAddSourceModal(false);
     setNewSourceUrl("");
     setNewSourceName("");
-    toast.success("تمت إضافة الرابط بنجاح", `تم إدراج رابط "${finalName}" ضمن مصادر البحث.`);
+    toast.success("الرابط اتضاف", `"${finalName}" بقى من مصادر البحث.`);
   };
 
   const handleDeleteSource = (id: string, name: string) => {
@@ -181,7 +181,7 @@ export default function ResearchPage() {
     try {
       localStorage.setItem("copycat_custom_research_sources_v1", JSON.stringify(updated));
     } catch {}
-    toast.info("تم حذف المصدر", `تمت إزالة "${name}" من قائمة المصادر.`);
+    toast.info("المصدر اتمسح", `شلنا "${name}" من المصادر.`);
   };
 
   const handleResetSources = () => {
@@ -195,7 +195,7 @@ export default function ResearchPage() {
     try {
       localStorage.setItem("copycat_custom_research_sources_v1", JSON.stringify(defaults));
     } catch {}
-    toast.success("تمت استعادة المصادر الافتراضية", "تمت استعادة الـ 10 مصادر الأكاديمية الرسمية المعتمدة.");
+    toast.success("المصادر رجعت زي الأول", "رجّعنا الـ 10 مصادر الأصلية.");
   };
 
   const handleGenerate = async (e: React.FormEvent) => {
@@ -204,8 +204,8 @@ export default function ResearchPage() {
 
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       toast.warning(
-        "أنت غير متصل بالإنترنت",
-        "توليد محتوى جديد بالذكاء الاصطناعي يتطلب اتصالاً بالإنترنت. يرجى الاتصال بالشبكة للمتابعة."
+        "النت فاصل",
+        "كتابة البحث محتاجة إنترنت. وصّل النت وجرب تاني."
       );
       return;
     }
@@ -245,7 +245,7 @@ export default function ResearchPage() {
 
       const data = await resp.json();
       if (!resp.ok) {
-        throw new Error(data.error || "فشل توليد البحث");
+        throw new Error(data.error || "البحث متكتبش");
       }
 
       if (data.versions && Array.isArray(data.versions) && data.versions.length > 0) {
@@ -272,15 +272,15 @@ export default function ResearchPage() {
         setActiveProvider(data.provider || "Gemini Flash");
       }
       toast.success(
-        "تم توليد البحث بنجاح",
+        "البحث جاهز",
         versionsCount > 1
-          ? `تم إنشاء (${data.versions?.length || versionsCount}) نسخ متباينة ومستقلة تماماً من البحث.`
-          : `تم إنشاء مسودة بحث متكاملة عن "${topic}".`
+          ? `اتكتب ${data.versions?.length || versionsCount} نسخ مختلفة عن بعض من البحث.`
+          : `اتكتب بحث كامل عن "${topic}".`
       );
     } catch (err) {
       toast.error(
-        "تعذر توليد محتوى البحث",
-        getFriendlyErrorMessage(err, "حدث خطأ أثناء الاتصال بخدمة الذكاء الاصطناعي.")
+        "البحث متكتبش",
+        getFriendlyErrorMessage(err, "مقدرناش نوصل للذكاء الاصطناعي. جرب تاني بعد شوية.")
       );
     } finally {
       setIsLoading(false);
@@ -319,12 +319,12 @@ export default function ResearchPage() {
         language: /[\u0600-\u06FF]/.test(topic + " " + (textToExport || "")) ? "ar" : "en",
       });
       toast.success(
-        "تم تنزيل ملف الوورد بنجاح",
-        `تم حفظ ${generatedVersions.length > 1 ? `النسخة (${targetVersionIdx + 1})` : "البحث"} بتنسيق Word A4 منسق وجاهز للطباعة فوراً.`
+        "ملف Word نزل",
+        `${generatedVersions.length > 1 ? `النسخة ${targetVersionIdx + 1}` : "البحث"} نزل ملف Word مقاس A4 جاهز للطباعة.`
       );
     } catch (err) {
       console.error(err);
-      toast.error("تعذر توليد ملف الوورد", getFriendlyErrorMessage(err, "يرجى المحاولة مرة أخرى."));
+      toast.error("ملف Word منزلش", getFriendlyErrorMessage(err, "جرب تاني."));
     } finally {
       setIsExportingDocx(false);
     }
@@ -364,12 +364,12 @@ export default function ResearchPage() {
         await new Promise((resolve) => setTimeout(resolve, 400));
       }
       toast.success(
-        "تم تنزيل جميع النسخ بنجاح",
-        `تم تصدير وحفظ كل النسخ الـ (${generatedVersions.length}) كملفات Word مستقلة.`
+        "كل النسخ نزلت",
+        `نزلنا الـ ${generatedVersions.length} نسخ، كل نسخة في ملف Word لوحدها.`
       );
     } catch (err) {
       console.error(err);
-      toast.error("حدث خطأ أثناء تنزيل النسخ", getFriendlyErrorMessage(err));
+      toast.error("النسخ منزلتش", getFriendlyErrorMessage(err));
     } finally {
       setIsBatchExporting(false);
     }
@@ -379,7 +379,7 @@ export default function ResearchPage() {
     if (!generatedText) return;
     navigator.clipboard.writeText(generatedText);
     setCopied(true);
-    toast.info("تم نسخ النص", "تم نسخ محتوى البحث كاملاً إلى الحافظة.");
+    toast.info("النص اتنسخ", "البحث كله اتنسخ، الزقه في أي مكان.");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -393,7 +393,7 @@ export default function ResearchPage() {
         >
           {/* Topic */}
           <div className="space-y-1.5">
-            <label className="text-sm font-black text-slate-900 block">عنوان أو موضوع البحث المطلوب:</label>
+            <label className="text-sm font-black text-slate-900 block">عنوان البحث:</label>
             <textarea
               rows={3}
               value={topic}
@@ -409,11 +409,11 @@ export default function ResearchPage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label className="text-sm font-black text-purple-900 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-purple-700" />
-                <span>عدد النسخ المطلوبة للبحث:</span>
+                <span>عايز كام نسخة؟</span>
               </label>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-purple-800 bg-purple-100 border border-purple-300 px-2.5 py-1 rounded-xl">
-                  (اختر أي رقم من 1 إلى 15 نسخة)
+                  (من 1 لـ 15 نسخة)
                 </span>
                 <span className="text-sm font-black text-white bg-purple-700 px-3 py-1 rounded-xl shadow-xs">
                   {versionsCount} {versionsCount === 1 ? "نسخة واحدة" : "نسخ مستقلة"}
@@ -421,7 +421,7 @@ export default function ResearchPage() {
               </div>
             </div>
             <p className="text-xs text-purple-900 leading-relaxed font-medium">
-              لو طلب 15 طالباً نفس البحث، كل نسخة ستصدر بزاوية وهيكل ومقدمة وعناوين واستنتاجات ومصادر فريدة تماماً لضمان عدم التطابق!
+              لو 15 طالب طالبين نفس البحث، كل نسخة هتطلع مختلفة في المقدمة والعناوين والخاتمة والمصادر، عشان محدش ياخد نفس بحث التاني.
             </p>
             <div className="flex items-center gap-3 pt-1">
               <input
@@ -437,7 +437,7 @@ export default function ResearchPage() {
                   type="button"
                   onClick={() => setVersionsCount((prev) => Math.max(1, prev - 1))}
                   className="w-8 h-8 rounded-lg bg-white border border-purple-300 text-purple-800 hover:bg-purple-100 font-black text-base flex items-center justify-center transition cursor-pointer"
-                  title="تقليل نسخة"
+                  title="نسخة أقل"
                 >
                   -
                 </button>
@@ -458,7 +458,7 @@ export default function ResearchPage() {
                   type="button"
                   onClick={() => setVersionsCount((prev) => Math.min(15, prev + 1))}
                   className="w-8 h-8 rounded-lg bg-white border border-purple-300 text-purple-800 hover:bg-purple-100 font-black text-base flex items-center justify-center transition cursor-pointer"
-                  title="زيادة نسخة"
+                  title="نسخة زيادة"
                 >
                   +
                 </button>
@@ -469,20 +469,20 @@ export default function ResearchPage() {
           {/* Custom Requirements / Details */}
           <div className="space-y-1.5">
             <label className="text-sm font-black text-slate-900 block">
-              شروط وتفاصيل خاصة وملاحظات بالبحث (اختياري):
+              شروط أو ملاحظات (مش لازم):
             </label>
             <textarea
               rows={2}
               value={customDetails}
               onChange={(e) => setCustomDetails(e.target.value)}
-              placeholder="مثال: التركيز على 5 نقاط معينة، إضافة مقارنة أو إحصائيات، الالتزام بشروط الدكتور..."
+              placeholder="مثلاً: يركز على 5 نقط معينة، يكون فيه مقارنة أو إحصائيات، شروط الدكتور..."
               className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl p-3 text-xs sm:text-sm text-slate-900 focus:border-purple-600 focus:bg-white focus:outline-none transition resize-none leading-relaxed"
             />
           </div>
 
           {/* Target Pages */}
           <div className="space-y-1.5">
-            <label className="text-sm font-black text-slate-900 block">الحجم التقديري للبحث المطبوع:</label>
+            <label className="text-sm font-black text-slate-900 block">البحث كام صفحة تقريباً؟</label>
             <div className="grid grid-cols-6 gap-1.5">
               {[5, 10, 15, 20, 30].map((pages) => (
                 <button
@@ -533,12 +533,12 @@ export default function ResearchPage() {
           {/* Cover Page Metadata Box (Item #13) */}
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
             <span className="text-xs font-bold text-purple-400 block border-b border-slate-200 pb-1.5">
-              بيانات صفحة الغلاف الرسمية:
+              بيانات الغلاف:
             </span>
 
             <div className="space-y-2 text-xs">
               <div>
-                <label className="text-[11px] text-slate-500 block mb-1">اسم الطالب / الباحث:</label>
+                <label className="text-[11px] text-slate-500 block mb-1">اسم الطالب:</label>
                 <div className="relative">
                   <User className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-2.5" />
                   <input
@@ -552,7 +552,7 @@ export default function ResearchPage() {
               </div>
 
               <div>
-                <label className="text-[11px] text-slate-500 block mb-1">اسم الأستاذ / المشرف:</label>
+                <label className="text-[11px] text-slate-500 block mb-1">اسم الدكتور / المدرس:</label>
                 <div className="relative">
                   <GraduationCap className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-2.5" />
                   <input
@@ -567,7 +567,7 @@ export default function ResearchPage() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] text-slate-500 block mb-1">الصف / الفرقة:</label>
+                  <label className="text-[11px] text-slate-500 block mb-1">السنة / الفرقة:</label>
                   <input
                     type="text"
                     value={gradeOrClass}
@@ -589,7 +589,7 @@ export default function ResearchPage() {
               </div>
 
               <div>
-                <label className="text-[11px] text-slate-500 block mb-1">المدرسة / الكلية والجامعة:</label>
+                <label className="text-[11px] text-slate-500 block mb-1">المدرسة / الكلية:</label>
                 <div className="relative">
                   <School className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-2.5" />
                   <input
@@ -611,7 +611,7 @@ export default function ResearchPage() {
               onClick={() => setIncludeIndex(!includeIndex)}
               className="w-full flex items-center justify-between text-xs py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:border-purple-500/40 transition cursor-pointer"
             >
-              <span>إدراج صفحة فهرس المحتويات (جدول منظم)</span>
+              <span>حط صفحة فهرس</span>
               {includeIndex ? (
                 <CheckSquare className="w-4 h-4 text-purple-400" />
               ) : (
@@ -624,7 +624,7 @@ export default function ResearchPage() {
               onClick={() => setIncludeRefs(!includeRefs)}
               className="w-full flex items-center justify-between text-xs py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:border-purple-500/40 transition cursor-pointer"
             >
-              <span>إدراج صفحة المصادر والمراجع المعتمدة</span>
+              <span>حط صفحة المراجع</span>
               {includeRefs ? (
                 <CheckSquare className="w-4 h-4 text-purple-400" />
               ) : (
@@ -641,13 +641,13 @@ export default function ResearchPage() {
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span>جاري صياغة وكتابة النسخ الأكاديمية ({versionsCount})...</span>
+                <span>بنكتب البحث ({versionsCount} نسخ)...</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4 text-purple-200" />
                 <span>
-                  توليد وصياغة البحث الأكاديمي {versionsCount > 1 ? `(${versionsCount} نسخ مختلفة)` : ""}
+                  اكتب البحث {versionsCount > 1 ? `(${versionsCount} نسخ مختلفة)` : ""}
                 </span>
               </>
             )}
@@ -662,7 +662,7 @@ export default function ResearchPage() {
               {generatedVersions.length > 1 && (
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200">
                   <span className="text-xs font-bold text-slate-600 shrink-0 flex items-center gap-1">
-                    <Layers className="w-3.5 h-3.5 text-purple-600" /> النسخ المُولدة:
+                    <Layers className="w-3.5 h-3.5 text-purple-600" /> النسخ اللي اتكتبت:
                   </span>
                   {generatedVersions.map((v, idx) => {
                     const angleName = getAngleName(v.angle);
@@ -708,7 +708,7 @@ export default function ResearchPage() {
                     className="flex items-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer"
                   >
                     {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? "تم النسخ" : "نسخ النص"}</span>
+                    <span>{copied ? "اتنسخ" : "انسخ النص"}</span>
                   </button>
 
                   <button
@@ -719,10 +719,10 @@ export default function ResearchPage() {
                     <Download className="w-3.5 h-3.5 text-white" />
                     <span>
                       {isExportingDocx
-                        ? "جاري التجهيز..."
+                        ? "بنجهز..."
                         : generatedVersions.length > 1
-                        ? `تنزيل النسخة (${selectedVersionIndex + 1})`
-                        : "تنزيل مستند Word كامل (.docx)"}
+                        ? `نزّل النسخة ${selectedVersionIndex + 1}`
+                        : "نزّل ملف Word"}
                     </span>
                   </button>
 
@@ -734,7 +734,7 @@ export default function ResearchPage() {
                     >
                       <Layers className="w-3.5 h-3.5 text-purple-600" />
                       <span>
-                        {isBatchExporting ? "جاري تنزيل كل النسخ..." : `تنزيل كل النسخ (${generatedVersions.length})`}
+                        {isBatchExporting ? "بننزل كل النسخ..." : `نزّل كل النسخ (${generatedVersions.length})`}
                       </span>
                     </button>
                   )}
@@ -774,8 +774,7 @@ export default function ResearchPage() {
                 جاري صياغة وكتابة البحث الأكاديمي {versionsCount > 1 ? `(${versionsCount} نسخ مستقلة)...` : "..."}
               </h3>
               <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-                يقوم محرك الذكاء الاصطناعي الآن بصياغة محتوى علمي متعمق بدون حشو، منسق بالهيكل الجامعي المعتمد وزوايا تناول
-                متباينة.
+                الذكاء الاصطناعي بيكتب البحث دلوقتي، بكلام علمي من غير حشو وبالترتيب المعروف للأبحاث، وكل نسخة مختلفة عن التانية.
               </p>
 
               {/* Live Timer Badge */}
@@ -799,17 +798,17 @@ export default function ResearchPage() {
                     elapsedSeconds >= 0 ? "text-purple-700 font-bold" : "text-slate-500"
                   }`}
                 >
-                  <span>1. تحليل الموضوع وإعداد الهيكلية الأكاديمية والزوايا المتباينة</span>
-                  <span className="text-[11px] font-bold">{elapsedSeconds > 10 ? "✓ تم" : "جاري..."}</span>
+                  <span>1. بيفهم الموضوع ويقسّم البحث</span>
+                  <span className="text-[11px] font-bold">{elapsedSeconds > 10 ? "✓ تم" : "شغالين..."}</span>
                 </div>
                 <div
                   className={`flex items-center justify-between gap-2 ${
                     elapsedSeconds >= 12 ? "text-purple-700 font-bold" : "text-slate-500"
                   }`}
                 >
-                  <span>2. صياغة المقدمة والمنهجية والأهداف وإشكالية البحث لكل نسخة</span>
+                  <span>2. بيكتب المقدمة والأهداف لكل نسخة</span>
                   <span className="text-[11px] font-bold">
-                    {elapsedSeconds > 28 ? "✓ تم" : elapsedSeconds >= 12 ? "جاري..." : "قيد الانتظار"}
+                    {elapsedSeconds > 28 ? "✓ تم" : elapsedSeconds >= 12 ? "شغالين..." : "مستني دوره"}
                   </span>
                 </div>
                 <div
@@ -817,9 +816,9 @@ export default function ResearchPage() {
                     elapsedSeconds >= 30 ? "text-purple-700 font-bold" : "text-slate-500"
                   }`}
                 >
-                  <span>3. كتابة المباحث ومناقشة المحتوى العلمي والمراجع المعتمدة</span>
+                  <span>3. بيكتب موضوع البحث نفسه</span>
                   <span className="text-[11px] font-bold">
-                    {elapsedSeconds > 60 ? "✓ تم" : elapsedSeconds >= 30 ? "جاري..." : "قيد الانتظار"}
+                    {elapsedSeconds > 60 ? "✓ تم" : elapsedSeconds >= 30 ? "شغالين..." : "مستني دوره"}
                   </span>
                 </div>
                 <div
@@ -827,9 +826,9 @@ export default function ResearchPage() {
                     elapsedSeconds >= 62 ? "text-purple-700 font-bold" : "text-slate-500"
                   }`}
                 >
-                  <span>4. صياغة الخاتمة والتوصيات وتدقيق قائمة المراجع لكل نسخة</span>
+                  <span>4. بيكتب الخاتمة والتوصيات والمراجع</span>
                   <span className="text-[11px] font-bold">
-                    {elapsedSeconds > 80 ? "✓ تم" : elapsedSeconds >= 62 ? "جاري..." : "قيد الانتظار"}
+                    {elapsedSeconds > 80 ? "✓ تم" : elapsedSeconds >= 62 ? "شغالين..." : "مستني دوره"}
                   </span>
                 </div>
                 <div
@@ -837,8 +836,8 @@ export default function ResearchPage() {
                     elapsedSeconds >= 82 ? "text-purple-700 font-bold" : "text-slate-500"
                   }`}
                 >
-                  <span>5. مراجعة التنسيقات وتجهيز ملفات Word (DOCX) للتحميل</span>
-                  <span className="text-[11px] font-bold">{elapsedSeconds >= 82 ? "جاري..." : "قيد الانتظار"}</span>
+                  <span>5. بيجهز ملفات Word</span>
+                  <span className="text-[11px] font-bold">{elapsedSeconds >= 82 ? "شغالين..." : "مستني دوره"}</span>
                 </div>
               </div>
             </div>
@@ -847,10 +846,9 @@ export default function ResearchPage() {
               <div className="w-16 h-16 rounded-2xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-600 mb-4 shadow-inner">
                 <FileText className="w-8 h-8" />
               </div>
-              <p className="text-base font-bold text-slate-900 mb-1">جاهز لكتابة وتنسيق بحثك فوراً</p>
+              <p className="text-base font-bold text-slate-900 mb-1">جاهز يكتبلك البحث</p>
               <p className="text-xs max-w-md text-slate-600 leading-relaxed font-medium">
-                أدخل عنوان البحث وبيانات الغلاف وعدد النسخ واضغط &quot;توليد وصياغة البحث&quot;. سيتكفل النظام بتوليد
-                محتوى ثري وطبيعي ومستقل وتصدير ملفات Word مقاس A4 بهوامش ضيقة وغلاف رسمي وفهرس جاهزة للطباعة فوراً.
+                اكتب عنوان البحث وبيانات الغلاف وعدد النسخ، وبعدين دوس الزرار. هيطلعلك ملف Word مقاس A4 فيه غلاف وفهرس وجاهز للطباعة.
               </p>
             </div>
           )}
@@ -867,15 +865,14 @@ export default function ResearchPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm md:text-base font-bold text-slate-900">
-                  المصادر وقواعد البيانات البحثية المعتمدة للتوثيق
+                  المصادر اللي البحث بياخد منها
                 </h3>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold border border-purple-200">
                   {sources.length} مصدر
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                يمكنك كمسؤول إضافة مصادر ودوريات جديدة أو حذف مصادر موجودة، وسيتم الاستشهاد بها تلقائياً في نص ومراجع
-                البحث وملف Word!
+                تقدر تضيف مصادر جديدة أو تمسح مصادر، وهتتكتب لوحدها في البحث وفي صفحة المراجع.
               </p>
             </div>
           </div>
@@ -886,15 +883,15 @@ export default function ResearchPage() {
               onClick={() => setShowAddSourceModal(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-md shadow-purple-600/20 cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" /> إضافة رابط مصدر جديد
+              <Plus className="w-3.5 h-3.5" /> ضيف مصدر جديد
             </button>
             <button
               type="button"
               onClick={handleResetSources}
-              title="استعادة المصادر الافتراضية الأصلية"
+              title="رجّع المصادر الأصلية"
               className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer border border-slate-200"
             >
-              <RotateCcw className="w-3 h-3" /> استعادة الافتراضي
+              <RotateCcw className="w-3 h-3" /> رجّع الأصلي
             </button>
           </div>
         </div>
@@ -914,7 +911,7 @@ export default function ResearchPage() {
                   <button
                     type="button"
                     onClick={() => handleDeleteSource(source.id, source.name)}
-                    title={`حذف مصدر "${source.name}"`}
+                    title={`امسح "${source.name}"`}
                     className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -954,7 +951,7 @@ export default function ResearchPage() {
                 <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-600 flex items-center justify-center font-bold">
                   <Plus className="w-4 h-4" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">إضافة رابط موقع أو مقال بحثي</h3>
+                <h3 className="text-sm font-bold text-slate-900">ضيف رابط موقع أو مقال</h3>
               </div>
               <button
                 type="button"
@@ -968,7 +965,7 @@ export default function ResearchPage() {
             <form onSubmit={handleAddSource} className="space-y-3.5 text-right">
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">
-                  رابط الموقع أو المقال البحثي (URL Link): <span className="text-red-500">*</span>
+                  الرابط: <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="url"
@@ -981,19 +978,19 @@ export default function ResearchPage() {
                   autoFocus
                 />
                 <span className="text-[11px] text-slate-500 block mt-1">
-                  يمكنك وضع رابط ويكيبيديا، موقع موضوع، أو أي رابط موقع أو مقال ترغب في اعتماده كمصدر للبحث.
+                  حط رابط ويكيبيديا أو موضوع أو أي موقع عايز البحث ياخد منه.
                 </span>
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">
-                  اسم المصدر أو الموقع (اختياري):
+                  اسم الموقع (مش لازم):
                 </label>
                 <input
                   type="text"
                   value={newSourceName}
                   onChange={(e) => setNewSourceName(e.target.value)}
-                  placeholder="اختياري - يتم استخراجه تلقائياً من الرابط"
+                  placeholder="مش لازم، هيتاخد من الرابط لوحده"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:border-purple-500 focus:outline-none"
                 />
               </div>
@@ -1010,7 +1007,7 @@ export default function ResearchPage() {
                   type="submit"
                   className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 transition flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Plus className="w-3.5 h-3.5" /> حفظ وإدراج الرابط
+                  <Plus className="w-3.5 h-3.5" /> احفظ الرابط
                 </button>
               </div>
             </form>

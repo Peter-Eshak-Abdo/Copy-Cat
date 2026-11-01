@@ -392,7 +392,7 @@ export async function POST(req: NextRequest) {
         if (hasPythonScript) {
           sendEvent({
             type: "status",
-            message: "جاري تشغيل محرك الفيس بوك المحلي بالمتصفح...",
+            message: "بنفتح البوست في متصفح على الجهاز...",
           });
 
           const args = [
@@ -449,7 +449,7 @@ export async function POST(req: NextRequest) {
               if (code !== 0) {
                 sendEvent({
                   type: "error",
-                  message: `انتهت العملية بكود (${code}). إذا كان المنشور في مجموعة مغلقة، يمكنك سحب وإفلات الصور يدوياً أدناه لتجميعها فوراً.`,
+                  message: `السحب وقف (كود ${code}). لو البوست في جروب مقفول نزّل الصور وارفعها بنفسك.`,
                 });
               }
               controller.close();
@@ -470,7 +470,7 @@ export async function POST(req: NextRequest) {
         // Strategy B: Universal Native Multi-Engine Scraper & pdf-lib Compiler (100% Serverless / Vercel Ready)
         sendEvent({
           type: "status",
-          message: "جاري الاتصال بخوادم فيسبوك واستخراج الصور المتاحة...",
+          message: "بنفتح البوست على فيسبوك ونسحب الصور...",
         });
 
         try {
@@ -600,7 +600,7 @@ export async function POST(req: NextRequest) {
             sendEvent({
               type: "error",
               message:
-                "هذا المنشور خاص أو يتطلب تسجيل الدخول بحساب فيسبوك. لحسن الحظ يمكنك سحب وإفلات صور الملزمة مباشرة في صندوق الرفع أدناه لتوليد ملف الـ PDF فوراً للطباعة!",
+                "فيسبوك مش بيوري صور البوست ده من غير تسجيل دخول (غالباً في جروب مقفول أو البوست مش عام). نزّل الصور على الجهاز وارفعها من «ارفع صور الملزمة بنفسك» وهتتجمع PDF على طول.",
             });
             controller.close();
             return;
@@ -610,7 +610,7 @@ export async function POST(req: NextRequest) {
 
           sendEvent({
             type: "status",
-            message: `تم اكتشاف ${limitedUrls.length} صورة بالترتيب! جاري التحميل فائق السرعة...`,
+            message: `لقينا ${limitedUrls.length} صورة، بننزلهم...`,
           });
 
           // Download all images in memory
@@ -664,7 +664,7 @@ export async function POST(req: NextRequest) {
           if (downloadedBuffers.length === 0) {
             sendEvent({
               type: "error",
-              message: "تعذر تحميل الصور من خوادم فيس بوك. يرجى تجربة رفع الصور مباشرة.",
+              message: "الصور منزلتش من فيسبوك. نزّلها على الجهاز وارفعها بنفسك.",
             });
             controller.close();
             return;
@@ -673,7 +673,7 @@ export async function POST(req: NextRequest) {
           // Compile into PDF using pdf-lib
           sendEvent({
             type: "status",
-            message: `جاري تجميع ${downloadedBuffers.length} صفحة في ملف PDF عالي الجودة للطباعة...`,
+            message: `بنجمع ${downloadedBuffers.length} صفحة في ملف PDF...`,
           });
 
           const pdfDoc = await PDFDocument.create();
@@ -722,7 +722,7 @@ export async function POST(req: NextRequest) {
             pdf_url: finalPdfUrl,
             pdf_filename: pdfFilename,
             images: downloadedBuffers.map((b) => b.webUrl),
-            message: `تم سحب ودمج ${downloadedBuffers.length} صفحة بنجاح في ملف PDF جاهز للطباعة فوراً!`,
+            message: `${downloadedBuffers.length} صفحة اتجمعوا في ملف PDF جاهز للطباعة.`,
           });
 
           controller.close();
@@ -730,7 +730,7 @@ export async function POST(req: NextRequest) {
           const msg = nativeErr instanceof Error ? nativeErr.message : "خطأ غير متوقع";
           sendEvent({
             type: "error",
-            message: `تعذر معالجة المنشور: ${msg}`,
+            message: `حصلت مشكلة في البوست: ${msg}`,
           });
           controller.close();
         }

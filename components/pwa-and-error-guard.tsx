@@ -59,7 +59,7 @@ export function PwaAndErrorGuard() {
       if ("caches" in window) {
         caches.keys().then((keys) => {
           for (const key of keys) {
-            if (key !== "copycat-cache-v6.0") {
+            if (key !== "copycat-cache-v6.0" && key !== "copycat-models-v1") {
               caches.delete(key);
             }
           }

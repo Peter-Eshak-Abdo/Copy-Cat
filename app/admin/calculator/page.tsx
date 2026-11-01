@@ -347,14 +347,14 @@ export default function SmartCalculatorPage() {
       });
     text += `• إجمالي سعر النسخة الواحدة: ${singleCopyTotalCost.toFixed(2)} ج.م\n`;
     text += `━━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `💰 *الإجمالي النهائي المطلوب: ${grandTotalCost.toLocaleString("ar-EG")} ج.م*\n`;
+    text += `💰 *الإجمالي: ${grandTotalCost.toLocaleString("ar-EG")} ج.م*\n`;
     text += `📍 ${SITE_CONFIG.store.address} | هاتف: ${SITE_CONFIG.store.phone}\n`;
 
     try {
       await navigator.clipboard.writeText(text);
-      toast.success("تم نسخ الفاتورة", "تم نسخ ملخص عرض السعر بنجاح لمشاركته مع العميل");
+      toast.success("اتنسخ", "عرض السعر اتنسخ، ابعته للزبون");
     } catch {
-      toast.error("خطأ", "تعذر نسخ النص للحافظة");
+      toast.error("منسخش", "جرب تاني");
     }
   };
 
@@ -386,13 +386,13 @@ export default function SmartCalculatorPage() {
     setRateLabel("أبيض وأسود (وش وظهر)");
     setSelectedBinding(null);
     setSelectedFinishingIds([]);
-    toast.info("تم التصفير", "تم تصفير جميع القيم والبدء من جديد (0 صفحة / 0 نسخة)");
+    toast.info("اتصفرت", "ابدأ حساب جديد");
   };
 
   // Custom Add-ons Management Handlers
   const handleAddAddon = () => {
     if (!newAddonName.trim() || isNaN(parseFloat(newAddonPrice)) || parseFloat(newAddonPrice) <= 0) {
-      toast.warning("بيانات غير مكتملة", "يرجى كتابة اسم الخدمة وسعرها بصيغة صحيحة");
+      toast.warning("في حاجة ناقصة", "اكتب اسم الخدمة وسعرها");
       return;
     }
     const newAddon: CustomAddon = {
@@ -409,12 +409,12 @@ export default function SmartCalculatorPage() {
     } catch {}
     setNewAddonName("");
     setNewAddonPrice("");
-    toast.success("تمت الإضافة", `تمت إضافة خدمة التجليد "${newAddon.name}" بنجاح`);
+    toast.success("اتضافت", `"${newAddon.name}"`);
   };
 
   const handleSaveEditAddon = (id: string) => {
     if (!editAddonName.trim() || isNaN(parseFloat(editAddonPrice)) || parseFloat(editAddonPrice) <= 0) {
-      toast.warning("بيانات غير مكتملة", "يرجى التحقق من الاسم والسعر");
+      toast.warning("في حاجة غلط", "راجع الاسم والسعر");
       return;
     }
     const updated = customAddons.map((a) =>
@@ -433,12 +433,12 @@ export default function SmartCalculatorPage() {
       localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
     setEditingAddonId(null);
-    toast.success("تم التعديل", "تم حفظ تعديل خدمة التجليد بنجاح");
+    toast.success("اتعدلت", "التعديل اتحفظ");
   };
 
   const handleDeleteAddon = (id: string) => {
     if (customAddons.length <= 1) {
-      toast.warning("تنبيه", "يجب الإبقاء على خدمة تجليد واحدة على الأقل");
+      toast.warning("مينفعش", "لازم تفضل خدمة تجليد واحدة على الأقل");
       return;
     }
     const updated = customAddons.filter((a) => a.id !== id);
@@ -450,7 +450,7 @@ export default function SmartCalculatorPage() {
       setSelectedBinding(null);
     }
     setSelectedFinishingIds((prev) => prev.filter((x) => x !== id));
-    toast.info("تم الحذف", "تم حذف خدمة التجليد");
+    toast.info("اتمسحت", "خدمة التجليد اتمسحت");
   };
 
   const handleResetAddons = () => {
@@ -458,13 +458,13 @@ export default function SmartCalculatorPage() {
     try {
       localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(DEFAULT_ADDONS));
     } catch {}
-    toast.success("تم الاسترجاع", "تمت استعادة خدمات التجليد والتشطيب الافتراضية");
+    toast.success("رجعت", "خدمات التجليد رجعت زي الأول");
   };
 
   // Custom Quick Buttons Management
   const handleAddButton = () => {
     if (!newBtnLabel.trim() || isNaN(parseFloat(newBtnPrice)) || parseFloat(newBtnPrice) <= 0) {
-      toast.warning("بيانات غير مكتملة", "يرجى كتابة اسم الزر وسعر الورقة بصيغة صحيحة");
+      toast.warning("في حاجة ناقصة", "اكتب اسم الزرار وسعر الورقة");
       return;
     }
     const newBtn: QuickPricingButton = {
@@ -480,12 +480,12 @@ export default function SmartCalculatorPage() {
     } catch {}
     setNewBtnLabel("");
     setNewBtnPrice("");
-    toast.success("تمت الإضافة", `تمت إضافة زر التسعير "${newBtn.label}" بنجاح`);
+    toast.success("اتضاف", `زرار "${newBtn.label}"`);
   };
 
   const handleSaveEditButton = (id: string) => {
     if (!editBtnLabel.trim() || isNaN(parseFloat(editBtnPrice)) || parseFloat(editBtnPrice) <= 0) {
-      toast.warning("بيانات غير مكتملة", "يرجى التحقق من الاسم والسعر");
+      toast.warning("في حاجة غلط", "راجع الاسم والسعر");
       return;
     }
     const updated = quickButtons.map((b) =>
@@ -496,12 +496,12 @@ export default function SmartCalculatorPage() {
       localStorage.setItem(BUTTONS_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
     setEditingBtnId(null);
-    toast.success("تم التعديل", "تم حفظ تعديل زر التسعير");
+    toast.success("اتعدل", "الزرار اتعدل");
   };
 
   const handleDeleteButton = (id: string) => {
     if (quickButtons.length <= 1) {
-      toast.warning("تنبيه", "يجب الإبقاء على زر تسعير واحد على الأقل");
+      toast.warning("مينفعش", "لازم يفضل زرار سعر واحد على الأقل");
       return;
     }
     const updated = quickButtons.filter((b) => b.id !== id);
@@ -509,7 +509,7 @@ export default function SmartCalculatorPage() {
     try {
       localStorage.setItem(BUTTONS_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
-    toast.info("تم الحذف", "تم حذف زر التسعير");
+    toast.info("اتمسح", "الزرار اتمسح");
   };
 
   const handleResetButtons = () => {
@@ -517,7 +517,7 @@ export default function SmartCalculatorPage() {
     try {
       localStorage.setItem(BUTTONS_STORAGE_KEY, JSON.stringify(DEFAULT_QUICK_BUTTONS));
     } catch {}
-    toast.success("تم الاسترجاع", "تمت استعادة أزرار التسعير الافتراضية");
+    toast.success("رجعت", "أزرار الأسعار رجعت زي الأول");
   };
 
   // Save Settings
@@ -525,9 +525,9 @@ export default function SmartCalculatorPage() {
     setPricing(tempPricing);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tempPricing));
-      toast.success("تم الحفظ", "تم تحديث جدول أسعار الورق والتجليد الافتراضية بنجاح");
+      toast.success("اتحفظت", "الأسعار الجديدة اتحفظت");
     } catch {
-      toast.error("خطأ", "تعذر حفظ الإعدادات");
+      toast.error("متحفظتش", "جرب تاني");
     }
     setIsSettingsOpen(false);
   };
@@ -559,13 +559,13 @@ export default function SmartCalculatorPage() {
             type="button"
           >
             <Calculator className="w-4 h-4" />
-            <span>حاسبة عامة (Numpad)</span>
+            <span>آلة حاسبة</span>
           </button>
         </div>
 
         <button
           className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-slate-200"
-          title="إعدادات التسعير الافتراضية"
+          title="الأسعار"
           onClick={() => {
             setTempPricing(pricing);
             setIsSettingsOpen(true);
@@ -573,7 +573,7 @@ export default function SmartCalculatorPage() {
           type="button"
         >
           <Settings className="w-4 h-4" />
-          <span className="hidden sm:inline">إعدادات التسعير</span>
+          <span className="hidden sm:inline">الأسعار</span>
         </button>
       </div>
 
@@ -582,8 +582,8 @@ export default function SmartCalculatorPage() {
         <div className="flex flex-col items-center justify-center pt-4">
           <div className="max-w-md mx-auto w-full bg-white rounded-2xl p-6 shadow-xs flex flex-col gap-4 border border-slate-200">
             <div className="flex items-center justify-between">
-              <span className="text-base font-bold text-slate-900">آلة حاسبة سريعة</span>
-              <span className="text-xs text-slate-500 font-medium">يدعم الكيبورد (Numpad)</span>
+              <span className="text-base font-bold text-slate-900">آلة حاسبة</span>
+              <span className="text-xs text-slate-500 font-medium">تقدر تكتب بالكيبورد</span>
             </div>
             <div
               className="bg-slate-50 p-4 rounded-xl text-left font-mono text-2xl text-blue-600 font-bold tracking-wider overflow-x-auto min-h-[58px] flex items-center justify-end border border-slate-200"
@@ -739,11 +739,11 @@ export default function SmartCalculatorPage() {
                 <div className="flex items-center gap-2">
                   <FolderOpen className="w-6 h-6 text-blue-600" />
                   <span className="text-base font-bold text-slate-900">
-                    بيانات المذكرة أو المستند
+                    بيانات الملزمة
                   </span>
                 </div>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 uppercase">
-                  Step 1 · الأبعاد والكميات
+                  الخطوة 1 · العدد
                 </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -753,7 +753,7 @@ export default function SmartCalculatorPage() {
                     className="flex items-center justify-between text-xs font-bold text-slate-700"
                     htmlFor="input-pages"
                   >
-                    <span>عدد الصفحات في الملف (PDF / Word)</span>
+                    <span>الملف فيه كام صفحة؟</span>
                     <span className="text-slate-500 font-mono">صفحة أصلية</span>
                   </label>
                   <div className="relative flex items-center">
@@ -775,7 +775,7 @@ export default function SmartCalculatorPage() {
                     </span>
                   </div>
                   <span className="text-slate-500 text-xs">
-                    مثال: كتاب مدرسي 120 صفحة أو ملزمة 45 ورقة
+                    مثلاً: كتاب 120 صفحة أو ملزمة 45 ورقة
                   </span>
                 </div>
                 {/* Copies Count */}
@@ -784,8 +784,8 @@ export default function SmartCalculatorPage() {
                     className="flex items-center justify-between text-xs font-bold text-slate-700"
                     htmlFor="input-copies"
                   >
-                    <span>عدد النسخ المطلوبة (الكمية)</span>
-                    <span className="text-slate-500 font-mono">نسخة للعميل</span>
+                    <span>عايز كام نسخة؟</span>
+                    <span className="text-slate-500 font-mono">نسخة</span>
                   </label>
                   <div className="relative flex items-center">
                     <input
@@ -806,14 +806,14 @@ export default function SmartCalculatorPage() {
                     </span>
                   </div>
                   <span className="text-slate-500 text-xs">
-                    عدد الملازم أو الكتب للعميل / السنتر
+                    عدد الملازم أو الكتب للزبون أو السنتر
                   </span>
                 </div>
               </div>
               {/* Duplex / Single Selection */}
               <div className="mt-4 flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-700">
-                  نوع طباعة الورق (وجه واحد أم وش وظهر)
+                  وش بس ولا وش وضهر؟
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" id="duplex-selector">
                   <button
@@ -834,9 +834,9 @@ export default function SmartCalculatorPage() {
                     <div className="flex items-center gap-3 text-right">
                       <BookOpen className="w-6 h-6" />
                       <div>
-                        <div className="text-sm font-bold">وش وظهر (Duplex)</div>
+                        <div className="text-sm font-bold">وش وضهر</div>
                         <div className="text-xs text-slate-500">
-                          الافتراضي للملازم والكتب (يوفر 50% ورق)
+                          العادي للملازم والكتب (نص الورق)
                         </div>
                       </div>
                     </div>
@@ -864,9 +864,9 @@ export default function SmartCalculatorPage() {
                     <div className="flex items-center gap-3 text-right">
                       <FileText className="w-6 h-6" />
                       <div>
-                        <div className="text-sm font-bold">وجه واحد (Single-Sided)</div>
+                        <div className="text-sm font-bold">وش بس</div>
                         <div className="text-xs text-slate-500">
-                          شيتات وامتحانات ورسم بياني ومذكرات فردية
+                          شيتات وامتحانات ومذكرات
                         </div>
                       </div>
                     </div>
@@ -882,13 +882,13 @@ export default function SmartCalculatorPage() {
               <div className="mt-4 p-3 rounded-xl bg-slate-50 flex flex-wrap items-center justify-between gap-3 border border-slate-200">
                 <div className="flex items-center gap-2 text-slate-800 text-xs">
                   <BarChart3 className="w-4 h-4 text-blue-600" />
-                  <span className="text-slate-500 font-medium">النتيجة الحسابية:</span>
+                  <span className="text-slate-500 font-medium">الحساب:</span>
                   <span className="font-mono font-bold text-blue-700" id="banner-pages-calc">
                     {pageCount} صفحة {isDuplex ? "وش وظهر" : "وجه واحد"} = {sheetCountPerCopy} ورقة لكل نسخة
                   </span>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white border border-slate-200 shadow-xs">
-                  <span className="text-xs text-slate-500 font-medium">إجمالي الأوردر:</span>
+                  <span className="text-xs text-slate-500 font-medium">الأوردر كله:</span>
                   <span className="font-mono text-xs font-bold text-emerald-700" id="banner-total-sheets">
                     {totalSheetsOrder.toLocaleString("ar-EG")} ورقة ({packetsA4Count} باكيت A4)
                   </span>
@@ -902,12 +902,12 @@ export default function SmartCalculatorPage() {
                 <div className="flex items-center gap-2">
                   <Tag className="w-6 h-6 text-blue-600" />
                   <span className="text-base font-bold text-slate-900">
-                    أزرار تسعير الورقة والطباعة السريعة
+                    سعر الورقة
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1.5 font-mono text-xs text-slate-500">
-                    <span>المحدد:</span>
+                    <span>اخترت:</span>
                     <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold">
                       {rateLabel} {paperRate.toFixed(2)} ج.م
                     </span>
@@ -918,7 +918,7 @@ export default function SmartCalculatorPage() {
                     className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-xs text-blue-700 font-bold flex items-center gap-1 cursor-pointer transition border border-slate-200"
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5" />
-                    <span>إدارة وتعديل الأزرار</span>
+                    <span>عدّل الأزرار</span>
                   </button>
                 </div>
               </div>
@@ -954,7 +954,7 @@ export default function SmartCalculatorPage() {
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 gap-4 border border-slate-200">
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4 text-slate-400" />
-                  <span className="text-xs font-bold text-slate-700">أو تحديد سعر ورقة يدوي مخصص:</span>
+                  <span className="text-xs font-bold text-slate-700">أو اكتب سعر الورقة بإيدك:</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -980,12 +980,12 @@ export default function SmartCalculatorPage() {
                 <div className="flex items-center gap-2">
                   <Layers className="w-6 h-6 text-blue-600" />
                   <h2 className="text-base font-bold text-slate-900">
-                    خدمات التجليد والتشطيب (Add-ons)
+                    التجليد والتشطيب
                   </h2>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                    سعر مضاف للنسخة
+                    بيتزود على سعر النسخة
                   </span>
                   <button
                     type="button"
@@ -993,7 +993,7 @@ export default function SmartCalculatorPage() {
                     className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-xs text-blue-700 font-bold flex items-center gap-1 cursor-pointer transition border border-slate-200"
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5" />
-                    <span>إدارة وتعديل خدمات التجليد</span>
+                    <span>عدّل التجليد</span>
                   </button>
                 </div>
               </div>
@@ -1001,7 +1001,7 @@ export default function SmartCalculatorPage() {
               {/* Spiral Wire Binding Options */}
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-bold text-slate-600">
-                  تجليد السلك المعدني (Spiral Wire Binding):
+                  سلك معدن:
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {customAddons.filter((a) => a.category === "wire").map((item) => {
@@ -1031,7 +1031,7 @@ export default function SmartCalculatorPage() {
               {/* Plastic Comb Binding Options */}
               <div className="flex flex-col gap-2 mt-1">
                 <span className="text-xs font-bold text-slate-600">
-                  تجليد المشط البلاستيكي (Plastic Comb):
+                  بلاستيك:
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {customAddons.filter((a) => a.category === "plastic").map((item) => {
@@ -1061,7 +1061,7 @@ export default function SmartCalculatorPage() {
               {/* Extras: Finishing & Coatings */}
               <div className="flex flex-col gap-2 mt-1">
                 <span className="text-xs font-bold text-slate-600">
-                  خدمات التشطيب والسلوفان الإضافية:
+                  سلوفان وتشطيب:
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {customAddons.filter((a) => a.category === "finishing").map((item) => {
@@ -1100,7 +1100,7 @@ export default function SmartCalculatorPage() {
                     type="button"
                   >
                     <X className="w-4 h-4" />
-                    <span className="text-xs font-semibold">إلغاء التجليد والتشطيب</span>
+                    <span className="text-xs font-semibold">من غير تجليد</span>
                   </button>
                 </div>
               </div>
@@ -1115,14 +1115,14 @@ export default function SmartCalculatorPage() {
                 <div className="flex items-center gap-2">
                   <Receipt className="w-6 h-6 text-blue-600" />
                   <h3 className="text-base font-bold text-slate-900">
-                    ملخص الفاتورة التقديرية
+                    الحساب
                   </h3>
                 </div>
                 <div className="flex items-center gap-1">
                   <button
                     className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
                     onClick={handleCopyInvoice}
-                    title="نسخ الفاتورة نصياً"
+                    title="انسخ الحساب"
                     type="button"
                   >
                     <Copy className="w-4 h-4" />
@@ -1130,7 +1130,7 @@ export default function SmartCalculatorPage() {
                   <button
                     className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
                     onClick={handleCopyInvoice}
-                    title="مشاركة الفاتورة"
+                    title="ابعت الحساب"
                     type="button"
                   >
                     <Share2 className="w-4 h-4" />
@@ -1141,31 +1141,31 @@ export default function SmartCalculatorPage() {
               {/* Metric Rows */}
               <div className="flex flex-col gap-2 text-xs text-slate-800">
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-slate-500">عدد الصفحات الأصلية:</span>
+                  <span className="text-slate-500">عدد الصفحات:</span>
                   <span className="font-mono font-bold text-slate-900">
                     {pageCount} صفحة
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-slate-500">نوع الطباعة:</span>
+                  <span className="text-slate-500">الطباعة:</span>
                   <span className="font-mono text-blue-600 font-bold">
-                    {isDuplex ? "وش وظهر (Duplex)" : "وجه واحد (Single)"}
+                    {isDuplex ? "وش وضهر" : "وش بس"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-slate-500">الورق الفعلي لكل نسخة:</span>
+                  <span className="text-slate-500">ورق النسخة الواحدة:</span>
                   <span className="font-mono font-bold text-slate-900">
                     {sheetCountPerCopy} ورقة
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-slate-500">عدد النسخ المطلوبة:</span>
+                  <span className="text-slate-500">عدد النسخ:</span>
                   <span className="font-mono font-bold text-slate-900">
                     {copiesCount} نسخة
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-slate-500">سعر الورقة المختارة:</span>
+                  <span className="text-slate-500">سعر الورقة:</span>
                   <span className="font-mono text-slate-900">
                     {paperRate.toFixed(2)} ج.م
                   </span>
@@ -1174,19 +1174,19 @@ export default function SmartCalculatorPage() {
                 <div className="my-1 h-px bg-slate-100"></div>
 
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-slate-500">تكلفة الطباعة للنسخة:</span>
+                  <span className="text-slate-500">طباعة النسخة:</span>
                   <span className="font-mono text-slate-900">
                     {printCostPerCopy.toFixed(2)} ج.م
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-slate-500">تكلفة التجليد والتشطيب:</span>
+                  <span className="text-slate-500">التجليد:</span>
                   <span className="font-mono text-slate-900">
                     {bindingCostPerCopy.toFixed(2)} ج.م
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1 font-semibold">
-                  <span className="text-slate-900">إجمالي تكلفة النسخة الواحدة:</span>
+                  <span className="text-slate-900">سعر النسخة الواحدة:</span>
                   <span className="font-mono text-sm text-blue-600 font-bold">
                     {singleCopyTotalCost.toFixed(2)} ج.م
                   </span>
@@ -1196,7 +1196,7 @@ export default function SmartCalculatorPage() {
               {/* Big Highlight Grand Total Box */}
               <div className="p-4 rounded-xl bg-slate-50 flex flex-col items-center justify-center gap-1 text-center border border-slate-200">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  الإجمالي النهائي المطلوب
+                  الإجمالي
                 </span>
                 <div className="flex items-baseline gap-1">
                   <span className="font-mono text-3xl font-extrabold text-blue-600 tracking-tight">
@@ -1206,7 +1206,7 @@ export default function SmartCalculatorPage() {
                 </div>
                 <div className="flex items-center gap-1 mt-1">
                   <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600 font-medium">
-                    تكلفة الإنتاج التقديرية: ~{estProductionCost.toLocaleString("ar-EG")} ج.م
+                    بتكلفنا تقريباً: ~{estProductionCost.toLocaleString("ar-EG")} ج.م
                   </span>
                 </div>
               </div>
@@ -1219,7 +1219,7 @@ export default function SmartCalculatorPage() {
                   type="button"
                 >
                   <Send className="w-4 h-4 text-emerald-600" />
-                  <span>إرسال عرض السعر للعميل عبر واتساب</span>
+                  <span>ابعت السعر للزبون واتساب</span>
                 </button>
                 <button
                   className="w-full py-1.5 rounded-lg text-slate-500 hover:text-rose-600 text-xs font-medium flex items-center justify-center gap-1 transition-colors cursor-pointer"
@@ -1227,7 +1227,7 @@ export default function SmartCalculatorPage() {
                   type="button"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>تصفير الحسابات والبدء من جديد</span>
+                  <span>صفّر وابدأ من الأول</span>
                 </button>
               </div>
             </div>
@@ -1237,10 +1237,10 @@ export default function SmartCalculatorPage() {
               <Lightbulb className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-bold text-slate-900">
-                  ملاحظة تسعير الملازم:
+                  ملحوظة:
                 </span>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  الطباعة &apos;وش وظهر&apos; تحسب سعر الورقة كاملة متضمنة وجهي الطباعة. إذا كانت المذكرة فردية الصفحات (مثلاً 121 صفحة)، تُجبر آخر ورقة تلقائياً لضمان حساب التكلفة الصحيح.
+                  في الوش والضهر سعر الورقة بيحسب الوشين. ولو عدد الصفحات فردي (مثلاً 121) آخر ورقة بتتحسب كاملة.
                 </p>
               </div>
             </div>
@@ -1255,7 +1255,7 @@ export default function SmartCalculatorPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Settings className="w-5 h-5 text-blue-600" />
-                <h3 className="font-bold text-base text-slate-900">إعدادات أسعار الطباعة والتجليد الافتراضية</h3>
+                <h3 className="font-bold text-base text-slate-900">أسعار الطباعة والتجليد</h3>
               </div>
               <button
                 onClick={() => setIsSettingsOpen(false)}
@@ -1266,7 +1266,7 @@ export default function SmartCalculatorPage() {
             </div>
 
             <div className="space-y-3 text-xs">
-              <span className="font-bold text-blue-600 block">أسعار الورق والطباعة (ج.م للورقة):</span>
+              <span className="font-bold text-blue-600 block">سعر الورقة (ج.م):</span>
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-xs text-slate-600 block mb-1">أبيض وأسود (وجه):</label>
@@ -1318,7 +1318,7 @@ export default function SmartCalculatorPage() {
                 </div>
               </div>
 
-              <span className="font-bold text-blue-600 block pt-2">أسعار التجليد (ج.م للنسخة):</span>
+              <span className="font-bold text-blue-600 block pt-2">سعر التجليد للنسخة (ج.م):</span>
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-xs text-slate-600 block mb-1">سلك صغير:</label>
@@ -1380,7 +1380,7 @@ export default function SmartCalculatorPage() {
                 onClick={handleSavePricing}
                 className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer"
               >
-                حفظ الأسعار
+                احفظ الأسعار
               </button>
             </div>
           </div>
@@ -1394,7 +1394,7 @@ export default function SmartCalculatorPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="w-5 h-5 text-blue-600" />
-                <h3 className="font-bold text-base text-slate-900">إدارة وتعديل أزرار التسعير السريعة</h3>
+                <h3 className="font-bold text-base text-slate-900">أزرار سعر الورقة</h3>
               </div>
               <button
                 onClick={() => {
@@ -1411,12 +1411,12 @@ export default function SmartCalculatorPage() {
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="font-bold text-xs text-blue-600 flex items-center gap-1.5">
                 <PlusCircle className="w-4 h-4 text-blue-600" />
-                <span>إضافة زر تسعير جديد</span>
+                <span>ضيف زرار جديد</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
                 <input
                   type="text"
-                  placeholder="اسم الزر (مثلاً: ألوان خفيف)"
+                  placeholder="اسم الزرار (مثلاً: ألوان خفيف)"
                   value={newBtnLabel}
                   onChange={(e) => setNewBtnLabel(e.target.value)}
                   className="sm:col-span-3 px-3 py-2 rounded-xl bg-white text-slate-900 border border-slate-200 text-xs focus:outline-none focus:border-blue-500"
@@ -1436,14 +1436,14 @@ export default function SmartCalculatorPage() {
                 className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>إضافة إلى شاشة الحاسبة</span>
+                <span>ضيفه</span>
               </button>
             </div>
 
             {/* Existing Buttons List */}
             <div className="space-y-2">
               <span className="font-bold text-xs text-slate-600 block">
-                الأزرار المتاحة حالياً ({quickButtons.length}):
+                الأزرار ({quickButtons.length}):
               </span>
               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                 {quickButtons.map((btn) => (
@@ -1484,7 +1484,7 @@ export default function SmartCalculatorPage() {
                             type="button"
                             onClick={() => handleSaveEditButton(btn.id)}
                             className="p-1 rounded-lg text-blue-600 hover:bg-blue-50 text-xs cursor-pointer"
-                            title="حفظ"
+                            title="احفظ"
                           >
                             <Check className="w-4 h-4" />
                           </button>
@@ -1507,7 +1507,7 @@ export default function SmartCalculatorPage() {
                               setEditBtnPrice(btn.price.toString());
                             }}
                             className="p-1 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 text-xs cursor-pointer"
-                            title="تعديل"
+                            title="عدّل"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
@@ -1515,7 +1515,7 @@ export default function SmartCalculatorPage() {
                             type="button"
                             onClick={() => handleDeleteButton(btn.id)}
                             className="p-1 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-xs cursor-pointer"
-                            title="حذف"
+                            title="امسح"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1533,7 +1533,7 @@ export default function SmartCalculatorPage() {
                 onClick={handleResetButtons}
                 className="px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               >
-                استعادة الأزرار الافتراضية
+                رجّع الأزرار الأصلية
               </button>
               <button
                 type="button"
@@ -1543,7 +1543,7 @@ export default function SmartCalculatorPage() {
                 }}
                 className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer"
               >
-                تم والعودة للحاسبة
+                تمام، ارجع للحاسبة
               </button>
             </div>
           </div>
@@ -1557,7 +1557,7 @@ export default function SmartCalculatorPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="w-5 h-5 text-blue-600" />
-                <h3 className="font-bold text-base text-slate-900">إدارة وتعديل خدمات التجليد والتشطيب</h3>
+                <h3 className="font-bold text-base text-slate-900">التجليد والتشطيب</h3>
               </div>
               <button
                 onClick={() => {
@@ -1574,7 +1574,7 @@ export default function SmartCalculatorPage() {
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="font-bold text-xs text-blue-600 flex items-center gap-1.5">
                 <PlusCircle className="w-4 h-4 text-blue-600" />
-                <span>إضافة خدمة تجليد أو تشطيب جديدة</span>
+                <span>ضيف خدمة جديدة</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
                 <select
@@ -1608,14 +1608,14 @@ export default function SmartCalculatorPage() {
                 className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>إضافة الخدمة للحاسبة</span>
+                <span>ضيفها</span>
               </button>
             </div>
 
             {/* Existing Add-ons List */}
             <div className="space-y-2">
               <span className="font-bold text-xs text-slate-600 block">
-                الخدمات المتاحة حالياً ({customAddons.length}):
+                الخدمات ({customAddons.length}):
               </span>
               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                 {customAddons.map((addon) => (
@@ -1675,7 +1675,7 @@ export default function SmartCalculatorPage() {
                             type="button"
                             onClick={() => handleSaveEditAddon(addon.id)}
                             className="p-1 rounded-lg text-blue-600 hover:bg-blue-50 text-xs cursor-pointer"
-                            title="حفظ"
+                            title="احفظ"
                           >
                             <Check className="w-4 h-4" />
                           </button>
@@ -1699,7 +1699,7 @@ export default function SmartCalculatorPage() {
                               setEditAddonCategory(addon.category);
                             }}
                             className="p-1 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 text-xs cursor-pointer"
-                            title="تعديل"
+                            title="عدّل"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
@@ -1707,7 +1707,7 @@ export default function SmartCalculatorPage() {
                             type="button"
                             onClick={() => handleDeleteAddon(addon.id)}
                             className="p-1 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-xs cursor-pointer"
-                            title="حذف"
+                            title="امسح"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1725,7 +1725,7 @@ export default function SmartCalculatorPage() {
                 onClick={handleResetAddons}
                 className="px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               >
-                استعادة الخدمات الافتراضية
+                رجّع الخدمات الأصلية
               </button>
               <button
                 type="button"
@@ -1735,7 +1735,7 @@ export default function SmartCalculatorPage() {
                 }}
                 className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer"
               >
-                تم والعودة للحاسبة
+                تمام، ارجع للحاسبة
               </button>
             </div>
 
@@ -1745,7 +1745,7 @@ export default function SmartCalculatorPage() {
                 onClick={handleResetAddons}
                 className="px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               >
-                استعادة الخدمات الافتراضية
+                رجّع الخدمات الأصلية
               </button>
               <button
                 type="button"
@@ -1755,7 +1755,7 @@ export default function SmartCalculatorPage() {
                 }}
                 className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer"
               >
-                تم والعودة للحاسبة
+                تمام، ارجع للحاسبة
               </button>
             </div>
           </div>

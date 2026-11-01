@@ -52,7 +52,7 @@ function getCurrentShift(date: Date = new Date()): {
   if (totalMinutes >= 540 && totalMinutes < 960) {
     return {
       id: "morning",
-      label: "شفت صباحي",
+      label: "شيفت الصبح",
       timeRange: "09:00 ص - 04:00 م",
     };
   }
@@ -61,15 +61,15 @@ function getCurrentShift(date: Date = new Date()): {
   if (totalMinutes >= 960 && totalMinutes < 1320) {
     return {
       id: "evening",
-      label: "شفت مسائي",
+      label: "شيفت بالليل",
       timeRange: "04:00 م - 10:00 م",
     };
   }
 
   return {
     id: "off_hours",
-    label: "خارج أوقات العمل",
-    timeRange: "المكتبة مغلقة (09:00 ص - 10:00 م)",
+    label: "المكتبة قافلة",
+    timeRange: "بنفتح من 09:00 ص لـ 10:00 م",
   };
 }
 
@@ -167,7 +167,7 @@ export default function TasksHandoverPage() {
   const handleSaveTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim() || !formCustomerName.trim()) {
-      toast.warning("بيانات ناقصة", "يرجى كتابة عنوان العمل واسم العميل / المدرس");
+      toast.warning("في حاجة ناقصة", "اكتب اسم الشغل واسم الزبون أو المدرس");
       return;
     }
 
@@ -193,7 +193,7 @@ export default function TasksHandoverPage() {
         return t;
       });
       setTasks(updated);
-      toast.success("تم التعديل", "تم حفظ تعديلات المهمة بنجاح");
+      toast.success("اتعدل", "التعديلات اتحفظت");
     } else {
       const newTask: PrintTask = {
         id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -209,16 +209,16 @@ export default function TasksHandoverPage() {
         createdAt: Date.now(),
       };
       setTasks([newTask, ...tasks]);
-      toast.success("تم تسجيل الأوردر", "تمت إضافة أوردر الطباعة الجديد إلى شفت اليوم بنجاح");
+      toast.success("الأوردر اتسجل", "اتضاف لشغل الشيفت");
     }
 
     setIsModalOpen(false);
   };
 
   const handleDeleteTask = (id: string) => {
-    if (confirm("هل أنت متأكد من حذف هذا الأوردر من مهام الشفت؟")) {
+    if (confirm("متأكد إنك عايز تمسح الأوردر ده؟")) {
       setTasks(tasks.filter((t) => t.id !== id));
-      toast.success("تم الحذف", "تم حذف المهمة من سجل الشفت");
+      toast.success("اتمسح", "الأوردر اتمسح");
     }
   };
 
@@ -266,7 +266,7 @@ export default function TasksHandoverPage() {
 
   const handleWhatsAppNotify = (task: PrintTask) => {
     if (!task.phone) {
-      toast.warning("لا يوجد رقم", "لم يتم تسجيل رقم هاتف لهذا العميل");
+      toast.warning("مفيش رقم", "الزبون ده متسجلش رقمه");
       return;
     }
     const message = `أهلاً أ/ ${task.customerName}، يسعدنا إبلاغك بأن طلبك (${task.title}) في مكتبة كوبي كات Copy Cat أصبح جاهزاً للاستلام. نتشرف بزيارتك في أي وقت.`;
@@ -314,7 +314,7 @@ export default function TasksHandoverPage() {
     } else {
       completedList.forEach((t, i) => {
         report += `${i + 1}. #${t.id} - ${t.title} [${t.customerName}] (${t.totalCopies} نسخة) [${
-          t.status === "ready" ? "جاهز للتسليم" : "تم التسليم"
+          t.status === "ready" ? "جاهز يتسلم" : "تم التسليم"
         }]\n`;
       });
     }
@@ -342,9 +342,9 @@ export default function TasksHandoverPage() {
     const text = generateHandoverReport();
     try {
       await navigator.clipboard.writeText(text);
-      toast.success("تم النسخ", "تم نسخ تقرير تسليم الشفت بصيغة واتساب جاهزة");
+      toast.success("اتنسخ", "تقرير الشيفت اتنسخ، الزقه في واتساب");
     } catch {
-      toast.error("خطأ", "تعذر نسخ التقرير");
+      toast.error("منسخش", "جرب تاني");
     }
   };
 
@@ -357,7 +357,7 @@ export default function TasksHandoverPage() {
       {/* Top Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-black text-slate-800">أوردرات الطباعة وتسليم الشفت</span>
+          <span className="text-sm font-black text-slate-800">الأوردرات وتسليم الشيفت</span>
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs border border-slate-200">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-1.5 animate-pulse"></span>
             {currentShift.label} ({currentShift.timeRange})
@@ -375,7 +375,7 @@ export default function TasksHandoverPage() {
             type="button"
           >
             <ClipboardCheck className="w-4 h-4" />
-            <span>تقرير تسليم الشفت</span>
+            <span>تقرير تسليم الشيفت</span>
           </button>
           <button
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
@@ -392,7 +392,7 @@ export default function TasksHandoverPage() {
       <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="rounded-2xl bg-white p-5 shadow-xs flex flex-col justify-between border border-slate-200">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-            <span>الأوردرات الجارية</span>
+            <span>الأوردرات الشغالة</span>
             <Printer className="w-5 h-5 text-blue-600" />
           </div>
           <div className="mt-3 flex items-baseline justify-between">
@@ -400,7 +400,7 @@ export default function TasksHandoverPage() {
               {activeTasksCount}
             </span>
             <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg">
-              {inProgressCount} قيد التنفيذ
+              {inProgressCount} شغالين فيهم
             </span>
           </div>
           <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
@@ -413,7 +413,7 @@ export default function TasksHandoverPage() {
 
         <div className="rounded-2xl bg-white p-5 shadow-xs flex flex-col justify-between border border-slate-200">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-            <span>النسخ المنجزة بالشفت</span>
+            <span>اتطبع في الشيفت</span>
             <Layers className="w-5 h-5 text-indigo-600" />
           </div>
           <div className="mt-3 flex items-baseline justify-between">
@@ -439,7 +439,7 @@ export default function TasksHandoverPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="بحث باسم العمل، العميل، رقم الأوردر..."
+            placeholder="دوّر باسم الشغل أو الزبون أو رقم الأوردر..."
             className="w-full pr-9 pl-4 py-2 rounded-xl bg-slate-50 text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-blue-500 border border-slate-200 transition"
           />
         </div>
@@ -448,11 +448,11 @@ export default function TasksHandoverPage() {
         <div className="flex items-center gap-1 p-1 bg-slate-50 rounded-xl overflow-x-auto w-full md:w-auto border border-slate-200">
           {[
             { key: "all", label: "الكل" },
-            { key: "active", label: "الطلبات الجارية" },
-            { key: "pending", label: "في الانتظار" },
-            { key: "in_progress", label: "جاري الطباعة" },
-            { key: "ready", label: "جاهز للتسليم" },
-            { key: "completed", label: "تم التسليم" },
+            { key: "active", label: "الشغالة" },
+            { key: "pending", label: "لسه مبدأتش" },
+            { key: "in_progress", label: "بتتطبع" },
+            { key: "ready", label: "جاهزة تتسلم" },
+            { key: "completed", label: "اتسلمت" },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -476,9 +476,9 @@ export default function TasksHandoverPage() {
           <div className="col-span-full p-12 rounded-2xl bg-white border border-dashed border-slate-200 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
             <Package className="w-10 h-10 text-slate-300" />
             <p className="text-base font-bold text-slate-900">
-              لا توجد طلبات تطابق هذا البحث
+              مفيش أوردرات كده
             </p>
-            <p className="text-xs text-slate-500">أضف أوردرات جديدة أو قم بتغيير خيارات التصفية بالأعلى</p>
+            <p className="text-xs text-slate-500">ضيف أوردر جديد أو غيّر الفلتر اللي فوق</p>
           </div>
         ) : (
           filteredTasks.map((task) => {
@@ -509,36 +509,36 @@ export default function TasksHandoverPage() {
                         ? "bg-slate-100 text-slate-600 border border-slate-200"
                         : "bg-amber-50 text-amber-700 border border-amber-200"
                     }`}
-                    title="اضغط لتغيير الحالة فورياً"
+                    title="دوس عشان تغير الحالة"
                   >
                     {task.status === "in_progress" && (
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping"></span>
                     )}
                     {task.status === "in_progress"
-                      ? "جاري الطباعة"
+                      ? "بتتطبع"
                       : task.status === "ready"
-                      ? "جاهز للتسليم"
+                      ? "جاهز يتسلم"
                       : task.status === "completed"
-                      ? "تم التسليم"
-                      : "في الانتظار"}
+                      ? "اتسلم"
+                      : "لسه مبدأش"}
                   </span>
                 </div>
 
                 {/* Details Meta */}
                 <div className="flex flex-col gap-1.5 text-slate-500 text-xs py-2 border-y border-slate-100">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-700">العميل / المدرس:</span>
+                    <span className="font-medium text-slate-700">الزبون / المدرس:</span>
                     <span className="font-bold text-slate-900">{task.customerName}</span>
                   </div>
                   {task.deadline && (
                     <div className="flex items-center justify-between text-xs">
-                      <span>موعد التسليم:</span>
+                      <span>هيستلم إمتى:</span>
                       <span className="font-mono font-medium text-slate-700">{task.deadline}</span>
                     </div>
                   )}
                   {task.bindingType && (
                     <div className="flex items-center justify-between text-xs">
-                      <span>التجليد والتشطيب:</span>
+                      <span>التجليد:</span>
                       <span className="text-slate-800 font-medium">{task.bindingType}</span>
                     </div>
                   )}
@@ -553,7 +553,7 @@ export default function TasksHandoverPage() {
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between text-xs font-mono">
                     <span className="text-slate-500">
-                      تم طباعة: {task.completedCopies} / {task.totalCopies} نسخة
+                      اتطبع: {task.completedCopies} من {task.totalCopies} نسخة
                     </span>
                     <span className="font-bold text-blue-600">{progress}%</span>
                   </div>
@@ -603,7 +603,7 @@ export default function TasksHandoverPage() {
                         <button
                           onClick={() => handleWhatsAppNotify(task)}
                           className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition cursor-pointer"
-                          title="إرسال إشعار واتساب للعميل"
+                          title="ابعت للزبون واتساب إن الأوردر جاهز"
                         >
                           <MessageSquare className="w-4 h-4" />
                         </button>
@@ -611,14 +611,14 @@ export default function TasksHandoverPage() {
                       <button
                         onClick={() => openEditModal(task)}
                         className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer"
-                        title="تعديل تفاصيل الأوردر"
+                        title="عدّل الأوردر"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteTask(task.id)}
                         className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition cursor-pointer"
-                        title="حذف الأوردر"
+                        title="امسح الأوردر"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -639,7 +639,7 @@ export default function TasksHandoverPage() {
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-600" />
                 <h3 className="font-bold text-base text-slate-900">
-                  {editingTask ? "تعديل أوردر الطباعة" : "تسجيل أوردر طباعة جديد للشفت"}
+                  {editingTask ? "عدّل الأوردر" : "أوردر جديد"}
                 </h3>
               </div>
               <button
@@ -653,7 +653,7 @@ export default function TasksHandoverPage() {
             <form onSubmit={handleSaveTask} className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-bold text-slate-700">
-                  عنوان المذكرة أو العمل *
+                  اسم المذكرة أو الشغل *
                 </label>
                 <input
                   type="text"
@@ -668,7 +668,7 @@ export default function TasksHandoverPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-slate-700">
-                    اسم العميل / المدرس *
+                    اسم الزبون / المدرس *
                   </label>
                   <input
                     type="text"
@@ -681,7 +681,7 @@ export default function TasksHandoverPage() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-slate-700">
-                    رقم هاتف الواتساب
+                    رقم الواتساب
                   </label>
                   <input
                     type="tel"
@@ -697,7 +697,7 @@ export default function TasksHandoverPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-slate-700">
-                    عدد النسخ المطلوب
+                    عايز كام نسخة
                   </label>
                   <input
                     type="number"
@@ -710,7 +710,7 @@ export default function TasksHandoverPage() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-slate-700">
-                    النسخ المكتملة
+                    اتطبع كام نسخة
                   </label>
                   <input
                     type="number"
@@ -722,7 +722,7 @@ export default function TasksHandoverPage() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-slate-700">
-                    موعد التسليم المتوقع
+                    هيستلم إمتى
                   </label>
                   <input
                     type="text"
@@ -737,7 +737,7 @@ export default function TasksHandoverPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-slate-700">
-                    نوع التجليد والتشطيب
+                    نوع التجليد
                   </label>
                   <select
                     value={formBindingType}
@@ -754,30 +754,30 @@ export default function TasksHandoverPage() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-slate-700">
-                    حالة المهمة
+                    الحالة
                   </label>
                   <select
                     value={formStatus}
                     onChange={(e) => setFormStatus(e.target.value as PrintTask["status"])}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-blue-500 border border-slate-200 transition cursor-pointer"
                   >
-                    <option value="pending">في الانتظار (لم تبدأ)</option>
-                    <option value="in_progress">جاري الطباعة والتنفيذ</option>
-                    <option value="ready">جاهز للتسليم للعميل</option>
-                    <option value="completed">تم التسليم واستلام الحساب</option>
+                    <option value="pending">لسه مبدأش</option>
+                    <option value="in_progress">بيتطبع</option>
+                    <option value="ready">جاهز يتسلم</option>
+                    <option value="completed">اتسلم واتحاسب</option>
                   </select>
                 </div>
               </div>
 
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-bold text-slate-700">
-                  الملاحظات الفنية للطباعة
+                  ملاحظات الطباعة
                 </label>
                 <textarea
                   rows={2}
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
-                  placeholder="نوع الورق، طباعة ملونة أم أبيض وأسود، خامة الغلاف..."
+                  placeholder="نوع الورق، ألوان ولا أبيض وأسود، نوع الغلاف..."
                   className="w-full p-2.5 rounded-xl bg-slate-50 text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-blue-500 border border-slate-200 transition"
                 ></textarea>
               </div>
@@ -795,7 +795,7 @@ export default function TasksHandoverPage() {
                   className="flex items-center gap-1 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
-                  <span>{editingTask ? "حفظ التعديلات" : "حفظ وإرسال للماكينة"}</span>
+                  <span>{editingTask ? "احفظ" : "سجّل الأوردر"}</span>
                 </button>
               </div>
             </form>
@@ -811,7 +811,7 @@ export default function TasksHandoverPage() {
               <div className="flex items-center gap-2">
                 <ClipboardCheck className="w-6 h-6 text-blue-600" />
                 <div>
-                  <h3 className="font-bold text-base text-slate-900">تقرير تسليم واستلام الشفت</h3>
+                  <h3 className="font-bold text-base text-slate-900">تقرير تسليم الشيفت</h3>
                   <span className="text-xs text-slate-500 font-mono">
                     {currentShift.label} ({currentShift.timeRange})
                   </span>
@@ -827,7 +827,7 @@ export default function TasksHandoverPage() {
 
             {/* Shift Stats Card */}
             <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-              <span className="text-xs text-slate-500 block mb-1">النسخ المطبوعة بالشفت:</span>
+              <span className="text-xs text-slate-500 block mb-1">اتطبع في الشيفت:</span>
               <span className="text-xl font-bold font-mono text-indigo-700">
                 {totalCompletedCopies.toLocaleString("ar-EG")} ورقة
               </span>
@@ -846,7 +846,7 @@ export default function TasksHandoverPage() {
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer border border-slate-200"
               >
                 <Copy className="w-4 h-4" />
-                <span>نسخ التقرير</span>
+                <span>انسخ التقرير</span>
               </button>
 
               <div className="flex items-center gap-2">
@@ -856,17 +856,17 @@ export default function TasksHandoverPage() {
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer shadow-xs"
                 >
                   <Send className="w-4 h-4" />
-                  <span>إرسال للشفت القادم واتساب</span>
+                  <span>ابعته للشيفت اللي جاي واتساب</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setIsHandoverModalOpen(false);
-                    toast.success("تم توثيق الشفت", "تم اعتماد تقرير تسليم الوردية بنجاح");
+                    toast.success("الشيفت اتسلم", "التقرير اتحفظ");
                   }}
                   className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer"
                 >
-                  اعتماد وإغلاق
+                  تمام، اقفل
                 </button>
               </div>
             </div>

@@ -22,6 +22,7 @@ import {
   Math as OMath,
   ImageRun,
   ParagraphChild,
+  PageOrientation,
 } from "docx";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
@@ -43,6 +44,8 @@ export interface OcrDocxOptions {
   language?: "ar" | "en" | "fr" | "auto";
   /** Figures cropped from the scan, keyed by the number in their "[شكل n]" / "[FIGURE n]" line */
   figures?: Record<number, OcrFigure>;
+  /** Landscape A4 (wide forms and tables scanned sideways) */
+  landscape?: boolean;
 }
 
 export interface OcrFigure {
@@ -69,8 +72,8 @@ const SIZE_PHOTO_LABEL = 26; // 13pt
 const LINE_BODY = 390;
 const LINE_RULE = LineRuleType.EXACT;
 
-const PAGE_W_MM = 210;
-const PAGE_H_MM = 297;
+const A4_SHORT_MM = 210;
+const A4_LONG_MM = 297;
 
 /** Marker the OCR prompt uses to push a trailing label (e.g. "(طرف أول زوج)") to the far end of the line */
 const TRAILING_SPLIT = /\s*\|\|\s*/;
@@ -187,6 +190,9 @@ function tokenizeFormattedText(text: string, isParentBold: boolean = false): Inl
  * Parses inline formatting like **bold text** and <u>underlined</u> into docx TextRuns
  * Adheres to Requirement #4: Uses detected font or falls back to "Arial"
  */
+/** A date with three parts: 1975/4/30, ٣٠-٤-١٩٧٥ (captured so split() keeps it) */
+const DATE_RE = /([0-9٠-٩]{1,4}[/\-][0-9٠-٩]{1,2}[/\-][0-9٠-٩]{1,4})/;
+
 function parseInlineRuns(
   text: string,
   baseSize: number,
@@ -200,23 +206,27 @@ function parseInlineRuns(
   // left-to-right they merged with the equations into one LTR block and printed "١/٤ = ٣/٤ +"
   const lineIsRtl = isArabic(text);
 
+  const textRunProps = (token: InlineToken) => ({
+    bold: token.bold,
+    italics: token.italic,
+    underline: token.underline ? { type: UnderlineType.SINGLE } : undefined,
+    size: baseSize,
+    font: fontName,
+    color: baseColor,
+  });
   const textRun = (t: string, token: InlineToken) =>
-    new TextRun({
-      text: t,
-      bold: token.bold,
-      italics: token.italic,
-      underline: token.underline ? { type: UnderlineType.SINGLE } : undefined,
-      size: baseSize,
-      font: fontName,
-      rightToLeft: isArabic(t) || (lineIsRtl && !/[A-Za-z]/.test(t)),
-      color: baseColor,
-    });
+    new TextRun({ ...textRunProps(token), text: t, rightToLeft: isArabic(t) || (lineIsRtl && !/[A-Za-z]/.test(t)) });
 
   for (const token of tokens) {
     // $...$ math: fractions / powers / roots become Word equations, the rest stays text in reading order
     for (const part of splitMath(token.text)) {
       if (!part.math) {
-        if (part.s) runs.push(textRun(part.s, token));
+        // Dates ("١٩٧٥/٤/٣٠") stay one left-to-right block: inside a right-to-left run Word flips them
+        // to "٣٠/٤/١٩٧٥"
+        for (const [k, piece] of part.s.split(DATE_RE).entries()) {
+          if (!piece) continue;
+          runs.push(k % 2 ? new TextRun({ ...textRunProps(token), text: piece, rightToLeft: false }) : textRun(piece, token));
+        }
         continue;
       }
       for (const piece of latexToPieces(part.s)) {
@@ -526,68 +536,76 @@ function buildDocxTable(
   const combinedTableText = tableLines.join(" ");
   const tableIsAr = isArabic(combinedTableText);
 
-  const rows: TableRow[] = [];
-  let isFirstRow = true;
+  const cellRows = tableLines
+    .filter((line) => !isTableSeparator(line))
+    .map((line) =>
+      line
+        .split("|")
+        .map((c) => sanitizeText(c).text)
+        .slice(1, -1)
+    )
+    .filter((cells) => cells.length > 0);
+  if (cellRows.length === 0) return null;
 
-  for (const line of tableLines) {
-    if (isTableSeparator(line)) continue;
+  // Column widths follow the longest entry in each column (names and jobs need more room than dates),
+  // with a floor so an empty or one-word column stays usable
+  const colCount = Math.max(...cellRows.map((r) => r.length));
+  const plain = (c: string) => c.replace(/<[^>]+>|\*\*|\$/g, "").trim();
+  const colWeights = Array.from({ length: colCount }, (_, k) =>
+    Math.max(6, ...cellRows.map((r) => Math.min(40, plain(r[k] || "").length)))
+  );
+  const weightSum = colWeights.reduce((a, b) => a + b, 0);
+  const colPercents = colWeights.map((w) => Math.max(7, (w / weightSum) * 100));
+  // Long tables (family lists, grades, schedules) are printed with tight rows so the form fits one page
+  const dense = cellRows.length > 8;
+  const padV = convertMillimetersToTwip(dense ? 0.4 : 2);
+  // Printed tables (exam grids, schedules, forms) use thin black rules; bold comes only from ** in a cell
+  const rule = { style: BorderStyle.SINGLE, size: 6, color: "000000" };
 
-    const rawCells = line
-      .split("|")
-      .map((c) => sanitizeText(c).text)
-      .slice(1, -1);
-
-    if (rawCells.length === 0) continue;
-
-    const cellWidthPercent = Math.max(10, Math.floor(100 / rawCells.length));
-    // Printed tables (exam grids, schedules, forms) use thin black rules; bold comes only from ** in a cell
-    const rule = { style: BorderStyle.SINGLE, size: 6, color: "000000" };
-
-    const cells: TableCell[] = rawCells.map((cellContent) => {
-      const cellIsAr = isArabic(cellContent);
-      // Short entries (numbers, single words) sit centred in their cell as on printed grids
-      const plainLen = cellContent.replace(/<[^>]+>|\*\*|\$/g, "").trim().length;
-
-      return new TableCell({
-        width: {
-          size: cellWidthPercent,
-          type: WidthType.PERCENTAGE,
-        },
-        borders: { top: rule, bottom: rule, left: rule, right: rule },
-        margins: {
-          top: convertMillimetersToTwip(2),
-          bottom: convertMillimetersToTwip(2),
-          left: convertMillimetersToTwip(2.5),
-          right: convertMillimetersToTwip(2.5),
-        },
-        children: [
-          new Paragraph({
-            bidirectional: cellIsAr,
-            alignment: plainLen <= 25 ? AlignmentType.CENTER : cellIsAr ? AlignmentType.RIGHT : AlignmentType.LEFT,
-            spacing: { before: 40, after: 40, line: 240 },
-            children: parseInlineRuns(cellContent, SIZE_BODY - 2, "000000", false, fontName),
-          }),
-        ],
-      });
-    });
-
-    rows.push(
+  const rows = cellRows.map(
+    (rawCells, rowIdx) =>
       new TableRow({
-        tableHeader: isFirstRow,
-        children: cells,
+        tableHeader: rowIdx === 0,
+        children: rawCells.map((cellContent, k) => {
+          const cellIsAr = isArabic(cellContent);
+          // Short entries (numbers, single words) sit centred in their cell as on printed grids
+          const plainLen = plain(cellContent).length;
+          return new TableCell({
+            width: { size: Math.round(convertMillimetersToTwip(((colPercents[k] ?? 10) / colPercents.reduce((a, b) => a + b, 0)) * textWidthMm)), type: WidthType.DXA },
+            borders: { top: rule, bottom: rule, left: rule, right: rule },
+            margins: {
+              top: padV,
+              bottom: padV,
+              left: convertMillimetersToTwip(dense ? 1.5 : 2.5),
+              right: convertMillimetersToTwip(dense ? 1.5 : 2.5),
+            },
+            children: [
+              new Paragraph({
+                bidirectional: cellIsAr,
+                alignment: plainLen <= 25 ? AlignmentType.CENTER : cellIsAr ? AlignmentType.RIGHT : AlignmentType.LEFT,
+                // Arabic fonts carry a tall built-in line gap, so dense rows get an exact pitch
+                spacing: dense
+                  ? { before: 0, after: 0, line: 285, lineRule: LineRuleType.EXACT }
+                  : { before: 40, after: 40, line: 240 },
+                children: parseInlineRuns(cellContent, SIZE_BODY - 2, "000000", false, fontName),
+              }),
+            ],
+          });
+        }),
       })
-    );
-    isFirstRow = false;
-  }
+  );
 
   if (rows.length === 0) return null;
 
+  const totalPct = colPercents.reduce((a, b) => a + b, 0);
   return new Table({
     visuallyRightToLeft: tableIsAr,
     width: {
       size: 100,
       type: WidthType.PERCENTAGE,
     },
+    // Word lays a table out from its grid; percentages on the cells alone are ignored
+    columnWidths: colPercents.map((pct) => Math.round(convertMillimetersToTwip((pct / totalPct) * textWidthMm))),
     rows,
   });
 }
@@ -644,7 +662,9 @@ export function buildOcrDocument({
   boldBody = false,
   language = "auto",
   figures,
+  landscape = false,
 }: OcrDocxOptions): Document {
+  const PAGE_W_MM = landscape ? A4_LONG_MM : A4_SHORT_MM;
   const fullText = rawText || content || "";
   const lines = mergeWrappedLines(fullText.split(/\r?\n/).map((l) => liftBlanksOutOfMath(l.trimEnd())));
   const docIsArabic = language === "ar" ? true : language === "en" || language === "fr" ? false : isArabic(fullText);
@@ -653,7 +673,7 @@ export function buildOcrDocument({
 
   const frame: PageBorderKind = borderStyle && borderStyle !== "none" ? borderStyle : hasPageBorder ? "double" : "none";
   // Leave room for the art border band so text never collides with it
-  const marginMm = frame === "decorative" ? 16 : frame === "none" ? 15 : 18;
+  const marginMm = landscape ? 12 : frame === "decorative" ? 16 : frame === "none" ? 15 : 18;
   const textWidthMm = PAGE_W_MM - marginMm * 2;
   const textWidthTwip = convertMillimetersToTwip(textWidthMm);
 
@@ -953,8 +973,10 @@ export function buildOcrDocument({
         properties: {
           page: {
             size: {
-              width: convertMillimetersToTwip(PAGE_W_MM),
-              height: convertMillimetersToTwip(PAGE_H_MM),
+              // docx swaps width and height itself for a landscape section
+              width: convertMillimetersToTwip(A4_SHORT_MM),
+              height: convertMillimetersToTwip(A4_LONG_MM),
+              orientation: landscape ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT,
             },
             margin: {
               top: convertMillimetersToTwip(marginMm),

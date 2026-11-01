@@ -95,7 +95,7 @@ export default function ShortcutsPage() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !url.trim()) {
-      toast.error("بيانات غير مكتملة", "يرجى كتابة اسم الموقع والرابط.");
+      toast.error("في حاجة ناقصة", "اكتب اسم الموقع والرابط.");
       return;
     }
 
@@ -117,7 +117,7 @@ export default function ShortcutsPage() {
           : sc
       );
       persistShortcuts(updated);
-      toast.success("تم تحديث الموقع بنجاح");
+      toast.success("الموقع اتعدل");
     } else {
       const newSc: WebShortcut = {
         id: `sc-${Date.now()}`,
@@ -127,7 +127,7 @@ export default function ShortcutsPage() {
         description: description.trim(),
       };
       persistShortcuts([newSc, ...shortcuts]);
-      toast.success("تمت إضافة الموقع بنجاح");
+      toast.success("الموقع اتضاف");
     }
 
     setIsModalOpen(false);
@@ -136,7 +136,7 @@ export default function ShortcutsPage() {
   const handleDelete = (id: string) => {
     const filtered = shortcuts.filter((sc) => sc.id !== id);
     persistShortcuts(filtered);
-    toast.success("تم حذف الموقع من الاختصارات");
+    toast.success("الموقع اتمسح");
   };
 
   const handleOpenLink = (urlToOpen: string) => {
@@ -155,7 +155,7 @@ export default function ShortcutsPage() {
             <Search className="w-4 h-4 text-slate-500 absolute right-3 top-3" />
             <input
               type="text"
-              placeholder="بحث باسم الموقع أو الوصف..."
+              placeholder="دوّر باسم الموقع..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl pr-9 pl-4 py-2 text-xs sm:text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
@@ -171,7 +171,7 @@ export default function ShortcutsPage() {
               className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>إضافة موقع</span>
+              <span>ضيف موقع</span>
             </button>
           </div>
         </div>
@@ -221,14 +221,14 @@ export default function ShortcutsPage() {
                   <button
                     onClick={() => openEditModal(sc)}
                     className="p-1.5 text-slate-500 hover:text-blue-400 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-                    title="تعديل الموقع"
+                    title="عدّل"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => handleDelete(sc.id)}
                     className="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-                    title="حذف الموقع"
+                    title="امسح"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -246,7 +246,7 @@ export default function ShortcutsPage() {
               onClick={() => handleOpenLink(sc.url)}
               className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-50 hover:bg-blue-600 text-slate-700 hover:text-white border border-slate-200 hover:border-blue-500 text-xs font-bold transition cursor-pointer group/btn"
             >
-              <span>فتح الموقع الآن</span>
+              <span>افتح الموقع</span>
               <ExternalLink className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
             </button>
           </div>
@@ -254,7 +254,7 @@ export default function ShortcutsPage() {
 
         {filteredShortcuts.length === 0 && (
           <div className="col-span-full bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500">
-            لا توجد مواقع تطابق عملية البحث الحالية
+            مفيش مواقع بالاسم ده
           </div>
         )}
       </div>
@@ -265,7 +265,7 @@ export default function ShortcutsPage() {
           <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <h3 className="text-base font-black text-slate-900">
-                {editingShortcut ? "تعديل بيانات الموقع" : "إضافة موقع جديد إلى الاختصارات"}
+                {editingShortcut ? "عدّل الموقع" : "ضيف موقع جديد"}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -283,13 +283,13 @@ export default function ShortcutsPage() {
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="مثال: منصة التنسيق الإلكتروني"
+                  placeholder="مثلاً: موقع التنسيق"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500 block mb-1">رابط الموقع (URL):</label>
+                <label className="text-xs font-bold text-slate-500 block mb-1">الرابط:</label>
                 <input
                   type="text"
                   required
@@ -302,23 +302,23 @@ export default function ShortcutsPage() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500 block mb-1">التصنيف:</label>
+                <label className="text-xs font-bold text-slate-500 block mb-1">النوع:</label>
                 <input
                   type="text"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  placeholder="مثال: خدمات حكومية، تقديمات، تصميم"
+                  placeholder="مثلاً: خدمات حكومية، تقديمات، تصميم"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500 block mb-1">وصف أو ملاحظات:</label>
+                <label className="text-xs font-bold text-slate-500 block mb-1">ملاحظة:</label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="اكتب ملاحظة تفيد زملاء العمل عند فتح هذا الموقع..."
+                  placeholder="اكتب ملاحظة تفيد زمايلك لما يفتحوا الموقع..."
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none resize-none"
                 />
               </div>
@@ -335,7 +335,7 @@ export default function ShortcutsPage() {
                   type="submit"
                   className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 cursor-pointer shadow-lg shadow-blue-600/20"
                 >
-                  حفظ الموقع
+                  احفظ
                 </button>
               </div>
             </form>

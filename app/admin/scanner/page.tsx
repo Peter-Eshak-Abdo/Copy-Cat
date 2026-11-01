@@ -122,11 +122,11 @@ export default function ScannerPage() {
     if (newDocImages.length > 0) {
       setImages((prev) => [...prev, ...newDocImages]);
       toast.success(
-        `تم إضافة ${newDocImages.length} مستند بنجاح`,
-        invalidCount > 0 ? `تم تخطي ${invalidCount} ملف لعدم توافقهما كصور صالحة.` : undefined
+        `ضفنا ${newDocImages.length} صورة`,
+        invalidCount > 0 ? `سبنا ${invalidCount} ملف عشان مش صور.` : undefined
       );
     } else if (invalidCount > 0) {
-      toast.error("تعذر تحميل الملفات", "يرجى التأكد من اختيار ملفات صور مدعومة (JPG, PNG, WebP).");
+      toast.error("الملفات مفتحتش", "اختار صور بس (JPG أو PNG أو WebP).");
     }
 
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -278,12 +278,12 @@ export default function ScannerPage() {
 
       const content = await zip.generateAsync({ type: "blob" });
       saveAs(content, "CopyCat_Enhanced_Images.zip");
-      toast.success("تم تجهيز الأرشيف بنجاح", `تم ضغط وتنزيل ${images.length} صفحة بصيغة ZIP.`);
+      toast.success("ملف ZIP نزل", `فيه ${images.length} صفحة.`);
     } catch (err) {
       console.error("ZIP Error:", err);
       toast.error(
-        "تعذر إنشاء الملف المضغوط",
-        getFriendlyErrorMessage(err, "يرجى التحقق من حجم الصور والمحاولة مرة أخرى.")
+        "ملف ZIP متعملش",
+        getFriendlyErrorMessage(err, "ممكن الصور كبيرة أوي. جرب تاني بصور أقل.")
       );
     } finally {
       setIsExportingZip(false);
@@ -320,7 +320,7 @@ export default function ScannerPage() {
       {images.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-sm text-slate-900">المستندات المرفوعة:</span>
+            <span className="font-bold text-sm text-slate-900">الصور اللي رفعتها:</span>
             <span className="text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-xl">
               {images.length} {images.length === 1 ? "صورة" : "صور"}
             </span>
@@ -332,14 +332,14 @@ export default function ScannerPage() {
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition shadow-xs cursor-pointer"
             >
               <Upload className="w-4 h-4" />
-              <span>+ إضافة المزيد من الصور</span>
+              <span>+ ضيف صور</span>
             </button>
 
             <button
               onClick={() => setImages([])}
               className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
             >
-              مسح الكل
+              امسح الكل
             </button>
 
             <button
@@ -348,7 +348,7 @@ export default function ScannerPage() {
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/20 transition disabled:opacity-50 cursor-pointer"
             >
               <Download className="w-4 h-4" />
-              <span>{isDownloadingAll ? "جاري التنزيل..." : "تنزيل كل الصور متتالية"}</span>
+              <span>{isDownloadingAll ? "بننزل..." : "نزّل كل الصور"}</span>
             </button>
 
             <button
@@ -357,7 +357,7 @@ export default function ScannerPage() {
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20 transition disabled:opacity-50 cursor-pointer"
             >
               <Archive className="w-4 h-4" />
-              <span>{isExportingZip ? "جاري الضغط..." : "تنزيل أرشيف (ZIP)"}</span>
+              <span>{isExportingZip ? "بنجهز..." : "نزّل ZIP"}</span>
             </button>
           </div>
         </div>
@@ -365,7 +365,7 @@ export default function ScannerPage() {
 
       {/* Preset Quick Actions */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center gap-2.5">
-        <span className="text-xs font-bold text-slate-500 ml-2">الإعدادات السريعة الجاهزة:</span>
+        <span className="text-xs font-bold text-slate-500 ml-2">إعدادات جاهزة:</span>
 
         {/* Screen Clarifier Preset (Requirement #13) */}
         <button
@@ -377,7 +377,7 @@ export default function ScannerPage() {
           }`}
         >
           <Monitor className="w-3.5 h-3.5 text-cyan-300" />
-          <span>توضيح صور شاشات الكمبيوتر (Anti-Moire)</span>
+          <span>صورة شاشة كمبيوتر</span>
         </button>
 
         <button
@@ -389,7 +389,7 @@ export default function ScannerPage() {
           }`}
         >
           <Zap className="w-3.5 h-3.5" />
-          <span>عكس شاشات وتحاليل سوداء (توفير 80% حبر)</span>
+          <span>شاشة سودا (اقلبها أبيض)</span>
         </button>
 
         <button
@@ -401,7 +401,7 @@ export default function ScannerPage() {
           }`}
         >
           <Sparkles className="w-3.5 h-3.5" />
-          <span>تبييض مذكرات وأوراق مصورة (CamScanner)</span>
+          <span>ورقة متصورة (بيّضها)</span>
         </button>
 
         <button
@@ -413,7 +413,7 @@ export default function ScannerPage() {
           }`}
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>توضيح النصوص فقط (Sharpness 100%)</span>
+          <span>وضّح الكلام بس</span>
         </button>
 
         <button
@@ -421,7 +421,7 @@ export default function ScannerPage() {
           className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer mr-auto"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>إعادة ضبط المصنع</span>
+          <span>رجّع زي الأول</span>
         </button>
       </div>
 
@@ -430,8 +430,8 @@ export default function ScannerPage() {
         {/* Invert Toggle */}
         <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200">
           <div>
-            <span className="text-xs font-bold text-slate-900 block">عكس الألوان (Invert)</span>
-            <span className="text-[10px] text-amber-700 font-medium">قلب السواد لبياض ناصع</span>
+            <span className="text-xs font-bold text-slate-900 block">اقلب الألوان</span>
+            <span className="text-[10px] text-amber-700 font-medium">الأسود يبقى أبيض</span>
           </div>
           <input
             type="checkbox"
@@ -447,8 +447,8 @@ export default function ScannerPage() {
         {/* Screen Clarifier Mode Toggle (Requirement #13) */}
         <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200">
           <div>
-            <span className="text-xs font-bold text-cyan-900 block">فلتر شاشات الكمبيوتر</span>
-            <span className="text-[10px] text-slate-500 font-medium">إزالة تموجات الشاشة والموبايل</span>
+            <span className="text-xs font-bold text-cyan-900 block">فلتر الشاشات</span>
+            <span className="text-[10px] text-slate-500 font-medium">بيشيل التموجات اللي بتطلع في صورة الشاشة</span>
           </div>
           <input
             type="checkbox"
@@ -464,7 +464,7 @@ export default function ScannerPage() {
         {/* Sharpness Slider */}
         <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
           <div className="flex justify-between text-xs font-bold text-slate-900">
-            <span>حدة النصوص (Sharpness)</span>
+            <span>الحدة</span>
             <span className="text-amber-700 font-mono font-black">{sharpness}%</span>
           </div>
           <input
@@ -485,7 +485,7 @@ export default function ScannerPage() {
         {/* Brightness Slider */}
         <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
           <div className="flex justify-between text-xs font-bold text-slate-900">
-            <span>السطوع (Brightness)</span>
+            <span>الإضاءة</span>
             <span className="text-blue-700 font-mono font-black">{brightness}%</span>
           </div>
           <input
@@ -505,7 +505,7 @@ export default function ScannerPage() {
         {/* Contrast Slider */}
         <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
           <div className="flex justify-between text-xs font-bold text-slate-900">
-            <span>التباين (Contrast)</span>
+            <span>التباين</span>
             <span className="text-purple-700 font-mono font-black">{contrast}%</span>
           </div>
           <input
@@ -555,10 +555,10 @@ export default function ScannerPage() {
           </div>
           <div>
             <span className="text-base font-bold text-slate-900 block">
-              {isDragging ? "أفلت الصور هنا الآن!" : "اضغط هنا لرفع الصور أو اسحبها وأفلتها مباشرة (Drag & Drop)"}
+              {isDragging ? "سيب الصور هنا" : "دوس هنا وارفع الصور، أو اسحبها وسيبها هنا"}
             </span>
             <span className="text-xs text-slate-500 mt-1 block">
-              يدعم رفع حتى 30 صورة معاً (JPG, PNG, WEBP) — معالجة فورية فائقة السرعة محلياً بالمتصفح
+              لحد 30 صورة مرة واحدة (JPG أو PNG أو WEBP)، والشغل كله على الجهاز
             </span>
           </div>
         </div>
@@ -568,9 +568,9 @@ export default function ScannerPage() {
       {images.length > 0 && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 gap-2">
-            <span>معروض {images.length} صورة معالجة جاهزة للتنزيل والفحص</span>
+            <span>{images.length} صورة جاهزين</span>
             <span className="text-amber-500 font-semibold">
-              انقر على أي صورة لتكبيرها وفحص نقاء الكلمات، أو زر التدوير للضبط بزوايا دقيقة
+              دوس على أي صورة عشان تكبرها وتشوف الكلام واضح ولا لأ
             </span>
           </div>
 
@@ -587,7 +587,7 @@ export default function ScannerPage() {
                     setImages((prev) => prev.filter((item) => item.id !== img.id));
                   }}
                   className="absolute top-3 left-3 z-20 w-6 h-6 rounded-full bg-red-600/90 hover:bg-red-500 text-white flex items-center justify-center shadow-md transition-transform hover:scale-110 cursor-pointer"
-                  title="حذف هذه الصورة (X)"
+                  title="امسح الصورة دي"
                 >
                   <X className="w-3.5 h-3.5 stroke-[3]" />
                 </button>
@@ -596,7 +596,7 @@ export default function ScannerPage() {
                 <div
                   onClick={() => setEnlargedImage(img)}
                   className="relative h-32 sm:h-36 w-full bg-slate-50 rounded-xl overflow-hidden mb-2 border border-slate-200 flex items-center justify-center cursor-zoom-in group/img p-1"
-                  title="انقر لتكبير الصورة وفحص الكلمات بملء الشاشة"
+                  title="كبّر الصورة"
                 >
                   <NextImage
                     src={img.processedSrc}
@@ -616,7 +616,7 @@ export default function ScannerPage() {
                   <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                     <span className="px-2 py-1 rounded-lg bg-white/95 text-slate-900 text-[11px] font-bold flex items-center gap-1 shadow-sm">
                       <Maximize2 className="w-3 h-3 text-blue-600" />
-                      تكبير
+                      كبّر
                     </span>
                   </div>
                 </div>
@@ -635,10 +635,10 @@ export default function ScannerPage() {
                         setFineAngle(img.rotation || 0);
                       }}
                       className="p-1 text-slate-600 hover:text-blue-600 rounded-md hover:bg-slate-100 transition flex items-center gap-0.5 text-[10px] font-bold cursor-pointer"
-                      title="تدوير وضبط بزوايا دقيقة"
+                      title="لف الصورة"
                     >
                       <RotateCw className="w-3 h-3 text-blue-500" />
-                      <span>تدوير</span>
+                      <span>لف</span>
                     </button>
                   </div>
 
@@ -648,7 +648,7 @@ export default function ScannerPage() {
                     className="w-full py-1.5 px-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                   >
                     <Download className="w-3.5 h-3.5 stroke-[2.5]" />
-                    <span>تنزيل الصورة</span>
+                    <span>نزّل الصورة</span>
                   </button>
                 </div>
               </div>
@@ -670,7 +670,7 @@ export default function ScannerPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
                 <Eye className="w-4 h-4 text-amber-400" />
-                <span className="text-sm font-bold text-slate-900">{enlargedImage.name} (معاينة فائقة الدقة)</span>
+                <span className="text-sm font-bold text-slate-900">{enlargedImage.name} </span>
               </div>
               <button
                 onClick={() => setEnlargedImage(null)}
@@ -693,14 +693,14 @@ export default function ScannerPage() {
 
             <div className="flex items-center justify-between pt-2">
               <span className="text-xs text-slate-500">
-                افحص وضوح ونقاء الحروف والكلمات بعد تطبيق التفتيح وعكس الألوان
+                شوف الكلام بقى واضح ولا لأ
               </span>
               <button
                 onClick={() => handleDownloadSingleImage(enlargedImage, 1)}
                 className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs flex items-center gap-2 cursor-pointer shadow-lg"
               >
                 <Download className="w-4 h-4" />
-                <span>تنزيل الصورة المعالجة</span>
+                <span>نزّل الصورة</span>
               </button>
             </div>
           </div>
@@ -714,7 +714,7 @@ export default function ScannerPage() {
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2">
                 <RotateCw className="w-4 h-4 text-amber-400" />
-                <h3 className="text-base font-black text-slate-900">تدوير دقيق وتعديل ميلان الصورة</h3>
+                <h3 className="text-base font-black text-slate-900">لف الصورة</h3>
               </div>
               <button
                 onClick={() => setEditingDoc(null)}
@@ -739,7 +739,7 @@ export default function ScannerPage() {
             {/* Slider for exact degrees */}
             <div className="space-y-2 bg-slate-50 p-4 rounded-2xl border border-slate-200">
               <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                <span>زاوية الدوران الدقيقة:</span>
+                <span>الزاوية:</span>
                 <span className="text-amber-400 font-mono text-sm">{fineAngle > 0 ? `+${fineAngle}` : fineAngle}°</span>
               </div>
               <input
@@ -756,13 +756,13 @@ export default function ScannerPage() {
                   onClick={() => setFineAngle((prev) => (prev - 90) % 360)}
                   className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
                 >
-                  -90° يسار
+                  -90° شمال
                 </button>
                 <button
                   onClick={() => setFineAngle(0)}
                   className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs transition cursor-pointer"
                 >
-                  إلغاء الميلان (0°)
+                  من غير لف (0°)
                 </button>
                 <button
                   onClick={() => setFineAngle((prev) => (prev + 90) % 360)}
@@ -786,7 +786,7 @@ export default function ScannerPage() {
                 onClick={handleApplyFineRotation}
                 className="flex-1 py-2.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-white transition cursor-pointer shadow-lg shadow-amber-500/20"
               >
-                تطبيق التدوير
+                لف
               </button>
             </div>
           </div>

@@ -130,7 +130,7 @@ export default function PdfToolsPage() {
     if (!file) return;
 
     if (!file.name.toLowerCase().endsWith(".pdf")) {
-      toast.error("صيغة غير صحيحة", "يرجى اختيار ملف PDF صالح");
+      toast.error("ده مش PDF", "اختار ملف PDF");
       return;
     }
 
@@ -161,14 +161,14 @@ export default function PdfToolsPage() {
       setPages(initialPages);
       setSelectedPageIds(new Set());
       setPagesToDeleteInput("");
-      toast.success("تم تفكيك صفحات الملف", `تم تحميل ${count} صفحة بنجاح، جاري استخراج المعاينة...`);
+      toast.success("الملف اتفتح", `${count} صفحة، بنجهز الصور...`);
 
       // Trigger asynchronous background thumbnail rendering
       setTimeout(() => {
         renderThumbnailsForDoc(buffer, 0, count);
       }, 50);
     } catch {
-      toast.error("خطأ", "تعذر فتح ملف PDF، قد يكون محمياً بكلمة مرور أو تالفاً");
+      toast.error("الملف مفتحش", "ممكن يكون عليه باسورد أو بايظ");
     } finally {
       if (pdfInputRef.current) pdfInputRef.current.value = "";
     }
@@ -180,7 +180,7 @@ export default function PdfToolsPage() {
     if (!file) return;
 
     if (!file.name.toLowerCase().endsWith(".pdf")) {
-      toast.error("صيغة غير صحيحة", "يرجى اختيار ملف PDF صالح");
+      toast.error("ده مش PDF", "اختار ملف PDF");
       return;
     }
 
@@ -211,15 +211,15 @@ export default function PdfToolsPage() {
       setLoadedDocs((prev) => [...prev, newDoc]);
       setPages((prev) => [...prev, ...appendedPages]);
       toast.success(
-        "تم دمج الملف الإضافي",
-        `تمت إضافة ${count} صفحة من "${file.name}" لترتيبها مع باقي الصفحات`
+        "الملف التاني اتضاف",
+        `${count} صفحة من "${file.name}" اتضافوا، رتبهم مع الباقي`
       );
 
       setTimeout(() => {
         renderThumbnailsForDoc(buffer, newDocIndex, count);
       }, 50);
     } catch {
-      toast.error("خطأ", "تعذر فتح ملف PDF الإضافي");
+      toast.error("الملف مفتحش", "الملف التاني مفتحش");
     } finally {
       if (appendPdfInputRef.current) appendPdfInputRef.current.value = "";
     }
@@ -246,7 +246,7 @@ export default function PdfToolsPage() {
     const [moved] = newPages.splice(fromIndex, 1);
     newPages.splice(toIndex, 0, moved);
     setPages(newPages);
-    toast.success("تم نقل الصفحة", `تم نقل الصفحة إلى الترتيب رقم #${targetPos1Based}`);
+    toast.success("الصفحة اتنقلت", `بقت رقم ${targetPos1Based}`);
   };
 
   // Rotate a single page 90 degrees
@@ -266,13 +266,13 @@ export default function PdfToolsPage() {
     const newPages = [...pages];
     newPages.splice(index + 1, 0, newPage);
     setPages(newPages);
-    toast.success("تم تكرار الصفحة", `تم عمل نسخة مكررة من الصفحة رقم ${index + 1}`);
+    toast.success("الصفحة اتكررت", `عملنا نسخة تانية من صفحة ${index + 1}`);
   };
 
   // Delete a single page
   const deletePage = (index: number) => {
     if (pages.length <= 1) {
-      toast.warning("تنبيه", "لا يمكن حذف جميع صفحات المستند!");
+      toast.warning("مينفعش", "مينفعش تمسح كل الصفحات");
       return;
     }
     const pageId = pages[index].id;
@@ -282,13 +282,13 @@ export default function PdfToolsPage() {
       next.delete(pageId);
       return next;
     });
-    toast.info("تم حذف الصفحة", `تمت إزالة الصفحة رقم ${index + 1}`);
+    toast.info("اتمسحت", `صفحة ${index + 1} اتمسحت`);
   };
 
   // Rotate All Pages
   const rotateAllPages = () => {
     setPages((curr) => curr.map((p) => ({ ...p, rotation: (p.rotation + 90) % 360 })));
-    toast.success("تم تدوير الكل", "تم تدوير كافة الصفحات 90 درجة في اتجاه عقارب الساعة");
+    toast.success("اتلفوا", "كل الصفحات اتلفت 90 درجة");
   };
 
   // Toggle Single Page Selection
@@ -313,7 +313,7 @@ export default function PdfToolsPage() {
   // Batch delete using range text input
   const handleBatchDelete = () => {
     if (!pagesToDeleteInput.trim()) {
-      toast.warning("تنبيه", "يرجى كتابة أرقام الصفحات المراد حذفها (مثال: 1, 3, 5-8)");
+      toast.warning("اكتب أرقام الصفحات", "مثلاً: 1, 3, 5-8");
       return;
     }
 
@@ -338,21 +338,21 @@ export default function PdfToolsPage() {
     });
 
     if (pagesToDelete.size === 0) {
-      toast.error("خطأ", "لم يتم التعرف على أرقام صفحات صالحة");
+      toast.error("الأرقام غلط", "اكتبها كده: 1, 3, 5-8");
       return;
     }
 
     const remainingPages = pages.filter((_, idx) => !pagesToDelete.has(idx + 1));
     if (remainingPages.length === 0) {
-      toast.error("خطأ", "لا يمكن حذف جميع صفحات المستند دفعة واحدة!");
+      toast.error("مينفعش", "مينفعش تمسح كل الصفحات");
       return;
     }
 
     setPages(remainingPages);
     setPagesToDeleteInput("");
     toast.success(
-      "تم حذف الصفحات",
-      `تم حذف ${pagesToDelete.size} صفحة بنجاح. المتبقي ${remainingPages.length} صفحة.`
+      "الصفحات اتمسحت",
+      `مسحنا ${pagesToDelete.size} صفحة، فاضل ${remainingPages.length}.`
     );
   };
 
@@ -363,7 +363,7 @@ export default function PdfToolsPage() {
       : pages;
 
     if (targetPagesList.length === 0) {
-      toast.warning("تنبيه", onlySelected ? "يرجى تحديد صفحة واحدة على الأقل للتصدير" : "لا توجد صفحات لتصديرها");
+      toast.warning("تنبيه", onlySelected ? "علّم على صفحة واحدة على الأقل" : "مفيش صفحات");
       return;
     }
 
@@ -403,12 +403,12 @@ export default function PdfToolsPage() {
       URL.revokeObjectURL(url);
 
       toast.success(
-        "تم تصدير الـ PDF بنجاح",
-        `تم حفظ وتحميل ${targetPagesList.length} صفحة بالترتيب الجديد.`
+        "ملف PDF نزل",
+        `${targetPagesList.length} صفحة بالترتيب الجديد.`
       );
     } catch (err: unknown) {
       console.error("Export error:", err);
-      toast.error("خطأ في التصدير", "تعذر تجميع وتصدير ملف الـ PDF النهائي.");
+      toast.error("ملف PDF منزلش", "جرب تاني.");
     } finally {
       setIsProcessingPdf(false);
     }
@@ -421,13 +421,13 @@ export default function PdfToolsPage() {
       : pages;
 
     if (targetPagesList.length === 0) {
-      toast.warning("تنبيه", "يرجى تحديد صفحات لتصديرها كصور");
+      toast.warning("مفيش صفحات", "علّم على الصفحات اللي عايزها صور");
       return;
     }
 
     setIsProcessingPdf(true);
     try {
-      toast.info("جاري تجهيز الصور", "يتم الآن تحويل الصفحات إلى صور عالية الجودة وتجهيز ملف ZIP...");
+      toast.info("بنجهز الصور", "بنحوّل الصفحات لصور في ملف ZIP...");
       const pdfjs = await import("pdfjs-dist");
       pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 
@@ -457,10 +457,10 @@ export default function PdfToolsPage() {
 
       const zipContent = await zip.generateAsync({ type: "blob" });
       saveAs(zipContent, `CopyCat_PDF_Images_${Date.now()}.zip`);
-      toast.success("تم تنزيل الصور بنجاح", `تم استخراج ${targetPagesList.length} صفحة كصور في ملف ZIP مضغوط.`);
+      toast.success("الصور نزلت", `${targetPagesList.length} صورة في ملف ZIP.`);
     } catch (err) {
       console.error(err);
-      toast.error("خطأ", "تعذر تحويل صفحات الـ PDF إلى صور");
+      toast.error("الصور متعملتش", "جرب تاني");
     } finally {
       setIsProcessingPdf(false);
     }
@@ -472,7 +472,7 @@ export default function PdfToolsPage() {
 
     setIsProcessingPdf(true);
     try {
-      toast.info("جاري ضغط الملف", "يتم ضغط الصور وإعادة ترميز صفحات الـ PDF لتقليل الحجم إلى أقصى حد...");
+      toast.info("بنصغّر الملف", "استنى شوية...");
       const pdfjs = await import("pdfjs-dist");
       pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 
@@ -523,12 +523,12 @@ export default function PdfToolsPage() {
       URL.revokeObjectURL(url);
 
       toast.success(
-        "تم ضغط الـ PDF بنجاح!",
-        `تم تقليص الحجم من ${originalMb} MB إلى ${compressedMb} MB بنجاح وتوفير المساحة.`
+        "الملف صغر",
+        `من ${originalMb} MB لـ ${compressedMb} MB.`
       );
     } catch (err) {
       console.error("Compression error:", err);
-      toast.error("خطأ في الضغط", "تعذر ضغط ملف الـ PDF");
+      toast.error("الملف مصغرش", "جرب تاني");
     } finally {
       setIsProcessingPdf(false);
     }
@@ -537,7 +537,7 @@ export default function PdfToolsPage() {
   // Tab 2: Images to PDF Handler
   const handleImagesToPdf = async () => {
     if (imageFiles.length === 0) {
-      toast.warning("تنبيه", "يرجى إضافة صورة واحدة على الأقل");
+      toast.warning("مفيش صور", "ضيف صورة واحدة على الأقل");
       return;
     }
 
@@ -591,9 +591,9 @@ export default function PdfToolsPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.success("تم بنجاح", `تم تحويل ${imageFiles.length} صورة إلى ملف PDF عالي الجودة`);
+      toast.success("ملف PDF جاهز", `${imageFiles.length} صورة في ملف واحد`);
     } catch {
-      toast.error("خطأ", "تعذر تحويل الصور إلى PDF");
+      toast.error("ملف PDF متعملش", "جرب تاني");
     } finally {
       setIsConvertingImages(false);
     }
@@ -602,12 +602,12 @@ export default function PdfToolsPage() {
   // Tab 3: PDF to Word Handler
   const handlePdfToWordConvert = async () => {
     if (!selectedWordPdf) {
-      toast.warning("تنبيه", "يرجى اختيار ملف PDF للتحويل");
+      toast.warning("مفيش ملف", "اختار ملف PDF الأول");
       return;
     }
 
     if (typeof navigator !== "undefined" && !navigator.onLine) {
-      toast.error("لا يوجد اتصال بالإنترنت", "تحويل PDF إلى Word الذكي يتطلب اتصالاً بالإنترنت");
+      toast.error("النت فاصل", "تحويل PDF لـ Word محتاج إنترنت");
       return;
     }
 
@@ -627,7 +627,7 @@ export default function PdfToolsPage() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "فشل تحويل الملف");
+        throw new Error(errData.error || "الملف متحولش");
       }
 
       const data = await res.json();
@@ -643,10 +643,10 @@ export default function PdfToolsPage() {
         hasPageBorder: false,
       });
 
-      toast.success("تم التحويل والتصدير", "تم تنزيل ملف Word منسق بدقة وهوامش قياسية وخط نقي");
+      toast.success("ملف Word نزل", "الملف جاهز تعدل فيه");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "فشل تحويل ملف PDF إلى Word";
-      toast.error("خطأ", msg);
+      const msg = err instanceof Error ? err.message : "الملف متحولش لـ Word";
+      toast.error("الملف متحولش", msg);
     } finally {
       setIsConvertingWord(false);
     }
@@ -665,7 +665,7 @@ export default function PdfToolsPage() {
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            تفكيك وتنظيم الصفحات
+            رتّب وامسح صفحات
           </button>
           <button
             onClick={() => setActiveTab("images_to_pdf")}
@@ -675,7 +675,7 @@ export default function PdfToolsPage() {
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            تحويل صور إلى PDF
+            صور لـ PDF
           </button>
           <button
             onClick={() => setActiveTab("pdf_to_word")}
@@ -685,7 +685,7 @@ export default function PdfToolsPage() {
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            تحويل PDF إلى Word ذكي
+            PDF لـ Word
           </button>
         </div>
       </div>
@@ -717,7 +717,7 @@ export default function PdfToolsPage() {
                   className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md shadow-blue-600/20"
                 >
                   <Upload className="w-4 h-4" />
-                  <span>{loadedDocs.length === 0 ? "رفع ملف PDF لتفكيكه" : "فتح ملف جديد..."}</span>
+                  <span>{loadedDocs.length === 0 ? "افتح ملف PDF" : "افتح ملف تاني..."}</span>
                 </button>
 
                 {loadedDocs.length > 0 && (
@@ -726,7 +726,7 @@ export default function PdfToolsPage() {
                     className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md shadow-teal-600/20"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>إضافة ملف PDF آخر للدمج والترتيب</span>
+                    <span>ضيف ملف PDF تاني عليه</span>
                   </button>
                 )}
 
@@ -735,10 +735,10 @@ export default function PdfToolsPage() {
                     <button
                       onClick={rotateAllPages}
                       className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-slate-200"
-                      title="تدوير كافة الصفحات 90 درجة"
+                      title="لف كل الصفحات 90 درجة"
                     >
                       <RotateCw className="w-3.5 h-3.5" />
-                      <span>تدوير الكل 90°</span>
+                      <span>لف الكل 90°</span>
                     </button>
 
                     <button
@@ -748,12 +748,12 @@ export default function PdfToolsPage() {
                       {selectedPageIds.size === pages.length ? (
                         <>
                           <Square className="w-3.5 h-3.5" />
-                          <span>إلغاء التحديد</span>
+                          <span>شيل العلامات</span>
                         </>
                       ) : (
                         <>
                           <CheckSquare className="w-3.5 h-3.5 text-purple-600" />
-                          <span>تحديد الكل ({pages.length})</span>
+                          <span>علّم على الكل ({pages.length})</span>
                         </>
                       )}
                     </button>
@@ -770,7 +770,7 @@ export default function PdfToolsPage() {
                     className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer shadow-md shadow-emerald-600/25 disabled:opacity-50"
                   >
                     <FileDown className="w-4 h-4" />
-                    <span>{isProcessingPdf ? "جاري المعالجة..." : "تنزيل الـ PDF المرتب"}</span>
+                    <span>{isProcessingPdf ? "شغالين..." : "نزّل الـ PDF"}</span>
                   </button>
 
                   {/* PDF to Images ZIP Button (Solid Indigo with high contrast) */}
@@ -778,10 +778,10 @@ export default function PdfToolsPage() {
                     onClick={() => handleExportImagesZip(false)}
                     disabled={isProcessingPdf}
                     className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md shadow-indigo-600/20 disabled:opacity-50"
-                    title="تصدير جميع الصفحات كصور JPG في ملف ZIP"
+                    title="نزّل كل الصفحات صور في ملف ZIP"
                   >
                     <Archive className="w-4 h-4" />
-                    <span>تحويل لصور (ZIP)</span>
+                    <span>صور (ZIP)</span>
                   </button>
 
                   {/* Compress Tool Button (Solid Amber/Orange with high contrast) */}
@@ -789,10 +789,10 @@ export default function PdfToolsPage() {
                     onClick={handleCompressPdf}
                     disabled={isProcessingPdf}
                     className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md shadow-amber-500/20 disabled:opacity-50"
-                    title="ضغط ملف الـ PDF وتقليل حجمه بشكل ملحوظ"
+                    title="صغّر حجم الملف"
                   >
                     <Minimize2 className="w-4 h-4" />
-                    <span>ضغط وتخفيف الحجم</span>
+                    <span>صغّر الحجم</span>
                   </button>
                 </div>
               )}
@@ -803,7 +803,7 @@ export default function PdfToolsPage() {
               <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-purple-950/40 border border-purple-500/40 text-xs animate-fade-in">
                 <div className="flex items-center gap-2 text-purple-200 font-bold">
                   <CheckCircle2 className="w-4 h-4 text-purple-400" />
-                  <span>تم تحديد <strong className="text-slate-900">{selectedPageIds.size}</strong> صفحة</span>
+                  <span>معلّم على <strong className="text-slate-900">{selectedPageIds.size}</strong> صفحة</span>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -813,7 +813,7 @@ export default function PdfToolsPage() {
                     className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition cursor-pointer flex items-center gap-1 shadow-md shadow-purple-600/20"
                   >
                     <FileDown className="w-3.5 h-3.5" />
-                    <span>تصدير المحددة كـ PDF</span>
+                    <span>نزّل المعلّم PDF</span>
                   </button>
 
                   <button
@@ -822,7 +822,7 @@ export default function PdfToolsPage() {
                     className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition cursor-pointer flex items-center gap-1 shadow-md shadow-indigo-600/20"
                   >
                     <Archive className="w-3.5 h-3.5" />
-                    <span>تصدير المحددة كصور (ZIP)</span>
+                    <span>نزّل المعلّم صور (ZIP)</span>
                   </button>
                 </div>
               </div>
@@ -833,31 +833,31 @@ export default function PdfToolsPage() {
               <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs">
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-700">حذف سريع بنطاق:</span>
+                    <span className="font-bold text-slate-700">امسح صفحات بالأرقام:</span>
                     <input
                       type="text"
                       value={pagesToDeleteInput}
                       onChange={(e) => setPagesToDeleteInput(e.target.value)}
-                      placeholder="مثال: 1, 3, 5-8"
+                      placeholder="مثلاً: 1, 3, 5-8"
                       className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none w-36"
                     />
                     <button
                       onClick={handleBatchDelete}
                       className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-red-900/60 text-rose-600 hover:text-rose-700 font-bold border border-rose-200 transition cursor-pointer"
                     >
-                      حذف النطاق
+                      امسح
                     </button>
                   </div>
 
                   {/* Dynamic Page Thumbnail Zoom Controls */}
                   <div className="flex items-center gap-2 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
-                    <span className="font-bold text-slate-600 text-[11px]">حجم المعاينة:</span>
+                    <span className="font-bold text-slate-600 text-[11px]">حجم الصفحات:</span>
                     <button
                       type="button"
                       onClick={() => setThumbnailZoom((z) => Math.max(1, z - 1))}
                       disabled={thumbnailZoom <= 1}
                       className="p-1 rounded-lg hover:bg-white text-slate-700 disabled:opacity-30 transition cursor-pointer"
-                      title="تصغير حجم المعاينة"
+                      title="صغّر"
                     >
                       <ZoomOut className="w-3.5 h-3.5" />
                     </button>
@@ -868,14 +868,14 @@ export default function PdfToolsPage() {
                         ? "متوسط (5)"
                         : thumbnailZoom === 3
                         ? "كبير (3)"
-                        : "عملاق (2)"}
+                        : "كبير جداً (2)"}
                     </span>
                     <button
                       type="button"
                       onClick={() => setThumbnailZoom((z) => Math.min(4, z + 1))}
                       disabled={thumbnailZoom >= 4}
                       className="p-1 rounded-lg hover:bg-white text-slate-700 disabled:opacity-30 transition cursor-pointer"
-                      title="تكبير حجم المعاينة"
+                      title="كبّر"
                     >
                       <ZoomIn className="w-3.5 h-3.5" />
                     </button>
@@ -885,10 +885,10 @@ export default function PdfToolsPage() {
                 <div className="text-slate-500 text-[11px] flex items-center gap-2">
                   {isGeneratingThumbs && (
                     <span className="text-blue-400 flex items-center gap-1">
-                      <Loader2 className="w-3 h-3 animate-spin" /> جاري توليد صور المعاينة...
+                      <Loader2 className="w-3 h-3 animate-spin" /> بنجهز صور الصفحات...
                     </span>
                   )}
-                  <span>الملفات المدمجة: {loadedDocs.map((d) => d.name).join(" • ")}</span>
+                  <span>الملفات: {loadedDocs.map((d) => d.name).join(" • ")}</span>
                 </div>
               </div>
             )}
@@ -905,10 +905,10 @@ export default function PdfToolsPage() {
               </div>
               <div>
                 <h3 className="text-base font-black text-slate-900 mb-1">
-                  اضغط لاختيار ملف PDF لتفكيكه مع عرض صور الصفحات
+                  دوس واختار ملف PDF عشان تشوف صفحاته
                 </h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  ستظهر صور الصفحات الحقيقية لتتعرف عليها فوراً، مع إمكانية كتابة رقم الصفحة لنقلها، تحديد صفحات معينة لتصديرها PDF أو صور ZIP، وضغط حجم الملف!
+                  هتشوف كل صفحة بصورتها. تقدر تنقل صفحة بكتابة رقمها، تمسح صفحات، تنزّل صفحات معينة PDF أو صور، أو تصغّر حجم الملف.
                 </p>
               </div>
             </div>
@@ -943,7 +943,7 @@ export default function PdfToolsPage() {
                           type="button"
                           onClick={() => togglePageSelection(page.id)}
                           className="text-slate-500 hover:text-purple-400 transition cursor-pointer"
-                          title="تحديد هذه الصفحة"
+                          title="علّم على الصفحة دي"
                         >
                           {isSelected ? (
                             <CheckSquare className="w-4 h-4 text-purple-400" />
@@ -952,7 +952,7 @@ export default function PdfToolsPage() {
                           )}
                         </button>
                         <span className="font-black px-2 py-0.5 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[11px]">
-                          صفحة #{index + 1}
+                          صفحة {index + 1}
                         </span>
                       </div>
                       <span className="text-[10px] text-slate-500 truncate max-w-[80px]" title={page.fileName}>
@@ -989,7 +989,7 @@ export default function PdfToolsPage() {
                           <span className="text-xs font-bold text-slate-200">
                             صفحة {page.sourcePageIndex + 1}
                           </span>
-                          <span className="text-[10px] text-slate-500 mt-1">جاري المعاينة...</span>
+                          <span className="text-[10px] text-slate-500 mt-1">بنجهزها...</span>
                         </div>
                       )}
 
@@ -1002,7 +1002,7 @@ export default function PdfToolsPage() {
 
                     {/* Direct Jump / Move to Page Number */}
                     <div className="flex items-center justify-between gap-1 py-1.5 px-2 my-1 rounded-xl bg-slate-50 border border-slate-200 text-[11px]">
-                      <span className="text-slate-500">انقل لـ #</span>
+                      <span className="text-slate-500">انقلها لرقم</span>
                       <input
                         type="number"
                         min="1"
@@ -1031,7 +1031,7 @@ export default function PdfToolsPage() {
                           onClick={() => movePage(index, "right")}
                           disabled={index === 0}
                           className="p-1 rounded-lg bg-slate-100 hover:bg-blue-600 text-slate-700 hover:text-white transition disabled:opacity-25 cursor-pointer"
-                          title="نقل لليمين (سابقاً)"
+                          title="قدّمها"
                         >
                           <ArrowRight className="w-3.5 h-3.5" />
                         </button>
@@ -1040,7 +1040,7 @@ export default function PdfToolsPage() {
                         <button
                           onClick={() => rotatePage(index)}
                           className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-blue-400 hover:text-slate-900 transition cursor-pointer"
-                          title="تدوير 90°"
+                          title="لف 90°"
                         >
                           <RotateCw className="w-3.5 h-3.5" />
                         </button>
@@ -1049,7 +1049,7 @@ export default function PdfToolsPage() {
                         <button
                           onClick={() => duplicatePage(index)}
                           className="p-1 rounded-lg bg-slate-100 hover:bg-emerald-600 text-emerald-400 hover:text-white transition cursor-pointer"
-                          title="تكرار هذه الصفحة (Duplicate)"
+                          title="كرر الصفحة دي"
                         >
                           <Copy className="w-3.5 h-3.5" />
                         </button>
@@ -1059,7 +1059,7 @@ export default function PdfToolsPage() {
                           onClick={() => movePage(index, "left")}
                           disabled={index === pages.length - 1}
                           className="p-1 rounded-lg bg-slate-100 hover:bg-blue-600 text-slate-700 hover:text-white transition disabled:opacity-25 cursor-pointer"
-                          title="نقل لليسار (لاحقاً)"
+                          title="أخّرها"
                         >
                           <ArrowLeft className="w-3.5 h-3.5" />
                         </button>
@@ -1068,7 +1068,7 @@ export default function PdfToolsPage() {
                         <button
                           onClick={() => deletePage(index)}
                           className="p-1 rounded-lg bg-slate-100 hover:bg-red-600 text-rose-600 hover:text-white transition cursor-pointer"
-                          title="حذف هذه الصفحة نهائياً"
+                          title="امسح الصفحة دي"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1087,9 +1087,9 @@ export default function PdfToolsPage() {
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
             <div>
-              <h2 className="text-lg font-black text-slate-900">تجميع الصور في ملف PDF واحد</h2>
+              <h2 className="text-lg font-black text-slate-900">جمّع صور في ملف PDF</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                اختر عدة صور (JPG, PNG) ورتبها ليتم دمجها في ملف PDF عالي الجودة بنظام ورقة A4.
+                اختار الصور ورتبها، وهتتجمع في ملف PDF مقاس A4.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -1113,7 +1113,7 @@ export default function PdfToolsPage() {
                 className="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>إضافة صور</span>
+                <span>ضيف صور</span>
               </button>
               {imageFiles.length > 0 && (
                 <button
@@ -1122,7 +1122,7 @@ export default function PdfToolsPage() {
                   className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-2 transition cursor-pointer shadow-lg shadow-emerald-600/30 disabled:opacity-50"
                 >
                   <FileDown className="w-4 h-4" />
-                  <span>{isConvertingImages ? "جاري التجميع..." : "تنزيل الـ PDF المجمع"}</span>
+                  <span>{isConvertingImages ? "بنجمع..." : "نزّل الـ PDF"}</span>
                 </button>
               )}
             </div>
@@ -1154,7 +1154,7 @@ export default function PdfToolsPage() {
                     preview: URL.createObjectURL(f),
                   }));
                   setImageFiles((prev) => [...prev, ...newItems]);
-                  toast.success("تمت إضافة الصور", `تم إدراج ${files.length} صورة بنجاح.`);
+                  toast.success("الصور اتضافت", `${files.length} صورة.`);
                 }
               }}
               className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-3 transition-all ${
@@ -1165,9 +1165,9 @@ export default function PdfToolsPage() {
             >
               <ImageIcon className={`w-12 h-12 transition-transform ${isImagesDragging ? "scale-110 text-blue-600" : "text-slate-400"}`} />
               <span className="text-sm font-bold text-slate-800">
-                {isImagesDragging ? "أفلت الصور هنا الآن!" : "اسحب وأفلت الصور هنا أو اضغط لاختيارها (Drag & Drop)"}
+                {isImagesDragging ? "سيب الصور هنا" : "اسحب الصور وسيبها هنا، أو دوس واختارها"}
               </span>
-              <span className="text-xs text-slate-500">يدعم رفع عدة صور معاً (JPG, PNG, WEBP) لتجميعها في ملف PDF مرتب</span>
+              <span className="text-xs text-slate-500">تقدر تختار كذا صورة مرة واحدة (JPG أو PNG أو WEBP)</span>
             </div>
           ) : (
             <div
@@ -1194,7 +1194,7 @@ export default function PdfToolsPage() {
                     preview: URL.createObjectURL(f),
                   }));
                   setImageFiles((prev) => [...prev, ...newItems]);
-                  toast.success("تمت إضافة صور إضافية", `تم إدراج ${files.length} صورة بنجاح.`);
+                  toast.success("الصور اتضافت", `${files.length} صورة زيادة.`);
                 }
               }}
               className={`grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 p-1 rounded-2xl transition-all ${
@@ -1208,7 +1208,7 @@ export default function PdfToolsPage() {
                   <button
                     onClick={() => setImageFiles((curr) => curr.filter((_, i) => i !== idx))}
                     className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition cursor-pointer shadow"
-                    title="حذف"
+                    title="امسح"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1220,7 +1220,7 @@ export default function PdfToolsPage() {
                 className="border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-xl flex flex-col items-center justify-center p-3 cursor-pointer text-slate-500 hover:text-blue-600 hover:bg-blue-50/40 transition gap-1 aspect-square"
               >
                 <Plus className="w-5 h-5" />
-                <span className="text-[11px] font-bold">+ اسحب أو اختر</span>
+                <span className="text-[11px] font-bold">+ ضيف</span>
               </div>
             </div>
           )}
@@ -1231,9 +1231,9 @@ export default function PdfToolsPage() {
       {activeTab === "pdf_to_word" && (
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
           <div>
-            <h2 className="text-lg font-black text-slate-900">تحويل PDF إلى ملف Word قابل للتعديل</h2>
+            <h2 className="text-lg font-black text-slate-900">حوّل PDF لـ Word تعدل فيه</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              تحليل وقراءة مستندات الـ PDF بالذكاء الاصطناعي واستخراج النصوص وتنسيقها في ملف Word A4 وهوامش ضيقة وخط 18pt.
+              الذكاء الاصطناعي بيقرا الـ PDF ويطلعه ملف Word مقاس A4.
             </p>
           </div>
 
@@ -1261,9 +1261,9 @@ export default function PdfToolsPage() {
               if (file) {
                 if (file.name.toLowerCase().endsWith(".pdf")) {
                   setSelectedWordPdf(file);
-                  toast.success("تم تحديد الملف", `ملف PDF: ${file.name}`);
+                  toast.success("اخترت الملف", `${file.name}`);
                 } else {
-                  toast.error("صيغة غير صحيحة", "يرجى إسقاط ملف بصيغة PDF فقط");
+                  toast.error("ده مش PDF", "اختار ملف PDF بس");
                 }
               }
             }}
@@ -1296,7 +1296,7 @@ export default function PdfToolsPage() {
                     onClick={() => setSelectedWordPdf(null)}
                     className="px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 cursor-pointer"
                   >
-                    تغيير الملف
+                    غيّر الملف
                   </button>
                   <button
                     onClick={handlePdfToWordConvert}
@@ -1304,24 +1304,24 @@ export default function PdfToolsPage() {
                     className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold flex items-center gap-2 cursor-pointer shadow-lg shadow-blue-600/30 disabled:opacity-50"
                   >
                     {isConvertingWord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    <span>{isConvertingWord ? "جاري استخراج وتنسيق الوورد..." : "بدء التحويل وتنزيل Word"}</span>
+                    <span>{isConvertingWord ? "بنحوّل لـ Word..." : "حوّل ونزّل Word"}</span>
                   </button>
                 </div>
               </div>
             ) : (
               <div>
                 <span className="text-sm sm:text-base font-bold text-slate-900 block mb-1">
-                  {isPdfWordDragging ? "أفلت ملف الـ PDF هنا الآن!" : "اسحب وأفلت ملف PDF هنا أو اضغط للاختيار (Drag & Drop)"}
+                  {isPdfWordDragging ? "سيب الملف هنا" : "اسحب ملف PDF وسيبه هنا، أو دوس واختاره"}
                 </span>
                 <span className="text-xs text-slate-500 block max-w-md mx-auto mb-4">
-                  تحويل ذكي فائق الدقة بالذكاء الاصطناعي مع الحفاظ على الجداول والتسطير والخطوط وهوامش Word القياسية
+                  بيحافظ على الجداول والخط اللي تحت الكلام
                 </span>
                 <button
                   type="button"
                   onClick={() => pdfWordInputRef.current?.click()}
                   className="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition cursor-pointer shadow-lg shadow-blue-600/20"
                 >
-                  اختيار ملف PDF من الجهاز
+                  اختار ملف PDF
                 </button>
               </div>
             )}
@@ -1329,7 +1329,7 @@ export default function PdfToolsPage() {
 
           {wordConvertedText && (
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-              <span className="text-xs font-bold text-emerald-600 block">معاينة النص المستخرج والمنسق:</span>
+              <span className="text-xs font-bold text-emerald-600 block">النص اللي اتقرا:</span>
               {(() => {
                 const isWordArabic = /[\u0600-\u06FF]/.test(wordConvertedText);
                 return (

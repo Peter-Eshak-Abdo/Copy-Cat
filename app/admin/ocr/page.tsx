@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import { useToast } from "@/components/toast-provider";
 import { readFileAsDataURL } from "@/lib/utils";
 import { generateOcrDocx, PageBorderKind, FIGURE_LINE, type OcrFigure } from "@/lib/docx/ocr-docx";
 import { splitMath } from "@/lib/docx/latex-math";
-import { cropFigures, prepareOcrImage, tesseractOcr } from "@/lib/ocr-client";
+import { cropFigures, imageAspect, prepareOcrImage, tesseractOcr, uprightPage } from "@/lib/ocr-client";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import {
@@ -91,7 +91,7 @@ export default function MultiStageOcrPage() {
   const [zoomPreview, setZoomPreview] = useState(false);
 
   const [refinedText, setRefinedText] = useState<string>("");
-  const [docTitle, setDocTitle] = useState<string>("مستند_نصوص_مستخرجة_مكتبة_كوبي_كات.docx");
+  const [docTitle, setDocTitle] = useState<string>("مستند_كوبي_كات.docx");
   const [viewMode, setViewMode] = useState<"visual" | "raw">("visual");
 
   // Requirement #4: Font detection, Arial fallback, and Language / Direction Settings
@@ -105,6 +105,24 @@ export default function MultiStageOcrPage() {
   const [figures, setFigures] = useState<Record<number, OcrFigure>>({});
   // Second pass: the same model re-reads the page image against its own draft
   const [verifyPass, setVerifyPass] = useState<boolean>(true);
+  // Wide forms and tables (usually scanned sideways) are exported on a landscape page
+  const [landscape, setLandscape] = useState<boolean>(false);
+  // Progress of the running extraction, for the loading panel and its time estimate
+  const [run, setRun] = useState<{
+    total: number;
+    done: number;
+    stage: string;
+    startedAt: number;
+    pageStartedAt: number;
+    msPerPage: number;
+  } | null>(null);
+  // Clock for the estimate, ticking only while a run is in progress
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    if (!run) return;
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [run]);
 
   const activePage = pages[activePageIndex] || null;
 
@@ -114,7 +132,7 @@ export default function MultiStageOcrPage() {
     if (!text.trim()) {
       return (
         <div className="py-20 text-center text-slate-400 text-xs sm:text-sm">
-          سيظهر هنا النص والمستند المستخرج مع الحفاظ التام على الجداول والعناوين والتنسيق الأصلي...
+          النص اللي هيتقرا من الصور هيظهر هنا بالجداول والعناوين زي الأصل...
         </div>
       );
     }
@@ -315,7 +333,7 @@ export default function MultiStageOcrPage() {
     }
 
     if (newItems.length === 0) {
-      toast.warning("تنبيه", "يرجى اختيار صور صالحة للمستندات (JPG / PNG / WEBP)");
+      toast.warning("الملف ده مش صورة", "اختار صور بس (JPG أو PNG أو WEBP)");
       return;
     }
 
@@ -323,14 +341,14 @@ export default function MultiStageOcrPage() {
       const updated = [...prev, ...newItems];
       if (prev.length === 0 && updated.length > 0) {
         const cleanName = updated[0].file.name.replace(/\.[^/.]+$/, "");
-        setDocTitle(`مستند_مستخرج_${cleanName}.docx`);
+        setDocTitle(`مستند_${cleanName}.docx`);
       }
       return updated;
     });
 
     toast.success(
-      "تمت إضافة الصفحات",
-      `تمت إضافة ${newItems.length} صورة. يمكنك إعادة ترتيبها بالأسهم قبل بدء الاستخراج.`
+      "الصفحات اتضافت",
+      `ضفنا ${newItems.length} صورة. رتبهم بالأسهم لو محتاج، وبعدين دوس «ابدأ القراية».`
     );
   };
 
@@ -396,18 +414,22 @@ export default function MultiStageOcrPage() {
   const handleProcessOcr = async () => {
     if (pages.length === 0) {
       if (fileInputRef.current) fileInputRef.current.click();
-      toast.warning("يرجى اختيار صور", "قم برفع صفحة واحدة أو أكثر من المستند أولاً");
+      toast.warning("مفيش صفحات", "ارفع صورة الصفحة الأول");
       return;
     }
 
     if (typeof navigator !== "undefined" && !navigator.onLine) {
-      toast.error("لا يوجد اتصال بالإنترنت", "تحتاج ميزة التعرف الضوئي الذكي إلى اتصال بالإنترنت");
+      toast.error("النت فاصل", "القراية محتاجة إنترنت");
       return;
     }
 
     setIsProcessing(true);
     setRefinedText("");
     setFigures({});
+    // First guess per page (direction + reading + optional review); replaced by the measured average
+    const now = Date.now();
+    setRun({ total: pages.length, done: 0, stage: "بنجهز الصفحة", startedAt: now, pageStartedAt: now, msPerPage: verifyPass ? 45_000 : 25_000 });
+    const stage = (text: string) => setRun((r) => (r ? { ...r, stage: text } : r));
 
     let combinedRaw = "";
     const allFigures: Record<number, OcrFigure> = {};
@@ -427,9 +449,18 @@ export default function MultiStageOcrPage() {
       for (let i = 0; i < pages.length; i++) {
         setActivePageIndex(i);
         setPages((prev) => prev.map((p, idx) => (idx === i ? { ...p, status: "processing" } : p)));
-        toast.info("جاري المعالجة", `جاري استخراج نصوص الصفحة (${i + 1} من ${pages.length})...`);
+        setRun((r) => (r ? { ...r, pageStartedAt: Date.now() } : r));
+        stage("بنشوف الصفحة متلفّة ولا لأ");
 
-        const image = await prepareOcrImage(pages[i].dataUrl);
+        // Sideways or upside-down scans are turned upright first
+        const upright = await uprightPage(pages[i].dataUrl);
+        if (upright.rotation) {
+          setPages((prev) => prev.map((p, idx) => (idx === i ? { ...p, dataUrl: upright.dataUrl } : p)));
+          toast.info("الصفحة كانت متلفّة", `عدلنا الصفحة ${i + 1} قبل القراية.`);
+        }
+        if (i === 0) setLandscape((await imageAspect(upright.dataUrl)) > 1.15);
+        const image = await prepareOcrImage(upright.dataUrl);
+        stage("بنقرا الكلام");
         let pageText = "";
         const extract = await callOcr({ action: "extract", imageBase64: image }).catch(() => ({ ok: false, data: {} }));
 
@@ -448,14 +479,14 @@ export default function MultiStageOcrPage() {
           }
           if (data.lowAccuracy) {
             toast.warning(
-              "تم الاستخراج بموديل احتياطي أقل دقة",
-              `موديلات Gemini غير متاحة الآن، فراجع نص الصفحة ${i + 1} جيداً قبل الطباعة.`
+              "اتقرت بموديل احتياطي أضعف",
+              `Gemini مش متاح دلوقتي، فراجع نص الصفحة ${i + 1} كويس قبل ما تطبع.`
             );
           }
 
           // 2. Verification: the model that made the draft re-reads the page image against it
           if (verifyPass && !data.lowAccuracy) {
-            toast.info("جاري المراجعة", `مراجعة الصفحة ${i + 1} حرفاً بحرف مقابل الصورة...`);
+            stage("بنراجع الكلام على الصورة حرف بحرف");
             const verify = await callOcr({ action: "verify", imageBase64: image, draft: pageText, provider: data.provider }).catch(
               () => ({ ok: false, data: {} })
             );
@@ -463,7 +494,8 @@ export default function MultiStageOcrPage() {
           }
         } else {
           // 3. Every server model failed: Tesseract in the browser (plain text only)
-          toast.warning("موديلات الذكاء الاصطناعي غير متاحة", `جاري القراءة داخل المتصفح للصفحة ${i + 1} (نص فقط، بدقة أقل)...`);
+          toast.warning("الذكاء الاصطناعي مش متاح دلوقتي", `هنقرا الصفحة ${i + 1} من على الجهاز (نص بس من غير جداول، ودقته أقل)...`);
+          stage("بنقرا من على الجهاز (أبطأ)");
           pageText = await tesseractOcr(image);
         }
 
@@ -483,22 +515,35 @@ export default function MultiStageOcrPage() {
           combinedRaw += pageText;
         }
         setRefinedText(combinedRaw);
+        setRun((r) => {
+          if (!r) return r;
+          const done = i + 1;
+          return { ...r, done, msPerPage: (Date.now() - r.startedAt) / done };
+        });
       }
 
-      toast.success("اكتمل الاستخراج بنجاح", `تم استخراج ومراجعة ${pages.length} صفحة وجاهزة للتصدير للوورد.`);
+      toast.success("خلصنا", `اتقرت ${pages.length} صفحة وجاهزة تنزلها Word.`);
     } catch (err: unknown) {
       setPages((prev) => prev.map((p) => (p.status === "processing" ? { ...p, status: "error" } : p)));
-      const msg = err instanceof Error ? err.message : "حدث خطأ أثناء معالجة الصفحات";
-      toast.error("فشل الاستخراج", msg);
+      const msg = err instanceof Error ? err.message : "حصلت مشكلة وإحنا بنقرا الصفحات";
+      toast.error("القراية وقفت", msg);
     } finally {
       setIsProcessing(false);
+      setRun(null);
     }
   };
+
+  // Seconds left: pages still to read at the measured pace, minus what the current page has used already
+  const secondsLeft = run
+    ? Math.max(5, Math.round(((run.total - run.done) * run.msPerPage - Math.max(0, now - run.pageStartedAt)) / 1000))
+    : 0;
+  const formatLeft = (s: number) =>
+    s < 60 ? `${s} ثانية` : `${Math.floor(s / 60)} دقيقة${s % 60 >= 10 ? ` و${s % 60} ثانية` : ""}`;
 
   // Action: Export Word .docx (Requirement #4)
   const handleExportWord = async () => {
     if (!refinedText.trim()) {
-      toast.warning("لا يوجد نص للتصدير", "يرجى استخراج نص أولاً قبل تحميل ملف Word");
+      toast.warning("مفيش نص", "اقرا الصفحات الأول وبعدين نزّل ملف Word");
       return;
     }
 
@@ -511,25 +556,26 @@ export default function MultiStageOcrPage() {
         boldBody,
         language: selectedLanguage as "ar" | "en" | "fr" | "auto",
         figures,
+        landscape,
       });
-      toast.success("تم تصدير ملف Word", `تم تحميل المستند بنجاح بخط ${selectedFont || "Arial"} والتنسيق المطلوب`);
+      toast.success("ملف Word نزل", `بخط ${selectedFont || "Arial"}`);
     } catch {
-      toast.error("خطأ في التصدير", "تعذر توليد ملف Word. يمكنك نسخ النص يدوياً.");
+      toast.error("ملف Word منزلش", "حصلت مشكلة. ممكن تنسخ النص وتلزقه في Word بإيدك.");
     }
   };
 
   // Action: Copy Text to Clipboard
   const handleCopyText = async () => {
     if (!refinedText.trim()) {
-      toast.warning("لا يوجد نص لنسخه", "قم باستخراج النص أولاً");
+      toast.warning("مفيش نص", "اقرا الصفحات الأول");
       return;
     }
 
     try {
       await navigator.clipboard.writeText(refinedText);
-      toast.success("تم النسخ", "تم نسخ النص إلى الحافظة بنجاح");
+      toast.success("اتنسخ", "النص اتنسخ، الزقه في أي مكان");
     } catch {
-      toast.error("خطأ", "تعذر النسخ إلى الحافظة");
+      toast.error("منسخش", "حدد النص وانسخه بإيدك");
     }
   };
 
@@ -563,7 +609,7 @@ export default function MultiStageOcrPage() {
                 <div className="flex items-center gap-space-xs">
                   <Layers className="text-primary w-5 h-5" />
                   <span className="font-headline-sm text-headline-sm text-on-surface font-bold">
-                    صفحات المستند ({pages.length})
+                    الصفحات ({pages.length})
                   </span>
                 </div>
                 <button
@@ -572,7 +618,7 @@ export default function MultiStageOcrPage() {
                   type="button"
                 >
                   <ImagePlus className="w-4 h-4" />
-                  <span>+ إضافة صفحات</span>
+                  <span>+ ضيف صفحات</span>
                 </button>
               </div>
 
@@ -602,10 +648,12 @@ export default function MultiStageOcrPage() {
                           </span>
                           <span className="text-[11px] text-on-surface-variant">
                             {page.status === "processing"
-                              ? "⏳ جاري الاستخراج..."
+                              ? "⏳ بنقراها..."
                               : page.status === "done"
-                              ? "✅ تم الاستخراج"
-                              : "جاهز"}
+                              ? "✅ اتقرت"
+                              : page.status === "error"
+                              ? "❌ حصلت مشكلة"
+                              : "مستنية دورها"}
                           </span>
                         </div>
                       </div>
@@ -616,7 +664,7 @@ export default function MultiStageOcrPage() {
                           disabled={idx === 0}
                           onClick={() => movePageUp(idx)}
                           className="p-1 rounded hover:bg-surface-bright text-on-surface-variant disabled:opacity-30 cursor-pointer"
-                          title="تحريك لأعلى"
+                          title="طلّعها فوق"
                         >
                           <ArrowUp className="w-4 h-4" />
                         </button>
@@ -625,7 +673,7 @@ export default function MultiStageOcrPage() {
                           disabled={idx === pages.length - 1}
                           onClick={() => movePageDown(idx)}
                           className="p-1 rounded hover:bg-surface-bright text-on-surface-variant disabled:opacity-30 cursor-pointer"
-                          title="تحريك لأسفل"
+                          title="نزّلها تحت"
                         >
                           <ArrowDown className="w-4 h-4" />
                         </button>
@@ -633,7 +681,7 @@ export default function MultiStageOcrPage() {
                           type="button"
                           onClick={() => removePage(idx)}
                           className="p-1 rounded hover:bg-error/20 text-error cursor-pointer"
-                          title="حذف هذه الصفحة"
+                          title="امسح الصفحة دي"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -649,8 +697,8 @@ export default function MultiStageOcrPage() {
                   className="p-6 text-center border-2 border-dashed border-primary/40 rounded-xl cursor-pointer hover:border-primary transition"
                 >
                   <UploadCloud className="w-10 h-10 text-primary mx-auto mb-2" />
-                  <p className="text-sm font-bold text-on-surface">اسحب وأفلت صور الصفحات هنا</p>
-                  <p className="text-xs text-on-surface-variant mt-1">أو اضغط لاختيار صورة أو أكثر من جهازك</p>
+                  <p className="text-sm font-bold text-on-surface">اسحب صور الصفحات وسيبها هنا</p>
+                  <p className="text-xs text-on-surface-variant mt-1">أو دوس هنا واختار صورة أو أكتر من الجهاز. الصفحة المتصورة بالعرض أو بالمقلوب بتتعدل لوحدها.</p>
                 </div>
               )}
             </div>
@@ -662,13 +710,13 @@ export default function MultiStageOcrPage() {
                   <div className="flex items-center gap-space-xs">
                     <Eye className="w-5 h-5 text-primary" />
                     <span className="font-headline-sm text-headline-sm text-on-surface font-bold">
-                      معاينة: صفحة ({activePageIndex + 1})
+                      صفحة {activePageIndex + 1}
                     </span>
                   </div>
                   <button
                     onClick={() => setZoomPreview((prev) => !prev)}
                     className="p-space-2xs rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
-                    title={zoomPreview ? "تصغير" : "تكبير"}
+                    title={zoomPreview ? "صغّر" : "كبّر"}
                     type="button"
                   >
                     {zoomPreview ? <ZoomOut className="w-4 h-4" /> : <ZoomIn className="w-4 h-4" />}
@@ -688,6 +736,34 @@ export default function MultiStageOcrPage() {
               </div>
             )}
 
+            {run && (
+              <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 space-y-2" role="status" aria-live="polite">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin shrink-0" />
+                  <p className="text-sm font-bold text-blue-900">
+                    صفحة {Math.min(run.done + 1, run.total)} من {run.total}: {run.stage}...
+                  </p>
+                </div>
+                <div className="h-2 rounded-full bg-blue-100 overflow-hidden">
+                  <div
+                    className="h-full bg-blue-600 transition-all duration-1000"
+                    style={{
+                      width: `${Math.min(
+                        97,
+                        Math.max(
+                          4,
+                          ((run.done + Math.min(0.95, Math.max(0, now - run.pageStartedAt) / run.msPerPage)) / run.total) * 100
+                        )
+                      )}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-blue-800">
+                  فاضل حوالي <strong>{formatLeft(secondsLeft)}</strong>. سيب الصفحة مفتوحة، الشغل شغال.
+                </p>
+              </div>
+            )}
+
             {/* Action Start Button */}
             <button
               onClick={handleProcessOcr}
@@ -697,10 +773,10 @@ export default function MultiStageOcrPage() {
               {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
               <span>
                 {isProcessing
-                  ? `جاري استخراج صفحة (${activePageIndex + 1} من ${pages.length})...`
+                  ? `بنقرا صفحة ${activePageIndex + 1} من ${pages.length}...`
                   : pages.length > 1
-                  ? `بدء الاستخراج والتدقيق لـ (${pages.length} صفحات)`
-                  : "بدء الاستخراج والتدقيق اللغوي"}
+                  ? `ابدأ القراية (${pages.length} صفحات)`
+                  : "ابدأ القراية"}
               </span>
             </button>
           </div>
@@ -712,7 +788,7 @@ export default function MultiStageOcrPage() {
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-blue-600" />
                   <span className="text-base font-bold text-slate-900">
-                    النص المستخرج والمدقق
+                    النص اللي اتقرا
                   </span>
                 </div>
 
@@ -728,7 +804,7 @@ export default function MultiStageOcrPage() {
                           : "text-slate-600 hover:text-slate-900"
                       }`}
                     >
-                      التنسيق والجداول
+                      شكل الورقة
                     </button>
                     <button
                       type="button"
@@ -739,7 +815,7 @@ export default function MultiStageOcrPage() {
                           : "text-slate-600 hover:text-slate-900"
                       }`}
                     >
-                      محرر النص
+                      عدّل النص
                     </button>
                   </div>
 
@@ -751,7 +827,7 @@ export default function MultiStageOcrPage() {
                     className="flex items-center gap-1 py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer border border-slate-200"
                   >
                     <Copy className="w-4 h-4" />
-                    <span>نسخ</span>
+                    <span>انسخ</span>
                   </button>
                   <button
                     onClick={handleExportWord}
@@ -759,7 +835,7 @@ export default function MultiStageOcrPage() {
                     className="flex items-center gap-1.5 py-1.5 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow-xs"
                   >
                     <Download className="w-4 h-4" />
-                    <span>تصدير Word (.docx)</span>
+                    <span>نزّل Word</span>
                   </button>
                 </div>
               </div>
@@ -769,7 +845,7 @@ export default function MultiStageOcrPage() {
                 <div className="flex flex-wrap items-center gap-3">
                   {/* Font Selector with Arial as default fallback */}
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-700">نوع الخط (Font):</span>
+                    <span className="text-xs font-bold text-slate-700">الخط:</span>
                     <select
                       value={selectedFont}
                       onChange={(e) => {
@@ -778,9 +854,9 @@ export default function MultiStageOcrPage() {
                       }}
                       className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 shadow-2xs"
                     >
-                      <option value="Arial">Arial (الافتراضي العام)</option>
-                      <option value="Simplified Arabic">Simplified Arabic (عقود ومحررات)</option>
-                      <option value="Traditional Arabic">Traditional Arabic (عربي رسمي)</option>
+                      <option value="Arial">Arial (العادي)</option>
+                      <option value="Simplified Arabic">Simplified Arabic (للعقود)</option>
+                      <option value="Traditional Arabic">Traditional Arabic (للورق الحكومي)</option>
                       <option value="Times New Roman">Times New Roman</option>
                       <option value="Calibri">Calibri</option>
                       <option value="Amiri">Amiri (أميري)</option>
@@ -791,33 +867,45 @@ export default function MultiStageOcrPage() {
 
                   {/* Language Selector */}
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-700">اتجاه النص:</span>
+                    <span className="text-xs font-bold text-slate-700">اللغة:</span>
                     <select
                       value={selectedLanguage}
                       onChange={(e) => setSelectedLanguage(e.target.value)}
                       className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 shadow-2xs"
                     >
-                      <option value="auto">تلقائي (حسب المستند)</option>
-                      <option value="ar">العربية (RTL - يمين)</option>
-                      <option value="en">English (LTR - يسار)</option>
-                      <option value="fr">Français (LTR - يسار)</option>
+                      <option value="auto">لوحدها (حسب الورقة)</option>
+                      <option value="ar">عربي (من اليمين)</option>
+                      <option value="en">English (من الشمال)</option>
+                      <option value="fr">Français (من الشمال)</option>
                     </select>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-700">الورقة:</span>
+                    <select
+                      value={landscape ? "landscape" : "portrait"}
+                      onChange={(e) => setLandscape(e.target.value === "landscape")}
+                      className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 shadow-2xs"
+                    >
+                      <option value="portrait">بالطول</option>
+                      <option value="landscape">بالعرض</option>
+                    </select>
+                  </div>
+
                   {/* Page Border (auto-detected from the scan) */}
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-700">إطار الصفحة:</span>
+                    <span className="text-xs font-bold text-slate-700">البرواز:</span>
                     <select
                       value={borderStyle}
                       onChange={(e) => setBorderStyle(e.target.value as PageBorderKind)}
                       className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 shadow-2xs"
                     >
-                      <option value="none">بدون إطار</option>
-                      <option value="single">خط مفرد</option>
-                      <option value="double">خط مزدوج</option>
-                      <option value="decorative">إطار مزخرف (عقود)</option>
+                      <option value="none">من غير برواز</option>
+                      <option value="single">خط واحد</option>
+                      <option value="double">خطين</option>
+                      <option value="decorative">مزخرف (للعقود)</option>
                     </select>
                   </div>
 
@@ -828,12 +916,12 @@ export default function MultiStageOcrPage() {
                       onChange={(e) => setBoldBody(e.target.checked)}
                       className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
                     />
-                    <span>نص عريض (Bold)</span>
+                    <span>الكلام تقيل (Bold)</span>
                   </label>
 
                   <label
                     className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none"
-                    title="يقرأ نفس الموديل الصورة مرة ثانية ويقارنها بالنص حرفاً بحرف. أدق لكنه أبطأ ويستهلك طلباً إضافياً."
+                    title="بيقرا الصورة تاني ويقارنها بالنص حرف بحرف. أدق بس أبطأ شوية."
                   >
                     <input
                       type="checkbox"
@@ -841,7 +929,7 @@ export default function MultiStageOcrPage() {
                       onChange={(e) => setVerifyPass(e.target.checked)}
                       className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
                     />
-                    <span>مراجعة ثانية مقابل الصورة</span>
+                    <span>راجع مرة تانية على الصورة</span>
                   </label>
                 </div>
               </div>
@@ -853,7 +941,7 @@ export default function MultiStageOcrPage() {
                   value={docTitle}
                   onChange={(e) => setDocTitle(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-blue-500"
-                  placeholder="اسم ملف الوورد الناتج"
+                  placeholder="اسم ملف الـ Word"
                 />
               </div>
 
@@ -898,7 +986,7 @@ export default function MultiStageOcrPage() {
                         ? "'Traditional Arabic', Arial, sans-serif"
                         : `${selectedFont}, Arial, sans-serif`,
                   }}
-                  placeholder="سيظهر هنا النص المستخرج من الصفحات بترتيبها بعد انتهاء القراءة والتدقيق..."
+                  placeholder="النص هيظهر هنا بعد ما الصفحات تتقرا..."
                   rows={18}
                   className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs sm:text-sm text-slate-900 leading-relaxed focus:bg-white focus:outline-none focus:border-blue-500 resize-y ${
                     selectedLanguage === "ar" ||

@@ -15,12 +15,14 @@ async function tryRemoveBg(buffer: Buffer, apiKey: string): Promise<Buffer | nul
     method: "POST",
     headers: { "X-Api-Key": apiKey },
     body: form,
+    signal: AbortSignal.timeout(40_000),
   });
   if (!resp.ok) {
-    console.warn("remove.bg failed:", resp.status, await resp.text().catch(() => ""));
+    const detail = await resp.text().catch(() => "");
+    console.warn("remove.bg failed:", resp.status, detail);
     // 402: the monthly free calls and paid credits are used up
     if (resp.status === 402) throw new Error("quota");
-    return null;
+    throw new Error(`remove.bg ${resp.status}: ${detail.slice(0, 200)}`);
   }
   return Buffer.from(await resp.arrayBuffer());
 }
@@ -68,6 +70,9 @@ export async function POST(req: NextRequest) {
     ];
 
     const quotaExhausted: string[] = [];
+    // Why each provider failed, returned to the page (and its console) so a photo that kept its
+    // background can be explained
+    const errors: string[] = [];
     for (const [name, key, run] of providers) {
       if (!key) continue;
       try {
@@ -81,7 +86,10 @@ export async function POST(req: NextRequest) {
         }
       } catch (err) {
         if (err instanceof Error && err.message === "quota") quotaExhausted.push(name);
-        else console.warn(`${name} background removal failed, trying next provider:`, err);
+        else {
+          console.warn(`${name} background removal failed, trying next provider:`, err);
+          errors.push(err instanceof Error ? err.message : String(err));
+        }
       }
     }
 
@@ -91,6 +99,7 @@ export async function POST(req: NextRequest) {
       message: "الخلفية جاهزة للمعالجة والتبييض.",
       provider: "client-canvas",
       quotaExhausted,
+      errors,
     });
   } catch (error) {
     console.error("Error in remove-bg route:", error);

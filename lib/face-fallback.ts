@@ -138,3 +138,11 @@ export async function detectHeadLocally(full: HTMLCanvasElement): Promise<{ box:
   ];
   return { box, rotation: best.rotation };
 }
+
+/**
+ * Starts loading the face detector in the background (wasm + ~1MB model, then cached by the browser and the
+ * service worker), so the first photo that needs the fallback does not wait for the download.
+ */
+export function warmUpFaceDetector(): void {
+  getDetector().catch(() => {});
+}

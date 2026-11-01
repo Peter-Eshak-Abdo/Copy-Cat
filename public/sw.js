@@ -1,5 +1,16 @@
-// Copy-Cat Service Worker v6.0 - High Performance & Dynamic Admin Bypass
+// Copy-Cat Service Worker v6.1 - High Performance & Dynamic Admin Bypass
 const CACHE_NAME = "copycat-cache-v6.0";
+// Browser AI models and their runtimes (background removal ~40MB, face detector, OCR language data, KaTeX):
+// version-pinned URLs that never change, kept cache-first for good so a slow line downloads them once
+const MODEL_CACHE = "copycat-models-v1";
+const MODEL_HOSTS = [
+  "staticimgly.com",
+  "cdn.jsdelivr.net",
+  "unpkg.com",
+  "storage.googleapis.com",
+  "tessdata.projectnaptha.com",
+  "cdnjs.cloudflare.com",
+];
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
@@ -28,7 +39,7 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
+          if (key !== CACHE_NAME && key !== MODEL_CACHE) {
             return caches.delete(key);
           }
         })
@@ -51,6 +62,24 @@ self.addEventListener("fetch", (event) => {
 
   // 2. Only cache HTTP and HTTPS requests (ignore chrome-extension:, data:, blob:, etc.)
   if (!url.protocol.startsWith("http")) {
+    return;
+  }
+
+  // 2b. AI model files from their CDNs: cache first, forever (they are versioned)
+  if (MODEL_HOSTS.includes(url.hostname)) {
+    event.respondWith(
+      caches.open(MODEL_CACHE).then((cache) =>
+        cache.match(request).then(
+          (cached) =>
+            cached ||
+            fetch(request).then((resp) => {
+              // Opaque (no-cors) answers are cached too: their status is 0 but they are usable
+              if (resp && (resp.status === 200 || resp.type === "opaque")) cache.put(request, resp.clone()).catch(() => {});
+              return resp;
+            })
+        )
+      )
+    );
     return;
   }
 

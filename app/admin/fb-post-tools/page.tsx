@@ -91,16 +91,16 @@ export default function FacebookPostToolsPage() {
   const startScraping = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!postUrl.trim()) {
-      toast.error("يرجى إدخال الرابط", "ضع رابط منشور الفيس بوك أو الألبوم المطلوب سحبه.");
+      toast.error("مفيش رابط", "الزق رابط البوست أو الألبوم من فيسبوك.");
       return;
     }
 
     setIsRunning(true);
-    setStatusMessage("جاري الاتصال بـ Facebook وتحليل المنشور...");
+    setStatusMessage("بنفتح البوست على فيسبوك...");
     setScrapedCount(0);
     setDownloadedCount(0);
     setPreviewImages([]);
-    setLogs([`بدء فحص الرابط: ${postUrl}`]);
+    setLogs([`بنفتح الرابط: ${postUrl}`]);
     setCompletedDoc(null);
     setShowUploadFallbackPrompt(false);
 
@@ -116,7 +116,7 @@ export default function FacebookPostToolsPage() {
       });
 
       if (!response.ok) {
-        let errMsg = "حدث خطأ غير متوقع أثناء معالجة الطلب.";
+        let errMsg = "حصلت مشكلة، جرب تاني.";
         try {
           const errData = await response.json();
           if (errData?.error) errMsg = errData.error;
@@ -125,7 +125,7 @@ export default function FacebookPostToolsPage() {
       }
 
       if (!response.body) {
-        throw new Error("تعذر قراءة الاستجابة من الخادم.");
+        throw new Error("السيرفر مردش، جرب تاني.");
       }
 
       const reader = response.body.getReader();
@@ -153,7 +153,7 @@ export default function FacebookPostToolsPage() {
               if (data.image_url) {
                 setPreviewImages((prev) => [...prev, data.image_url]);
               }
-              setLogs((prev) => [...prev, `[اكتشاف] تم إيجاد صورة رقم ${data.current}`]);
+              setLogs((prev) => [...prev, `[لقينا] صورة رقم ${data.current}`]);
             } else if (data.type === "download_progress") {
               setDownloadedCount(data.downloaded);
             } else if (data.type === "completed") {
@@ -165,12 +165,12 @@ export default function FacebookPostToolsPage() {
                 title: data.title || docTitle || "ملزمة فيسبوك",
               });
               setLogs((prev) => [...prev, `✅ ${data.message}`]);
-              toast.success("تم تجهيز ملف PDF بنجاح!", `تم دمج ${data.total_images} صفحة بالترتيب.`);
+              toast.success("ملف PDF جاهز", `${data.total_images} صفحة بالترتيب.`);
               fetchHistory();
             } else if (data.type === "error") {
               setStatusMessage(`خطأ: ${data.message}`);
               setLogs((prev) => [...prev, `❌ [خطأ] ${data.message}`]);
-              toast.error("حدث خطأ", data.message);
+              toast.error("مقدرناش نسحب الصور", data.message);
               setShowUploadFallbackPrompt(true);
             } else if (data.type === "log") {
               setLogs((prev) => [...prev, data.message]);
@@ -181,8 +181,8 @@ export default function FacebookPostToolsPage() {
         }
       }
     } catch (err) {
-      toast.error("تعذر إكمال العملية", (err as Error).message || "حدث خطأ في الاتصال.");
-      setLogs((prev) => [...prev, `❌ [استثناء] ${(err as Error).message}`]);
+      toast.error("العملية وقفت", (err as Error).message || "النت فصل أو السيرفر مردش.");
+      setLogs((prev) => [...prev, `❌ [مشكلة] ${(err as Error).message}`]);
     } finally {
       setIsRunning(false);
     }
@@ -199,7 +199,7 @@ export default function FacebookPostToolsPage() {
       a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
     );
     setUploadedFiles((prev) => [...prev, ...newFiles]);
-    toast.success(`تم اختيار ${newFiles.length} صفحة`, "تم ترتيبها تلقائياً حسب أرقام الصفحات.");
+    toast.success(`اخترت ${newFiles.length} صفحة`, "اترتبوا لوحدهم بأرقام الصفحات.");
   };
 
   const removeUploadedFile = (index: number) => {
@@ -214,15 +214,15 @@ export default function FacebookPostToolsPage() {
   // Compile uploaded images directly in the browser via pdf-lib (100% Client-side, 0 Server Errors)
   const compileLocalImagesToPdf = async () => {
     if (uploadedFiles.length === 0) {
-      toast.warning("يرجى اختيار صور", "اسحب أو اختر صور صفحات الملزمة أولاً.");
+      toast.warning("مفيش صور", "اختار صور صفحات الملزمة الأول.");
       return;
     }
 
     setIsCompilingLocal(true);
-    setStatusMessage("جاري تجميع الصفحات في ملف PDF للطباعة بالمتصفح...");
+    setStatusMessage("بنجمع الصفحات في ملف PDF...");
     setLogs((prev) => [
       ...prev,
-      `بدء تجميع ${uploadedFiles.length} صفحة محلياً بأعلى دقة للطباعة...`,
+      `بنجمع ${uploadedFiles.length} صفحة...`,
     ]);
 
     try {
@@ -240,7 +240,7 @@ export default function FacebookPostToolsPage() {
         }
         const page = pdfDoc.addPage([img.width, img.height]);
         page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
-        setLogs((prev) => [...prev, `[صفحة #${i + 1}] تمت إضافة ${file.name}`]);
+        setLogs((prev) => [...prev, `[صفحة ${i + 1}] ${file.name}`]);
       }
 
       const pdfBytes = await pdfDoc.save();
@@ -257,13 +257,13 @@ export default function FacebookPostToolsPage() {
       });
 
       toast.success(
-        "تم تجهيز ملف الـ PDF بنجاح!",
-        `تم دمج ${uploadedFiles.length} صفحة بالترتيب وجاهز للطباعة فوراً.`
+        "ملف PDF جاهز",
+        `${uploadedFiles.length} صفحة بالترتيب وجاهز للطباعة.`
       );
-      setLogs((prev) => [...prev, `✅ اكتمل إنشاء ملف ${filename} بنجاح!`]);
+      setLogs((prev) => [...prev, `✅ الملف ${filename} جاهز`]);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "تعذر تجميع ملف PDF";
-      toast.error("خطأ", msg);
+      const msg = err instanceof Error ? err.message : "ملف PDF متعملش";
+      toast.error("ملف PDF متعملش", msg);
       setLogs((prev) => [...prev, `❌ [خطأ] ${msg}`]);
     } finally {
       setIsCompilingLocal(false);
@@ -289,11 +289,11 @@ export default function FacebookPostToolsPage() {
       };
       localStorage.setItem("copycat_tasks_v1", JSON.stringify([newTask, ...existing]));
       toast.success(
-        "تمت الإضافة لطابور الطباعة 🖨️",
-        `تم تسجيل مهمة طباعة "${doc.title}" في لوحة التحكم الرئيسية.`
+        "اتضاف لشغل الطباعة 🖨️",
+        `"${doc.title}" اتضاف في صفحة الأوردرات.`
       );
     } catch {
-      toast.error("تعذر حفظ المهمة");
+      toast.error("الأوردر متحفظش");
     }
   };
 
@@ -313,7 +313,7 @@ export default function FacebookPostToolsPage() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <span>🔗 سحب تلقائي برابط المنشور</span>
+              <span>🔗 اسحب الصور من رابط البوست</span>
             </button>
             <button
               type="button"
@@ -324,7 +324,7 @@ export default function FacebookPostToolsPage() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <span>📁 رفع وسحب صور الملزمة مباشرة (بدون قيود)</span>
+              <span>📁 ارفع صور الملزمة بنفسك</span>
             </button>
           </div>
 
@@ -332,7 +332,7 @@ export default function FacebookPostToolsPage() {
             <form onSubmit={startScraping} className="space-y-4">
               <div>
                 <label className="block text-xs font-black text-slate-700 mb-1.5">
-                  رابط منشور أو ألبوم فيسبوك (Facebook Post / Album URL):
+                  رابط البوست أو الألبوم من فيسبوك:
                 </label>
                 <input
                   type="url"
@@ -344,18 +344,18 @@ export default function FacebookPostToolsPage() {
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-600 focus:border-blue-500 focus:outline-none transition"
                 />
                 <span className="text-[11px] text-slate-500 block mt-1">
-                  يدعم روابط المنشورات العامة، ألبومات الصور، والصفحات التعليمية.
+                  بيشتغل مع البوستات العامة والألبومات وصفحات المدرسين. البوستات اللي في جروبات مقفولة مش هتنفع.
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                    عنوان الملزمة أو المذكرة (اسم الملف):
+                    اسم الملزمة (اسم الملف):
                   </label>
                   <input
                     type="text"
-                    placeholder="مثال: مذكرة لغة عربية الصف الثالث"
+                    placeholder="مثلاً: مذكرة عربي تالتة ثانوي"
                     value={docTitle}
                     onChange={(e) => setDocTitle(e.target.value)}
                     disabled={isRunning}
@@ -365,7 +365,7 @@ export default function FacebookPostToolsPage() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                    الحد الأقصى لعدد الصور المسموح سحبها:
+                    أقصى عدد صور:
                   </label>
                   <input
                     type="number"
@@ -387,12 +387,12 @@ export default function FacebookPostToolsPage() {
                 {isRunning ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>جاري سحب الصور ودمج الـ PDF...</span>
+                    <span>بنسحب الصور ونعمل الـ PDF...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>🚀 ابدأ سحب الصور وتوليد الـ PDF للطباعة</span>
+                    <span>🚀 اسحب الصور واعمل PDF</span>
                   </>
                 )}
               </button>
@@ -403,10 +403,10 @@ export default function FacebookPostToolsPage() {
                     <span className="text-lg">💡</span>
                     <div className="space-y-1">
                       <h4 className="text-xs font-bold text-amber-950">
-                        المنشور في مجموعة مغلقة أو يتطلب تسجيل الدخول؟
+                        البوست في جروب مقفول أو محتاج تسجيل دخول؟
                       </h4>
                       <p className="text-[11px] text-amber-800 leading-relaxed">
-                        لحماية الخصوصية، يمنع فيسبوك سحب محتوى المجموعات المغلقة بدون حساب. يمكنك سحب وإفلات صور صفحات الملزمة مباشرة في صندوق الرفع بالمتصفح لتوليد ملف الـ PDF فوراً بدون أي أخطاء!
+                        فيسبوك مش بيسمح لأي برنامج يسحب صور الجروبات المقفولة أو البوستات الخاصة. نزّل الصور على الجهاز من الموبايل أو الكمبيوتر، وبعدين ارفعها هنا وهتتجمع PDF على طول.
                       </p>
                     </div>
                   </div>
@@ -419,7 +419,7 @@ export default function FacebookPostToolsPage() {
                     className="w-full py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                   >
                     <FolderDown className="w-4 h-4" />
-                    <span>📁 التبديل الآن لصندوق رفع وسحب الصور (سحب وإفلات مباشر)</span>
+                    <span>📁 ارفع الصور بنفسك</span>
                   </button>
                 </div>
               )}
@@ -450,10 +450,10 @@ export default function FacebookPostToolsPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900">
-                    اسحب وأفلت صور صفحات الملزمة هنا أو اضغط للاختيار
+                    اسحب صور صفحات الملزمة وسيبها هنا، أو دوس واختارها
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    يدعم اختيار حتى 150 صورة دفعة واحدة من الموبايل أو واتساب، وسيتم ترتيبها تلقائياً
+                    تقدر تختار لحد 150 صورة مرة واحدة، وهتترتب لوحدها
                   </p>
                 </div>
               </div>
@@ -462,14 +462,14 @@ export default function FacebookPostToolsPage() {
                 <div className="space-y-2">
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-700">
-                      تم تحديد {uploadedFiles.length} صفحة
+                      اخترت {uploadedFiles.length} صفحة
                     </span>
                     <button
                       type="button"
                       onClick={clearUploadedFiles}
                       className="text-xs text-red-500 hover:text-red-700 font-bold cursor-pointer"
                     >
-                      مسح الكل
+                      امسح الكل
                     </button>
                   </div>
 
@@ -485,7 +485,7 @@ export default function FacebookPostToolsPage() {
                           type="button"
                           onClick={() => removeUploadedFile(idx)}
                           className="text-slate-400 hover:text-red-500 font-black cursor-pointer"
-                          title="حذف هذه الصفحة"
+                          title="امسح الصفحة دي"
                         >
                           ×
                         </button>
@@ -498,11 +498,11 @@ export default function FacebookPostToolsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                    عنوان الملزمة أو المذكرة:
+                    اسم الملزمة:
                   </label>
                   <input
                     type="text"
-                    placeholder="مثال: مذكرة علوم الصف الأول الإعدادي"
+                    placeholder="مثلاً: مذكرة علوم أولى إعدادي"
                     value={docTitle}
                     onChange={(e) => setDocTitle(e.target.value)}
                     disabled={isCompilingLocal}
@@ -520,12 +520,12 @@ export default function FacebookPostToolsPage() {
                 {isCompilingLocal ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>جاري تجميع ملف PDF بالمتصفح...</span>
+                    <span>بنعمل الـ PDF...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>⚡ تجميع الـ PDF فوراً ({uploadedFiles.length} صفحة)</span>
+                    <span>⚡ اعمل PDF ({uploadedFiles.length} صفحة)</span>
                   </>
                 )}
               </button>
@@ -543,7 +543,7 @@ export default function FacebookPostToolsPage() {
                 <span className="font-bold text-blue-700 bg-blue-100 px-2.5 py-1 rounded-lg border border-blue-200">
                   {scrapedCount > 0
                     ? `${downloadedCount} من ${scrapedCount} صورة`
-                    : "جاري الفحص..."}
+                    : "بندوّر..."}
                 </span>
               </div>
 
@@ -565,7 +565,7 @@ export default function FacebookPostToolsPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-emerald-800 font-black text-sm">
                   <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  <span>تم تجهيز ملف PDF بنجاح! ({completedDoc.totalImages} صفحة)</span>
+                  <span>ملف PDF جاهز ({completedDoc.totalImages} صفحة)</span>
                 </div>
                 <span className="text-xs text-emerald-800 font-bold bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
                   جاهز للطباعة
@@ -579,7 +579,7 @@ export default function FacebookPostToolsPage() {
                   className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition"
                 >
                   <Download className="w-4 h-4" />
-                  <span>تنزيل ملف PDF ({completedDoc.pdfFilename})</span>
+                  <span>نزّل PDF ({completedDoc.pdfFilename})</span>
                 </a>
 
                 <button
@@ -588,7 +588,7 @@ export default function FacebookPostToolsPage() {
                   className="py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition cursor-pointer"
                 >
                   <Printer className="w-4 h-4" />
-                  <span>إرسال لطابور الطباعة 🖨️</span>
+                  <span>ضيفه لشغل الطباعة 🖨️</span>
                 </button>
               </div>
             </div>
@@ -601,7 +601,7 @@ export default function FacebookPostToolsPage() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
                 <ImageIcon className="w-4 h-4 text-cyan-400" />
-                <span>الصور المكتشفة بالترتيب ({previewImages.length})</span>
+                <span>الصور اللي لقيناها بالترتيب ({previewImages.length})</span>
               </h3>
               <span className="text-[11px] text-slate-500">تسلسل 1، 2، 3...</span>
             </div>
@@ -610,7 +610,7 @@ export default function FacebookPostToolsPage() {
               {previewImages.length === 0 ? (
                 <div className="col-span-3 h-full flex flex-col items-center justify-center text-slate-600 text-xs text-center p-4">
                   <Layers className="w-8 h-8 mb-2 opacity-40" />
-                  <span>ستظهر مصغرات الصور هنا فور اكتشافها بالترتيب الزمني للملزمة</span>
+                  <span>الصور هتظهر هنا أول ما نلاقيها</span>
                 </div>
               ) : (
                 previewImages.map((imgUrl, i) => (
@@ -630,8 +630,8 @@ export default function FacebookPostToolsPage() {
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-200 text-[11px] text-slate-500 leading-relaxed">
-            💡 <strong className="text-slate-900">معلومة:</strong> يتم تجميع الصفحات بنفس ترتيب ظهورها في المنشور
-            لضمان قراءة الملازم والمذكرات بترتيب الصفحات الصحيح.
+            💡 <strong className="text-slate-900">معلومة:</strong> الصفحات بتتجمع بنفس ترتيبها في البوست
+            عشان الملزمة تطلع مترتبة صح.
           </div>
         </div>
       </div>
@@ -641,12 +641,12 @@ export default function FacebookPostToolsPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FolderDown className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-black text-slate-900">الملازم والملفات المحفوظة سابقاً</h2>
+            <h2 className="text-lg font-black text-slate-900">الملازم اللي اتسحبت قبل كده</h2>
           </div>
           <button
             onClick={fetchHistory}
             className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
-            title="تحديث القائمة"
+            title="حدّث القايمة"
           >
             <RefreshCw className={`w-4 h-4 ${isLoadingHistory ? "animate-spin" : ""}`} />
           </button>
@@ -654,7 +654,7 @@ export default function FacebookPostToolsPage() {
 
         {historyDocs.length === 0 ? (
           <div className="text-center py-8 text-slate-500 text-xs">
-            لا توجد ملفات PDF مسحوبة من فيسبوك حتى الآن.
+            لسه مفيش ملازم اتسحبت من فيسبوك.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -693,7 +693,7 @@ export default function FacebookPostToolsPage() {
                       className="flex-1 py-1.5 px-2.5 rounded-lg bg-slate-100 hover:bg-emerald-600 text-slate-700 hover:text-white font-bold text-xs flex items-center justify-center gap-1 transition"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      <span>تحميل PDF</span>
+                      <span>نزّل PDF</span>
                     </a>
                   )}
 
@@ -708,7 +708,7 @@ export default function FacebookPostToolsPage() {
                         })
                       }
                       className="p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white transition cursor-pointer"
-                      title="إرسال لطابور الطباعة"
+                      title="ضيفه لشغل الطباعة"
                     >
                       <Printer className="w-4 h-4" />
                     </button>

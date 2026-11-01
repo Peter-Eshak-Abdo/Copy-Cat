@@ -15,7 +15,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
  * Page image sent to the OCR models: long side capped at 2400px (enough for small exam digits and
  * superscripts) as JPEG, so a phone photo stays under the hosting request limit (~4.5MB).
  */
-export async function prepareOcrImage(dataUrl: string, maxSide = 2400): Promise<string> {
+export async function prepareOcrImage(dataUrl: string, maxSide = 2200): Promise<string> {
   const img = await loadImage(dataUrl);
   const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
   const canvas = document.createElement("canvas");
@@ -27,7 +27,69 @@ export async function prepareOcrImage(dataUrl: string, maxSide = 2400): Promise<
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  // 0.85 keeps print sharp for the models and roughly halves the upload on a slow line
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
+
+/** Turns an image clockwise by 90 / 180 / 270 degrees (JPEG) */
+export async function rotateImage(dataUrl: string, degrees: number): Promise<string> {
+  const deg = ((degrees % 360) + 360) % 360;
+  if (!deg) return dataUrl;
+  const img = await loadImage(dataUrl);
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  const canvas = document.createElement("canvas");
+  canvas.width = deg === 180 ? w : h;
+  canvas.height = deg === 180 ? h : w;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl;
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate((deg * Math.PI) / 180);
+  ctx.drawImage(img, -w / 2, -h / 2);
   return canvas.toDataURL("image/jpeg", 0.92);
+}
+
+/** Width / height of an image */
+export async function imageAspect(dataUrl: string): Promise<number> {
+  const img = await loadImage(dataUrl);
+  return img.naturalWidth / Math.max(1, img.naturalHeight);
+}
+
+/**
+ * Asks the server which way the page is turned and returns it upright. Without an AI answer the page is
+ * read by Tesseract at each quarter turn and the turn with the most confident text wins.
+ */
+export async function uprightPage(dataUrl: string): Promise<{ dataUrl: string; rotation: number }> {
+  const small = await prepareOcrImage(dataUrl, 1000);
+  let rotation: number | null = null;
+  try {
+    const res = await fetch("/api/ocr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "orient", imageBase64: small }),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) rotation = Number(data.rotation) || 0;
+  } catch {}
+  if (rotation === null) rotation = await tesseractOrientation(small).catch(() => 0);
+  return { dataUrl: rotation ? await rotateImage(dataUrl, rotation) : dataUrl, rotation };
+}
+
+async function tesseractOrientation(small: string): Promise<number> {
+  const { createWorker } = await import("tesseract.js");
+  const worker = await createWorker(["ara", "eng"], 1);
+  try {
+    let best = { rotation: 0, confidence: -1 };
+    for (const rotation of [0, 90, 270, 180]) {
+      const { data } = await worker.recognize(await rotateImage(small, rotation));
+      if (data.confidence > best.confidence) best = { rotation, confidence: data.confidence };
+      // An upright page usually reads well above this; no need to try the other turns
+      if (rotation === 0 && data.confidence > 70) break;
+    }
+    return best.rotation;
+  } finally {
+    await worker.terminate();
+  }
 }
 
 /**

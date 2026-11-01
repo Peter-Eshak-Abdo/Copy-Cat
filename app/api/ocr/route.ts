@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { transcribeImage } from "@/lib/vision-text";
+import { geminiVisionJson } from "@/lib/gemini";
 
 export const maxDuration = 300;
 
@@ -24,11 +25,15 @@ const MARKUP_RULES = `
 - الأشكال الهندسية والرسوم البيانية والصور والشعارات والأختام والتوقيعات المرسومة: سطر مستقل في مكانها بالصيغة [FIGURE: ymin, xmin, ymax, xmax] حيث الإحداثيات من 0 إلى 1000 بالنسبة للصورة كاملة، والمربع يشمل الشكل كاملاً بكل الحروف والأرقام المكتوبة عليه. لا تكتب النصوص الموجودة داخل الشكل نفسه.
 - مربعات الصور الشخصية أعلى العقود (صورة الزوج / صورة الزوجة) تُكتب كجدول ترويسة: | صورة الزوج | # بسم الله الرحمن الرحيم<br>## <u>عقد زواج عرفي</u> | صورة الزوجة |
 - رقم الصفحة أسفل الورقة مثل (١) يُكتب في سطر مستقل في النهاية.
+- الكتابة بخط اليد (استمارة مملوءة باليد، خطاب أو مذكرة مكتوبة باليد، أسماء وتواريخ في جدول) تُنسخ كاملة في مكانها مثل النص المطبوع تماماً، واقرأها بعناية حسب سياق الجملة: أسماء أشخاص مصرية، تواريخ، أرقام تليفونات، وظائف ومؤهلات.
+- في الاستمارة: اكتب كل حقل بعنوانه المطبوع ثم ما كُتب فيه باليد (مثل: اسم العامل / محمود عبد الفتاح). وخانات الجدول المملوءة باليد تُكتب في خاناتها بنفس ترتيب الأعمدة.
+- الكلمات المشطوب عليها في الأصل لا تُكتب، والكلمة المكتوبة فوق السطر كتصحيح أو إضافة تُكتب في مكانها داخل الجملة.
+- تجاهل تماماً النص الباهت المطبوع على ظهر الورقة والظاهر من خلالها (يظهر معكوساً أو خفيفاً جداً)، والأختام والشخبطة غير المقروءة.
 - ممنوع: كيانات HTML مثل &nbsp; ، الباك سلاش قبل * أو # ، علامات \`\`\` ، أي شرح أو تعليق أو مقدمة.
 `;
 
 const EXTRACT_PROMPT = `
-أنت متخصص في نسخ المستندات الضوئي بدقة حرفية كاملة (عربي / English / Français): عقود، أحكام، استمارات، أوراق امتحانات بها كسور ومعادلات وأشكال وجداول، ومستندات نصية طويلة.
+أنت متخصص في نسخ المستندات الضوئي بدقة حرفية كاملة (عربي / English / Français): عقود، أحكام، استمارات مطبوعة أو مملوءة بخط اليد، خطابات مكتوبة باليد، أوراق امتحانات بها كسور ومعادلات وأشكال وجداول، ومستندات نصية طويلة.
 
 المطلوب: انسخ كل محتوى الصفحة حرفاً بحرف بحيث يمكن إعادة طباعتها في Word مطابقة للأصل.
 
@@ -67,6 +72,10 @@ ${draft}
 """
 `;
 
+const ORIENT_PROMPT = `Look at the text on this scanned page (Arabic, English or French; printed or handwritten).
+Which edge of the image does the TOP of the text lines face (where the title / first line of the document is)?
+Answer JSON only: {"top": "top"} or {"top": "right"} or {"top": "bottom"} or {"top": "left"}`;
+
 function cleanTranscript(text: string): string {
   return text
     .replace(/^```[a-z]*\s*/i, "")
@@ -87,6 +96,15 @@ export async function POST(req: NextRequest) {
     const { action, imageBase64, draft, provider } = await req.json();
     if (!imageBase64) {
       return NextResponse.json({ error: "لم يتم إرسال بيانات الصورة." }, { status: 400 });
+    }
+
+    // Scans and phone photos often arrive sideways: the page asks first which edge the text's top faces
+    // and turns the image upright, so the transcription, the figure boxes and the page shape are right
+    if (action === "orient") {
+      const answer = (await geminiVisionJson(ORIENT_PROMPT, imageBase64, 60)) as { top?: string } | null;
+      const top = String(answer?.top || "").toLowerCase();
+      const rotation = ({ top: 0, right: 270, bottom: 180, left: 90 } as Record<string, number>)[top];
+      return NextResponse.json({ success: rotation !== undefined, rotation: rotation ?? 0 });
     }
 
     if (action === "extract") {

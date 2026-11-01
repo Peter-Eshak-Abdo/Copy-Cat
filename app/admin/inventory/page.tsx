@@ -99,7 +99,7 @@ export default function InventoryPage() {
         setPoolPhotos(data.photos);
       }
     } catch {
-      toast.error("خطأ", "تعذر جلب الصور من بنك الصور");
+      toast.error("الصور مظهرتش", "جرب تاني");
     } finally {
       setIsLoadingPool(false);
     }
@@ -114,11 +114,11 @@ export default function InventoryPage() {
       setImage(compressed);
       setShowAiPrompt(true);
       toast.success(
-        "تم تجهيز وضغط الصورة الرئيسية",
-        "تم حفظها بصيغة WebP خفيفة. هل ترغب بأن يبحث الـ AI عن 3 صور إضافية للمعرض؟"
+        "الصورة الأساسية اتحطت",
+        "عايز الذكاء الاصطناعي يدوّر على 3 صور زيادة للمنتج؟"
       );
     } catch {
-      toast.error("خطأ", "تعذر قراءة ملف الصورة.");
+      toast.error("الصورة مفتحتش", "جرب صورة تانية.");
     } finally {
       setIsUploadingImage(false);
     }
@@ -133,9 +133,9 @@ export default function InventoryPage() {
         files.map((file) => compressImageToWebP(file, 800, 0.82))
       );
       setImages((prev) => [...prev, ...compressedList]);
-      toast.success("تم إضافة الصور للمعرض", `تمت إضافة ${compressedList.length} صور إضافية بنجاح.`);
+      toast.success("الصور اتضافت", `${compressedList.length} صورة زيادة.`);
     } catch {
-      toast.error("خطأ", "تعذر معالجة بعض الصور.");
+      toast.error("في صور مفتحتش", "جرب تاني.");
     } finally {
       setIsUploadingImage(false);
     }
@@ -146,7 +146,7 @@ export default function InventoryPage() {
     const targetImage = providedImage || (image.startsWith("data:") ? image : undefined);
     const targetName = name.trim();
     if (!targetName && !targetImage) {
-      toast.error("بيانات ناقصة", "يرجى كتابة اسم الصنف أو رفع صورة بالهاتف أولاً ليبحث الذكاء الاصطناعي عنها.");
+      toast.error("في حاجة ناقصة", "اكتب اسم المنتج أو صوّره الأول عشان الذكاء الاصطناعي يدوّر.");
       return;
     }
 
@@ -171,14 +171,14 @@ export default function InventoryPage() {
           setAiDetectedName(data.productName);
         }
         toast.success(
-          "تم العثور على صور بالذكاء الاصطناعي!",
-          `تم جلب ${data.allImages.length} صور واضحة جاهزة للاستخدام والمعرض.`
+          "لقينا صور",
+          `${data.allImages.length} صورة للمنتج.`
         );
       } else {
-        toast.info("تنبيه", "لم تتوفر صور إضافية مطابقة، يمكنك تجربة كلمات بحث أخرى.");
+        toast.info("ملقيناش صور", "جرب تكتب اسم المنتج بطريقة تانية.");
       }
     } catch {
-      toast.error("خطأ", "تعذر الاتصال بخدمة البحث الذكي عن الصور.");
+      toast.error("مقدرناش ندوّر", "جرب تاني بعد شوية.");
     } finally {
       setIsAiSearchingImages(false);
     }
@@ -200,7 +200,7 @@ export default function InventoryPage() {
       return combined;
     });
     setAiDiscoveredImages([]);
-    toast.success("تم تطبيق الصور بنجاح!", "تم تعيين الصورة وتغذية المعرض بالصور الإضافية.");
+    toast.success("الصور اتحطت", "الصورة الأساسية والصور الزيادة اتحطوا على المنتج.");
   };
 
   // Load from Supabase with localStorage backup & auto image hydration
@@ -340,11 +340,11 @@ export default function InventoryPage() {
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      toast.error("بيانات غير مكتملة", "يرجى إدخال اسم الصنف أولاً.");
+      toast.error("في حاجة ناقصة", "اكتب اسم المنتج.");
       return;
     }
     if (price === "" || Number(price) < 0) {
-      toast.error("سعر غير صالح", "يرجى إدخال سعر بيع صحيح.");
+      toast.error("السعر غلط", "اكتب سعر البيع.");
       return;
     }
 
@@ -380,7 +380,7 @@ export default function InventoryPage() {
 
     setIsAddingModal(false);
     resetForm();
-    showNotification("تم إضافة الصنف بنجاح!");
+    showNotification("المنتج اتضاف");
 
     if (isSupabaseConfigured) {
       try {
@@ -449,7 +449,7 @@ export default function InventoryPage() {
 
     setEditingItem(null);
     resetForm();
-    showNotification("تم تحديث بيانات الصنف بنجاح!");
+    showNotification("المنتج اتعدل");
 
     if (isSupabaseConfigured) {
       try {
@@ -472,7 +472,7 @@ export default function InventoryPage() {
   };
 
   const handleDeleteItem = async (id: number) => {
-    if (!confirm("هل أنت متأكد من حذف هذا الصنف نهائياً من الكتالوج والمخزن؟")) return;
+    if (!confirm("متأكد إنك عايز تمسح المنتج ده خالص؟")) return;
     const updated = items.filter((item) => item.id !== id);
     setItems(updated);
     try {
@@ -481,7 +481,7 @@ export default function InventoryPage() {
       localStorage.setItem("copycat_custom_images", JSON.stringify(customMap));
       localStorage.setItem("copycat_inventory_v8_local_catalog", JSON.stringify(updated));
     } catch {}
-    showNotification("تم حذف الصنف.");
+    showNotification("المنتج اتمسح");
 
     if (isSupabaseConfigured) {
       try {
@@ -514,8 +514,8 @@ export default function InventoryPage() {
     const opened = openWhatsAppChat(ENGINEER_PHONE_INTL, textMsg);
     if (!opened) {
       toast.info(
-        "تم إنشاء رابط الواتساب",
-        "يرجى السماح بالنوافذ المنبثقة إذا لم يفتح المتصفح تطبيق واتساب تلقائياً."
+        "بنفتح واتساب",
+        "لو واتساب مفتحش، اسمح للموقع يفتح نوافذ جديدة (Pop-ups)."
       );
     }
   };
@@ -549,7 +549,7 @@ export default function InventoryPage() {
       {/* Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-black text-slate-800">إدارة الكتالوج والمخزن</span>
+          <span className="text-sm font-black text-slate-800">المنتجات والمخزن</span>
           <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-100">
             {totalItemsCount} صنف
           </span>
@@ -561,7 +561,7 @@ export default function InventoryPage() {
             className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition"
           >
             <Camera className="w-4 h-4 text-emerald-600" />
-            <span>مكتبة الصور</span>
+            <span>الصور</span>
           </Link>
 
           <button
@@ -572,7 +572,7 @@ export default function InventoryPage() {
             className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>إضافة صنف جديد</span>
+            <span>ضيف منتج</span>
           </button>
         </div>
       </div>
@@ -591,7 +591,7 @@ export default function InventoryPage() {
             <Package className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs text-slate-500 font-bold block">إجمالي أصناف الكتالوج</span>
+            <span className="text-xs text-slate-500 font-bold block">كل المنتجات</span>
             <span className="text-2xl font-black text-slate-900">{totalItemsCount} صنف</span>
           </div>
         </div>
@@ -601,7 +601,7 @@ export default function InventoryPage() {
             <Boxes className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs text-slate-500 font-bold block">الأقسام والتصنيفات</span>
+            <span className="text-xs text-slate-500 font-bold block">الأقسام</span>
             <span className="text-2xl font-black text-cyan-700">{existingCategories.length} قسم</span>
           </div>
         </div>
@@ -626,7 +626,7 @@ export default function InventoryPage() {
             <Camera className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs text-slate-500 font-bold block">بدون صورة (تحتاج تصوير)</span>
+            <span className="text-xs text-slate-500 font-bold block">من غير صورة (محتاجة تتصور)</span>
             <div className="flex items-center gap-2">
               <span className={`text-2xl font-black ${missingImagesCount > 0 ? "text-purple-700" : "text-emerald-700"}`}>
                 {missingImagesCount} صنف
@@ -660,14 +660,14 @@ export default function InventoryPage() {
             {incompleteCount > 0 ? <AlertTriangle className="w-6 h-6" /> : <CheckCircle2 className="w-6 h-6" />}
           </div>
           <div>
-            <span className="text-xs text-slate-500 font-bold block">أصناف ناقصة البيانات</span>
+            <span className="text-xs text-slate-500 font-bold block">ناقصها بيانات</span>
             <div className="flex items-center gap-2">
               <span className={`text-2xl font-black ${incompleteCount > 0 ? "text-amber-700" : "text-emerald-700"}`}>
                 {incompleteCount} صنف
               </span>
               {incompleteCount > 0 && (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
-                  مخفية عن الزبائن
+                  مش ظاهرة للزباين
                 </span>
               )}
             </div>
@@ -682,7 +682,7 @@ export default function InventoryPage() {
             <Search className="w-4 h-4 text-slate-400 absolute right-3 top-3" />
             <input
               type="text"
-              placeholder="بحث بالاسم أو التصنيف أو الملاحظات..."
+              placeholder="دوّر بالاسم أو القسم..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -742,7 +742,7 @@ export default function InventoryPage() {
 
         {/* Completion Status Tabs */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
-          <span className="text-xs font-bold text-slate-400 ml-1">تصفية العرض:</span>
+          <span className="text-xs font-bold text-slate-400 ml-1">وريني:</span>
           <button
             onClick={() => {
               setCompletionFilter("all");
@@ -754,7 +754,7 @@ export default function InventoryPage() {
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200"
             }`}
           >
-            جميع الأصناف ({items.length})
+            الكل ({items.length})
           </button>
           <button
             onClick={() => {
@@ -767,7 +767,7 @@ export default function InventoryPage() {
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200"
             }`}
           >
-            المكتملة المعروضة ({items.length - incompleteCount})
+            الظاهرة للزباين ({items.length - incompleteCount})
           </button>
           <button
             onClick={() => {
@@ -781,7 +781,7 @@ export default function InventoryPage() {
             }`}
           >
             <Camera className="w-3.5 h-3.5" />
-            <span>بدون صورة ({missingImagesCount})</span>
+            <span>من غير صورة ({missingImagesCount})</span>
           </button>
           <button
             onClick={() => {
@@ -795,7 +795,7 @@ export default function InventoryPage() {
             }`}
           >
             <AlertTriangle className="w-3 h-3" />
-            <span>بيانات ناقصة ({incompleteCount})</span>
+            <span>ناقصها بيانات ({incompleteCount})</span>
           </button>
         </div>
       </div>
@@ -810,7 +810,7 @@ export default function InventoryPage() {
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
             className="p-1.5 rounded-lg bg-slate-100 text-slate-600 disabled:opacity-40 hover:bg-slate-200 transition cursor-pointer border border-slate-200"
-            title="الصفحة السابقة"
+            title="اللي قبلها"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -821,7 +821,7 @@ export default function InventoryPage() {
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
             className="p-1.5 rounded-lg bg-slate-100 text-slate-600 disabled:opacity-40 hover:bg-slate-200 transition cursor-pointer border border-slate-200"
-            title="الصفحة التالية"
+            title="اللي بعدها"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -834,12 +834,12 @@ export default function InventoryPage() {
           <table className="w-full text-right text-xs">
             <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
               <tr>
-                <th className="p-3.5">اسم الصنف / الخدمة</th>
-                <th className="p-3.5">التصنيف</th>
-                <th className="p-3.5">سعر البيع للزبون</th>
-                <th className="p-3.5">سعر الجملة والشرط</th>
-                <th className="p-3.5">تفاصيل وملاحظات</th>
-                <th className="p-3.5 text-center">الإجراءات والطلب</th>
+                <th className="p-3.5">المنتج / الخدمة</th>
+                <th className="p-3.5">القسم</th>
+                <th className="p-3.5">سعر البيع</th>
+                <th className="p-3.5">سعر الجملة</th>
+                <th className="p-3.5">ملاحظات</th>
+                <th className="p-3.5 text-center">تعديل وطلب</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-800">
@@ -879,12 +879,12 @@ export default function InventoryPage() {
                           )}
                         </div>
                         <div className="flex flex-col gap-1">
-                          <span>{item.name || "— بدون اسم —"}</span>
+                          <span>{item.name || "— من غير اسم —"}</span>
                           <div className="flex flex-wrap items-center gap-1.5">
                             {incomplete && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 w-fit">
                                 <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                بيانات ناقصة (مخفي عن الزبون)
+                                ناقصه بيانات (الزبون مش شايفه)
                               </span>
                             )}
                             {missingImg && (
@@ -892,10 +892,10 @@ export default function InventoryPage() {
                                 type="button"
                                 onClick={() => handleEditItem(item)}
                                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 w-fit hover:bg-purple-200 cursor-pointer transition"
-                                title="انقر لإضافة صورة للمنتج بالهاتف أو الكاميرا"
+                                title="دوس عشان تصوّر المنتج أو ترفع صورته"
                               >
                                 <Camera className="w-3 h-3 text-purple-600" />
-                                <span>بدون صورة — اضغط للتصوير أو الرفع</span>
+                                <span>من غير صورة — دوس وصوّره</span>
                               </button>
                             )}
                           </div>
@@ -904,14 +904,14 @@ export default function InventoryPage() {
                     </td>
                     <td className="p-3.5">
                       <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap">
-                        {item.category || "غير محدد"}
+                        {item.category || "من غير قسم"}
                       </span>
                     </td>
                     <td className="p-3.5 font-bold whitespace-nowrap">
                       {item.price && item.price > 0 ? (
                         <span className="text-emerald-700">{formatCurrency(item.price)}</span>
                       ) : (
-                        <span className="text-amber-700 text-xs font-bold">⚠️ يلزم تحديد السعر</span>
+                        <span className="text-amber-700 text-xs font-bold">⚠️ اكتب السعر</span>
                       )}
                     </td>
                     <td className="p-3.5 text-xs whitespace-nowrap">
@@ -933,10 +933,10 @@ export default function InventoryPage() {
                             type="button"
                             onClick={() => handleEditItem(item)}
                             className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-800 border border-purple-200 transition cursor-pointer"
-                            title="إضافة صورة للمنتج بالهاتف أو الكاميرا"
+                            title="صوّر المنتج"
                           >
                             <Camera className="w-3.5 h-3.5" />
-                            <span>تصوير</span>
+                            <span>صوّر</span>
                           </button>
                         )}
 
@@ -947,20 +947,20 @@ export default function InventoryPage() {
                           title={`طلب توريد من البشمهندس (${ENGINEER_PHONE_LOCAL})`}
                         >
                           <Send className="w-3.5 h-3.5" />
-                          <span>طلب توريد</span>
+                          <span>اطلبه من المورد</span>
                         </button>
 
                         <button
                           onClick={() => handleEditItem(item)}
                           className="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition cursor-pointer"
-                          title="تعديل بيانات الصنف"
+                          title="عدّل المنتج"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteItem(item.id)}
                           className="p-1.5 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50 transition cursor-pointer"
-                          title="حذف الصنف"
+                          title="امسح المنتج"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -972,7 +972,7 @@ export default function InventoryPage() {
               {filteredItems.length === 0 && (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-slate-400 text-xs">
-                    لا توجد أصناف تطابق معايير الفلترة الحالية
+                    مفيش منتجات كده
                   </td>
                 </tr>
               )}
@@ -1023,7 +1023,7 @@ export default function InventoryPage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">إضافة صنف أو خدمة جديدة</h3>
+              <h3 className="text-lg font-bold text-slate-900">منتج أو خدمة جديدة</h3>
               <button
                 type="button"
                 onClick={() => setIsAddingModal(false)}
@@ -1035,20 +1035,20 @@ export default function InventoryPage() {
 
             <form onSubmit={handleAddItem} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">اسم الصنف أو الخدمة:</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1">الاسم:</label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="مثال: كشكول سلك A4 100 ورقة"
+                  placeholder="مثلاً: كشكول سلك A4 100 ورقة"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:bg-white focus:border-blue-500 focus:outline-none transition"
                 />
               </div>
 
               <div>
                 <label htmlFor="add-item-category-select" className="text-xs font-bold text-slate-700 block mb-1">
-                  التصنيف (اختر من القائمة لمنع الأخطاء):
+                  القسم (اختاره من القايمة):
                 </label>
                 <select
                   id="add-item-category-select"
@@ -1069,7 +1069,7 @@ export default function InventoryPage() {
                       {cat}
                     </option>
                   ))}
-                  <option value="__NEW__">+ إضافة تصنيف جديد يدوي...</option>
+                  <option value="__NEW__">+ قسم جديد...</option>
                 </select>
 
                 {isCustomCategory && (
@@ -1078,14 +1078,14 @@ export default function InventoryPage() {
                     required
                     value={customCategory}
                     onChange={(e) => setCustomCategory(e.target.value)}
-                    placeholder="اكتب اسم التصنيف الجديد هنا..."
+                    placeholder="اسم القسم الجديد..."
                     className="w-full mt-2 bg-slate-50 border border-blue-500 rounded-xl p-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none transition"
                   />
                 )}
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">سعر البيع العادي (ج.م):</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1">سعر البيع (ج.م):</label>
                 <input
                   type="number"
                   step="0.5"
@@ -1106,29 +1106,29 @@ export default function InventoryPage() {
                     step="0.5"
                     value={wholesalePrice}
                     onChange={(e) => setWholesalePrice(e.target.value ? Number(e.target.value) : "")}
-                    placeholder="مثال: 18.00"
+                    placeholder="مثلاً: 18"
                     className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs text-slate-900 focus:border-cyan-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-cyan-800 block mb-1">كمية الجملة:</label>
+                  <label className="text-xs font-bold text-cyan-800 block mb-1">الجملة من كام قطعة:</label>
                   <input
                     type="number"
                     value={wholesaleMinQty}
                     onChange={(e) => setWholesaleMinQty(e.target.value ? Number(e.target.value) : "")}
-                    placeholder="مثال: 12"
+                    placeholder="مثلاً: 12"
                     className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs text-slate-900 focus:border-cyan-500 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">ملاحظات وتفاصيل الخدمة:</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1">ملاحظات:</label>
                 <input
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="مقاس، خامة، تفاصيل العرض..."
+                  placeholder="المقاس، الخامة، العرض..."
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:bg-white focus:border-blue-500 focus:outline-none transition"
                 />
               </div>
@@ -1138,10 +1138,10 @@ export default function InventoryPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
-                    <span>صور المنتج (الرئيسية والمعرض)</span>
+                    <span>صور المنتج</span>
                   </span>
                   <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    ضغط WebP فائق
+                    صور خفيفة
                   </span>
                 </div>
 
@@ -1151,7 +1151,7 @@ export default function InventoryPage() {
                     <div className="flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
                       <span className="text-xs font-bold text-blue-900">
-                        مساعد الـ AI لجلب صور المنتج والمعرض
+                        خلّي الذكاء الاصطناعي يجيب صور للمنتج
                       </span>
                     </div>
                     <button
@@ -1163,26 +1163,26 @@ export default function InventoryPage() {
                       {isAiSearchingImages ? (
                         <>
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>جاري البحث بالـ AI...</span>
+                          <span>بندوّر...</span>
                         </>
                       ) : (
                         <>
                           <Search className="w-3.5 h-3.5" />
-                          <span>بحث ذكي عن صور</span>
+                          <span>دوّر على صور</span>
                         </>
                       )}
                     </button>
                   </div>
 
                   <p className="text-[11px] text-slate-600 leading-relaxed">
-                    اكتب اسم الصنف أو التقط له صورة بالهاتف؛ وسيقوم الـ AI بالتعرف عليه وجلب صور عالية الجودة للمعرض بنقرة واحدة!
+                    اكتب اسم المنتج أو صوّره بالموبايل، والذكاء الاصطناعي هيعرفه ويجيبله صور.
                   </p>
 
                   {/* Prompt when phone photo uploaded */}
                   {showAiPrompt && (
                     <div className="bg-white border border-blue-200 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-xs">
                       <p className="text-xs text-blue-900 font-medium">
-                        📸 تم رفع صورة للمنتج! هل ترغب بأن يبحث الـ AI عن 3 صور إضافية للمعرض؟
+                        📸 الصورة اترفعت. عايز الذكاء الاصطناعي يدوّر على 3 صور زيادة؟
                       </p>
                       <button
                         type="button"
@@ -1190,7 +1190,7 @@ export default function InventoryPage() {
                         disabled={isAiSearchingImages}
                         className="shrink-0 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-lg transition cursor-pointer shadow-xs"
                       >
-                        نعم، ابحث الآن
+                        أيوه، دوّر
                       </button>
                     </div>
                   )}
@@ -1201,14 +1201,14 @@ export default function InventoryPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-emerald-700 font-bold flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>الصور التي عثر عليها الـ AI ({aiDiscoveredImages.length}):</span>
+                          <span>الصور اللي لقيناها ({aiDiscoveredImages.length}):</span>
                         </span>
                         <button
                           type="button"
                           onClick={applyAiImagesAll}
                           className="text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-lg shadow-xs cursor-pointer transition"
                         >
-                          ✓ تطبيق الكل (+3 صور)
+                          ✓ حطهم كلهم
                         </button>
                       </div>
                       <div className="grid grid-cols-4 gap-2">
@@ -1231,21 +1231,21 @@ export default function InventoryPage() {
                                 type="button"
                                 onClick={() => {
                                   setImage(imgUrl);
-                                  toast.success("تم تعيين الصورة كرئيسية");
+                                  toast.success("بقت الصورة الأساسية");
                                 }}
                                 className="text-[10px] font-bold bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded w-full text-center cursor-pointer"
                               >
-                                رئيسية
+                                أساسية
                               </button>
                               <button
                                 type="button"
                                 onClick={() => {
                                   setImages((prev) => [...prev, imgUrl]);
-                                  toast.success("تمت الإضافة للمعرض");
+                                  toast.success("اتضافت");
                                 }}
                                 className="text-[10px] font-bold bg-slate-800 hover:bg-slate-900 text-white px-2 py-0.5 rounded w-full text-center cursor-pointer"
                               >
-                                + للمعرض
+                                + صورة زيادة
                               </button>
                             </div>
                           </div>
@@ -1262,12 +1262,12 @@ export default function InventoryPage() {
                   className="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
                 >
                   <ImageIcon className="w-4 h-4 text-emerald-600" />
-                  <span>اختيار من بنك صور فيسبوك والكاميرا ({poolPhotos.length || "150+"} صورة)</span>
+                  <span>اختار من الصور المتسجلة ({poolPhotos.length || "150+"} صورة)</span>
                 </button>
 
                 {/* Main Image */}
                 <div>
-                  <label className="text-[11px] text-slate-600 font-bold block mb-1">الصورة الرئيسية للكارت:</label>
+                  <label className="text-[11px] text-slate-600 font-bold block mb-1">الصورة الأساسية:</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="file"
@@ -1303,14 +1303,14 @@ export default function InventoryPage() {
                     type="text"
                     value={image}
                     onChange={(e) => setImage(e.target.value)}
-                    placeholder="أو ضع رابط مباشر للصورة (URL)..."
+                    placeholder="أو الزق رابط الصورة..."
                     className="w-full mt-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 {/* Gallery Images */}
                 <div>
-                  <label className="text-[11px] text-slate-600 font-bold block mb-1">صور إضافية لمعرض التفاصيل (Gallery):</label>
+                  <label className="text-[11px] text-slate-600 font-bold block mb-1">صور زيادة:</label>
                   <input
                     type="file"
                     multiple
@@ -1361,7 +1361,7 @@ export default function InventoryPage() {
                   type="submit"
                   className="w-1/2 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
                 >
-                  حفظ الصنف
+                  احفظ المنتج
                 </button>
               </div>
             </form>
@@ -1374,7 +1374,7 @@ export default function InventoryPage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">تعديل الصنف / الخدمة</h3>
+              <h3 className="text-lg font-bold text-slate-900">عدّل المنتج</h3>
               <button
                 type="button"
                 onClick={() => setEditingItem(null)}
@@ -1386,7 +1386,7 @@ export default function InventoryPage() {
 
             <form onSubmit={handleUpdateItem} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">اسم الصنف:</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1">الاسم:</label>
                 <input
                   type="text"
                   required
@@ -1419,7 +1419,7 @@ export default function InventoryPage() {
                       {cat}
                     </option>
                   ))}
-                  <option value="__NEW__">+ إضافة تصنيف جديد يدوي...</option>
+                  <option value="__NEW__">+ قسم جديد...</option>
                 </select>
 
                 {isCustomCategory && (
@@ -1428,14 +1428,14 @@ export default function InventoryPage() {
                     required
                     value={customCategory}
                     onChange={(e) => setCustomCategory(e.target.value)}
-                    placeholder="اكتب اسم التصنيف الجديد هنا..."
+                    placeholder="اسم القسم الجديد..."
                     className="w-full mt-2 bg-slate-50 border border-blue-500 rounded-xl p-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none transition"
                   />
                 )}
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">سعر البيع العادي (ج.م):</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1">سعر البيع (ج.م):</label>
                 <input
                   type="number"
                   step="0.5"
@@ -1455,17 +1455,17 @@ export default function InventoryPage() {
                     step="0.5"
                     value={wholesalePrice}
                     onChange={(e) => setWholesalePrice(e.target.value ? Number(e.target.value) : "")}
-                    placeholder="مثال: 18.00"
+                    placeholder="مثلاً: 18"
                     className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs text-slate-900 focus:border-cyan-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-cyan-800 block mb-1">كمية الجملة:</label>
+                  <label className="text-xs font-bold text-cyan-800 block mb-1">الجملة من كام قطعة:</label>
                   <input
                     type="number"
                     value={wholesaleMinQty}
                     onChange={(e) => setWholesaleMinQty(e.target.value ? Number(e.target.value) : "")}
-                    placeholder="مثال: 12"
+                    placeholder="مثلاً: 12"
                     className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs text-slate-900 focus:border-cyan-500 focus:outline-none"
                   />
                 </div>
@@ -1486,10 +1486,10 @@ export default function InventoryPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
-                    <span>صور المنتج (الرئيسية والمعرض)</span>
+                    <span>صور المنتج</span>
                   </span>
                   <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    ضغط WebP فائق
+                    صور خفيفة
                   </span>
                 </div>
 
@@ -1499,7 +1499,7 @@ export default function InventoryPage() {
                     <div className="flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
                       <span className="text-xs font-bold text-blue-900">
-                        مساعد الـ AI لجلب صور المنتج والمعرض
+                        خلّي الذكاء الاصطناعي يجيب صور للمنتج
                       </span>
                     </div>
                     <button
@@ -1511,26 +1511,26 @@ export default function InventoryPage() {
                       {isAiSearchingImages ? (
                         <>
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>جاري البحث بالـ AI...</span>
+                          <span>بندوّر...</span>
                         </>
                       ) : (
                         <>
                           <Search className="w-3.5 h-3.5" />
-                          <span>بحث ذكي عن صور</span>
+                          <span>دوّر على صور</span>
                         </>
                       )}
                     </button>
                   </div>
 
                   <p className="text-[11px] text-slate-600 leading-relaxed">
-                    اكتب اسم الصنف أو التقط له صورة بالهاتف؛ وسيقوم الـ AI بالتعرف عليه وجلب صور عالية الجودة للمعرض بنقرة واحدة!
+                    اكتب اسم المنتج أو صوّره بالموبايل، والذكاء الاصطناعي هيعرفه ويجيبله صور.
                   </p>
 
                   {/* Prompt when phone photo uploaded */}
                   {showAiPrompt && (
                     <div className="bg-white border border-blue-200 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-xs">
                       <p className="text-xs text-blue-900 font-medium">
-                        📸 تم رفع صورة للمنتج! هل ترغب بأن يبحث الـ AI عن 3 صور إضافية للمعرض؟
+                        📸 الصورة اترفعت. عايز الذكاء الاصطناعي يدوّر على 3 صور زيادة؟
                       </p>
                       <button
                         type="button"
@@ -1538,7 +1538,7 @@ export default function InventoryPage() {
                         disabled={isAiSearchingImages}
                         className="shrink-0 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-lg transition cursor-pointer shadow-xs"
                       >
-                        نعم، ابحث الآن
+                        أيوه، دوّر
                       </button>
                     </div>
                   )}
@@ -1549,14 +1549,14 @@ export default function InventoryPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-emerald-700 font-bold flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>الصور التي عثر عليها الـ AI ({aiDiscoveredImages.length}):</span>
+                          <span>الصور اللي لقيناها ({aiDiscoveredImages.length}):</span>
                         </span>
                         <button
                           type="button"
                           onClick={applyAiImagesAll}
                           className="text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-lg shadow-xs cursor-pointer transition"
                         >
-                          ✓ تطبيق الكل (+3 صور)
+                          ✓ حطهم كلهم
                         </button>
                       </div>
                       <div className="grid grid-cols-4 gap-2">
@@ -1579,21 +1579,21 @@ export default function InventoryPage() {
                                 type="button"
                                 onClick={() => {
                                   setImage(imgUrl);
-                                  toast.success("تم تعيين الصورة كرئيسية");
+                                  toast.success("بقت الصورة الأساسية");
                                 }}
                                 className="text-[10px] font-bold bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded w-full text-center cursor-pointer"
                               >
-                                رئيسية
+                                أساسية
                               </button>
                               <button
                                 type="button"
                                 onClick={() => {
                                   setImages((prev) => [...prev, imgUrl]);
-                                  toast.success("تمت الإضافة للمعرض");
+                                  toast.success("اتضافت");
                                 }}
                                 className="text-[10px] font-bold bg-slate-800 hover:bg-slate-900 text-white px-2 py-0.5 rounded w-full text-center cursor-pointer"
                               >
-                                + للمعرض
+                                + صورة زيادة
                               </button>
                             </div>
                           </div>
@@ -1610,12 +1610,12 @@ export default function InventoryPage() {
                   className="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
                 >
                   <ImageIcon className="w-4 h-4 text-emerald-600" />
-                  <span>اختيار من بنك صور فيسبوك والكاميرا ({poolPhotos.length || "150+"} صورة)</span>
+                  <span>اختار من الصور المتسجلة ({poolPhotos.length || "150+"} صورة)</span>
                 </button>
 
                 {/* Main Image */}
                 <div>
-                  <label className="text-[11px] text-slate-600 font-bold block mb-1">الصورة الرئيسية للكارت:</label>
+                  <label className="text-[11px] text-slate-600 font-bold block mb-1">الصورة الأساسية:</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="file"
@@ -1651,14 +1651,14 @@ export default function InventoryPage() {
                     type="text"
                     value={image}
                     onChange={(e) => setImage(e.target.value)}
-                    placeholder="أو ضع رابط مباشر للصورة (URL)..."
+                    placeholder="أو الزق رابط الصورة..."
                     className="w-full mt-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 {/* Gallery Images */}
                 <div>
-                  <label className="text-[11px] text-slate-600 font-bold block mb-1">صور إضافية لمعرض التفاصيل (Gallery):</label>
+                  <label className="text-[11px] text-slate-600 font-bold block mb-1">صور زيادة:</label>
                   <input
                     type="file"
                     multiple
@@ -1710,7 +1710,7 @@ export default function InventoryPage() {
                   className="w-1/2 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Save className="w-4 h-4" />
-                  <span>حفظ التعديلات</span>
+                  <span>احفظ</span>
                 </button>
               </div>
             </form>
@@ -1728,8 +1728,8 @@ export default function InventoryPage() {
                   <ImageIcon className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">بنك ومكتبة صور المنتجات</h3>
-                  <p className="text-xs text-slate-500">اختر أي صورة لتعيينها للصنف أو إضافتها للمعرض بنقرة واحدة</p>
+                  <h3 className="text-base font-bold text-slate-900">صور المنتجات</h3>
+                  <p className="text-xs text-slate-500">اختار صورة وحطها على المنتج</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -1738,7 +1738,7 @@ export default function InventoryPage() {
                   target="_blank"
                   className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
                 >
-                  <span>إدارة البنك</span>
+                  <span>كل الصور</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </Link>
                 <button
@@ -1757,7 +1757,7 @@ export default function InventoryPage() {
                 <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="ابحث باسم الصورة..."
+                  placeholder="دوّر باسم الصورة..."
                   value={poolSearch}
                   onChange={(e) => setPoolSearch(e.target.value)}
                   className="w-full pl-3 pr-9 py-2 text-xs bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-emerald-500"
@@ -1770,11 +1770,11 @@ export default function InventoryPage() {
               {isLoadingPool ? (
                 <div className="py-12 text-center text-slate-500 text-xs flex flex-col items-center gap-2">
                   <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-                  <span>جاري تحميل الصور من البنك...</span>
+                  <span>بنجيب الصور...</span>
                 </div>
               ) : poolPhotos.length === 0 ? (
                 <div className="py-12 text-center text-slate-500 text-xs">
-                  لا توجد صور في البنك حالياً. يمكنك رفع صور من صفحة إدارة الصور.
+                  مفيش صور لسه. ارفع صور من صفحة صور المنتجات.
                 </div>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
@@ -1798,22 +1798,22 @@ export default function InventoryPage() {
                             type="button"
                             onClick={() => {
                               setImage(p.url);
-                              toast.success("تم تعيين الصورة كرئيسية");
+                              toast.success("بقت الصورة الأساسية");
                               setShowPoolPicker(false);
                             }}
                             className="w-full py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold shadow-xs cursor-pointer"
                           >
-                            ✓ كصورة رئيسية
+                            ✓ أساسية
                           </button>
                           <button
                             type="button"
                             onClick={() => {
                               setImages((prev) => [...prev, p.url]);
-                              toast.success("تمت الإضافة لمعرض الصور");
+                              toast.success("اتضافت");
                             }}
                             className="w-full py-1 rounded bg-slate-800 hover:bg-slate-900 text-white text-[10px] font-bold cursor-pointer"
                           >
-                            + للمعرض
+                            + صورة زيادة
                           </button>
                         </div>
                       </div>
@@ -1828,7 +1828,7 @@ export default function InventoryPage() {
                 onClick={() => setShowPoolPicker(false)}
                 className="px-4 py-1.5 text-xs rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold border border-slate-200 cursor-pointer"
               >
-                إغلاق
+                اقفل
               </button>
             </div>
           </div>

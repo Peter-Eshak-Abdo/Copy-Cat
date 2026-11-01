@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import NextImage from "next/image";
 import {
   Upload,
@@ -20,13 +20,36 @@ import {
   Printer,
   Sliders,
   FileText,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { generateIdCardsDocx, PaperSize, DuplexAlignment } from "@/lib/docx/id-cards-docx";
 import { processImageOnCanvas, CropRect, QuadCorners, Point2D, detectCardCorners } from "@/lib/canvas-filters";
 import { detectCardCornersOpenCV } from "@/lib/opencv-loader";
 import { useToast } from "@/components/toast-provider";
+import { detectHeadLocally, warmUpFaceDetector } from "@/lib/face-fallback";
+
+/** Portrait on a straightened card side (in-browser BlazeFace); null on a back side */
+async function findFaceOnCard(src: string): Promise<{ rotation: number } | null> {
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = reject;
+      el.src = src;
+    });
+    const c = document.createElement("canvas");
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    c.getContext("2d")?.drawImage(img, 0, 0);
+    const face = await detectHeadLocally(c);
+    return face ? { rotation: face.rotation } : null;
+  } catch {
+    return null;
+  }
+}
 import { readFileAsDataURL, getFriendlyErrorMessage } from "@/lib/utils";
-import { pairCardSides, type ScannedSide } from "@/lib/card-pairing";
+import { landscapeQuad, pairCardSides, sameCardNumber, turnQuad, type ScannedSide } from "@/lib/card-pairing";
 
 interface CardSide {
   id: string;
@@ -45,6 +68,8 @@ interface CardSide {
   sideType: "front" | "back";
   crop?: CropRect;
   quad?: QuadCorners;
+  /** Side and national number the AI read, used to complete a card from a later upload */
+  scan?: ScannedSide;
 }
 
 interface CardPair {
@@ -186,7 +211,7 @@ export default function IdCardsPage() {
         const ctx = c.getContext("2d");
         if (ctx) {
           ctx.drawImage(img, 0, 0, w, h);
-          resolve(c.toDataURL("image/jpeg", 0.92));
+          resolve(c.toDataURL("image/jpeg", 0.86));
         } else {
           resolve(dataUrl);
         }
@@ -196,145 +221,229 @@ export default function IdCardsPage() {
     });
   };
 
-  const processFiles = async (fileList: File[]) => {
-    if (!fileList || fileList.length === 0) return;
+  // Upload queue: photos dropped while a batch is running join that batch instead of starting a second
+  // run that raced the first one (the first batch never showed up)
+  const queueRef = useRef<File[]>([]);
+  // The face detector (fallback for front / back and direction) downloads in the background on page open
+  useEffect(() => {
+    const t = window.setTimeout(warmUpFaceDetector, 1500);
+    return () => window.clearTimeout(t);
+  }, []);
+  const runningRef = useRef(false);
+  const [progress, setProgress] = useState<{ total: number; done: number } | null>(null);
 
-    const loadedSides: CardSide[] = [];
-    // Front/back + national number read by the AI for each loaded side (same order as loadedSides)
-    const scanned: ScannedSide[] = [];
-    let invalidCount = 0;
+  /** Straightens one photo: AI corners and direction, OpenCV / Sobel edges as fallback */
+  const processOneSide = async (file: File): Promise<{ side: CardSide; scan: ScannedSide }> => {
+    const originalSrc = await readAndOptimizeImage(file);
 
-    for (let i = 0; i < fileList.length; i++) {
-      const file = fileList[i];
-      if (!file.type.startsWith("image/")) {
-        invalidCount++;
-        continue;
-      }
+    // 1. AI corners first: edge detectors latch onto fingers, desk grain and backgrounds, while the
+    // vision model finds the card itself and extends its edges under a thumb. The corners come back already
+    // renamed for the card's own direction, so a card photographed sideways comes out upright.
+    let aiQuad: QuadCorners | null = null;
+    let aiTurned = false;
+    let scan: ScannedSide = { side: "unknown", nationalId: null };
+    try {
+      const res = await fetch("/api/admin/card-align", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: originalSrc }),
+      });
+      const data = await res.json();
+      if (data.success && data.corners) aiQuad = data.corners;
+      aiTurned = typeof data.rotation === "number";
+      scan = {
+        side: data.side === "front" || data.side === "back" ? data.side : "unknown",
+        nationalId: data.nationalId || null,
+        idTail: data.idTail || null,
+      };
+    } catch {}
 
+    const img = await new Promise<HTMLImageElement | null>((resolve) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => resolve(null);
+      el.src = originalSrc;
+    });
+    const inset: QuadCorners = {
+      tl: { x: 0.04, y: 0.06 },
+      tr: { x: 0.96, y: 0.06 },
+      br: { x: 0.96, y: 0.94 },
+      bl: { x: 0.04, y: 0.94 },
+    };
+
+    // 2. Fallback: OpenCV or native Canvas Sobel edge detection
+    let quad: QuadCorners = aiQuad ?? inset;
+    if (!aiQuad && img) {
       try {
-        const originalSrc = await readAndOptimizeImage(file);
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        const ctx = c.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          quad =
+            window.cv && window.cv.Mat
+              ? await detectCardCornersOpenCV(c).catch(() => detectCardCorners(c))
+              : detectCardCorners(c);
+        }
+      } catch {}
+    }
+    // Without the AI's direction a card is at least made landscape (a sideways photo came out squashed)
+    if (!aiTurned && img) quad = landscapeQuad(quad, img.naturalWidth, img.naturalHeight) as QuadCorners;
 
-        // 1. AI corners first: edge detectors latch onto fingers, desk grain and backgrounds, while the
-        // vision model finds the card itself and extends its edges under a thumb.
-        let aiQuad: QuadCorners | null = null;
-        let sideInfo: ScannedSide = { side: "unknown", nationalId: null };
-        try {
-          const res = await fetch("/api/admin/card-align", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ imageBase64: originalSrc }),
-          });
-          const data = await res.json();
-          if (data.success && data.corners) aiQuad = data.corners;
-          if (data.side === "front" || data.side === "back") sideInfo = { side: data.side, nationalId: data.nationalId };
-          else if (data.nationalId) sideInfo = { side: "unknown", nationalId: data.nationalId };
-        } catch {}
+    // 3. Perspective warp, CamScanner whitening and sharpening
+    const initialBrightness = 118;
+    const initialContrast = 105;
+    const initialSharpness = 45;
+    const warp = (q: QuadCorners) =>
+      processSideImage(originalSrc, initialBrightness, initialContrast, initialSharpness, 0, undefined, q, true, false);
+    let processedSrc = await warp(quad);
 
-        // 2. Fallback: OpenCV or native Canvas Sobel edge detection
-        const autoQuad = aiQuad ?? await new Promise<QuadCorners>((resolve) => {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.src = originalSrc;
-          img.onload = async () => {
-            try {
-              const c = document.createElement("canvas");
-              c.width = img.naturalWidth || img.width;
-              c.height = img.naturalHeight || img.height;
-              const ctx = c.getContext("2d");
-              if (ctx) {
-                ctx.drawImage(img, 0, 0);
-                if (typeof window !== "undefined" && window.cv && window.cv.Mat) {
-                  try {
-                    const cvQuad = await detectCardCornersOpenCV(c);
-                    resolve(cvQuad);
-                    return;
-                  } catch {}
-                }
-                const q = detectCardCorners(c);
-                resolve(q);
-                return;
-              }
-            } catch {}
-            // Fallback: standard 4% inset
-            resolve({
-              tl: { x: 0.04, y: 0.06 },
-              tr: { x: 0.96, y: 0.06 },
-              br: { x: 0.96, y: 0.94 },
-              bl: { x: 0.04, y: 0.94 },
-            });
-          };
-          img.onerror = () => {
-            resolve({
-              tl: { x: 0.04, y: 0.06 },
-              tr: { x: 0.96, y: 0.06 },
-              br: { x: 0.96, y: 0.94 },
-              bl: { x: 0.04, y: 0.94 },
-            });
-          };
-        });
-
-        // 3. Automatically process with quad perspective warp, CamScanner Retinex whitening & high sharpness
-        const initialBrightness = 118;
-        const initialContrast = 105;
-        const initialSharpness = 45;
-
-        const processedSrc = await processSideImage(
-          originalSrc,
-          initialBrightness,
-          initialContrast,
-          initialSharpness,
-          0,
-          undefined,
-          autoQuad,
-          true, // camScannerMode = true
-          false
-        );
-
-        loadedSides.push({
-          id: Math.random().toString(36).substring(2, 9),
-          name: file.name,
-          originalSrc,
-          processedSrc,
-          rotation: 0,
-          brightness: initialBrightness,
-          contrast: initialContrast,
-          sharpness: initialSharpness,
-          bakedBrightness: initialBrightness,
-          bakedContrast: initialContrast,
-          bakedSharpness: initialSharpness,
-          thresholdMode: false,
-          sideType: sideInfo.side === "back" ? "back" : "front",
-          quad: autoQuad,
-          camScannerMode: true,
-        });
-        scanned.push(sideInfo);
-      } catch (err) {
-        console.error(`Error reading card image ${file.name}:`, err);
-        invalidCount++;
+    // 4. No answer from the AI about the side (quota used up, no internet): the front is the side with the
+    // portrait, so the face detector in the browser decides, and the face's direction turns the card upright
+    if (scan.side === "unknown" || !aiTurned) {
+      const face = await findFaceOnCard(processedSrc);
+      if (scan.side === "unknown") scan = { ...scan, side: face ? "front" : "back" };
+      if (face && face.rotation && !aiTurned) {
+        quad = turnQuad(quad, face.rotation) as QuadCorners;
+        processedSrc = await warp(quad);
       }
     }
 
-    // Front with its own back by national number; a card without a scanned back keeps that side empty
-    const newPairs: CardPair[] = pairCardSides(scanned).map((p, idx) => ({
-      pairId: Math.random().toString(36).substring(2, 9),
-      cardName: `بطاقة رقم ${pairs.length + idx + 1}${p.nationalId ? ` (${p.nationalId})` : ""}`,
-      front: p.front !== null ? { ...loadedSides[p.front], sideType: "front" } : null,
-      back: p.back !== null ? { ...loadedSides[p.back], sideType: "back" } : null,
-    }));
+    return {
+      scan,
+      side: {
+        id: Math.random().toString(36).substring(2, 9),
+        name: file.name,
+        originalSrc,
+        processedSrc,
+        rotation: 0,
+        brightness: initialBrightness,
+        contrast: initialContrast,
+        sharpness: initialSharpness,
+        bakedBrightness: initialBrightness,
+        bakedContrast: initialContrast,
+        bakedSharpness: initialSharpness,
+        thresholdMode: false,
+        sideType: scan.side === "back" ? "back" : "front",
+        quad,
+        camScannerMode: true,
+        scan,
+      },
+    };
+  };
 
-    setPairs((prev) => [...prev, ...newPairs]);
-
-    if (newPairs.length > 0) {
-      toast.success(
-        "تم استيراد صور البطاقات وتحديد أركانها بنجاح",
-        `تمت إضافة ${loadedSides.length} صورة (${newPairs.length} بطاقة): تم ترتيب كل وجه مع ظهره بالرقم القومي، والبطاقة التي ليس لها ظهر تُركت بظهر فارغ.`
+  /** Pairs a finished batch, and lets a lone side complete an earlier card that is missing it */
+  const addBatch = (batch: Array<{ side: CardSide; scan: ScannedSide }>) => {
+    const pairing = pairCardSides(batch.map((b) => b.scan));
+    setPairs((prev) => {
+      const merged = prev.map((p) => ({ ...p }));
+      const fresh: CardPair[] = [];
+      for (const p of pairing) {
+        const front = p.front !== null ? { ...batch[p.front].side, sideType: "front" as const } : null;
+        const back = p.back !== null ? { ...batch[p.back].side, sideType: "back" as const } : null;
+        const lone = front ?? back;
+        if (lone?.scan && !(front && back)) {
+          const loneScan = lone.scan;
+          const target = merged.find((m) => {
+            const have = front ? m.back : m.front;
+            const missing = front ? m.front : m.back;
+            return !missing && !!have?.scan && sameCardNumber(have.scan, loneScan);
+          });
+          if (target) {
+            if (front) target.front = front;
+            else target.back = back;
+            continue;
+          }
+        }
+        const label = p.nationalId || (p.idTail ? `...${p.idTail}` : "");
+        fresh.push({
+          pairId: Math.random().toString(36).substring(2, 9),
+          cardName: `بطاقة ${merged.length + fresh.length + 1}${label ? ` (${label})` : ""}${
+            p.guessed ? " - اتأكد إن الوش مع ضهره" : ""
+          }`,
+          front,
+          back,
+        });
+      }
+      return [...merged, ...fresh];
+    });
+    const cards = pairing.length;
+    const complete = pairing.filter((p) => p.front !== null && p.back !== null).length;
+    const guessedCount = pairing.filter((p) => p.guessed).length;
+    if (guessedCount > 0) {
+      toast.warning(
+        "رقم قومي مش مقري",
+        `${guessedCount} بطاقة اتحط وشها مع ضهرها بترتيب الرفع مش بالرقم القومي. بص عليهم، ولو في غلط استخدم زرار «بدّل الوش والضهر».`
       );
     }
-    if (invalidCount > 0) {
-      toast.warning("تنبيه", `تم تخطي ${invalidCount} ملفات غير صالحة.`);
+    toast.success(
+      "الصور جاهزة",
+      `ظبطنا ${batch.length} صورة: ${complete} بطاقة وشها مع ضهرها${
+        cards - complete
+          ? `، و${cards - complete} ناقصها وش أو ضهر (لو ليها صورة تانية ارفعها وهتتحط مكانها لوحدها)`
+          : ""
+      }.`
+    );
+  };
+
+  const processFiles = async (fileList: File[]) => {
+    if (!fileList || fileList.length === 0) return;
+    const images = fileList.filter((f) => f.type.startsWith("image/"));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (images.length < fileList.length) {
+      toast.warning("في ملفات اتسابت", `${fileList.length - images.length} ملف مش صور، سبناهم.`);
+    }
+    if (images.length === 0) return;
+
+    queueRef.current.push(...images);
+    setProgress((p) => ({ total: (p?.total ?? 0) + images.length, done: p?.done ?? 0 }));
+    if (runningRef.current) {
+      toast.info("ضفناهم على الشغل", `${images.length} صورة زيادة، هنظبطهم مع اللي شغالين فيهم.`);
+      return;
     }
 
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    toast.info("استلمنا الصور", `${images.length} صورة، بنظبطهم دلوقتي...`);
+    runningRef.current = true;
+    const batch: Array<{ side: CardSide; scan: ScannedSide }> = [];
+    let failed = 0;
+    try {
+      // Two photos at a time (more only hits the AI's per-minute limit); results keep the upload order
+      while (queueRef.current.length > 0) {
+        const chunk = queueRef.current.splice(0, 2);
+        const results = await Promise.all(
+          chunk.map((f) =>
+            processOneSide(f).catch((err) => {
+              console.error(`Error reading card image ${f.name}:`, err);
+              return null;
+            })
+          )
+        );
+        for (const r of results) {
+          if (r) batch.push(r);
+          else failed++;
+        }
+        setProgress((p) => (p ? { ...p, done: p.done + chunk.length } : p));
+      }
+      if (batch.length > 0) addBatch(batch);
+      if (failed > 0) toast.warning("في صور معرفناش نفتحها", `${failed} صورة باظت أو مش مدعومة.`);
+    } finally {
+      runningRef.current = false;
+      setProgress(null);
+    }
+  };
+
+  /** Quarter turn of a straightened side (the corners are renamed, so the warp itself turns) */
+  const turnSideQuarter = (pairId: string, side: "front" | "back") => {
+    const target = pairs.find((p) => p.pairId === pairId)?.[side];
+    if (!target) return;
+    const quad: QuadCorners = target.quad ?? {
+      tl: { x: 0, y: 0 },
+      tr: { x: 1, y: 0 },
+      br: { x: 1, y: 1 },
+      bl: { x: 0, y: 1 },
+    };
+    updateSideProperty(pairId, side, { quad: turnQuad(quad, 90) as QuadCorners });
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -631,7 +740,7 @@ export default function IdCardsPage() {
     );
 
     setPairs(updated);
-    toast.success("تم تطبيق التفتيح العام", "تم حفظ نقاء الألوان وسواد الأرقام في كافة البطاقات.");
+    toast.success("الفلتر اتطبق على الكل", "كل البطاقات اتفتحت والأرقام فضلت واضحة.");
   };
 
   // Apply fine rotation from modal
@@ -697,7 +806,7 @@ export default function IdCardsPage() {
     );
 
     setCropTarget(null);
-    toast.success("تم قص وتعديل المنظور بنجاح", "تمت محاذاة أركان البطاقة الأربعة وتحويلها لكادر مستوي قياسي بجودة فائقة.");
+    toast.success("البطاقة اتقصت واتعدلت", "عدّل القص اتظبطت والبطاقة بقت مفرودة.");
   };
 
   // Auto-detect corners with instant native canvas Sobel edge detection (or OpenCV if available)
@@ -721,8 +830,8 @@ export default function IdCardsPage() {
         }
         setQuadCorners(detected);
         toast.success(
-          "تم كشف زوايا البطاقة تلقائياً ✨",
-          "تم رصد أركان البطاقة الأربعة بنجاح، يمكنك تعديل أي نقطة يدوياً بالماوس."
+          "لقينا أركان البطاقة ✨",
+          "لو في ركن مش مظبوط اسحبه بالماوس."
         );
       }
     };
@@ -744,8 +853,8 @@ export default function IdCardsPage() {
       if (data.success && data.corners) {
         setQuadCorners(data.corners);
         toast.success(
-          "تم التقاط أركان البطاقة بالذكاء الاصطناعي ✨",
-          "تم رصد حدود الكارت بدقة فائقة وتجاوز أصابع اليد والمكتب."
+          "الذكاء الاصطناعي لقى أركان البطاقة ✨",
+          "حدد البطاقة بالظبط حتى لو في صوابع أو مكتب في الصورة."
         );
       } else {
         await handleAutoDetectCorners();
@@ -776,14 +885,14 @@ export default function IdCardsPage() {
       });
 
       toast.success(
-        `تم تصدير ملف الوورد بنجاح (${paperSize})`,
-        `تم تجهيز ${pairs.length} بطاقة (الوش والظهر معاً) بمقاس 85.6×54 مم ومحاذاة الطباعة المزدوجة (${duplexAlignment === "vertical" ? "رأسية" : "أفقية"}).`
+        `ملف Word نزل (${paperSize})`,
+        `${pairs.length} بطاقة (الوش مع الضهر) بمقاس البطاقة الحقيقي 85.6×54 مم، والوش والضهر ${duplexAlignment === "vertical" ? "تحت بعض" : "جنب بعض"}.`
       );
     } catch (err) {
       console.error("Error generating docx:", err);
       toast.error(
-        "حدث خطأ أثناء إنشاء ملف الوورد",
-        getFriendlyErrorMessage(err, "يرجى المحاولة مرة أخرى.")
+        "ملف Word منزلش",
+        getFriendlyErrorMessage(err, "جرب تاني.")
       );
     } finally {
       setIsGenerating(false);
@@ -888,7 +997,7 @@ export default function IdCardsPage() {
     if (!printPreviewDataUrl) return;
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
-      toast.warning("يرجى السماح بالنوافذ المنبثقة للطباعة المباشرة");
+      toast.warning("اسمح للموقع يفتح نوافذ جديدة (Pop-ups) عشان الطباعة تشتغل");
       return;
     }
 
@@ -896,7 +1005,7 @@ export default function IdCardsPage() {
       <!DOCTYPE html>
       <html dir="rtl">
         <head>
-          <title>طباعة بطاقة الرقم القومي - Copy-Cat</title>
+          <title>طباعة بطاقة - Copy-Cat</title>
           <style>
             @page {
               size: ${paperSize} portrait;
@@ -935,7 +1044,7 @@ export default function IdCardsPage() {
       {/* Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-black text-slate-800">تجهيز وطباعة بطاقات الرقم القومي</span>
+          <span className="text-sm font-black text-slate-800">البطايق (وش وضهر)</span>
           {pairs.length > 0 && (
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-100">
               {pairs.length} بطاقة
@@ -949,7 +1058,7 @@ export default function IdCardsPage() {
               onClick={() => setPairs([])}
               className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
             >
-              مسح الكل
+              امسح الكل
             </button>
           )}
 
@@ -959,7 +1068,7 @@ export default function IdCardsPage() {
             className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-xs transition disabled:opacity-50 cursor-pointer"
           >
             <FileDown className="w-4 h-4" />
-            <span>{isGenerating ? "جاري الإنشاء..." : `تصدير وورد (${paperSize})`}</span>
+            <span>{isGenerating ? "بنجهز الملف..." : `نزّل Word (${paperSize})`}</span>
           </button>
         </div>
       </div>
@@ -970,7 +1079,7 @@ export default function IdCardsPage() {
           {/* Paper Size selector */}
           <div className="flex items-center gap-3">
             <span className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-blue-500" /> مقاس ورقة الطباعة:
+              <FileText className="w-4 h-4 text-blue-500" /> مقاس الورقة:
             </span>
             <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200">
               <button
@@ -980,7 +1089,7 @@ export default function IdCardsPage() {
                   paperSize === "A4" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                A4 (المعتمد للطباعة المزدوجة 210×297 مم)
+                A4 (العادي)
               </button>
               <button
                 type="button"
@@ -989,7 +1098,7 @@ export default function IdCardsPage() {
                   paperSize === "A5" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                A5 (148×210 مم)
+                A5 (نص A4)
               </button>
             </div>
           </div>
@@ -997,7 +1106,7 @@ export default function IdCardsPage() {
           {/* Duplex Alignment selector */}
           <div className="flex items-center gap-3">
             <span className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-              <ArrowUpDown className="w-4 h-4 text-emerald-500" /> محاذاة الطباعة المزدوجة (Duplex):
+              <ArrowUpDown className="w-4 h-4 text-emerald-500" /> مكان الوش والضهر:
             </span>
             <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200">
               <button
@@ -1008,9 +1117,9 @@ export default function IdCardsPage() {
                     ? "bg-emerald-600 text-white shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
-                title="الوجه والظهر على نفس المحور الرأسي تماماً للتطابق التام عند قلب الورقة"
+                title="الوش فوق والضهر تحته بالظبط، عشان لما تقلب الورقة ييجوا على بعض"
               >
-                محاذاة عمودية (Vertical)
+                تحت بعض
               </button>
               <button
                 type="button"
@@ -1020,9 +1129,9 @@ export default function IdCardsPage() {
                     ? "bg-emerald-600 text-white shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
-                title="الوجه والظهر متجاوران على نفس الخط الأفقي"
+                title="الوش والضهر جنب بعض في نفس السطر"
               >
-                محاذاة أفقية (Horizontal)
+                جنب بعض
               </button>
             </div>
           </div>
@@ -1030,7 +1139,7 @@ export default function IdCardsPage() {
 
         {/* Global Quick Presets */}
         <div className="flex flex-wrap items-center gap-2.5 pt-3 border-t border-slate-200">
-          <span className="text-sm font-bold text-slate-700">فلاتر سريعة للكل:</span>
+          <span className="text-sm font-bold text-slate-700">فلاتر للكل:</span>
           <button
             onClick={() => applyGlobalEnhancement(50, 118)}
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer ${
@@ -1040,7 +1149,7 @@ export default function IdCardsPage() {
             }`}
           >
             <Sparkles className="w-4 h-4 text-amber-500" />
-            <span>تفتيح متوازن مع حفظ الألوان</span>
+            <span>فتّح شوية</span>
           </button>
 
           <button
@@ -1052,14 +1161,14 @@ export default function IdCardsPage() {
             }`}
           >
             <Zap className="w-4 h-4 text-yellow-500" />
-            <span>تفتيح فائق للبطاقات المظلمة</span>
+            <span>فتّح جامد (للصور الضلمة)</span>
           </button>
 
           <button
             onClick={() => applyGlobalEnhancement(0, 100)}
             className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 transition cursor-pointer mr-auto"
           >
-            إعادة ضبط للأصل
+            رجّعها زي الأول
           </button>
         </div>
       </div>
@@ -1091,23 +1200,44 @@ export default function IdCardsPage() {
 
         <div>
           <h3 className="text-lg sm:text-xl font-black text-slate-900 mb-1.5">
-            {isDragging ? "أفلت صور البطاقات هنا الآن!" : "اضغط لرفع صور البطاقات أو اسحبها وأفلتها هنا"}
+            {isDragging ? "سيب الصور هنا" : "دوس هنا وارفع صور البطاقات، أو اسحبها وسيبها هنا"}
           </h3>
           <p className="text-slate-500 text-xs sm:text-sm font-medium">
-            يتم كشف أركان البطاقة الأربعة وتصحيح المنظور آلياً عبر OpenCV.js داخل المتصفح مع حفظ الألوان الطبيعية
+            ارفع صور الوش والضهر مع بعض بأي ترتيب. البرنامج بيقص البطاقة ويعدلها لو متصورة بالعرض أو بالمقلوب، وبيحط كل وش مع ضهره بالرقم القومي.
           </p>
         </div>
       </div>
+
+      {/* Progress of the running batch; photos added meanwhile join it */}
+      {progress && (
+        <div className="flex items-center gap-3 p-4 rounded-2xl bg-blue-50 border border-blue-200" role="status" aria-live="polite">
+          <Loader2 className="w-5 h-5 text-blue-600 animate-spin shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            <p className="text-sm font-bold text-blue-900">
+              استلمنا {progress.total} صورة، وبنظبطهم دلوقتي ({progress.done} من {progress.total} خلصوا)
+            </p>
+            <p className="text-xs text-blue-700">
+              لو عندك صور تانية ارفعها عادي، هتتضاف على الشغل ومش هتوقف اللي شغالين فيه.
+            </p>
+            <div className="h-1.5 rounded-full bg-blue-100 overflow-hidden">
+              <div
+                className="h-full bg-blue-600 transition-all duration-500"
+                style={{ width: `${Math.max(5, (progress.done / Math.max(1, progress.total)) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pairs Container */}
       {pairs.length > 0 && (
         <div className="space-y-6">
           <div className="flex items-center justify-between text-xs text-slate-500 px-1">
             <span>
-              تم تجميع <strong className="text-slate-900 font-bold">{pairs.length} بطاقة</strong> ({totalFacesCount} وجه وظفر جاهز للطباعة)
+              عندك <strong className="text-slate-900 font-bold">{pairs.length} بطاقة</strong> ({totalFacesCount} صورة وش وضهر جاهزين للطباعة)
             </span>
             <span className="text-blue-400 font-bold">
-              مقاس البطاقة المطبوعة الدقيق: 85.6mm × 54mm (معيار ISO ID-1)
+              البطاقة بتتطبع بمقاسها الحقيقي 85.6 × 54 مم
             </span>
           </div>
 
@@ -1136,7 +1266,7 @@ export default function IdCardsPage() {
                     <button
                       onClick={() => openPrintPreview(pair)}
                       className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/20"
-                      title="معاينة وطباعة فورية داخل المتصفح"
+                      title="شوف الورقة واطبعها على طول"
                     >
                       <Printer className="w-3.5 h-3.5" />
                       <span>معاينة وطباعة الورقة ({paperSize})</span>
@@ -1146,10 +1276,10 @@ export default function IdCardsPage() {
                     <button
                       onClick={() => swapPairSides(pair.pairId)}
                       className="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:text-white hover:bg-blue-600 transition text-xs font-bold flex items-center gap-1 cursor-pointer"
-                      title="تبديل الوش مكان الضهر"
+                      title="بدّل الوش مكان الضهر"
                     >
                       <ArrowUpDown className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">تبديل الوش والضهر</span>
+                      <span className="hidden sm:inline">بدّل الوش والضهر</span>
                     </button>
 
                     {/* Reorder Buttons */}
@@ -1157,7 +1287,7 @@ export default function IdCardsPage() {
                       onClick={() => movePair(index, "up")}
                       disabled={index === 0}
                       className="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200 transition disabled:opacity-30 cursor-pointer"
-                      title="نقل لأعلى"
+                      title="طلّعها فوق"
                     >
                       <ChevronUp className="w-4 h-4" />
                     </button>
@@ -1165,7 +1295,7 @@ export default function IdCardsPage() {
                       onClick={() => movePair(index, "down")}
                       disabled={index === pairs.length - 1}
                       className="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200 transition disabled:opacity-30 cursor-pointer"
-                      title="نقل لأسفل"
+                      title="نزّلها تحت"
                     >
                       <ChevronDown className="w-4 h-4" />
                     </button>
@@ -1174,7 +1304,7 @@ export default function IdCardsPage() {
                     <button
                       onClick={() => removePair(pair.pairId)}
                       className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition cursor-pointer"
-                      title="حذف هذه البطاقة"
+                      title="امسح البطاقة دي"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -1188,7 +1318,7 @@ export default function IdCardsPage() {
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-black text-blue-400 flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
-                        <span>الوش (Front Face)</span>
+                        <span>الوش</span>
                       </span>
 
                       {pair.front && (
@@ -1212,10 +1342,19 @@ export default function IdCardsPage() {
                               setCropCamScannerMode(pair.front?.camScannerMode ?? false);
                             }}
                             className="px-2 py-1 text-[11px] text-amber-400 hover:text-slate-950 rounded-lg bg-amber-500/10 hover:bg-amber-400 border border-amber-500/30 transition flex items-center gap-1 cursor-pointer font-bold"
-                            title="تحريك الأركان الأربعة بالماوس وتصحيح المنظور"
+                            title="حرّك عدّل القص بالماوس عشان تعدل القص"
                           >
                             <Scan className="w-3 h-3" />
-                            <span>الأركان الأربعة</span>
+                            <span>عدّل القص</span>
+                          </button>
+
+                          {/* Quarter turn: sideways card */}
+                          <button
+                            onClick={() => turnSideQuarter(pair.pairId, "front")}
+                            className="p-1 rounded-lg bg-slate-100 text-slate-700 hover:text-slate-900 transition cursor-pointer"
+                            title="لف البطاقة ربع لفة (90°)"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
                           </button>
 
                           {/* Fine Rotation */}
@@ -1229,7 +1368,7 @@ export default function IdCardsPage() {
                               setFineAngle(pair.front?.rotation || 0);
                             }}
                             className="p-1 rounded-lg bg-slate-100 text-slate-700 hover:text-slate-900 transition cursor-pointer"
-                            title="تدوير دقيق"
+                            title="لف بزاوية صغيرة"
                           >
                             <RotateCw className="w-3.5 h-3.5" />
                           </button>
@@ -1238,7 +1377,7 @@ export default function IdCardsPage() {
                           <button
                             onClick={() => resetSide(pair.pairId, "front")}
                             className="p-1 rounded-lg bg-slate-100 text-slate-500 hover:text-slate-900 transition cursor-pointer"
-                            title="إعادة ضبط للأصل"
+                            title="رجّعها زي الأول"
                           >
                             <RotateCcw className="w-3.5 h-3.5" />
                           </button>
@@ -1260,7 +1399,7 @@ export default function IdCardsPage() {
                           className="w-full h-full object-contain transition-all duration-75"
                         />
                       ) : (
-                        <span className="text-xs text-slate-600">غير متوفر</span>
+                        <span className="text-xs text-slate-600">مفيش صورة</span>
                       )}
                     </div>
 
@@ -1269,7 +1408,7 @@ export default function IdCardsPage() {
                       <div className="space-y-2 pt-1">
                         {/* Brightness Slider */}
                         <div className="flex items-center gap-2 text-[11px]">
-                          <span className="w-14 text-slate-500 font-bold">التفتيح:</span>
+                          <span className="w-14 text-slate-500 font-bold">الإضاءة:</span>
                           <input
                             type="range"
                             min="50"
@@ -1350,10 +1489,10 @@ export default function IdCardsPage() {
                                 ? "bg-white text-slate-950 border-white font-black shadow"
                                 : "bg-white text-slate-700 border-slate-200 hover:border-slate-200"
                             }`}
-                            title="فلتر أبيض وأسود عالي التباين جاهز للطباعة وتصوير المستندات"
+                            title="أبيض وأسود بس، واضح في التصوير"
                           >
                             <Sliders className="w-3 h-3" />
-                            <span>{pair.front.thresholdMode ? "إلغاء فلتر أبيض/أسود" : "فلتر أبيض/أسود (B&W)"}</span>
+                            <span>{pair.front.thresholdMode ? "رجّع الألوان" : "أبيض وأسود"}</span>
                           </button>
 
                           <button
@@ -1368,10 +1507,10 @@ export default function IdCardsPage() {
                                 ? "bg-amber-500 text-slate-950 border-amber-500 font-black shadow"
                                 : "bg-white text-amber-300 border-slate-200 hover:border-slate-200"
                             }`}
-                            title="تبييض أرضية البطاقة وإبراز سواد الأرقام والحبر"
+                            title="بيبيّض أرضية البطاقة ويغمّق الأرقام والكلام"
                           >
                             <Wand2 className="w-3 h-3" />
-                            <span>سحر كام سكانر</span>
+                            <span>تبييض زي الماسح</span>
                           </button>
                         </div>
                       </div>
@@ -1383,7 +1522,7 @@ export default function IdCardsPage() {
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-black text-emerald-400 flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>الضهر (Back Face)</span>
+                        <span>الضهر</span>
                       </span>
 
                       {pair.back && (
@@ -1407,10 +1546,19 @@ export default function IdCardsPage() {
                               setCropCamScannerMode(pair.back?.camScannerMode ?? false);
                             }}
                             className="px-2 py-1 text-[11px] text-amber-400 hover:text-slate-950 rounded-lg bg-amber-500/10 hover:bg-amber-400 border border-amber-500/30 transition flex items-center gap-1 cursor-pointer font-bold"
-                            title="تحريك الأركان الأربعة بالماوس وتصحيح المنظور"
+                            title="حرّك عدّل القص بالماوس عشان تعدل القص"
                           >
                             <Scan className="w-3 h-3" />
-                            <span>الأركان الأربعة</span>
+                            <span>عدّل القص</span>
+                          </button>
+
+                          {/* Quarter turn: sideways card */}
+                          <button
+                            onClick={() => turnSideQuarter(pair.pairId, "back")}
+                            className="p-1 rounded-lg bg-slate-100 text-slate-700 hover:text-slate-900 transition cursor-pointer"
+                            title="لف البطاقة ربع لفة (90°)"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
                           </button>
 
                           {/* Fine Rotation */}
@@ -1424,7 +1572,7 @@ export default function IdCardsPage() {
                               setFineAngle(pair.back?.rotation || 0);
                             }}
                             className="p-1 rounded-lg bg-slate-100 text-slate-700 hover:text-slate-900 transition cursor-pointer"
-                            title="تدوير دقيق"
+                            title="لف بزاوية صغيرة"
                           >
                             <RotateCw className="w-3.5 h-3.5" />
                           </button>
@@ -1433,7 +1581,7 @@ export default function IdCardsPage() {
                           <button
                             onClick={() => resetSide(pair.pairId, "back")}
                             className="p-1 rounded-lg bg-slate-100 text-slate-500 hover:text-slate-900 transition cursor-pointer"
-                            title="إعادة ضبط للأصل"
+                            title="رجّعها زي الأول"
                           >
                             <RotateCcw className="w-3.5 h-3.5" />
                           </button>
@@ -1455,7 +1603,7 @@ export default function IdCardsPage() {
                           className="w-full h-full object-contain transition-all duration-75"
                         />
                       ) : (
-                        <span className="text-xs text-slate-600">غير متوفر</span>
+                        <span className="text-xs text-slate-600">مفيش صورة</span>
                       )}
                     </div>
 
@@ -1464,7 +1612,7 @@ export default function IdCardsPage() {
                       <div className="space-y-2 pt-1">
                         {/* Brightness Slider */}
                         <div className="flex items-center gap-2 text-[11px]">
-                          <span className="w-14 text-slate-500 font-bold">التفتيح:</span>
+                          <span className="w-14 text-slate-500 font-bold">الإضاءة:</span>
                           <input
                             type="range"
                             min="50"
@@ -1545,10 +1693,10 @@ export default function IdCardsPage() {
                                 ? "bg-white text-slate-950 border-white font-black shadow"
                                 : "bg-white text-slate-700 border-slate-200 hover:border-slate-200"
                             }`}
-                            title="فلتر أبيض وأسود عالي التباين جاهز للطباعة وتصوير المستندات"
+                            title="أبيض وأسود بس، واضح في التصوير"
                           >
                             <Sliders className="w-3 h-3" />
-                            <span>{pair.back.thresholdMode ? "إلغاء فلتر أبيض/أسود" : "فلتر أبيض/أسود (B&W)"}</span>
+                            <span>{pair.back.thresholdMode ? "رجّع الألوان" : "أبيض وأسود"}</span>
                           </button>
 
                           <button
@@ -1563,10 +1711,10 @@ export default function IdCardsPage() {
                                 ? "bg-emerald-500 text-slate-950 border-emerald-500 font-black shadow"
                                 : "bg-white text-emerald-300 border-slate-200 hover:border-slate-200"
                             }`}
-                            title="تبييض أرضية البطاقة وإبراز سواد الأرقام والحبر"
+                            title="بيبيّض أرضية البطاقة ويغمّق الأرقام والكلام"
                           >
                             <Wand2 className="w-3 h-3" />
-                            <span>سحر كام سكانر</span>
+                            <span>تبييض زي الماسح</span>
                           </button>
                         </div>
                       </div>
@@ -1590,10 +1738,10 @@ export default function IdCardsPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900">
-                    قص وضبط أركان البطاقة الأربعة (OpenCV.js & CamScanner)
+                    عدّل قص البطاقة
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    اسحب الدوائر الأربعة بالماوس فوق زوايا البطاقة بالضبط لتعديل المنظور واستواء الكادر
+                    اسحب كل دايرة من الأربعة وحطها على ركن البطاقة بالظبط
                   </p>
                 </div>
               </div>
@@ -1640,19 +1788,19 @@ export default function IdCardsPage() {
                 const pt = quadCorners[key];
                 const label =
                   key === "tl"
-                    ? "أعلى يسار"
+                    ? "فوق شمال"
                     : key === "tr"
-                    ? "أعلى يمين"
+                    ? "فوق يمين"
                     : key === "br"
-                    ? "أسفل يمين"
-                    : "أسفل يسار";
+                    ? "تحت يمين"
+                    : "تحت شمال";
                 return (
                   <div
                     key={key}
                     style={{ left: `${pt.x * 100}%`, top: `${pt.y * 100}%` }}
                     onPointerDown={(e) => handleCornerPointerDown(key, e)}
                     className="absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full border-2 border-white bg-amber-500 shadow-xs cursor-grab active:cursor-grabbing flex items-center justify-center hover:scale-125 transition-transform z-20 group touch-none"
-                    title={`اسحب زاوية ${label}`}
+                    title={`اسحب ركن ${label}`}
                   >
                     <div className="w-2.5 h-2.5 rounded-full bg-slate-50" />
                     <span className="absolute -bottom-6 px-1.5 py-0.5 rounded bg-white text-[10px] font-bold text-amber-400 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -1687,7 +1835,7 @@ export default function IdCardsPage() {
                   </div>
                   <div className="absolute bottom-1 inset-x-0 text-center">
                     <span className="text-[9px] font-black bg-slate-50/90 text-amber-400 px-1.5 py-0.5 rounded-full">
-                      مكبرة 3.5x
+                      مكبّرة 3.5 مرة
                     </span>
                   </div>
                 </div>
@@ -1697,27 +1845,27 @@ export default function IdCardsPage() {
             {/* Presets & Controls */}
             <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-700">خيارات ضبط الكادر:</span>
+                <span className="text-xs font-bold text-slate-700">اختيارات القص:</span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={handleAiSnapCorners}
                     disabled={isAiSnappingCorners}
                     className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm disabled:opacity-50"
-                    title="التقاط أركان البطاقة بالذكاء الاصطناعي وتخطي أصابع اليد والمكتب"
+                    title="خلّي الذكاء الاصطناعي يلاقي الأركان (حتى لو في صوابع أو مكتب في الصورة)"
                   >
                     <Sparkles className={`w-3.5 h-3.5 ${isAiSnappingCorners ? "animate-spin" : ""}`} />
-                    <span>{isAiSnappingCorners ? "جاري الالتقاط..." : "التقاط ذكي بالذكاء الاصطناعي (AI Snap)"}</span>
+                    <span>{isAiSnappingCorners ? "بندوّر..." : "لاقي الأركان بالذكاء الاصطناعي"}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleAutoDetectCorners}
                     className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-amber-500 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border border-amber-500/20"
-                    title="كشف حدود البطاقة وتوجيه الأركان الأربعة آلياً بمكتبة OpenCV"
+                    title="لاقي حدود البطاقة من على الجهاز (من غير نت)"
                   >
                     <Scan className="w-3.5 h-3.5" />
-                    <span>كشف الزوايا (OpenCV)</span>
+                    <span>لاقي الأركان لوحده</span>
                   </button>
 
                   <button
@@ -1732,7 +1880,7 @@ export default function IdCardsPage() {
                     }}
                     className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] cursor-pointer"
                   >
-                    كادر بطاقة قياسي
+                    مقاس بطاقة عادي
                   </button>
                   <button
                     type="button"
@@ -1746,7 +1894,7 @@ export default function IdCardsPage() {
                     }}
                     className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] cursor-pointer"
                   >
-                    كامل الصورة
+                    الصورة كلها
                   </button>
                 </div>
               </div>
@@ -1756,8 +1904,8 @@ export default function IdCardsPage() {
                 <div className="flex items-center gap-2">
                   <Wand2 className="w-4 h-4 text-amber-400" />
                   <div>
-                    <span className="text-xs font-bold text-slate-900 block">سحر كام سكانر (Magic Color)</span>
-                    <span className="text-[10px] text-slate-500 block">تبييض الأرضية وإزالة الظلال مع إبراز سواد أرقام البطاقة</span>
+                    <span className="text-xs font-bold text-slate-900 block">تبييض زي الماسح</span>
+                    <span className="text-[10px] text-slate-500 block">بيبيّض الأرضية ويشيل الضل ويغمّق الأرقام</span>
                   </div>
                 </div>
                 <input
@@ -1784,7 +1932,7 @@ export default function IdCardsPage() {
                 className="flex-1 py-2.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-white transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center gap-1.5"
               >
                 <Scan className="w-4 h-4" />
-                <span>تطبيق وقص المنظور (Warp Perspective)</span>
+                <span>قص وعدّل</span>
               </button>
             </div>
           </div>
@@ -1799,7 +1947,7 @@ export default function IdCardsPage() {
               <div className="flex items-center gap-2">
                 <RotateCw className="w-4 h-4 text-blue-400" />
                 <h3 className="text-base font-black text-slate-900">
-                  تدوير دقيق لوجه البطاقة ({editingTarget.side === "front" ? "الوش" : "الضهر"})
+                  لف بزاوية صغيرة لوجه البطاقة ({editingTarget.side === "front" ? "الوش" : "الضهر"})
                 </h3>
               </div>
               <button
@@ -1824,7 +1972,7 @@ export default function IdCardsPage() {
 
             <div className="space-y-2 bg-slate-50 p-4 rounded-2xl border border-slate-200">
               <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                <span>زاوية التعديل والميلان الدقيقة:</span>
+                <span>زاوية اللف:</span>
                 <span className="text-blue-400 font-mono text-sm">{fineAngle > 0 ? `+${fineAngle}` : fineAngle}°</span>
               </div>
               <input
@@ -1841,13 +1989,13 @@ export default function IdCardsPage() {
                   onClick={() => setFineAngle((prev) => (prev - 90) % 360)}
                   className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
                 >
-                  -90° يسار
+                  -90° شمال
                 </button>
                 <button
                   onClick={() => setFineAngle(0)}
                   className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs transition cursor-pointer"
                 >
-                  إلغاء الميلان (0°)
+                  من غير لف (0°)
                 </button>
                 <button
                   onClick={() => setFineAngle((prev) => (prev + 90) % 360)}
@@ -1871,7 +2019,7 @@ export default function IdCardsPage() {
                 onClick={handleApplyFineRotation}
                 className="flex-1 py-2.5 rounded-xl text-xs font-black bg-blue-600 hover:bg-blue-500 text-white transition cursor-pointer shadow-lg shadow-blue-600/30"
               >
-                تطبيق التدوير
+                لف
               </button>
             </div>
           </div>
@@ -1892,7 +2040,7 @@ export default function IdCardsPage() {
                     معاينة ورقة الطباعة {paperSize} (مقاس البطاقة: 85.6mm × 54mm)
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    محاذاة الطباعة المزدوجة: {duplexAlignment === "vertical" ? "رأسية (Vertical Duplex)" : "أفقية (Horizontal Duplex)"}
+                    محاذاة الطباعة المزدوجة: {duplexAlignment === "vertical" ? "تحت بعض" : "جنب بعض"}
                   </p>
                 </div>
               </div>
@@ -1909,7 +2057,7 @@ export default function IdCardsPage() {
 
             <div className="flex items-center justify-center bg-slate-50 p-4 rounded-2xl border border-slate-200 min-h-[300px]">
               {isGeneratingPrintPreview ? (
-                <div className="text-center text-slate-500 text-xs">جاري تجهيز ورقة الطباعة الدقيقة...</div>
+                <div className="text-center text-slate-500 text-xs">بنجهز ورقة الطباعة...</div>
               ) : printPreviewDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -1918,7 +2066,7 @@ export default function IdCardsPage() {
                   className="max-h-[60vh] object-contain rounded-lg shadow-2xl border border-slate-200 bg-white"
                 />
               ) : (
-                <div className="text-xs text-rose-600">تعذر توليد المعاينة</div>
+                <div className="text-xs text-rose-600">مقدرناش نجهز الورقة</div>
               )}
             </div>
 
@@ -1931,7 +2079,7 @@ export default function IdCardsPage() {
                 }}
                 className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
               >
-                إغلاق
+                اقفل
               </button>
               <button
                 type="button"
@@ -1940,7 +2088,7 @@ export default function IdCardsPage() {
                 className="flex-1 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white transition cursor-pointer shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 <Printer className="w-4 h-4" />
-                <span>طباعة الورقة الآن (Print)</span>
+                <span>اطبع</span>
               </button>
             </div>
           </div>

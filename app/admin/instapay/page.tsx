@@ -87,11 +87,11 @@ export default function InstaPayAdminPage() {
   const handleAddRecord = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim()) {
-      toast.error("بيانات ناقصة", "يرجى كتابة اسم العميل.");
+      toast.error("في حاجة ناقصة", "اكتب اسم الزبون.");
       return;
     }
     if (!amount || Number(amount) <= 0) {
-      toast.error("مبلغ غير صحيح", "يرجى كتابة مبلغ التحويل بالجنيه.");
+      toast.error("المبلغ غلط", "اكتب المبلغ بالجنيه.");
       return;
     }
 
@@ -111,7 +111,7 @@ export default function InstaPayAdminPage() {
     setRecords(updated);
     saveInstaPayRecords(updated);
 
-    toast.success("تم تسجيل التحويل بنجاح!", `تحويل ${newRecord.amount} ج.م مسجل كمعلق حتى يؤكده الباشمهندس.`);
+    toast.success("التحويل اتسجل", `${newRecord.amount} ج.م، مستني الباشمهندس يأكده.`);
     setIsAddingModal(false);
     resetForm();
   }, [amount, customerName, notes, phone, records, resetForm, senderAccount, toast]);
@@ -134,16 +134,16 @@ export default function InstaPayAdminPage() {
 
     setRecords(updated);
     saveInstaPayRecords(updated);
-    toast.success("تم تأكيد الاستلام بنجاح ✓", `تم التحقق من استلام المبلغ بحساب إنستا باي بواسطة: ${engineerName}`);
+    toast.success("الفلوس وصلت ✓", `أكدها: ${engineerName}`);
   };
 
   // Delete a record
   const handleDeleteRecord = (id: string, name: string) => {
-    if (!confirm(`هل تريد حذف عملية تحويل "${name}"؟`)) return;
+    if (!confirm(`متأكد إنك عايز تمسح تحويل "${name}"؟`)) return;
     const updated = records.filter((r) => r.id !== id);
     setRecords(updated);
     saveInstaPayRecords(updated);
-    toast.info("تم الحذف", "تمت إزالة المعاملة من السجل.");
+    toast.info("اتمسح", "التحويل اتمسح من السجل.");
   };
 
   // Metrics
@@ -187,7 +187,7 @@ export default function InstaPayAdminPage() {
             <span className="p-1.5 rounded-xl bg-purple-500/10 text-purple-400">
               <CreditCard className="w-5 h-5" />
             </span>
-            <span className="text-base font-black text-on-surface">سجل مدفوعات إنستا باي</span>
+            <span className="text-base font-black text-on-surface">تحويلات إنستا باي</span>
           </div>
 
           <div className="flex items-center gap-space-xs">
@@ -196,7 +196,7 @@ export default function InstaPayAdminPage() {
               className="flex items-center gap-2 px-space-md py-space-sm rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-md transition-all cursor-pointer text-xs sm:text-sm"
             >
               <Plus className="w-4 h-4" />
-              <span>تسجيل تحويل جديد</span>
+              <span>سجّل تحويل جديد</span>
             </button>
           </div>
         </div>
@@ -207,7 +207,7 @@ export default function InstaPayAdminPage() {
           <div className="p-space-md rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between">
             <div>
               <span className="text-body-xs font-label-code text-amber-400 font-bold block">
-                تحويلات معلقة (بانتظار التأكيد)
+                لسه متأكدتش
               </span>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-headline-lg font-extrabold text-amber-300">
@@ -216,7 +216,7 @@ export default function InstaPayAdminPage() {
                 <span className="text-body-sm font-bold text-amber-400">ج.م</span>
               </div>
               <span className="text-body-xs text-amber-400/80 mt-1 block">
-                {pendingRecords.length} عمليات دفع بانتظار مراجعة الباشمهندس
+                {pendingRecords.length} تحويل مستنيين الباشمهندس يأكدهم
               </span>
             </div>
             <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
@@ -228,7 +228,7 @@ export default function InstaPayAdminPage() {
           <div className="p-space-md rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between">
             <div>
               <span className="text-body-xs font-label-code text-emerald-400 font-bold block">
-                تحويلات تم تأكيدها واستلامها
+                اتأكدت ووصلت
               </span>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-headline-lg font-extrabold text-emerald-300">
@@ -237,7 +237,7 @@ export default function InstaPayAdminPage() {
                 <span className="text-body-sm font-bold text-emerald-400">ج.م</span>
               </div>
               <span className="text-body-xs text-emerald-400/80 mt-1 block">
-                {confirmedRecords.length} عمليات مؤكدة في حساب المكتبة
+                {confirmedRecords.length} تحويل وصلوا حساب المكتبة
               </span>
             </div>
             <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -249,7 +249,7 @@ export default function InstaPayAdminPage() {
           <div className="p-space-md rounded-xl bg-surface-container-low border border-surface-container-high/40 flex items-center justify-between">
             <div>
               <span className="text-body-xs font-label-code text-on-surface-variant block">
-                إجمالي تحويلات إنستا باي المسجلة
+                كل التحويلات
               </span>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-headline-lg font-extrabold text-purple-400">
@@ -258,7 +258,7 @@ export default function InstaPayAdminPage() {
                 <span className="text-body-sm font-bold text-on-surface-variant">ج.م</span>
               </div>
               <span className="text-body-xs text-on-surface-variant mt-1 block">
-                إجمالي {records.length} معاملة اليوم
+                {records.length} تحويل
               </span>
             </div>
             <div className="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
@@ -278,7 +278,7 @@ export default function InstaPayAdminPage() {
                   : "bg-surface-container hover:bg-surface-container-high text-on-surface"
               }`}
             >
-              ⚠️ المعلقة فقط ({pendingRecords.length})
+              ⚠️ لسه متأكدتش ({pendingRecords.length})
             </button>
             <button
               onClick={() => setFilterStatus("confirmed")}
@@ -288,7 +288,7 @@ export default function InstaPayAdminPage() {
                   : "bg-surface-container hover:bg-surface-container-high text-on-surface"
               }`}
             >
-              ✓ المؤكدة ({confirmedRecords.length})
+              ✓ اتأكدت ({confirmedRecords.length})
             </button>
             <button
               onClick={() => setFilterStatus("all")}
@@ -306,7 +306,7 @@ export default function InstaPayAdminPage() {
             <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
             <input
               type="text"
-              placeholder="بحث باسم العميل، الهاتف، أو المبلغ..."
+              placeholder="دوّر بالاسم أو الرقم أو المبلغ..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-3 pr-9 py-1.5 text-body-sm bg-surface-container border border-surface-container-high rounded-xl text-on-surface focus:outline-none focus:border-purple-500"
@@ -320,18 +320,18 @@ export default function InstaPayAdminPage() {
         {filteredRecords.length === 0 ? (
           <div className="py-20 text-center rounded-2xl bg-surface-container-low border border-surface-container-high/40 p-space-xl">
             <AlertCircle className="w-12 h-12 text-on-surface-variant mx-auto mb-space-sm opacity-50" />
-            <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">لا توجد تحويلات مسجلة</h3>
+            <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">مفيش تحويلات</h3>
             <p className="font-body-md text-body-md text-on-surface-variant mt-1">
               {filterStatus === "pending"
-                ? "ممتاز! لا توجد أي تحويلات إنستا باي معلقة بانتظار التأكيد حالياً."
-                : "لم يتم العثور على أي عمليات مسجلة."}
+                ? "تمام، مفيش تحويلات مستنية تأكيد."
+                : "مفيش تحويلات متسجلة."}
             </p>
             <button
               onClick={() => setIsAddingModal(true)}
               className="mt-space-md px-space-md py-space-sm rounded-xl bg-purple-600 text-white font-bold inline-flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              <span>تسجيل تحويل جديد</span>
+              <span>سجّل تحويل جديد</span>
             </button>
           </div>
         ) : (
@@ -339,14 +339,14 @@ export default function InstaPayAdminPage() {
             <table className="w-full text-right border-collapse">
               <thead>
                 <tr className="bg-surface-container text-on-surface-variant font-label-code text-label-code">
-                  <th className="p-space-sm">رقم العملية</th>
-                  <th className="p-space-sm">اسم العميل</th>
-                  <th className="p-space-sm">رقم الهاتف والتواصل</th>
+                  <th className="p-space-sm">رقم</th>
+                  <th className="p-space-sm">اسم الزبون</th>
+                  <th className="p-space-sm">التليفون</th>
                   <th className="p-space-sm">المبلغ</th>
-                  <th className="p-space-sm">وقت الدفع</th>
+                  <th className="p-space-sm">الوقت</th>
                   <th className="p-space-sm">الحساب / ملاحظات</th>
-                  <th className="p-space-sm text-center">حالة التأكيد</th>
-                  <th className="p-space-sm text-left">إجراء الباشمهندس</th>
+                  <th className="p-space-sm text-center">وصل؟</th>
+                  <th className="p-space-sm text-left">تأكيد الباشمهندس</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-container-high/30 font-body-sm text-body-sm">
@@ -381,13 +381,13 @@ export default function InstaPayAdminPage() {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-emerald-500 hover:text-emerald-400 p-1 rounded"
-                              title="مراسلة واتساب"
+                              title="كلّمه واتساب"
                             >
                               <MessageCircle className="w-4 h-4" />
                             </a>
                           </div>
                         ) : (
-                          <span className="text-on-surface-variant text-xs">غير مسجل</span>
+                          <span className="text-on-surface-variant text-xs">مش متسجل</span>
                         )}
                       </td>
 
@@ -411,12 +411,12 @@ export default function InstaPayAdminPage() {
                         {isPending ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
                             <Clock className="w-3.5 h-3.5 animate-spin" />
-                            <span>بانتظار التأكيد</span>
+                            <span>مستني تأكيد</span>
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>مؤكد ({rec.confirmedBy || "الباشمهندس"})</span>
+                            <span>وصل ({rec.confirmedBy || "الباشمهندس"})</span>
                           </span>
                         )}
                       </td>
@@ -427,21 +427,21 @@ export default function InstaPayAdminPage() {
                             <button
                               onClick={() => handleConfirmRecord(rec.id)}
                               className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow transition cursor-pointer"
-                              title="تأكيد وصول المبلغ في الحساب"
+                              title="أكّد إن الفلوس وصلت الحساب"
                             >
                               <ShieldCheck className="w-4 h-4" />
-                              <span>تأكيد الاستلام ✓</span>
+                              <span>وصلت ✓</span>
                             </button>
                           ) : (
                             <span className="text-[11px] text-emerald-400 font-medium">
-                              تم التحقق
+                              اتأكدت
                             </span>
                           )}
 
                           <button
                             onClick={() => handleDeleteRecord(rec.id, rec.customerName)}
                             className="p-1.5 rounded-lg text-on-surface-variant hover:text-rose-500 hover:bg-surface-container transition cursor-pointer"
-                            title="حذف السجل"
+                            title="امسح"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -466,7 +466,7 @@ export default function InstaPayAdminPage() {
                   <CreditCard className="w-4 h-4" />
                 </div>
                 <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">
-                  تسجيل تحويل إنستا باي جديد
+                  سجّل تحويل إنستا باي
                 </h3>
               </div>
               <button onClick={() => setIsAddingModal(false)} className="text-on-surface-variant hover:text-on-surface">
@@ -476,11 +476,11 @@ export default function InstaPayAdminPage() {
 
             <form onSubmit={handleAddRecord} className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-on-surface-variant block mb-1">اسم العميل:</label>
+                <label className="text-xs font-bold text-on-surface-variant block mb-1">اسم الزبون:</label>
                 <input
                   type="text"
                   required
-                  placeholder="مثال: أ. محمد إبراهيم"
+                  placeholder="مثلاً: محمد إبراهيم"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="w-full bg-surface-container border border-surface-container-high rounded-xl p-2.5 text-sm text-on-surface focus:border-purple-500 focus:outline-none"
@@ -489,12 +489,12 @@ export default function InstaPayAdminPage() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-on-surface-variant block mb-1">المبلغ المحول (ج.م):</label>
+                <label className="text-xs font-bold text-on-surface-variant block mb-1">المبلغ (ج.م):</label>
                 <input
                   type="number"
                   step="1"
                   required
-                  placeholder="مثال: 150"
+                  placeholder="مثلاً: 150"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value ? Number(e.target.value) : "")}
                   className="w-full bg-surface-container border border-surface-container-high rounded-xl p-2.5 text-sm font-bold text-purple-400 focus:border-purple-500 focus:outline-none"
@@ -502,10 +502,10 @@ export default function InstaPayAdminPage() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-on-surface-variant block mb-1">رقم هاتف العميل (للتأكيد ومراسلة واتساب):</label>
+                <label className="text-xs font-bold text-on-surface-variant block mb-1">رقم الزبون (عشان نكلمه واتساب):</label>
                 <input
                   type="tel"
-                  placeholder="مثال: 01212345678"
+                  placeholder="مثلاً: 01212345678"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full bg-surface-container border border-surface-container-high rounded-xl p-2.5 text-sm text-on-surface focus:border-purple-500 focus:outline-none"
@@ -513,10 +513,10 @@ export default function InstaPayAdminPage() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-on-surface-variant block mb-1">اسم الحساب المحول منه / رقم العملية [اختياري]:</label>
+                <label className="text-xs font-bold text-on-surface-variant block mb-1">الحساب اللي حوّل منه أو رقم العملية (مش لازم):</label>
                 <input
                   type="text"
-                  placeholder="مثال: تحويل من حساب InstaPay: ahmed@instapay"
+                  placeholder="مثلاً: ahmed@instapay"
                   value={senderAccount}
                   onChange={(e) => setSenderAccount(e.target.value)}
                   className="w-full bg-surface-container border border-surface-container-high rounded-xl p-2.5 text-sm text-on-surface focus:border-purple-500 focus:outline-none"
@@ -524,10 +524,10 @@ export default function InstaPayAdminPage() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-on-surface-variant block mb-1">ملاحظات إضافية:</label>
+                <label className="text-xs font-bold text-on-surface-variant block mb-1">ملاحظات:</label>
                 <textarea
                   rows={2}
-                  placeholder="نوع الطلب، أو ملاحظات خاصة..."
+                  placeholder="الزبون طالب إيه، أو أي ملاحظة..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="w-full bg-surface-container border border-surface-container-high rounded-xl p-2.5 text-sm text-on-surface focus:border-purple-500 focus:outline-none resize-none"
@@ -546,7 +546,7 @@ export default function InstaPayAdminPage() {
                   type="submit"
                   className="w-1/2 py-2.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg transition"
                 >
-                  حفظ التحويل (معلق)
+                  احفظ التحويل
                 </button>
               </div>
             </form>

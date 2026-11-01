@@ -82,7 +82,7 @@ export function AdminClientWrapper({
       <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-900">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-          <p className="text-sm font-semibold text-slate-500">جاري التحقق من الصلاحيات...</p>
+          <p className="text-sm font-semibold text-slate-500">بنتأكد إنك مسجل دخول...</p>
         </div>
       </div>
     );
@@ -102,7 +102,7 @@ export function AdminClientWrapper({
             <Link
               href="/admin"
               className="flex items-center gap-2.5 group transition-transform hover:scale-102"
-              title="لوحة تحكم كوبي كات الرئيسية"
+              title="الرئيسية"
             >
               <div className="w-9 h-9 rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center p-0.5 border border-slate-200 shadow-2xs shrink-0">
                 <Image
@@ -121,7 +121,7 @@ export function AdminClientWrapper({
                     أدمن
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 font-bold">مركز العمليات السريع</p>
+                <p className="text-[11px] text-slate-500 font-bold">أدوات المكتبة</p>
               </div>
             </Link>
 
@@ -132,7 +132,7 @@ export function AdminClientWrapper({
                 className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-black shadow-xs shadow-blue-600/30 transition-all cursor-pointer"
               >
                 <ArrowRight className="w-4 h-4" />
-                <span>لوحة الأدوات الرئيسية</span>
+                <span>كل الأدوات</span>
               </Link>
             )}
           </div>
@@ -144,10 +144,10 @@ export function AdminClientWrapper({
               type="button"
               onClick={handleOpenQrModal}
               className="p-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold"
-              title="كيو آر واتساب المكتبة للزبائن"
+              title="كود واتساب المكتبة"
             >
               <QrCode className="w-4 h-4 text-emerald-600" />
-              <span className="hidden md:inline">كيو آر واتساب</span>
+              <span className="hidden md:inline">كود واتساب</span>
             </button>
 
             {/* Link to Public Store */}
@@ -155,10 +155,10 @@ export function AdminClientWrapper({
               href="/"
               target="_blank"
               className="p-2 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 border border-slate-200 transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold"
-              title="معاينة المتجر العام للزبائن"
+              title="افتح صفحة الزباين"
             >
               <Home className="w-4 h-4 text-blue-500" />
-              <span className="hidden md:inline">متجر الزبائن</span>
+              <span className="hidden md:inline">صفحة الزباين</span>
             </Link> */}
 
             {/* User Indicator */}
@@ -172,10 +172,10 @@ export function AdminClientWrapper({
               type="button"
               onClick={() => logout()}
               className="p-2 rounded-xl text-red-600 hover:bg-red-50 border border-red-200/60 transition-all cursor-pointer flex items-center gap-1 text-xs font-bold"
-              title="تسجيل الخروج من لوحة التحكم"
+              title="اخرج من حساب الأدمن"
             >
               <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">خروج</span>
+              <span className="hidden sm:inline">اخرج</span>
             </button>
           </div>
         </div>
