@@ -182,8 +182,11 @@ export function AdminClientWrapper({
       </header>
 
       {/* Main Content Area: 95% Screen Width for Maximum Utility */}
-      <main className="w-[96%] max-w-[96vw] xl:max-w-[95%] mx-auto py-5 flex-1 transition-all">
-        {children}
+      <main className="admin-shell w-[96%] max-w-[96vw] xl:max-w-[95%] mx-auto py-5 flex-1 transition-all">
+        {/* Keyed by route so every admin page slides in (see the cc-* animations in globals.css) */}
+        <div key={pathname} className="cc-page-in">
+          {children}
+        </div>
       </main>
 
       {/* Large High-Resolution QR Code Modal */}

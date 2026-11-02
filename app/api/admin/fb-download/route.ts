@@ -316,7 +316,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let body: { url?: string; title?: string; maxPhotos?: number };
+    let body: { url?: string; title?: string; maxPhotos?: number; imageUrls?: unknown };
     try {
       body = await req.json();
     } catch {
@@ -329,6 +329,22 @@ export async function POST(req: NextRequest) {
     const title = body?.title;
     const maxPhotos = Math.max(1, Math.min(200, Number(body?.maxPhotos) || 120));
     let url = body?.url;
+
+    // Image links collected by the browser helper on the shop's own logged-in Facebook tab (closed groups,
+    // private posts): only Facebook's image CDN is accepted, so the server never fetches anything else
+    const providedUrls = (Array.isArray(body?.imageUrls) ? body.imageUrls : [])
+      .filter((u): u is string => typeof u === "string")
+      .map((u) => u.trim())
+      .filter((u) => {
+        try {
+          const h = new URL(u);
+          return h.protocol === "https:" && (h.hostname === "fbcdn.net" || h.hostname.endsWith(".fbcdn.net"));
+        } catch {
+          return false;
+        }
+      })
+      .slice(0, maxPhotos);
+    if (providedUrls.length > 0 && (!url || typeof url !== "string" || !url.trim())) url = "https://www.facebook.com/";
 
     if (!url || typeof url !== "string" || !url.trim()) {
       return NextResponse.json(
@@ -389,7 +405,7 @@ export async function POST(req: NextRequest) {
         };
 
         // Strategy A: Local Python with Playwright (if running on desktop/local server)
-        if (hasPythonScript) {
+        if (hasPythonScript && providedUrls.length === 0) {
           sendEvent({
             type: "status",
             message: "بنفتح البوست في متصفح على الجهاز...",
@@ -470,15 +486,17 @@ export async function POST(req: NextRequest) {
         // Strategy B: Universal Native Multi-Engine Scraper & pdf-lib Compiler (100% Serverless / Vercel Ready)
         sendEvent({
           type: "status",
-          message: "بنفتح البوست على فيسبوك ونسحب الصور...",
+          message: providedUrls.length > 0 ? `بننزل ${providedUrls.length} صورة من فيسبوك...` : "بنفتح البوست على فيسبوك ونسحب الصور...",
         });
 
         try {
+          // Links from the browser helper: nothing to look up on Facebook, straight to download + PDF
+          const fromHelper = providedUrls.length > 0;
           // Normalize base URLs and follow redirects to canonical post URL (handles /share/p/... shortlinks)
           const cleanBaseUrl = url!.replace(/(\?|&)fbclid=[^&]*/, "");
           let canonicalUrl = cleanBaseUrl;
 
-          try {
+          if (!fromHelper) try {
             const headResp = await fetch(cleanBaseUrl, {
               method: "HEAD",
               redirect: "follow",
@@ -558,7 +576,8 @@ export async function POST(req: NextRequest) {
           }
 
           const seenBases = new Set<string>();
-          const imageUrls: string[] = [];
+          const imageUrls: string[] = [...providedUrls];
+          if (fromHelper) fetchAttempts.length = 0;
 
           for (const attempt of fetchAttempts) {
             try {
@@ -600,7 +619,7 @@ export async function POST(req: NextRequest) {
             sendEvent({
               type: "error",
               message:
-                "فيسبوك مش بيوري صور البوست ده من غير تسجيل دخول (غالباً في جروب مقفول أو البوست مش عام). نزّل الصور على الجهاز وارفعها من «ارفع صور الملزمة بنفسك» وهتتجمع PDF على طول.",
+                "فيسبوك مش بيوري صور البوست ده من غير تسجيل دخول (غالباً في جروب مقفول أو البوست مش عام). استخدم زرار «اسحب صور البوست» من حسابك على فيسبوك (الخطوات تحت)، وهو هيجمع الصور ويعملهم PDF.",
             });
             controller.close();
             return;

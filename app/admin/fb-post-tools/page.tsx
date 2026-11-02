@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
+import { FB_BOOKMARKLET } from "@/lib/fb-bookmarklet";
 
 interface DownloadedDoc {
   id: string;
@@ -31,6 +32,13 @@ export default function FacebookPostToolsPage() {
   const { toast } = useToast();
 
   const [postUrl, setPostUrl] = useState("");
+  // Browser helper: image links collected on the staff member's own logged-in Facebook tab
+  const [helperLinks, setHelperLinks] = useState("");
+  const bookmarkletRef = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    // React refuses javascript: URLs in JSX, so the helper link is set on the element directly
+    bookmarkletRef.current?.setAttribute("href", FB_BOOKMARKLET);
+  });
   const [docTitle, setDocTitle] = useState("");
   const [maxPhotos, setMaxPhotos] = useState(120);
 
@@ -94,13 +102,29 @@ export default function FacebookPostToolsPage() {
       toast.error("مفيش رابط", "الزق رابط البوست أو الألبوم من فيسبوك.");
       return;
     }
+    await runDownload({ url: postUrl.trim() });
+  };
 
+  // Links collected by the browser helper on the staff member's own Facebook tab
+  const startFromLinks = async () => {
+    const links = helperLinks
+      .split(/\s+/)
+      .map((l) => l.trim())
+      .filter((l) => /^https:\/\/[^/]*fbcdn\.net\//.test(l));
+    if (links.length === 0) {
+      toast.error("مفيش روابط صور", "الزق الروابط اللي زرار «اسحب صور البوست» نسخها من فيسبوك.");
+      return;
+    }
+    await runDownload({ imageUrls: links });
+  };
+
+  const runDownload = async (source: { url?: string; imageUrls?: string[] }) => {
     setIsRunning(true);
-    setStatusMessage("بنفتح البوست على فيسبوك...");
+    setStatusMessage(source.imageUrls ? `بننزل ${source.imageUrls.length} صورة...` : "بنفتح البوست على فيسبوك...");
     setScrapedCount(0);
     setDownloadedCount(0);
     setPreviewImages([]);
-    setLogs([`بنفتح الرابط: ${postUrl}`]);
+    setLogs([source.imageUrls ? `روابط من المتصفح: ${source.imageUrls.length} صورة` : `بنفتح الرابط: ${source.url}`]);
     setCompletedDoc(null);
     setShowUploadFallbackPrompt(false);
 
@@ -109,9 +133,9 @@ export default function FacebookPostToolsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          url: postUrl.trim(),
+          ...source,
           title: docTitle.trim() || "ملزمة_فيسبوك",
-          maxPhotos,
+          maxPhotos: source.imageUrls ? Math.max(maxPhotos, source.imageUrls.length) : maxPhotos,
         }),
       });
 
@@ -344,7 +368,7 @@ export default function FacebookPostToolsPage() {
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-600 focus:border-blue-500 focus:outline-none transition"
                 />
                 <span className="text-[11px] text-slate-500 block mt-1">
-                  بيشتغل مع البوستات العامة والألبومات وصفحات المدرسين. البوستات اللي في جروبات مقفولة مش هتنفع.
+                  بيشتغل مع البوستات العامة. لو البوست في جروب مقفول استخدم «اسحب صور البوست» اللي تحت.
                 </span>
               </div>
 
@@ -397,6 +421,51 @@ export default function FacebookPostToolsPage() {
                 )}
               </button>
 
+              {/* Browser helper: closed groups / private posts, read through the staff member's own login */}
+              <div
+                className={`p-4 rounded-2xl border space-y-3 ${
+                  showUploadFallbackPrompt ? "bg-amber-50 border-amber-300" : "bg-slate-50 border-slate-200"
+                }`}
+              >
+                <h4 className="text-sm font-black text-slate-900">
+                  البوست في جروب مقفول أو الرابط منفعش؟ اسحب الصور من متصفحك
+                </h4>
+                <ol className="text-xs text-slate-700 space-y-1.5 list-decimal pr-4 leading-relaxed">
+                  <li>
+                    مرة واحدة بس: اسحب الزرار الأزرق ده وسيبه في شريط الإشارات المرجعية في Chrome (Ctrl+Shift+B لو
+                    الشريط مش ظاهر):{" "}
+                    <a
+                      ref={bookmarkletRef}
+                      onClick={(e) => e.preventDefault()}
+                      className="inline-block mx-1 px-3 py-1 rounded-lg bg-blue-600 text-white font-bold cursor-grab"
+                      title="اسحبه لشريط الإشارات المرجعية"
+                    >
+                      اسحب صور البوست
+                    </a>
+                  </li>
+                  <li>افتح البوست على فيسبوك من حسابك، ودوس على أول صورة عشان تفتح كبيرة.</li>
+                  <li>دوس «اسحب صور البوست» من شريط الإشارات. هيقلب الصور لوحده ويجمعهم، وبعدين دوس «انسخ».</li>
+                  <li>ارجع هنا، الزق الروابط تحت ودوس «اعمل PDF».</li>
+                </ol>
+                <textarea
+                  value={helperLinks}
+                  onChange={(e) => setHelperLinks(e.target.value)}
+                  disabled={isRunning}
+                  dir="ltr"
+                  rows={3}
+                  placeholder="https://scontent...fbcdn.net/..."
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-mono text-slate-900 focus:border-blue-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={startFromLinks}
+                  disabled={isRunning || !helperLinks.trim()}
+                  className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition cursor-pointer disabled:opacity-50"
+                >
+                  اعمل PDF من الروابط ({helperLinks.split(/\s+/).filter((l) => /fbcdn\.net/.test(l)).length} صورة)
+                </button>
+              </div>
+
               {showUploadFallbackPrompt && (
                 <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-3 animate-in fade-in">
                   <div className="flex items-start gap-2.5">
@@ -406,7 +475,7 @@ export default function FacebookPostToolsPage() {
                         البوست في جروب مقفول أو محتاج تسجيل دخول؟
                       </h4>
                       <p className="text-[11px] text-amber-800 leading-relaxed">
-                        فيسبوك مش بيسمح لأي برنامج يسحب صور الجروبات المقفولة أو البوستات الخاصة. نزّل الصور على الجهاز من الموبايل أو الكمبيوتر، وبعدين ارفعها هنا وهتتجمع PDF على طول.
+                        السيرفر مقدرش يفتح البوست ده. استخدم «اسحب صور البوست» اللي فوق من حسابك على فيسبوك، أو لو الصور عندك على الجهاز ارفعها بنفسك.
                       </p>
                     </div>
                   </div>

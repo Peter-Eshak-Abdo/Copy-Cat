@@ -779,7 +779,8 @@ export async function enhanceAndFramePassportPhoto(
   // C. Luminance-only sharpening at print resolution (sharpening before the downscale was averaged away).
   // An AI-restored photo is already crisp and only gets a light touch.
   if (superResolution) {
-    const strength = options.aiEnhanced ? 0.15 : preserveIdentity ? 0.3 : 0.45;
+    // +25% over the first tuning: the shop wanted crisper prints
+    const strength = options.aiEnhanced ? 0.19 : preserveIdentity ? 0.375 : 0.56;
     applyFaceSafeSuperResolution(finalCanvas, strength);
   }
 

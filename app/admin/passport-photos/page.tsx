@@ -7,13 +7,11 @@ import {
   FileDown,
   Trash2,
   Maximize2,
-  CheckCircle2,
   X,
   Focus,
   ZoomIn,
   RotateCw,
   RefreshCw,
-  Printer,
   Wand2,
 } from "lucide-react";
 import { generatePassportPhotosDocx } from "@/lib/docx/passport-docx";
@@ -35,8 +33,8 @@ import { detectHeadLocally, warmUpFaceDetector } from "@/lib/face-fallback";
 const NAME_STRIP_MM = 8;
 
 /**
- * Same 40x52mm photo with its bottom 8mm turned into a white strip carrying the name (the photo keeps its
- * printed size; the frame crops the lowest part of the shoulders instead).
+ * The 40x52mm photo kept whole, with an 8mm white strip added UNDER it for the name: 40x60mm printed,
+ * framed as one piece with a rule between photo and name.
  */
 async function composeNameStrip(framedDataUrl: string, name: string): Promise<string> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -46,8 +44,9 @@ async function composeNameStrip(framedDataUrl: string, name: string): Promise<st
     el.src = framedDataUrl;
   });
   const W = img.naturalWidth;
-  const H = img.naturalHeight;
-  const strip = Math.round((H * NAME_STRIP_MM) / 52);
+  const photoH = img.naturalHeight;
+  const strip = Math.round((photoH * NAME_STRIP_MM) / 52);
+  const H = photoH + strip;
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -55,11 +54,9 @@ async function composeNameStrip(framedDataUrl: string, name: string): Promise<st
   if (!ctx) return framedDataUrl;
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, W, H);
-  ctx.drawImage(img, 0, 0, W, H - strip, 0, 0, W, H - strip);
-  // Thin rule between photo and name, then the name sized to fit the strip
-  ctx.fillStyle = "#000000";
-  ctx.fillRect(0, H - strip - 1, W, 2);
+  ctx.drawImage(img, 0, 0, W, photoH);
   let size = Math.round(strip * 0.55);
+  ctx.fillStyle = "#000000";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.direction = "rtl";
@@ -68,7 +65,8 @@ async function composeNameStrip(framedDataUrl: string, name: string): Promise<st
     return ctx.measureText(name).width;
   };
   while (size > 12 && fit() > W * 0.9) size -= 2;
-  ctx.fillText(name, W / 2, H - strip / 2 + 1);
+  ctx.fillText(name, W / 2, photoH + strip / 2 + 1);
+  // One frame around photo and name; the photo's own bottom border line separates the two
   ctx.strokeStyle = "#000000";
   ctx.lineWidth = FRAME_BORDER_PX;
   ctx.strokeRect(FRAME_BORDER_PX / 2, FRAME_BORDER_PX / 2, W - FRAME_BORDER_PX, H - FRAME_BORDER_PX);
@@ -344,13 +342,6 @@ export default function PassportPhotosPage() {
   const [framingContrast, setFramingContrast] = useState<number>(100);
   const [framingSaturation, setFramingSaturation] = useState<number>(100);
   const [framingWhiteBg, setFramingWhiteBg] = useState<boolean>(true);
-
-  // Grid Sheet Direct Print / Preview State
-  const [gridPreview, setGridPreview] = useState<{
-    person: PhotoPerson;
-    layoutCount: 4 | 9;
-    dataUrl: string;
-  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -896,167 +887,24 @@ export default function PassportPhotosPage() {
     toast.success("الصورة اتحفظت", "القص والألوان الجديدة اتحفظوا بمقاس 4×6.");
   };
 
-  /**
-   * Generates the High-Res Grid Sheet Canvas (4 photos on A6 or 9 photos on A5)
-   * Exact photo size: 40mm x 52mm, 1.5 border, 18mm scissor cut gap / crop marks.
-   */
-  const generateGridCanvas = async (person: PhotoPerson, layoutCount: 4 | 9): Promise<string> => {
-    const isA5 = layoutCount === 9;
-    const pxPerMm = 11.811; // 300 DPI
-    const sheetW = Math.round((isA5 ? 148 : 105) * pxPerMm);
-    const sheetH = Math.round((isA5 ? 210 : 148) * pxPerMm);
-
-    const canvas = document.createElement("canvas");
-    canvas.width = sheetW;
-    canvas.height = sheetH;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return person.imageDataUrl;
-
-    // Pure white sheet
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, sheetW, sheetH);
-
-    // Photo dimensions: exactly 40.0mm x 52.0mm
-    const photoW = Math.round(40.0 * pxPerMm); // 472 px
-    const photoH = Math.round(52.0 * pxPerMm); // 614 px
-
-    // Desired gap between photos: 18mm
-    const gap = Math.round(18.0 * pxPerMm); // ~213 px
-
-    const cols = isA5 ? 3 : 2;
-    const rows = isA5 ? 3 : 2;
-
-    // Distribute with exact margins and 18mm scissor cutting space
-    const actualGapX = isA5 ? Math.min(gap, Math.floor((sheetW - cols * photoW) / (cols - 1))) : gap;
-    const actualGapY = isA5 ? Math.min(gap, Math.floor((sheetH - rows * photoH) / (rows - 1))) : gap;
-
-    const startX = Math.max(0, Math.round((sheetW - (cols * photoW + (cols - 1) * actualGapX)) / 2));
-    const startY = Math.max(0, Math.round((sheetH - (rows * photoH + (rows - 1) * actualGapY)) / 2));
-
-    const img = new Image();
-    await new Promise<void>((resolve) => {
-      img.onload = () => resolve();
-      img.src = printedImage(person);
-    });
-
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const x = startX + c * (photoW + actualGapX);
-        const y = startY + r * (photoH + actualGapY);
-
-        // Draw photo
-        ctx.drawImage(img, x, y, photoW, photoH);
-
-        // 1.5 border (solid black)
-        ctx.strokeStyle = "#000000";
-        ctx.lineWidth = 2.5;
-        ctx.strokeRect(x, y, photoW, photoH);
-
-        // Corner tick marks (crop marks)
-        const tickLen = Math.round(6 * pxPerMm);
-        ctx.strokeStyle = "#888888";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        // Top-Left
-        ctx.moveTo(x - tickLen, y); ctx.lineTo(x - 2, y);
-        ctx.moveTo(x, y - tickLen); ctx.lineTo(x, y - 2);
-        // Top-Right
-        ctx.moveTo(x + photoW + 2, y); ctx.lineTo(x + photoW + tickLen, y);
-        ctx.moveTo(x + photoW, y - tickLen); ctx.lineTo(x + photoW, y - 2);
-        // Bottom-Left
-        ctx.moveTo(x - tickLen, y + photoH); ctx.lineTo(x - 2, y + photoH);
-        ctx.moveTo(x, y + photoH + 2); ctx.lineTo(x, y + photoH + tickLen);
-        // Bottom-Right
-        ctx.moveTo(x + photoW + 2, y + photoH); ctx.lineTo(x + photoW + tickLen, y + photoH);
-        ctx.moveTo(x + photoW, y + photoH + 2); ctx.lineTo(x + photoW, y + photoH + tickLen);
-        ctx.stroke();
-
-        // Subtle scissor cut guide lines in the center of the 18mm gap
-        if (c < cols - 1) {
-          const midX = x + photoW + actualGapX / 2;
-          ctx.setLineDash([6, 6]);
-          ctx.strokeStyle = "#b8b8b8";
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(midX, y - 5);
-          ctx.lineTo(midX, y + photoH + 5);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
-        if (r < rows - 1) {
-          const midY = y + photoH + actualGapY / 2;
-          ctx.setLineDash([6, 6]);
-          ctx.strokeStyle = "#b8b8b8";
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(x - 5, midY);
-          ctx.lineTo(x + photoW + 5, midY);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
-      }
-    }
-
-    return canvas.toDataURL("image/jpeg", 0.96);
-  };
-
-  // Open Sheet Preview Modal
-  const openGridSheetModal = async (person: PhotoPerson, layoutCount: 4 | 9) => {
-    const dataUrl = await generateGridCanvas(person, layoutCount);
-    setGridPreview({ person, layoutCount, dataUrl });
-  };
-
-  const triggerDirectPrintGrid = () => {
-    if (!gridPreview) return;
-    const paper = gridPreview.layoutCount === 9 ? "A5" : "A6";
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      toast.warning("اسمح للموقع يفتح نوافذ جديدة (Pop-ups) عشان الطباعة تشتغل");
-      return;
-    }
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html dir="rtl">
-        <head>
-          <title>طباعة الصور الشخصية (${paper}) - Copy-Cat</title>
-          <style>
-            @page {
-              size: ${paper} portrait;
-              margin: 0;
-            }
-            body {
-              margin: 0;
-              padding: 0;
-              background: #fff;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            }
-            img {
-              width: 100vw;
-              height: 100vh;
-              object-fit: contain;
-            }
-          </style>
-        </head>
-        <body>
-          <img src="${gridPreview.dataUrl}" onload="window.print(); window.close();" />
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
-
   // Export DOCX
-  const handleExportDocx = async (layoutCount: 4 | 9) => {
-    if (persons.length === 0) return;
+  // Word sheet of 4 (A6) or 9 (A5) copies per photo; a single card's buttons export just that photo
+  const handleExportDocx = async (layoutCount: 4 | 9, only?: PhotoPerson) => {
+    const list = only ? [only] : persons;
+    if (list.length === 0) return;
     setIsGeneratingDocx(true);
     try {
-      // The name is already printed inside the photo strip, so Word gets the final image and no extra line
+      // The name is already printed in the strip under the photo, so Word gets the final image (40x60mm
+      // with a name, 40x52mm without) and no extra text line
       await generatePassportPhotosDocx(
-        persons.map((p) => ({ ...p, imageDataUrl: printedImage(p), includeName: false })),
-        layoutCount
+        list.map((p) => ({
+          ...p,
+          imageDataUrl: printedImage(p),
+          includeName: false,
+          heightMm: p.includeName && p.namedDataUrl ? 52 + NAME_STRIP_MM : 52,
+        })),
+        layoutCount,
+        only ? `صور_${(only.name || "شخصية").trim().replace(/[\/:*?"<>|]/g, "_")}_${layoutCount}.docx` : undefined
       );
       toast.success(
         "ملف Word نزل",
@@ -1201,9 +1049,7 @@ export default function PassportPhotosPage() {
             <span>
               جاهز <strong className="text-slate-900 font-bold">{persons.length} صورة</strong> مقاس 4×6 (40 × 52 مم)
             </span>
-            <span className="text-emerald-400 font-bold">
-              كل صورة ليها برواز أسود رفيع ومسافة للقص بالمقص
-            </span>
+
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1237,7 +1083,7 @@ export default function PassportPhotosPage() {
                   </div>
 
                   {/* Photo Display (40mm x 52mm aspect ratio) */}
-                  <div className="aspect-[40/52] max-w-[200px] mx-auto bg-white rounded-xl overflow-hidden mb-3 border-2 border-slate-950 flex items-center justify-center p-0.5 shadow-lg relative">
+                  <div className={`${person.includeName && person.namedDataUrl ? "aspect-[40/60]" : "aspect-[40/52]"} max-w-[200px] mx-auto bg-white rounded-xl overflow-hidden mb-3 border-2 border-slate-950 flex items-center justify-center p-0.5 shadow-lg relative`}>
                     <NextImage
                       src={printedImage(person)}
                       alt={person.name}
@@ -1343,32 +1189,29 @@ export default function PassportPhotosPage() {
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <button
                       type="button"
-                      onClick={() => openGridSheetModal(person, 4)}
+                      onClick={() => handleExportDocx(4, person)}
+                      disabled={isGeneratingDocx}
                       className="py-2 px-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1"
-                      title="شوف واطبع 4 صور على ورقة A6"
+                      title="نزّل ملف Word فيه 4 نسخ من الصورة دي على ورقة A6"
                     >
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>اطبع 4 صور (A6)</span>
+                      <FileDown className="w-3.5 h-3.5" />
+                      <span>Word: 4 صور (A6)</span>
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => openGridSheetModal(person, 9)}
+                      onClick={() => handleExportDocx(9, person)}
+                      disabled={isGeneratingDocx}
                       className="py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1"
-                      title="شوف واطبع 9 صور على ورقة A5"
+                      title="نزّل ملف Word فيه 9 نسخ من الصورة دي على ورقة A5"
                     >
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>اطبع 9 صور (A5)</span>
+                      <FileDown className="w-3.5 h-3.5" />
+                      <span>Word: 9 صور (A5)</span>
                     </button>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
-                  <span className="flex items-center gap-1 text-emerald-400">
-                    <CheckCircle2 className="w-3 h-3" /> مقاس 40 × 52 مم
-                  </span>
-                  <span>برواز رفيع ومسافة للقص</span>
-                </div>
+
               </div>
             ))}
           </div>
@@ -1654,62 +1497,6 @@ export default function PassportPhotosPage() {
               >
                 <Focus className="w-4 h-4" />
                 <span>احفظ</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Grid Sheet Print Preview Modal (4 on A6 or 9 on A5) */}
-      {gridPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 max-w-2xl w-full space-y-4 shadow-2xl relative max-h-[95vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <Printer className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-slate-900">
-                    معاينة شبكة {gridPreview.layoutCount} صور على ورقة {gridPreview.layoutCount === 9 ? "A5" : "A6"}
-                  </h3>
-                  <p className="text-[11px] text-slate-500">
-                    الصورة بتتطبع 40 × 52 مم بالظبط، وحواليها برواز رفيع ومسافة للقص
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setGridPreview(null)}
-                className="text-slate-500 hover:text-slate-900 cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex items-center justify-center bg-slate-50 p-4 rounded-2xl border border-slate-200 min-h-[300px]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={gridPreview.dataUrl}
-                alt="Grid Sheet Preview"
-                className="max-h-[60vh] object-contain rounded-lg shadow-2xl border border-slate-200 bg-white"
-              />
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setGridPreview(null)}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
-              >
-                اقفل
-              </button>
-              <button
-                type="button"
-                onClick={triggerDirectPrintGrid}
-                className="flex-1 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white transition cursor-pointer shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5"
-              >
-                <Printer className="w-4 h-4" />
-                <span>طباعة الشبكة الآن ({gridPreview.layoutCount === 9 ? "A5" : "A6"})</span>
               </button>
             </div>
           </div>

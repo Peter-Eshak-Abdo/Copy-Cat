@@ -38,6 +38,8 @@ export interface PhotoPerson {
   imageDataUrl: string; // Base64 with white bg & 1.5pt black border
   originalDataUrl?: string; // Original uploaded/cutout image for biometric reframing
   includeName?: boolean;
+  /** Printed height of the image: 52mm, or 60mm when an 8mm name strip is part of it */
+  heightMm?: number;
 }
 
 export async function generatePassportPhotosDocx(
@@ -61,8 +63,11 @@ export async function generatePassportPhotosDocx(
   // row gap for scissor cutting, sized so every photo of the grid stays on ONE page.
   const photoWmm = 40;
   const photoHmm = 52;
+  // Every photo row is 60mm tall: a 52mm photo plus 8mm, which holds the name strip or stays white
+  // under a photo without a name (room to cut and write on)
+  const rowHmm = 60;
   const gapXmm = isA5 ? 6 : 5;
-  const gapYmm = isA5 ? 10 : 15;
+  const gapYmm = isA5 ? 7 : 10;
   const topMarginMm = 6;
   const gridWmm = cols * photoWmm + (cols - 1) * gapXmm;
   const sideMarginMm = (pageWidthMm - gridWmm) / 2;
@@ -95,6 +100,7 @@ export async function generatePassportPhotosDocx(
   const sections = persons.map((person) => {
     const imgBytes = base64ToUint8Array(person.imageDataUrl);
     const showName = !!(person.includeName && person.name && person.name.trim());
+    const imageHmm = person.heightMm || photoHmm;
 
     const photoCell = () => {
       const children: Paragraph[] = [
@@ -104,7 +110,7 @@ export async function generatePassportPhotosDocx(
           children: [
             new ImageRun({
               data: imgBytes,
-              transformation: { width: mmToPx(photoWmm), height: mmToPx(photoHmm) },
+              transformation: { width: mmToPx(photoWmm), height: mmToPx(imageHmm) },
               type: person.imageDataUrl.includes("image/png") ? "png" : "jpg",
             }),
           ],
@@ -139,7 +145,7 @@ export async function generatePassportPhotosDocx(
       tableRows.push(
         new TableRow({
           cantSplit: true,
-          height: { value: convertMillimetersToTwip(photoHmm), rule: HeightRule.ATLEAST },
+          height: { value: convertMillimetersToTwip(rowHmm), rule: HeightRule.EXACT },
           children: cells,
         })
       );
@@ -148,7 +154,7 @@ export async function generatePassportPhotosDocx(
           new TableRow({
             cantSplit: true,
             // A printed name already takes part of the cutting gap
-            height: { value: convertMillimetersToTwip(showName ? gapYmm - 5 : gapYmm), rule: HeightRule.EXACT },
+            height: { value: convertMillimetersToTwip(gapYmm), rule: HeightRule.EXACT },
             children: columnWidthsMm.map((w) => emptyCell(w)),
           })
         );

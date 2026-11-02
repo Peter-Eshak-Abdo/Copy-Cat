@@ -1,1019 +1,540 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  FileText,
-  Sparkles,
-  Download,
-  Loader2,
   BookOpen,
-  CheckSquare,
-  Square,
-  Server,
-  Copy,
   Check,
-  User,
-  GraduationCap,
-  School,
-  Plus,
-  Trash2,
-  RotateCcw,
+  CheckCircle2,
+  ChevronDown,
+  Copy,
+  Download,
+  FileText,
+  Image as ImageIcon,
   Layers,
-  X,
+  ListOrdered,
+  Loader2,
+  Minus,
+  Palette,
+  Plus,
+  Sparkles,
+  User,
 } from "lucide-react";
-import {
-  generateResearchDocx,
-  ResearchCoverInfo,
-  TOP_ARABIC_ACADEMIC_SOURCES,
-  CustomResearchSource,
-  normalizeResearchText,
-} from "@/lib/docx/research-docx";
+import { generateResearchDocx, type ResearchCoverInfo } from "@/lib/docx/research-docx";
+import { researchToText, type ResearchDoc } from "@/lib/research/types";
 import { useToast } from "@/components/toast-provider";
 import { getFriendlyErrorMessage } from "@/lib/utils";
 
-interface GeneratedVersion {
-  id?: number;
-  versionNumber?: number;
-  angle?: string | { id?: number | string; name?: string; focus?: string; keywords?: string[] };
-  title?: string;
-  content: string;
-  provider?: string;
-  wordCount?: number;
-  estimatedPages?: number;
+const PAGE_CHOICES = [5, 10, 15, 20, 30];
+
+interface Stage {
+  text: string;
+  progress: number;
+  at: number;
 }
 
-function getAngleName(angle?: GeneratedVersion["angle"]): string {
-  if (!angle) return "";
-  if (typeof angle === "string") return angle;
-  if (typeof angle === "object" && angle.name) return angle.name;
-  return "";
-}
-
-function getAngleShortLabel(angle?: GeneratedVersion["angle"]): string {
-  const name = getAngleName(angle);
-  if (!name) return "";
-  const parts = name.trim().split(/\s+/);
-  return parts[1] || parts[0] || name;
-}
-
-function getRealisticProgress(seconds: number): number {
-  if (seconds < 12) {
-    return Math.min(25, 10 + Math.floor((seconds / 12) * 15)); // Step 1: 10% -> 25%
-  }
-  if (seconds < 30) {
-    return Math.min(50, 25 + Math.floor(((seconds - 12) / 18) * 25)); // Step 2: 25% -> 50%
-  }
-  if (seconds < 65) {
-    return Math.min(75, 50 + Math.floor(((seconds - 30) / 35) * 25)); // Step 3: 50% -> 75%
-  }
-  if (seconds < 90) {
-    return Math.min(88, 75 + Math.floor(((seconds - 65) / 25) * 13)); // Step 4: 75% -> 88%
-  }
-  return Math.min(96, 88 + Math.floor(((seconds - 90) / 30) * 8)); // Step 5: 88% -> 96%
+/** One switch row: label, explanation and a toggle */
+function Toggle({
+  checked,
+  onChange,
+  icon,
+  title,
+  hint,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  icon: React.ReactNode;
+  title: string;
+  hint: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={`w-full flex items-center gap-3 p-3 rounded-xl border text-right transition cursor-pointer ${
+        checked ? "bg-indigo-50 border-indigo-300" : "bg-white border-slate-200 hover:border-slate-300"
+      }`}
+      aria-pressed={checked}
+    >
+      <span className={`p-2 rounded-lg ${checked ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}>{icon}</span>
+      <span className="flex-1">
+        <span className="block text-sm font-bold text-slate-900">{title}</span>
+        <span className="block text-xs text-slate-500">{hint}</span>
+      </span>
+      <span className={`w-10 h-6 rounded-full p-0.5 transition ${checked ? "bg-indigo-600" : "bg-slate-300"}`}>
+        <span className={`block w-5 h-5 rounded-full bg-white shadow transition-transform ${checked ? "-translate-x-4" : ""}`} />
+      </span>
+    </button>
+  );
 }
 
 export default function ResearchPage() {
   const { toast } = useToast();
   const [topic, setTopic] = useState("");
-  const [targetPages, setTargetPages] = useState(5);
+  const [pages, setPages] = useState(10);
   const [customPages, setCustomPages] = useState("");
-  const [isCustomPages, setIsCustomPages] = useState(false);
-  const [customDetails, setCustomDetails] = useState("");
-  const includeIntro = true;
-  const [includeIndex, setIncludeIndex] = useState(true);
-  const includeConclusion = true;
-  const [includeRefs, setIncludeRefs] = useState(true);
-
-  // Versions Count (Item #1)
   const [versionsCount, setVersionsCount] = useState(1);
-  const [generatedVersions, setGeneratedVersions] = useState<GeneratedVersion[]>([]);
-  const [selectedVersionIndex, setSelectedVersionIndex] = useState(0);
-  const [isBatchExporting, setIsBatchExporting] = useState(false);
-
-  // Cover Information State (Item #13)
-  const [studentName, setStudentName] = useState("");
-  const [teacherName, setTeacherName] = useState("");
-  const [gradeOrClass, setGradeOrClass] = useState("");
-  const [schoolOrUniversity, setSchoolOrUniversity] = useState("");
-  const [academicYear, setAcademicYear] = useState("2026 / 2027");
+  const [details, setDetails] = useState("");
+  const [colors, setColors] = useState(false);
+  const [withImages, setWithImages] = useState(false);
+  const [includeIndex, setIncludeIndex] = useState(true);
+  const [showCover, setShowCover] = useState(false);
+  const [cover, setCover] = useState<ResearchCoverInfo>({ academicYear: "2026 / 2027" });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [generatedText, setGeneratedText] = useState<string | null>(null);
-  const [activeProvider, setActiveProvider] = useState<string | null>(null);
-  const [isExportingDocx, setIsExportingDocx] = useState(false);
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [now, setNow] = useState(0);
+  const [startedAt, setStartedAt] = useState(0);
+  const [versions, setVersions] = useState<ResearchDoc[]>([]);
+  const [selected, setSelected] = useState(0);
+  const [exporting, setExporting] = useState<number | "all" | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Custom Sources Management State (Item #2)
-  const [sources, setSources] = useState<CustomResearchSource[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("copycat_custom_research_sources_v1");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
-          }
-        }
-      } catch {}
-    }
-    return TOP_ARABIC_ACADEMIC_SOURCES.map((s) => ({
-      id: s.id,
-      name: s.name,
-      desc: s.desc,
-      category: s.category,
-    }));
-  });
-  const [showAddSourceModal, setShowAddSourceModal] = useState(false);
-  const [newSourceUrl, setNewSourceUrl] = useState("");
-  const [newSourceName, setNewSourceName] = useState("");
+  const effectivePages = customPages ? Math.max(1, Math.min(60, parseInt(customPages) || pages)) : pages;
+  const doc = versions[selected];
 
-  // Live timer for research generation
+  // Conditions written in the notes ("بالألوان", "فيه صور") switch the matching option on
+  const onDetails = (text: string) => {
+    setDetails(text);
+    if (/ألوان|الوان|ملون/.test(text)) setColors(true);
+    if (/صور|صوره|صورة/.test(text)) setWithImages(true);
+  };
+
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isLoading) {
-      interval = setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
+    if (!isLoading) return;
+    const t = window.setInterval(() => setNow(Date.now()), 500);
+    return () => window.clearInterval(t);
   }, [isLoading]);
 
-  const handleAddSource = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSourceUrl.trim()) return;
-
-    let guessedName = "";
-    try {
-      const u = new URL(newSourceUrl.startsWith("http") ? newSourceUrl : `https://${newSourceUrl}`);
-      if (u.hostname.includes("wikipedia")) guessedName = "موسوعة ويكيبيديا العربية (Wikipedia)";
-      else if (u.hostname.includes("mawdoo3")) guessedName = "موسوعة موضوع (Mawdoo3)";
-      else if (u.hostname.includes("ekb.eg")) guessedName = "بنك المعرفة المصري (EKB)";
-      else if (u.hostname.includes("marefa")) guessedName = "موسوعة المعرفة (Marefa)";
-      else guessedName = u.hostname.replace(/^www\./, "");
-    } catch {
-      guessedName = newSourceUrl.trim();
-    }
-
-    const finalName = newSourceName.trim() || guessedName;
-    const newSource: CustomResearchSource = {
-      id: "source-" + Date.now(),
-      name: finalName,
-      url: newSourceUrl.trim(),
-      desc: `مصدر للبحث (${newSourceUrl.trim()})`,
-      category: "مواقع ومصادر",
-      citation: `${finalName} - استشهاد وبحث (${newSourceUrl.trim()})`,
-    };
-    const updated = [newSource, ...sources];
-    setSources(updated);
-    try {
-      localStorage.setItem("copycat_custom_research_sources_v1", JSON.stringify(updated));
-    } catch {}
-    setShowAddSourceModal(false);
-    setNewSourceUrl("");
-    setNewSourceName("");
-    toast.success("الرابط اتضاف", `"${finalName}" بقى من مصادر البحث.`);
-  };
-
-  const handleDeleteSource = (id: string, name: string) => {
-    const updated = sources.filter((s) => s.id !== id);
-    setSources(updated);
-    try {
-      localStorage.setItem("copycat_custom_research_sources_v1", JSON.stringify(updated));
-    } catch {}
-    toast.info("المصدر اتمسح", `شلنا "${name}" من المصادر.`);
-  };
-
-  const handleResetSources = () => {
-    const defaults: CustomResearchSource[] = TOP_ARABIC_ACADEMIC_SOURCES.map((s) => ({
-      id: s.id,
-      name: s.name,
-      desc: s.desc,
-      category: s.category,
-    }));
-    setSources(defaults);
-    try {
-      localStorage.setItem("copycat_custom_research_sources_v1", JSON.stringify(defaults));
-    } catch {}
-    toast.success("المصادر رجعت زي الأول", "رجّعنا الـ 10 مصادر الأصلية.");
-  };
+  const progress = stages.length ? stages[stages.length - 1].progress : 0;
+  const elapsed = isLoading && startedAt ? Math.max(0, Math.round((now - startedAt) / 1000)) : 0;
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim()) return;
-
     if (typeof navigator !== "undefined" && !navigator.onLine) {
-      toast.warning(
-        "النت فاصل",
-        "كتابة البحث محتاجة إنترنت. وصّل النت وجرب تاني."
-      );
+      toast.warning("النت فاصل", "عمل البحث محتاج إنترنت. وصّل النت وجرب تاني.");
       return;
     }
-
-    setElapsedSeconds(0);
     setIsLoading(true);
-    setGeneratedText(null);
-    setGeneratedVersions([]);
-    setActiveProvider(null);
-
-    const effectivePages = isCustomPages
-      ? Math.max(1, Math.min(60, parseInt(customPages) || 5))
-      : targetPages;
+    setVersions([]);
+    setSelected(0);
+    const t0 = Date.now();
+    setStartedAt(t0);
+    setNow(t0);
+    setStages([{ text: "بنبعت الطلب", progress: 2, at: t0 }]);
 
     try {
       const resp = await fetch("/api/research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topic,
-          targetPages: effectivePages,
-          includeIntro,
-          includeIndex,
-          includeConclusion,
-          includeRefs,
-          customDetails,
-          versionsCount,
-          customSources: sources.map((s) => ({
-            name: s.name,
-            category: s.category,
-            desc: s.desc,
-            citation: s.citation,
-            url: s.url,
-          })),
-        }),
+        body: JSON.stringify({ topic, targetPages: effectivePages, versionsCount, withImages, customDetails: details }),
       });
-
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new Error(data.error || "البحث متكتبش");
+      if (!resp.ok || !resp.body) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data.error || "البحث متعملش");
       }
-
-      if (data.versions && Array.isArray(data.versions) && data.versions.length > 0) {
-        const normalizedVersions = data.versions.map((v: GeneratedVersion) => ({
-          ...v,
-          content: normalizeResearchText(v.content),
-        }));
-        setGeneratedVersions(normalizedVersions);
-        setSelectedVersionIndex(0);
-        setGeneratedText(normalizedVersions[0].content);
-        setActiveProvider(data.versions[0].provider || data.provider || "Gemini Flash");
-      } else {
-        const normalizedContent = normalizeResearchText(data.content);
-        const singleVersion: GeneratedVersion = {
-          id: 1,
-          versionNumber: 1,
-          angle: "النسخة الرئيسية",
-          title: `بحث متكامل عن: ${topic}`,
-          content: normalizedContent,
-        };
-        setGeneratedVersions([singleVersion]);
-        setSelectedVersionIndex(0);
-        setGeneratedText(normalizedContent);
-        setActiveProvider(data.provider || "Gemini Flash");
+      // The server streams one JSON line per real step
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let result: ResearchDoc[] | null = null;
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const ev = JSON.parse(line);
+          if (ev.type === "stage") setStages((s) => [...s, { text: ev.text, progress: ev.progress, at: Date.now() }]);
+          else if (ev.type === "done") result = ev.versions;
+          else if (ev.type === "error") throw new Error(ev.error);
+        }
       }
+      if (!result || result.length === 0) throw new Error("البحث متعملش");
+      setVersions(result);
+      const fromWiki = result[0].source === "wikipedia";
       toast.success(
         "البحث جاهز",
-        versionsCount > 1
-          ? `اتكتب ${data.versions?.length || versionsCount} نسخ مختلفة عن بعض من البحث.`
-          : `اتكتب بحث كامل عن "${topic}".`
+        `${result.length > 1 ? `${result.length} نسخ مختلفة` : "نسخة واحدة"}${fromWiki ? "، الكلام من ويكيبيديا" : ""}. نزّل ملف Word.`
       );
     } catch (err) {
-      toast.error(
-        "البحث متكتبش",
-        getFriendlyErrorMessage(err, "مقدرناش نوصل للذكاء الاصطناعي. جرب تاني بعد شوية.")
-      );
+      toast.error("البحث متعملش", getFriendlyErrorMessage(err, "جرب تاني بعد شوية."));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDownloadDocx = async (targetVersionIdx = selectedVersionIndex) => {
-    const versionToExport = generatedVersions[targetVersionIdx];
-    const textToExport = versionToExport?.content || generatedText;
-    if (!textToExport || !topic) return;
+  const coverInfo = (): ResearchCoverInfo => ({
+    studentName: cover.studentName?.trim() || undefined,
+    teacherName: cover.teacherName?.trim() || undefined,
+    gradeOrClass: cover.gradeOrClass?.trim() || undefined,
+    schoolOrUniversity: cover.schoolOrUniversity?.trim() || undefined,
+    academicYear: cover.academicYear?.trim() || undefined,
+  });
 
-    setIsExportingDocx(true);
-
-    const effectivePages = isCustomPages
-      ? Math.max(1, Math.min(60, parseInt(customPages) || 5))
-      : targetPages;
-
-    const coverInfo: ResearchCoverInfo = {
-      studentName: studentName.trim() || undefined,
-      teacherName: teacherName.trim() || undefined,
-      gradeOrClass: gradeOrClass.trim() || undefined,
-      schoolOrUniversity: schoolOrUniversity.trim() || undefined,
-      academicYear: academicYear.trim() || undefined,
-    };
-
+  const download = async (index: number) => {
+    setExporting(index);
     try {
-      await generateResearchDocx({
-        topic,
-        rawText: textToExport,
-        includeIndex,
-        includeReferences: includeRefs,
-        coverInfo,
-        targetPages: effectivePages,
-        sources,
-        versionNumber: generatedVersions.length > 1 ? targetVersionIdx + 1 : undefined,
-        language: /[\u0600-\u06FF]/.test(topic + " " + (textToExport || "")) ? "ar" : "en",
-      });
-      toast.success(
-        "ملف Word نزل",
-        `${generatedVersions.length > 1 ? `النسخة ${targetVersionIdx + 1}` : "البحث"} نزل ملف Word مقاس A4 جاهز للطباعة.`
-      );
+      await generateResearchDocx({ doc: versions[index], coverInfo: coverInfo(), includeIndex, colors });
+      toast.success("ملف Word نزل", versions.length > 1 ? `النسخة ${index + 1}` : "البحث جاهز للطباعة");
     } catch (err) {
-      console.error(err);
       toast.error("ملف Word منزلش", getFriendlyErrorMessage(err, "جرب تاني."));
     } finally {
-      setIsExportingDocx(false);
+      setExporting(null);
     }
   };
 
-  const handleDownloadAllVersions = async () => {
-    if (generatedVersions.length === 0 || !topic) return;
-    setIsBatchExporting(true);
-
-    const effectivePages = isCustomPages
-      ? Math.max(1, Math.min(60, parseInt(customPages) || 5))
-      : targetPages;
-
-    const coverInfo: ResearchCoverInfo = {
-      studentName: studentName.trim() || undefined,
-      teacherName: teacherName.trim() || undefined,
-      gradeOrClass: gradeOrClass.trim() || undefined,
-      schoolOrUniversity: schoolOrUniversity.trim() || undefined,
-      academicYear: academicYear.trim() || undefined,
-    };
-
+  const downloadAll = async () => {
+    setExporting("all");
     try {
-      for (let i = 0; i < generatedVersions.length; i++) {
-        const v = generatedVersions[i];
-        await generateResearchDocx({
-          topic,
-          rawText: v.content,
-          includeIndex,
-          includeReferences: includeRefs,
-          coverInfo,
-          targetPages: effectivePages,
-          sources,
-          versionNumber: i + 1,
-          language: /[\u0600-\u06FF]/.test(topic + " " + (v.content || "")) ? "ar" : "en",
-        });
-        // Small delay to allow browser to trigger each download smoothly
-        await new Promise((resolve) => setTimeout(resolve, 400));
+      for (const v of versions) {
+        await generateResearchDocx({ doc: v, coverInfo: coverInfo(), includeIndex, colors });
+        await new Promise((r) => setTimeout(r, 400));
       }
-      toast.success(
-        "كل النسخ نزلت",
-        `نزلنا الـ ${generatedVersions.length} نسخ، كل نسخة في ملف Word لوحدها.`
-      );
+      toast.success("كل النسخ نزلت", `${versions.length} ملفات Word، كل نسخة لوحدها.`);
     } catch (err) {
-      console.error(err);
       toast.error("النسخ منزلتش", getFriendlyErrorMessage(err));
     } finally {
-      setIsBatchExporting(false);
+      setExporting(null);
     }
   };
 
-  const handleCopy = () => {
-    if (!generatedText) return;
-    navigator.clipboard.writeText(generatedText);
+  const copyText = () => {
+    if (!doc) return;
+    navigator.clipboard.writeText(researchToText(doc));
     setCopied(true);
-    toast.info("النص اتنسخ", "البحث كله اتنسخ، الزقه في أي مكان.");
+    toast.info("اتنسخ", "نص البحث كله اتنسخ.");
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const stats = useMemo(() => {
+    if (!doc) return null;
+    const images = doc.sections.reduce((n, s) => n + s.images.length, 0);
+    return { sections: doc.sections.length, images, refs: doc.references.length };
+  }, [doc]);
+
+  const navy = colors ? "text-[#1F3864]" : "text-slate-900";
+  const steel = colors ? "text-[#2E5C8A]" : "text-slate-800";
+
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Form Panel */}
-        <form
-          onSubmit={handleGenerate}
-          className="bg-white backdrop-blur-md border border-slate-200 rounded-2xl p-6 space-y-5 h-fit shadow-xs"
-        >
-          {/* Topic */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-black text-slate-900 block">عنوان البحث:</label>
-            <textarea
-              rows={3}
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="مثال: الذكاء الاصطناعي وتطبيقاته في الطب الحديث..."
-              className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl p-3.5 text-sm font-medium text-slate-900 focus:border-purple-600 focus:bg-white focus:outline-none transition resize-none leading-relaxed"
-              required
-            />
+    <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
+      {/* ── Form ── */}
+      <form onSubmit={handleGenerate} className="xl:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 space-y-5 shadow-xs">
+        <div className="flex items-center gap-3">
+          <span className="p-2.5 rounded-xl bg-indigo-600 text-white">
+            <BookOpen className="w-5 h-5" />
+          </span>
+          <div>
+            <h1 className="text-lg font-black text-slate-900">عمل الأبحاث</h1>
+            <p className="text-xs text-slate-500">الكلام من مقالات ويكيبيديا الحقيقية، وكل نسخة مختلفة عن التانية</p>
           </div>
+        </div>
 
-          {/* Versions Count (Item #1) - High Contrast & Interactive */}
-          <div className="space-y-3 p-4 rounded-2xl bg-purple-50 border-2 border-purple-200 shadow-xs">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <label className="text-sm font-black text-purple-900 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-purple-700" />
-                <span>عايز كام نسخة؟</span>
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-purple-800 bg-purple-100 border border-purple-300 px-2.5 py-1 rounded-xl">
-                  (من 1 لـ 15 نسخة)
-                </span>
-                <span className="text-sm font-black text-white bg-purple-700 px-3 py-1 rounded-xl shadow-xs">
-                  {versionsCount} {versionsCount === 1 ? "نسخة واحدة" : "نسخ مستقلة"}
-                </span>
-              </div>
-            </div>
-            <p className="text-xs text-purple-900 leading-relaxed font-medium">
-              لو 15 طالب طالبين نفس البحث، كل نسخة هتطلع مختلفة في المقدمة والعناوين والخاتمة والمصادر، عشان محدش ياخد نفس بحث التاني.
-            </p>
-            <div className="flex items-center gap-3 pt-1">
-              <input
-                type="range"
-                min="1"
-                max="15"
-                value={versionsCount}
-                onChange={(e) => setVersionsCount(Math.max(1, Math.min(15, Number(e.target.value))))}
-                className="w-full accent-purple-600 cursor-pointer h-2.5 bg-purple-200 rounded-lg"
-              />
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setVersionsCount((prev) => Math.max(1, prev - 1))}
-                  className="w-8 h-8 rounded-lg bg-white border border-purple-300 text-purple-800 hover:bg-purple-100 font-black text-base flex items-center justify-center transition cursor-pointer"
-                  title="نسخة أقل"
-                >
-                  -
-                </button>
-                <input
-                  type="number"
-                  min="1"
-                  max="15"
-                  value={versionsCount}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    if (!isNaN(val)) {
-                      setVersionsCount(Math.max(1, Math.min(15, val)));
-                    }
-                  }}
-                  className="w-14 text-center font-black text-purple-900 bg-white border-2 border-purple-300 rounded-lg py-1 text-sm focus:border-purple-600 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setVersionsCount((prev) => Math.min(15, prev + 1))}
-                  className="w-8 h-8 rounded-lg bg-white border border-purple-300 text-purple-800 hover:bg-purple-100 font-black text-base flex items-center justify-center transition cursor-pointer"
-                  title="نسخة زيادة"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-bold text-slate-900 block">عنوان البحث</label>
+          <input
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="مثلاً: التلوث البيئي"
+            required
+            className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3.5 py-3 text-base font-bold text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none transition"
+          />
+          <p className="text-[11px] text-slate-500">العنوان القصير الواضح بيجيب كلام أكتر وأدق.</p>
+        </div>
 
-          {/* Custom Requirements / Details */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-black text-slate-900 block">
-              شروط أو ملاحظات (مش لازم):
-            </label>
-            <textarea
-              rows={2}
-              value={customDetails}
-              onChange={(e) => setCustomDetails(e.target.value)}
-              placeholder="مثلاً: يركز على 5 نقط معينة، يكون فيه مقارنة أو إحصائيات، شروط الدكتور..."
-              className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl p-3 text-xs sm:text-sm text-slate-900 focus:border-purple-600 focus:bg-white focus:outline-none transition resize-none leading-relaxed"
-            />
-          </div>
-
-          {/* Target Pages */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-black text-slate-900 block">البحث كام صفحة تقريباً؟</label>
-            <div className="grid grid-cols-6 gap-1.5">
-              {[5, 10, 15, 20, 30].map((pages) => (
-                <button
-                  key={pages}
-                  type="button"
-                  onClick={() => {
-                    setTargetPages(pages);
-                    setIsCustomPages(false);
-                  }}
-                  className={`py-2 px-1 text-center rounded-xl text-xs sm:text-sm font-black transition cursor-pointer border-2 ${
-                    !isCustomPages && targetPages === pages
-                      ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/20"
-                      : "bg-slate-50 text-slate-700 border-slate-200 hover:border-purple-300"
-                  }`}
-                >
-                  {pages} ص
-                </button>
-              ))}
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-slate-900 block">
+            كام صفحة؟ <span className="font-normal text-slate-500 text-xs">(من غير الغلاف والفهرس والمقدمة والخاتمة والمراجع)</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {PAGE_CHOICES.map((n) => (
               <button
+                key={n}
                 type="button"
-                onClick={() => setIsCustomPages(true)}
-                className={`py-2 px-1 text-center rounded-xl text-xs sm:text-sm font-black transition cursor-pointer border-2 ${
-                  isCustomPages
-                    ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/20"
-                    : "bg-slate-50 text-slate-700 border-slate-200 hover:border-purple-300"
+                onClick={() => {
+                  setPages(n);
+                  setCustomPages("");
+                }}
+                className={`px-4 py-2 rounded-xl text-sm font-bold border transition cursor-pointer ${
+                  !customPages && pages === n ? "bg-indigo-600 border-indigo-600 text-white shadow-sm" : "bg-white border-slate-200 text-slate-700 hover:border-indigo-300"
                 }`}
               >
-                أخرى
+                {n}
               </button>
-            </div>
-
-            {isCustomPages && (
-              <div className="mt-2 flex items-center gap-2 p-2 rounded-xl bg-purple-950/20 border border-purple-500/30">
-                <input
-                  type="number"
-                  min="1"
-                  max="60"
-                  value={customPages}
-                  onChange={(e) => setCustomPages(e.target.value)}
-                  placeholder="اكتب عدد الصفحات (مثلاً 25 أو 30)"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:border-purple-400 focus:outline-none"
-                />
-                <span className="text-xs text-purple-300 whitespace-nowrap font-bold">صفحة</span>
-              </div>
-            )}
+            ))}
+            <input
+              value={customPages}
+              onChange={(e) => setCustomPages(e.target.value.replace(/\D/g, "").slice(0, 2))}
+              placeholder="عدد تاني"
+              inputMode="numeric"
+              className={`w-24 px-3 py-2 rounded-xl text-sm font-bold border text-center focus:outline-none ${
+                customPages ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+              }`}
+            />
           </div>
+          <p className="text-[11px] text-slate-500">الملف كله هيطلع حوالي {effectivePages + 5} صفحة.</p>
+        </div>
 
-          {/* Cover Page Metadata Box (Item #13) */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-            <span className="text-xs font-bold text-purple-400 block border-b border-slate-200 pb-1.5">
-              بيانات الغلاف:
+        <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+          <div>
+            <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <Layers className="w-4 h-4 text-indigo-600" /> عدد النسخ
             </span>
-
-            <div className="space-y-2 text-xs">
-              <div>
-                <label className="text-[11px] text-slate-500 block mb-1">اسم الطالب:</label>
-                <div className="relative">
-                  <User className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-2.5" />
-                  <input
-                    type="text"
-                    value={studentName}
-                    onChange={(e) => setStudentName(e.target.value)}
-                    placeholder="مثال: أحمد محمد علي"
-                    className="w-full bg-white border border-slate-200 rounded-xl pr-8 pl-3 py-1.5 text-xs text-slate-900 focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-500 block mb-1">اسم الدكتور / المدرس:</label>
-                <div className="relative">
-                  <GraduationCap className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-2.5" />
-                  <input
-                    type="text"
-                    value={teacherName}
-                    onChange={(e) => setTeacherName(e.target.value)}
-                    placeholder="مثال: أ.د / محمود عثمان"
-                    className="w-full bg-white border border-slate-200 rounded-xl pr-8 pl-3 py-1.5 text-xs text-slate-900 focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[11px] text-slate-500 block mb-1">السنة / الفرقة:</label>
-                  <input
-                    type="text"
-                    value={gradeOrClass}
-                    onChange={(e) => setGradeOrClass(e.target.value)}
-                    placeholder="مثال: الصف الثالث الثانوي"
-                    className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-slate-500 block mb-1">العام الدراسي:</label>
-                  <input
-                    type="text"
-                    value={academicYear}
-                    onChange={(e) => setAcademicYear(e.target.value)}
-                    placeholder="2026 / 2027"
-                    className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-500 block mb-1">المدرسة / الكلية:</label>
-                <div className="relative">
-                  <School className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-2.5" />
-                  <input
-                    type="text"
-                    value={schoolOrUniversity}
-                    onChange={(e) => setSchoolOrUniversity(e.target.value)}
-                    placeholder="مثال: مدرسة المتفوقين / كلية الهندسة"
-                    className="w-full bg-white border border-slate-200 rounded-xl pr-8 pl-3 py-1.5 text-xs text-slate-900 focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
+            <span className="text-[11px] text-slate-500">لو كذا طالب عايزين نفس البحث، كل واحد ياخد نسخة مختلفة</span>
           </div>
-
-          {/* Options */}
-          <div className="space-y-2 pt-1 border-t border-slate-200">
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setIncludeIndex(!includeIndex)}
-              className="w-full flex items-center justify-between text-xs py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:border-purple-500/40 transition cursor-pointer"
+              onClick={() => setVersionsCount((n) => Math.max(1, n - 1))}
+              className="p-2 rounded-lg bg-white border border-slate-200 hover:border-indigo-300 cursor-pointer"
+              aria-label="نسخة أقل"
             >
-              <span>حط صفحة فهرس</span>
-              {includeIndex ? (
-                <CheckSquare className="w-4 h-4 text-purple-400" />
-              ) : (
-                <Square className="w-4 h-4 text-slate-600" />
-              )}
+              <Minus className="w-4 h-4" />
             </button>
-
+            <span className="w-8 text-center text-lg font-black text-indigo-700">{versionsCount}</span>
             <button
               type="button"
-              onClick={() => setIncludeRefs(!includeRefs)}
-              className="w-full flex items-center justify-between text-xs py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:border-purple-500/40 transition cursor-pointer"
+              onClick={() => setVersionsCount((n) => Math.min(15, n + 1))}
+              className="p-2 rounded-lg bg-white border border-slate-200 hover:border-indigo-300 cursor-pointer"
+              aria-label="نسخة زيادة"
             >
-              <span>حط صفحة المراجع</span>
-              {includeRefs ? (
-                <CheckSquare className="w-4 h-4 text-purple-400" />
-              ) : (
-                <Square className="w-4 h-4 text-slate-600" />
-              )}
+              <Plus className="w-4 h-4" />
             </button>
           </div>
+        </div>
 
+        <div className="space-y-2">
+          <Toggle checked={colors} onChange={setColors} icon={<Palette className="w-4 h-4" />} title="بالألوان" hint="العناوين كحلي والباقي بدرجات أزرق هادية" />
+          <Toggle checked={withImages} onChange={setWithImages} icon={<ImageIcon className="w-4 h-4" />} title="فيه صور" hint="صور حقيقية من ويكيبيديا، صورة كل صفحتين أو تلاتة" />
+          <Toggle checked={includeIndex} onChange={setIncludeIndex} icon={<ListOrdered className="w-4 h-4" />} title="فيه فهرس" hint="صفحة فهرس بعد الغلاف" />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-bold text-slate-900 block">شروط المدرس (مش لازم)</label>
+          <textarea
+            rows={2}
+            value={details}
+            onChange={(e) => onDetails(e.target.value)}
+            placeholder="مثلاً: بالألوان وفيه صور، يركز على الأسباب والحلول"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none resize-none"
+          />
+        </div>
+
+        <div className="rounded-xl border border-slate-200 overflow-hidden">
           <button
-            type="submit"
-            disabled={isLoading || !topic.trim()}
-            className="w-full py-3.5 px-4 rounded-2xl bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm shadow-md shadow-purple-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            type="button"
+            onClick={() => setShowCover((v) => !v)}
+            className="w-full flex items-center justify-between p-3 bg-slate-50 text-sm font-bold text-slate-900 cursor-pointer"
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span>بنكتب البحث ({versionsCount} نسخ)...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 text-purple-200" />
-                <span>
-                  اكتب البحث {versionsCount > 1 ? `(${versionsCount} نسخ مختلفة)` : ""}
-                </span>
-              </>
-            )}
+            <span className="flex items-center gap-2">
+              <User className="w-4 h-4 text-indigo-600" /> بيانات الغلاف
+              {cover.studentName && <span className="text-xs font-normal text-slate-500">({cover.studentName})</span>}
+            </span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showCover ? "rotate-180" : ""}`} />
           </button>
-        </form>
-
-        {/* Results Panel */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between min-h-[550px] shadow-xs">
-          {generatedText ? (
-            <div className="space-y-4">
-              {/* Version Switcher Tabs if multiple versions generated */}
-              {generatedVersions.length > 1 && (
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200">
-                  <span className="text-xs font-bold text-slate-600 shrink-0 flex items-center gap-1">
-                    <Layers className="w-3.5 h-3.5 text-purple-600" /> النسخ اللي اتكتبت:
-                  </span>
-                  {generatedVersions.map((v, idx) => {
-                    const angleName = getAngleName(v.angle);
-                    const shortAngle = getAngleShortLabel(v.angle);
-                    const versionNum = v.versionNumber || v.id || idx + 1;
-
-                    return (
-                      <button
-                        key={v.id || v.versionNumber || idx}
-                        type="button"
-                        onClick={() => {
-                          setSelectedVersionIndex(idx);
-                          setGeneratedText(v.content);
-                          if (v.provider) {
-                            setActiveProvider(v.provider);
-                          }
-                        }}
-                        title={`نسخة ${versionNum}`}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
-                          selectedVersionIndex === idx
-                            ? "bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-600/30"
-                            : "bg-slate-50 text-slate-700 border-slate-200 hover:text-purple-700 hover:bg-purple-50"
-                        }`}
-                      >
-                        <span>نسخة {versionNum}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <BookOpen className="w-5 h-5 text-purple-600" />
-                  <span className="font-bold text-slate-900 text-base">
-                    معاينة نص البحث {generatedVersions.length > 1 ? `(نسخة ${selectedVersionIndex + 1})` : ""}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? "اتنسخ" : "انسخ النص"}</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleDownloadDocx(selectedVersionIndex)}
-                    disabled={isExportingDocx || isBatchExporting}
-                    className="flex items-center gap-2 py-2 px-4 rounded-xl bg-linear-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition disabled:opacity-50 cursor-pointer"
-                  >
-                    <Download className="w-3.5 h-3.5 text-white" />
-                    <span>
-                      {isExportingDocx
-                        ? "بنجهز..."
-                        : generatedVersions.length > 1
-                        ? `نزّل النسخة ${selectedVersionIndex + 1}`
-                        : "نزّل ملف Word"}
-                    </span>
-                  </button>
-
-                  {generatedVersions.length > 1 && (
-                    <button
-                      onClick={handleDownloadAllVersions}
-                      disabled={isBatchExporting || isExportingDocx}
-                      className="flex items-center gap-2 py-2 px-4 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border-2 border-purple-300 text-xs font-bold shadow-xs transition disabled:opacity-50 cursor-pointer"
-                    >
-                      <Layers className="w-3.5 h-3.5 text-purple-600" />
-                      <span>
-                        {isBatchExporting ? "بننزل كل النسخ..." : `نزّل كل النسخ (${generatedVersions.length})`}
-                      </span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {(() => {
-                const isResearchArabic = /[\u0600-\u06FF]/.test(generatedText || topic || "");
-                return (
-                  <div
-                    dir={isResearchArabic ? "rtl" : "ltr"}
-                    className={`bg-white p-6 rounded-2xl border-2 border-slate-200 max-h-[600px] overflow-y-auto whitespace-pre-wrap text-black text-sm sm:text-base leading-relaxed font-sans select-text shadow-inner ${
-                      isResearchArabic ? "text-right" : "text-left"
-                    }`}
-                    style={{
-                      color: "#000000",
-                      direction: isResearchArabic ? "rtl" : "ltr",
-                      textAlign: isResearchArabic ? "right" : "left",
-                    }}
-                  >
-                    {generatedText}
-                  </div>
-                );
-              })()}
-            </div>
-          ) : isLoading ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-lg mx-auto w-full">
-              {/* Spinner & Glow */}
-              <div className="relative mb-6">
-                <div className="w-20 h-20 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400 animate-pulse shadow-xs shadow-purple-600/20">
-                  <Sparkles className="w-10 h-10 animate-spin text-purple-400" style={{ animationDuration: "3s" }} />
-                </div>
-                <div className="absolute -inset-2 bg-linear-to-r from-purple-500/30 to-indigo-500/30 rounded-2xl blur-xl -z-10" />
-              </div>
-
-              <h3 className="text-lg font-bold text-slate-900 mb-2">
-                جاري صياغة وكتابة البحث الأكاديمي {versionsCount > 1 ? `(${versionsCount} نسخ مستقلة)...` : "..."}
-              </h3>
-              <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-                الذكاء الاصطناعي بيكتب البحث دلوقتي، بكلام علمي من غير حشو وبالترتيب المعروف للأبحاث، وكل نسخة مختلفة عن التانية.
-              </p>
-
-              {/* Live Timer Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-purple-800 text-xs font-bold mb-5 shadow-inner">
-                <span className="w-2 h-2 rounded-full bg-purple-600 animate-ping" />
-                <span>الوقت المستغرق: {elapsedSeconds} ثانية</span>
-              </div>
-
-              {/* Visual Progress Bar (Realistic progress synchronized with current step) */}
-              <div className="w-full bg-slate-100 rounded-full h-3.5 p-0.5 border border-slate-200 mb-6 overflow-hidden">
-                <div
-                  className="bg-linear-to-r from-purple-600 via-indigo-600 to-purple-600 h-full rounded-full transition-all duration-500 shadow-sm"
-                  style={{ width: `${getRealisticProgress(elapsedSeconds)}%` }}
-                />
-              </div>
-
-              {/* Step Checklist */}
-              <div className="w-full bg-slate-50 rounded-2xl border border-slate-200 p-4 text-right space-y-2.5 text-xs">
-                <div
-                  className={`flex items-center justify-between gap-2 ${
-                    elapsedSeconds >= 0 ? "text-purple-700 font-bold" : "text-slate-500"
-                  }`}
-                >
-                  <span>1. بيفهم الموضوع ويقسّم البحث</span>
-                  <span className="text-[11px] font-bold">{elapsedSeconds > 10 ? "✓ تم" : "شغالين..."}</span>
-                </div>
-                <div
-                  className={`flex items-center justify-between gap-2 ${
-                    elapsedSeconds >= 12 ? "text-purple-700 font-bold" : "text-slate-500"
-                  }`}
-                >
-                  <span>2. بيكتب المقدمة والأهداف لكل نسخة</span>
-                  <span className="text-[11px] font-bold">
-                    {elapsedSeconds > 28 ? "✓ تم" : elapsedSeconds >= 12 ? "شغالين..." : "مستني دوره"}
-                  </span>
-                </div>
-                <div
-                  className={`flex items-center justify-between gap-2 ${
-                    elapsedSeconds >= 30 ? "text-purple-700 font-bold" : "text-slate-500"
-                  }`}
-                >
-                  <span>3. بيكتب موضوع البحث نفسه</span>
-                  <span className="text-[11px] font-bold">
-                    {elapsedSeconds > 60 ? "✓ تم" : elapsedSeconds >= 30 ? "شغالين..." : "مستني دوره"}
-                  </span>
-                </div>
-                <div
-                  className={`flex items-center justify-between gap-2 ${
-                    elapsedSeconds >= 62 ? "text-purple-700 font-bold" : "text-slate-500"
-                  }`}
-                >
-                  <span>4. بيكتب الخاتمة والتوصيات والمراجع</span>
-                  <span className="text-[11px] font-bold">
-                    {elapsedSeconds > 80 ? "✓ تم" : elapsedSeconds >= 62 ? "شغالين..." : "مستني دوره"}
-                  </span>
-                </div>
-                <div
-                  className={`flex items-center justify-between gap-2 ${
-                    elapsedSeconds >= 82 ? "text-purple-700 font-bold" : "text-slate-500"
-                  }`}
-                >
-                  <span>5. بيجهز ملفات Word</span>
-                  <span className="text-[11px] font-bold">{elapsedSeconds >= 82 ? "شغالين..." : "مستني دوره"}</span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500">
-              <div className="w-16 h-16 rounded-2xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-600 mb-4 shadow-inner">
-                <FileText className="w-8 h-8" />
-              </div>
-              <p className="text-base font-bold text-slate-900 mb-1">جاهز يكتبلك البحث</p>
-              <p className="text-xs max-w-md text-slate-600 leading-relaxed font-medium">
-                اكتب عنوان البحث وبيانات الغلاف وعدد النسخ، وبعدين دوس الزرار. هيطلعلك ملف Word مقاس A4 فيه غلاف وفهرس وجاهز للطباعة.
-              </p>
+          {showCover && (
+            <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5 cc-fade-up">
+              {(
+                [
+                  ["studentName", "اسم الطالب", "أحمد محمد علي"],
+                  ["teacherName", "اسم المدرس", "أ/ محمود عثمان"],
+                  ["gradeOrClass", "السنة / الصف", "الصف الأول الثانوي"],
+                  ["academicYear", "العام الدراسي", "2026 / 2027"],
+                  ["schoolOrUniversity", "المدرسة / الكلية", "مدرسة الإسماعيلية الثانوية"],
+                ] as const
+              ).map(([key, label, ph]) => (
+                <label key={key} className={`block ${key === "schoolOrUniversity" ? "sm:col-span-2" : ""}`}>
+                  <span className="text-xs font-bold text-slate-600">{label}</span>
+                  <input
+                    value={cover[key] || ""}
+                    onChange={(e) => setCover((c) => ({ ...c, [key]: e.target.value }))}
+                    placeholder={ph}
+                    className="mt-1 w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                  />
+                </label>
+              ))}
             </div>
           )}
         </div>
-      </div>
 
-      {/* Custom Sources Management Card (Item #2) */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-inner">
-              <GraduationCap className="w-5 h-5" />
+        <button
+          type="submit"
+          disabled={isLoading || !topic.trim()}
+          className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 transition disabled:opacity-50 cursor-pointer"
+        >
+          {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+          {isLoading ? "شغالين على البحث..." : versionsCount > 1 ? `اعمل البحث (${versionsCount} نسخ)` : "اعمل البحث"}
+        </button>
+      </form>
+
+      {/* ── Progress / result ── */}
+      <div className="xl:col-span-3 space-y-4">
+        {isLoading && (
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4 cc-fade-up" role="status" aria-live="polite">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-black text-slate-900">بنجهز البحث عن «{topic}»</span>
+              <span className="text-xs font-mono text-slate-500">{elapsed} ث</span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm md:text-base font-bold text-slate-900">
-                  المصادر اللي البحث بياخد منها
-                </h3>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold border border-purple-200">
-                  {sources.length} مصدر
+            <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+              <div className="h-full bg-indigo-600 transition-all duration-700" style={{ width: `${Math.max(3, progress)}%` }} />
+            </div>
+            <ol className="space-y-2">
+              {stages.map((s, i) => {
+                const current = i === stages.length - 1;
+                return (
+                  <li key={i} className="flex items-center gap-2.5 text-sm cc-fade-up">
+                    {current ? (
+                      <Loader2 className="w-4 h-4 text-indigo-600 animate-spin shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    )}
+                    <span className={current ? "font-bold text-slate-900" : "text-slate-500"}>{s.text}</span>
+                  </li>
+                );
+              })}
+            </ol>
+            <div className="space-y-2 pt-1">
+              <div className="h-4 w-2/3 rounded cc-shimmer" />
+              <div className="h-3 w-full rounded cc-shimmer" />
+              <div className="h-3 w-5/6 rounded cc-shimmer" />
+            </div>
+          </div>
+        )}
+
+        {!isLoading && !doc && (
+          <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center space-y-3">
+            <FileText className="w-12 h-12 text-slate-300 mx-auto" />
+            <h2 className="text-base font-black text-slate-800">البحث هيظهر هنا</h2>
+            <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+              اكتب العنوان واختار عدد الصفحات ودوس «اعمل البحث». هيطلعلك ملف Word فيه غلاف وفهرس ومقدمة والموضوع وخاتمة في صفحة لوحدها ومراجع.
+            </p>
+          </div>
+        )}
+
+        {!isLoading && doc && stats && (
+          <div className="space-y-4 cc-fade-up">
+            {versions.length > 1 && (
+              <div className="flex flex-wrap gap-2">
+                {versions.map((v, i) => (
+                  <button
+                    key={v.versionNumber}
+                    type="button"
+                    onClick={() => setSelected(i)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      i === selected ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-slate-200 text-slate-700 hover:border-indigo-300"
+                    }`}
+                  >
+                    نسخة {v.versionNumber} <span className="opacity-75">({v.font})</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-wrap items-center gap-3 justify-between">
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700">{stats.sections} عنوان</span>
+                <span className="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700">حوالي {effectivePages} صفحة موضوع</span>
+                {stats.images > 0 && <span className="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700">{stats.images} صور</span>}
+                <span className="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700">الخط: {doc.font}</span>
+                <span className={`px-2.5 py-1 rounded-lg font-bold ${doc.source === "wikipedia" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                  {doc.source === "wikipedia" ? "الكلام من ويكيبيديا" : "مكتوب بالذكاء الاصطناعي (ويكيبيديا مكانش فيها كفاية)"}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                تقدر تضيف مصادر جديدة أو تمسح مصادر، وهتتكتب لوحدها في البحث وفي صفحة المراجع.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setShowAddSourceModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-md shadow-purple-600/20 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" /> ضيف مصدر جديد
-            </button>
-            <button
-              type="button"
-              onClick={handleResetSources}
-              title="رجّع المصادر الأصلية"
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer border border-slate-200"
-            >
-              <RotateCcw className="w-3 h-3" /> رجّع الأصلي
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {sources.map((source, index) => (
-            <div
-              key={source.id}
-              className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-purple-500/40 hover:bg-purple-50/30 transition-all flex flex-col justify-between text-right space-y-2 group relative"
-            >
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-xs font-black text-purple-600">#{index + 1}</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 border border-purple-200 truncate max-w-[105px] font-bold">
-                    {source.category}
-                  </span>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={copyText} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold cursor-pointer">
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {copied ? "اتنسخ" : "انسخ النص"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => download(selected)}
+                  disabled={exporting !== null}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold disabled:opacity-60 cursor-pointer"
+                >
+                  {exporting === selected ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {exporting === selected ? (stats.images ? "بننزل الصور ونجهز الملف..." : "بنجهز الملف...") : versions.length > 1 ? `نزّل النسخة ${selected + 1}` : "نزّل Word"}
+                </button>
+                {versions.length > 1 && (
                   <button
                     type="button"
-                    onClick={() => handleDeleteSource(source.id, source.name)}
-                    title={`امسح "${source.name}"`}
-                    className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                    onClick={downloadAll}
+                    disabled={exporting !== null}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold disabled:opacity-60 cursor-pointer"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    {exporting === "all" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                    نزّل الكل ({versions.length})
                   </button>
-                </div>
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-slate-900 group-hover:text-purple-900 leading-snug">
-                  {source.name}
-                </h4>
-                {source.url ? (
-                  <a
-                    href={source.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[10px] text-purple-600 hover:underline block truncate mt-0.5 text-left"
-                    dir="ltr"
-                    title={source.url}
-                  >
-                    🔗 {source.url}
-                  </a>
-                ) : (
-                  <p className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-relaxed font-medium">{source.desc}</p>
                 )}
               </div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Add Source Modal (URL Focus - Requirement #11) */}
-      {showAddSourceModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-purple-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-600 flex items-center justify-center font-bold">
-                  <Plus className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-900">ضيف رابط موقع أو مقال</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAddSourceModal(false)}
-                className="text-slate-500 hover:text-slate-900 p-1 rounded-lg hover:bg-slate-100 transition"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddSource} className="space-y-3.5 text-right">
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
-                  الرابط: <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="url"
-                  value={newSourceUrl}
-                  onChange={(e) => setNewSourceUrl(e.target.value)}
-                  placeholder="مثال: https://ar.wikipedia.org/wiki/... أو https://mawdoo3.com/..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:border-purple-500 focus:outline-none text-left"
-                  dir="ltr"
-                  required
-                  autoFocus
-                />
-                <span className="text-[11px] text-slate-500 block mt-1">
-                  حط رابط ويكيبيديا أو موضوع أو أي موقع عايز البحث ياخد منه.
-                </span>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
-                  اسم الموقع (مش لازم):
-                </label>
-                <input
-                  type="text"
-                  value={newSourceName}
-                  onChange={(e) => setNewSourceName(e.target.value)}
-                  placeholder="مش لازم، هيتاخد من الرابط لوحده"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:border-purple-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setShowAddSourceModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" /> احفظ الرابط
-                </button>
-              </div>
-            </form>
+            {/* Preview, laid out like the Word file */}
+            <article
+              key={doc.versionNumber}
+              dir="rtl"
+              className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs max-h-[70vh] overflow-y-auto space-y-4 cc-fade-up text-right"
+              style={{ fontFamily: `"${doc.font}", Arial, sans-serif` }}
+            >
+              <h2 className={`text-2xl font-black text-center ${navy}`}>{doc.topic}</h2>
+              <section className="space-y-2">
+                <h3 className={`text-lg font-black ${navy} ${colors ? "border-b border-[#8EAADB] pb-1" : ""}`}>المقدمة</h3>
+                {doc.intro.map((p, i) => (
+                  <p key={i} className="text-[15px] leading-8 text-slate-800">{p}</p>
+                ))}
+              </section>
+              {doc.sections.map((s, si) => (
+                <section key={si} className="space-y-2">
+                  <h3 className={`text-lg font-black ${navy} ${colors ? "border-b border-[#8EAADB] pb-1" : ""}`}>{s.title}</h3>
+                  {s.paragraphs.map((p, pi) => (
+                    <div key={pi} className="space-y-2">
+                      <p className="text-[15px] leading-8 text-slate-800">{p}</p>
+                      {s.images
+                        .filter((im) => im.afterParagraph === pi)
+                        .map((im) => (
+                          <figure key={im.url} className="text-center">
+                            {/* eslint-disable-next-line @next/next/no-img-element -- Wikimedia thumbnail */}
+                            <img src={im.url} alt={im.caption} loading="lazy" className="mx-auto max-h-64 rounded-lg border border-slate-200" />
+                            <figcaption className="text-xs text-slate-500 mt-1">{im.caption}</figcaption>
+                          </figure>
+                        ))}
+                    </div>
+                  ))}
+                  {s.subsections.map((sub, k) => (
+                    <div key={k} className="space-y-2">
+                      <h4 className={`text-base font-bold ${steel}`}>{sub.title}</h4>
+                      {sub.paragraphs.map((p, pi) => (
+                        <p key={pi} className="text-[15px] leading-8 text-slate-800">{p}</p>
+                      ))}
+                    </div>
+                  ))}
+                </section>
+              ))}
+              <section className="space-y-2 pt-4 border-t border-dashed border-slate-200">
+                <h3 className={`text-lg font-black ${navy}`}>الخاتمة <span className="text-xs font-normal text-slate-400">(في صفحة لوحدها في الملف)</span></h3>
+                {doc.conclusion.map((p, i) => (
+                  <p key={i} className="text-[15px] leading-8 text-slate-800">{p}</p>
+                ))}
+              </section>
+              {doc.references.length > 0 && (
+                <section className="space-y-2">
+                  <h3 className={`text-lg font-black ${navy}`}>المراجع</h3>
+                  <ol className="list-decimal pr-5 space-y-1 text-sm text-slate-700">
+                    {doc.references.map((r) => (
+                      <li key={r.url}>
+                        {r.title}، {r.site}.{" "}
+                        <a href={r.url} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline break-all" dir="ltr">
+                          {decodeURIComponent(r.url)}
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
+            </article>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
