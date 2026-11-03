@@ -139,6 +139,40 @@ export async function cropFigures(
 }
 
 /**
+ * Every page of a PDF as a JPEG data URL (long side about `maxSide` px), so a PDF goes through exactly the
+ * same reading as photographed pages ("PDF لـ Word" uses the OCR page).
+ */
+export async function pdfToImages(
+  file: File,
+  maxSide = 2200,
+  onPage?: (done: number, total: number) => void
+): Promise<string[]> {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = `${window.location.origin}/pdf.worker.min.js`;
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const out: string[] = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const base = page.getViewport({ scale: 1 });
+    const scale = Math.min(4, maxSide / Math.max(base.width, base.height));
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) continue;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    out.push(canvas.toDataURL("image/jpeg", 0.9));
+    page.cleanup();
+    onPage?.(i, pdf.numPages);
+  }
+  await pdf.destroy();
+  return out;
+}
+
+/**
  * Last-resort OCR in the browser (Tesseract, Arabic + English) when every server model is unavailable.
  * Plain text only: no maths, tables or figures, and noticeably less accurate on Arabic.
  */

@@ -2,55 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { getSession } from "@/lib/edge-auth";
 
-const LOCAL_LAN_ROOT = path.join(process.cwd(), "public", "uploads", "lan_share");
-const MAX_FILE_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours auto-expiry
-
-function isServerlessEnvironment(): boolean {
-  return Boolean(
-    process.env.VERCEL ||
-    process.env.VERCEL_ENV ||
-    process.env.NOW_REGION ||
-    process.env.AWS_LAMBDA_FUNCTION_NAME ||
-    process.env.LAMBDA_TASK_ROOT ||
-    process.env.NEXT_RUNTIME === "edge" ||
-    (typeof process.cwd === "function" && (process.cwd().startsWith("/var/task") || process.cwd().startsWith("/tmp")))
-  );
-}
-
-function ensureRoomDir(roomId: string): { roomDir: string; safeRoom: string; isServerless: boolean } {
-  const safeRoom = roomId.replace(/[^a-zA-Z0-9_-]/g, "_") || "default_room";
-  const isServerless = isServerlessEnvironment();
-
-  if (isServerless) {
-    const roomDir = path.join(os.tmpdir(), "copycat_lan", safeRoom);
-    try {
-      if (!fs.existsSync(roomDir)) {
-        fs.mkdirSync(roomDir, { recursive: true });
-      }
-    } catch {}
-    return { roomDir, safeRoom, isServerless: true };
-  }
-
-  try {
-    const roomDir = path.join(LOCAL_LAN_ROOT, safeRoom);
-    if (!fs.existsSync(roomDir)) {
-      fs.mkdirSync(roomDir, { recursive: true });
-    }
-    const testFile = path.join(roomDir, `.test_${Date.now()}`);
-    fs.writeFileSync(testFile, "ok");
-    fs.unlinkSync(testFile);
-    return { roomDir, safeRoom, isServerless: false };
-  } catch {
-    const roomDir = path.join(os.tmpdir(), "copycat_lan", safeRoom);
-    try {
-      if (!fs.existsSync(roomDir)) {
-        fs.mkdirSync(roomDir, { recursive: true });
-      }
-    } catch {}
-    return { roomDir, safeRoom, isServerless: true };
-  }
-}
+/**
+ * Fallback file relay for "نقل ملفات" when the direct PC-to-PC (WebRTC) link cannot start. The main
+ * path never touches this route: files go straight between the two shop PCs over the router.
+ *
+ * Files are kept OUTSIDE /public (os.tmpdir on Vercel, .data/ locally), so the only way to get one is
+ * this route, which proxy.ts and the check below keep behind the staff login. They expire after 4 hours.
+ * On Vercel /tmp belongs to one server instance, so a relayed file can be missing on the other PC; the
+ * page says so.
+ */
+const MAX_FILE_AGE_MS = 4 * 60 * 60 * 1000;
+const IS_SERVERLESS = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+// Vercel rejects request bodies over 4.5 MB; locally the limit is just a sanity cap
+const MAX_BYTES = IS_SERVERLESS ? 4 * 1024 * 1024 : 500 * 1024 * 1024;
+const ID_RE = /^lan_\d{13}_[a-z0-9]{8}$/;
 
 interface FileMetadata {
   id: string;
@@ -59,196 +26,119 @@ interface FileMetadata {
   type: string;
   sender: string;
   timestamp: number;
-  downloadUrl: string;
 }
 
-// Helper to cleanup stale files
-function cleanupOldFiles(roomDir: string) {
-  try {
-    if (!fs.existsSync(roomDir)) return;
-    const now = Date.now();
-    const entries = fs.readdirSync(roomDir);
-    for (const entry of entries) {
-      if (entry.endsWith(".meta.json")) {
-        try {
-          const metaPath = path.join(roomDir, entry);
-          const raw = fs.readFileSync(metaPath, "utf-8");
-          const meta = JSON.parse(raw);
-          if (now - meta.timestamp > MAX_FILE_AGE_MS) {
-            const actualFile = entry.replace(/\.meta\.json$/, "");
-            const filePath = path.join(roomDir, actualFile);
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-            if (fs.existsSync(metaPath)) fs.unlinkSync(metaPath);
-          }
-        } catch {}
+function storeDir(): string {
+  const dir = IS_SERVERLESS
+    ? path.join(os.tmpdir(), "copycat_lan")
+    : path.join(/* turbopackIgnore: true */ process.cwd(), ".data", "lan_share");
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function cleanupOldFiles(dir: string) {
+  const now = Date.now();
+  for (const entry of fs.readdirSync(dir)) {
+    if (!entry.endsWith(".meta.json")) continue;
+    try {
+      const meta: FileMetadata = JSON.parse(fs.readFileSync(path.join(dir, entry), "utf-8"));
+      if (now - meta.timestamp > MAX_FILE_AGE_MS) {
+        fs.rmSync(path.join(dir, meta.id), { force: true });
+        fs.rmSync(path.join(dir, entry), { force: true });
       }
+    } catch {
+      fs.rmSync(path.join(dir, entry), { force: true });
     }
-  } catch {}
+  }
 }
 
-// GET: List shared files in a room OR download a file directly
+function readMeta(dir: string, id: string): FileMetadata | null {
+  if (!ID_RE.test(id)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(path.join(dir, `${id}.meta.json`), "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
+async function requireSession(req: NextRequest) {
+  return getSession(req);
+}
+
+// GET: list relayed files, or ?download=<id> to stream one
 export async function GET(req: NextRequest) {
-  try {
-    const roomId = req.nextUrl.searchParams.get("roomId") || "copycat-lan-room";
-    const { roomDir, safeRoom, isServerless } = ensureRoomDir(roomId);
+  if (!(await requireSession(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const dir = storeDir();
+  cleanupOldFiles(dir);
 
-    // Direct File Stream Download Handler
-    const downloadFile = req.nextUrl.searchParams.get("download");
-    if (downloadFile) {
-      const safeFile = path.basename(downloadFile);
-      const candidates = [
-        path.join(roomDir, safeFile),
-        path.join(LOCAL_LAN_ROOT, safeRoom, safeFile),
-        path.join(os.tmpdir(), "copycat_lan", safeRoom, safeFile),
-      ];
-
-      for (const targetPath of candidates) {
-        if (fs.existsSync(targetPath)) {
-          const fileBytes = fs.readFileSync(targetPath);
-          const originalName = safeFile.replace(/^lan_\d+_[a-z0-9]+_/, "") || safeFile;
-
-          return new Response(fileBytes, {
-            headers: {
-              "Content-Type": "application/octet-stream",
-              "Content-Disposition": `attachment; filename="${encodeURIComponent(originalName)}"`,
-            },
-          });
-        }
-      }
-
-      return NextResponse.json({ success: false, error: "الملف غير موجود" }, { status: 404 });
+  const downloadId = req.nextUrl.searchParams.get("download");
+  if (downloadId) {
+    const meta = readMeta(dir, downloadId);
+    const filePath = path.join(dir, downloadId);
+    if (!meta || !fs.existsSync(filePath)) {
+      return NextResponse.json({ success: false, error: "الملف مش موجود (ممكن يكون اتمسح أو على سيرفر تاني)." }, { status: 404 });
     }
-
-    cleanupOldFiles(roomDir);
-
-    const files: FileMetadata[] = [];
-    if (!fs.existsSync(roomDir)) {
-      return NextResponse.json({ success: true, files: [] });
-    }
-
-    const entries = fs.readdirSync(roomDir);
-
-    for (const entry of entries) {
-      if (entry.endsWith(".meta.json")) {
-        try {
-          const metaPath = path.join(roomDir, entry);
-          const raw = fs.readFileSync(metaPath, "utf-8");
-          const meta: FileMetadata = JSON.parse(raw);
-
-          // Verify underlying file still exists
-          const actualFilename = entry.replace(/\.meta\.json$/, "");
-          const actualFilePath = path.join(roomDir, actualFilename);
-          if (fs.existsSync(actualFilePath)) {
-            meta.downloadUrl = isServerless
-              ? `/api/admin/lan-transfer?download=${encodeURIComponent(actualFilename)}&roomId=${encodeURIComponent(safeRoom)}`
-              : `/uploads/lan_share/${safeRoom}/${actualFilename}`;
-            files.push(meta);
-          }
-        } catch {}
-      }
-    }
-
-    // Sort newest first
-    files.sort((a, b) => b.timestamp - a.timestamp);
-
-    return NextResponse.json({ success: true, files });
-  } catch (err: unknown) {
-    console.warn("LAN GET error:", err);
-    return NextResponse.json({ success: true, files: [] });
+    return new Response(fs.readFileSync(filePath), {
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(meta.name)}`,
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
   }
+
+  const files: FileMetadata[] = [];
+  for (const entry of fs.readdirSync(dir)) {
+    if (!entry.endsWith(".meta.json")) continue;
+    const meta = readMeta(dir, entry.replace(/\.meta\.json$/, ""));
+    if (meta && fs.existsSync(path.join(dir, meta.id))) files.push(meta);
+  }
+  files.sort((a, b) => b.timestamp - a.timestamp);
+  return NextResponse.json({ success: true, files, maxBytes: MAX_BYTES }, { headers: { "Cache-Control": "no-store" } });
 }
 
-// POST: Upload a shared file over LAN
+// POST: relay one file (multipart: file, sender)
 export async function POST(req: NextRequest) {
-  try {
-    const formData = await req.formData();
-    const file = formData.get("file") as File | null;
-    const sender = (formData.get("sender") as string) || "جهاز غير معروف";
-    const roomId = (formData.get("roomId") as string) || "copycat-lan-room";
-
-    if (!file || !(file instanceof Blob)) {
-      return NextResponse.json(
-        { success: false, error: "لم يتم اختيار أي ملف للرفع" },
-        { status: 400 }
-      );
-    }
-
-    const { roomDir, safeRoom, isServerless } = ensureRoomDir(roomId);
-
-    const fileId = `lan_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const originalName = file.name || "unnamed_file";
-    const safeName = originalName.replace(/[^a-zA-Z0-9_\u0600-\u06FF.-]/g, "_");
-    const storedFileName = `${fileId}_${safeName}`;
-
-    const filePath = path.join(roomDir, storedFileName);
-    const metaPath = path.join(roomDir, `${storedFileName}.meta.json`);
-
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    try {
-      fs.writeFileSync(filePath, buffer);
-    } catch (writeErr) {
-      console.warn("Write to roomDir failed:", writeErr);
-    }
-
-    const downloadUrl = isServerless
-      ? `/api/admin/lan-transfer?download=${encodeURIComponent(storedFileName)}&roomId=${encodeURIComponent(safeRoom)}`
-      : `/uploads/lan_share/${safeRoom}/${storedFileName}`;
-
-    const metadata: FileMetadata = {
-      id: fileId,
-      name: originalName,
-      size: file.size,
-      type: file.type || "application/octet-stream",
-      sender,
-      timestamp: Date.now(),
-      downloadUrl,
-    };
-
-    try {
-      fs.writeFileSync(metaPath, JSON.stringify(metadata, null, 2), "utf-8");
-    } catch {}
-
-    return NextResponse.json({ success: true, file: metadata });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "فشل رفع الملف عبر الشبكة";
-    console.error("LAN upload error:", err);
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  if (!(await requireSession(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const declared = Number(req.headers.get("content-length") || 0);
+  if (declared > MAX_BYTES + 64 * 1024) {
+    return NextResponse.json({ success: false, error: `الملف أكبر من ${Math.round(MAX_BYTES / 1048576)} ميجا.` }, { status: 413 });
   }
+
+  const formData = await req.formData().catch(() => null);
+  const file = formData?.get("file");
+  if (!(file instanceof File)) {
+    return NextResponse.json({ success: false, error: "مفيش ملف." }, { status: 400 });
+  }
+  if (file.size > MAX_BYTES) {
+    return NextResponse.json({ success: false, error: `الملف أكبر من ${Math.round(MAX_BYTES / 1048576)} ميجا.` }, { status: 413 });
+  }
+
+  const dir = storeDir();
+  const id = `lan_${Date.now()}_${crypto.randomUUID().replace(/-/g, "").slice(0, 8)}`;
+  const sender = String(formData?.get("sender") || "جهاز").slice(0, 60);
+  const meta: FileMetadata = {
+    id,
+    name: (file.name || "file").replace(/[\\/\r\n"]/g, "_").slice(0, 200),
+    size: file.size,
+    type: (file.type || "application/octet-stream").slice(0, 100),
+    sender,
+    timestamp: Date.now(),
+  };
+
+  fs.writeFileSync(path.join(dir, id), Buffer.from(await file.arrayBuffer()));
+  fs.writeFileSync(path.join(dir, `${id}.meta.json`), JSON.stringify(meta), "utf-8");
+  return NextResponse.json({ success: true, file: meta });
 }
 
-// DELETE: Remove a file from LAN room
+// DELETE: ?id=<exact id>
 export async function DELETE(req: NextRequest) {
-  try {
-    const id = req.nextUrl.searchParams.get("id");
-    const roomId = req.nextUrl.searchParams.get("roomId") || "copycat-lan-room";
-
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: "معرف الملف مطلوب للحذف" },
-        { status: 400 }
-      );
-    }
-
-    const { roomDir } = ensureRoomDir(roomId);
-    let deleted = false;
-
-    if (fs.existsSync(roomDir)) {
-      const entries = fs.readdirSync(roomDir);
-      for (const entry of entries) {
-        if (entry.startsWith(id)) {
-          try {
-            fs.unlinkSync(path.join(roomDir, entry));
-            deleted = true;
-          } catch {}
-        }
-      }
-    }
-
-    return NextResponse.json({ success: true, deleted });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "فشل حذف الملف من الشبكة";
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
-  }
+  if (!(await requireSession(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const id = req.nextUrl.searchParams.get("id") || "";
+  if (!ID_RE.test(id)) return NextResponse.json({ success: false, error: "رقم الملف غلط." }, { status: 400 });
+  const dir = storeDir();
+  fs.rmSync(path.join(dir, id), { force: true });
+  fs.rmSync(path.join(dir, `${id}.meta.json`), { force: true });
+  return NextResponse.json({ success: true });
 }

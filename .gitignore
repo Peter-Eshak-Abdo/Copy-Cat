@@ -60,3 +60,13 @@ public/uploads/fb_posts/
 !public/uploads/fb_posts/.gitkeep
 
 test*.*
+
+# Server-side private files (LAN relay); never served publicly
+/.data/
+public/uploads/lan_share/
+
+# Firebase: never commit a service-account key; emulator/CLI logs
+*-firebase-adminsdk-*.json
+serviceAccount*.json
+firebase-debug.log*
+firestore-debug.log*

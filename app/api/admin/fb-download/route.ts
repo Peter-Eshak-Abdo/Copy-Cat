@@ -5,9 +5,14 @@ import path from "path";
 import os from "os";
 import { PDFDocument } from "pdf-lib";
 import { verifySessionTokenEdge } from "@/lib/edge-auth";
-import { isAllowedFacebookUrl } from "@/lib/security";
+import { isAllowedFacebookImageUrl, isAllowedFacebookUrl } from "@/lib/security";
 
-const LOCAL_POSTS_ROOT = path.join(process.cwd(), "public", "uploads", "fb_posts");
+const LOCAL_POSTS_ROOT = path.join(/* turbopackIgnore: true */ process.cwd(), "public", "uploads", "fb_posts");
+/** base64 characters per "pdf_chunk" event when the PDF goes back in the stream (Vercel) */
+const PDF_CHUNK = 256 * 1024;
+
+// Downloading up to 200 photos and building the PDF can take minutes (Vercel's ceiling on every plan)
+export const maxDuration = 300;
 
 function getPythonExecutable(): string | null {
   // Never attempt local Python child_process in serverless environments (Vercel / AWS Lambda)
@@ -29,7 +34,7 @@ function getPythonExecutable(): string | null {
   ];
 
   for (const cand of candidates) {
-    if (fs.existsSync(cand)) return cand;
+    if (fs.existsSync(/* turbopackIgnore: true */ cand)) return cand;
   }
 
   return null;
@@ -42,6 +47,7 @@ function getPythonExecutable(): string | null {
  */
 function getStorageRoot(): { rootDir: string; isServerless: boolean } {
   try {
+    if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) throw new Error("serverless");
     if (!fs.existsSync(LOCAL_POSTS_ROOT)) {
       fs.mkdirSync(LOCAL_POSTS_ROOT, { recursive: true });
     }
@@ -101,8 +107,8 @@ export async function GET(req: NextRequest) {
       ];
 
       for (const targetPath of candidatePaths) {
-        if (fs.existsSync(targetPath)) {
-          const fileBytes = fs.readFileSync(targetPath);
+        if (fs.existsSync(/* turbopackIgnore: true */ targetPath)) {
+          const fileBytes = fs.readFileSync(/* turbopackIgnore: true */ targetPath);
           const ext = path.extname(safeFile).toLowerCase();
           const contentType =
             ext === ".pdf"
@@ -140,7 +146,7 @@ export async function GET(req: NextRequest) {
 
     for (const scanDir of dirsToScan) {
       try {
-        if (!fs.existsSync(scanDir)) continue;
+        if (!fs.existsSync(/* turbopackIgnore: true */ scanDir)) continue;
         const entries = fs.readdirSync(/* turbopackIgnore: true */ scanDir, { withFileTypes: true });
 
         for (const entry of entries) {
@@ -425,7 +431,7 @@ export async function POST(req: NextRequest) {
 
           let pyProc;
           try {
-            pyProc = spawn(pythonExecutable, args, {
+            pyProc = spawn(/* turbopackIgnore: true */ pythonExecutable, args, {
               cwd: process.cwd(),
               env: { ...process.env, PYTHONIOENCODING: "utf-8" },
             });
@@ -625,7 +631,8 @@ export async function POST(req: NextRequest) {
             return;
           }
 
-          const limitedUrls = imageUrls.slice(0, maxPhotos);
+          // Scraped links are checked again: only Facebook's image CDN, never another host (SSRF)
+          const limitedUrls = imageUrls.filter(isAllowedFacebookImageUrl).slice(0, maxPhotos);
 
           sendEvent({
             type: "status",
@@ -635,50 +642,38 @@ export async function POST(req: NextRequest) {
           // Download all images in memory
           const downloadedBuffers: { buffer: Buffer; filename: string; webUrl: string }[] = [];
 
-          for (let i = 0; i < limitedUrls.length; i++) {
-            const imgUrl = limitedUrls[i];
-            const pageNum = i + 1;
-            const filename = `page_${String(pageNum).padStart(3, "0")}.jpg`;
-            const destPath = path.join(outDir, filename);
-
-            try {
-              const imgResp = await fetch(imgUrl, {
-                headers: { Referer: "https://www.facebook.com/" },
-              });
-
-              if (imgResp.ok) {
-                const arrayBuf = await imgResp.arrayBuffer();
-                const buf = Buffer.from(arrayBuf);
-
-                if (buf.length > 2000) {
-                  try {
-                    fs.writeFileSync(destPath, buf);
-                  } catch {}
-
-                  const webImgUrl = isServerless
-                    ? `/api/admin/fb-download?download=1&dir=${encodeURIComponent(folderName)}&file=${encodeURIComponent(filename)}`
-                    : `/uploads/fb_posts/${folderName}/${filename}`;
-
-                  downloadedBuffers.push({ buffer: buf, filename, webUrl: webImgUrl });
-
-                  sendEvent({
-                    type: "progress",
-                    current: pageNum,
-                    image_url: imgUrl,
-                  });
-
-                  sendEvent({
-                    type: "download_progress",
-                    downloaded: downloadedBuffers.length,
-                    total: limitedUrls.length,
-                    file_name: filename,
-                  });
-                }
+          // A few at a time (keeps a 150-photo post well inside Vercel's time limit); pages keep post order
+          const slots: ({ buffer: Buffer; filename: string; webUrl: string } | null)[] = limitedUrls.map(() => null);
+          let nextIndex = 0;
+          let done = 0;
+          const worker = async () => {
+            while (nextIndex < limitedUrls.length) {
+              const i = nextIndex++;
+              const imgUrl = limitedUrls[i];
+              const pageNum = i + 1;
+              const filename = `page_${String(pageNum).padStart(3, "0")}.jpg`;
+              try {
+                const imgResp = await fetch(imgUrl, {
+                  headers: { Referer: "https://www.facebook.com/" },
+                  signal: AbortSignal.timeout(30_000),
+                });
+                if (!imgResp.ok) continue;
+                const buf = Buffer.from(await imgResp.arrayBuffer());
+                if (buf.length <= 2000) continue;
+                try {
+                  fs.writeFileSync(path.join(outDir, filename), buf);
+                } catch {}
+                slots[i] = { buffer: buf, filename, webUrl: isServerless ? imgUrl : `/uploads/fb_posts/${folderName}/${filename}` };
+                done++;
+                sendEvent({ type: "progress", current: pageNum, image_url: imgUrl });
+                sendEvent({ type: "download_progress", downloaded: done, total: limitedUrls.length, file_name: filename });
+              } catch (dlErr) {
+                console.warn(`Failed to download image ${pageNum}:`, dlErr);
               }
-            } catch (dlErr) {
-              console.warn(`Failed to download image ${i + 1}:`, dlErr);
             }
-          }
+          };
+          await Promise.all(Array.from({ length: Math.min(6, limitedUrls.length) }, worker));
+          for (const s of slots) if (s) downloadedBuffers.push(s);
 
           if (downloadedBuffers.length === 0) {
             sendEvent({
@@ -731,13 +726,18 @@ export async function POST(req: NextRequest) {
             fs.writeFileSync(pdfPath, Buffer.from(pdfBytes));
           } catch {}
 
-          const finalPdfUrl = isServerless
-            ? `/api/admin/fb-download?download=1&dir=${encodeURIComponent(folderName)}&file=${encodeURIComponent(pdfFilename)}`
-            : `/uploads/fb_posts/${folderName}/${pdfFilename}`;
+          // On Vercel /tmp belongs to one instance and is wiped, so a later download link could 404: the PDF
+          // itself goes back in this stream and the page saves it from memory
+          if (isServerless) {
+            const b64 = Buffer.from(pdfBytes).toString("base64");
+            for (let i = 0; i < b64.length; i += PDF_CHUNK) sendEvent({ type: "pdf_chunk", data: b64.slice(i, i + PDF_CHUNK) });
+          }
+          const finalPdfUrl = isServerless ? null : `/uploads/fb_posts/${folderName}/${pdfFilename}`;
 
           sendEvent({
             type: "completed",
             total_images: downloadedBuffers.length,
+            pdf_inline: isServerless,
             pdf_url: finalPdfUrl,
             pdf_filename: pdfFilename,
             images: downloadedBuffers.map((b) => b.webUrl),

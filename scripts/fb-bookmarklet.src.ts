@@ -5,8 +5,10 @@
  * Browser helper ("bookmarklet") for Facebook posts the server cannot open (closed groups, private posts).
  * It runs in the shop's own Chrome tab, where the staff member is already logged in, so it only sees what
  * that account can see. With a post's photo viewer open it reads the big photo, presses "next" until it
- * comes back to the first photo, and shows the collected image links in a box with a copy button. The
- * links (Facebook's image CDN) are pasted into the PDF page, which downloads them in order.
+ * comes back to the first photo, and shows the collected image links in a box. "ابعتهم لكوبي كات" opens the
+ * PDF page with the links in the URL hash (never sent to any server but ours, and only by that page); "انسخ"
+ * is the manual fallback. __COPYCAT_ORIGIN__ is replaced by the page with its own origin (so the same build
+ * works on Vercel, localhost or a shop PC).
  */
 (function helper() {
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -74,8 +76,9 @@
     }
     const text = urls.join("\n");
     const box = overlay(
-      `<b>لقينا ${urls.length} صورة ✓</b><br>دوس «انسخ»، وارجع لصفحة كوبي كات والزقهم في خانة الروابط.` +
+      `<b>لقينا ${urls.length} صورة ✓</b><br>دوس «ابعتهم لكوبي كات» وهيتعمل الـ PDF لوحده. (أو «انسخ» والزقهم في خانة الروابط.)` +
         '<textarea readonly style="width:100%;height:90px;margin:10px 0;font:11px monospace;direction:ltr"></textarea>' +
+        '<button id="cc-send" style="background:#16a34a;color:#fff;border:0;border-radius:10px;padding:8px 18px;font-weight:bold;cursor:pointer">ابعتهم لكوبي كات</button> ' +
         '<button id="cc-copy" style="background:#2563eb;color:#fff;border:0;border-radius:10px;padding:8px 18px;font-weight:bold;cursor:pointer">انسخ</button> ' +
         '<button id="cc-close" style="background:#e2e8f0;border:0;border-radius:10px;padding:8px 14px;cursor:pointer">اقفل</button>'
     );
@@ -89,6 +92,11 @@
         document.execCommand("copy");
       }
       (box.querySelector("#cc-copy") as HTMLElement).textContent = "اتنسخ ✓";
+    };
+    (box.querySelector("#cc-send") as HTMLElement).onclick = () => {
+      // A click (not the async loop above) opens the tab, so the popup blocker lets it through
+      window.open(`${decodeURIComponent("__COPYCAT_ORIGIN__")}/admin/fb-post-tools#fb-links=${encodeURIComponent(text)}`, "_blank", "noopener");
+      (box.querySelector("#cc-send") as HTMLElement).textContent = "اتبعتوا ✓";
     };
     (box.querySelector("#cc-close") as HTMLElement).onclick = () => box.remove();
   })();

@@ -26,17 +26,25 @@ const securityHeaders = [
     value: "camera=(self), microphone=(), geolocation=(), browsing-topics=()",
   },
   {
+    key: "X-Permitted-Cross-Domain-Policies",
+    value: "none",
+  },
+  {
     key: "Content-Security-Policy",
     value:
       "default-src 'self'; " +
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https:; " +
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https:; " +
       "style-src 'self' 'unsafe-inline' https:; " +
       "img-src 'self' blob: data: https:; " +
       "font-src 'self' https: data:; " +
+      // https: covers Firebase (Firestore, Auth for the LAN transfer, Analytics) and the AI/model CDNs
       "connect-src 'self' blob: data: https:; " +
       "worker-src 'self' blob:; " +
       "frame-src 'self' https://maps.google.com https://www.google.com https://maps.googleapis.com; " +
-      "frame-ancestors 'self';",
+      "frame-ancestors 'self'; " +
+      "object-src 'none'; " +
+      "base-uri 'self'; " +
+      "form-action 'self';",
   },
 ];
 

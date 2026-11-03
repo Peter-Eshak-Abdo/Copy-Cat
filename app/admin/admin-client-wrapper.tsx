@@ -14,9 +14,14 @@ import {
   Download,
   Copy,
   Check,
-  ArrowRight,
+  ChevronLeft,
+  LayoutGrid,
+  Search,
 } from "lucide-react";
 import QRCode from "qrcode";
+import { AnimatePresence, motion, MotionConfig } from "motion/react";
+import { findToolByPath } from "@/lib/admin-tools";
+import { ToolSwitcher } from "@/components/admin/tool-switcher";
 
 const emptySubscribe = () => () => {};
 
@@ -36,6 +41,20 @@ export function AdminClientWrapper({
   const WHATSAPP_LINK = "https://wa.me/qr/MA4E2HELDOY7F1";
 
   const isMainAdminHome = pathname === "/admin";
+  const currentTool = findToolByPath(pathname);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+
+  // Ctrl+K / Cmd+K opens the tool switcher from any admin page
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K" || e.code === "KeyK")) {
+        e.preventDefault();
+        setSwitcherOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     if (mounted && !loading && !user) {
@@ -93,6 +112,8 @@ export function AdminClientWrapper({
   }
 
   return (
+    // reducedMotion="user": people who turn animations off in Windows get none here either
+    <MotionConfig reducedMotion="user">
     <div className="min-h-screen bg-slate-50/70 text-slate-900 flex flex-col font-sans">
       {/* Sleek Minimalist Top Bar (Replaces Full Sidebar) */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
@@ -125,20 +146,53 @@ export function AdminClientWrapper({
               </div>
             </Link>
 
-            {/* Back to Tools Button (shown on sub-pages) */}
+            {/* Breadcrumb: all tools > current tool (sub-pages only) */}
             {!isMainAdminHome && (
-              <Link
-                href="/admin"
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-black shadow-xs shadow-blue-600/30 transition-all cursor-pointer"
-              >
-                <ArrowRight className="w-4 h-4" />
-                <span>كل الأدوات</span>
-              </Link>
+              <nav aria-label="مكانك" className="flex items-center gap-1.5 min-w-0">
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-black shadow-xs shadow-blue-600/30 transition-all cursor-pointer shrink-0"
+                  title="ارجع لكل الأدوات"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  <span className="hidden sm:inline">كل الأدوات</span>
+                </Link>
+                {currentTool && (
+                  <>
+                    <ChevronLeft className="w-4 h-4 text-slate-300 shrink-0" />
+                    <motion.span
+                      key={currentTool.id}
+                      initial={{ opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="inline-flex items-center gap-2 min-w-0"
+                    >
+                      <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${currentTool.solidTile}`}>
+                        <currentTool.icon className="w-4 h-4" />
+                      </span>
+                      <span className="text-sm sm:text-base font-black text-slate-900 truncate">{currentTool.short}</span>
+                    </motion.span>
+                  </>
+                )}
+              </nav>
             )}
           </div>
 
           {/* Left Section: User & Quick Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Tool switcher (Ctrl+K) */}
+            <button
+              type="button"
+              onClick={() => setSwitcherOpen(true)}
+              className="p-2 sm:px-3 rounded-xl text-slate-600 hover:text-blue-700 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 transition-all cursor-pointer flex items-center gap-2 text-xs font-bold"
+              title="دوّر على أداة (Ctrl + K)"
+            >
+              <Search className="w-4 h-4 text-blue-600" />
+              <span className="hidden lg:inline">دوّر على أداة</span>
+              <kbd dir="ltr" className="hidden lg:inline px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-500">
+                Ctrl K
+              </kbd>
+            </button>
+
             {/* WhatsApp QR Modal Button */}
             <button
               type="button"
@@ -183,16 +237,38 @@ export function AdminClientWrapper({
 
       {/* Main Content Area: 95% Screen Width for Maximum Utility */}
       <main className="admin-shell w-[96%] max-w-[96vw] xl:max-w-[95%] mx-auto py-5 flex-1 transition-all">
-        {/* Keyed by route so every admin page slides in (see the cc-* animations in globals.css) */}
-        <div key={pathname} className="cc-page-in">
+        {/* Keyed by route so every admin page slides in */}
+        <motion.div
+          key={pathname}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        >
           {children}
-        </div>
+        </motion.div>
       </main>
 
+      <ToolSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
+
       {/* Large High-Resolution QR Code Modal */}
+      <AnimatePresence>
       {showQrModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative text-center flex flex-col items-center">
+        <motion.div
+          className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setShowQrModal(false);
+          }}
+        >
+          <motion.div
+            className="bg-white border border-slate-200 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative text-center flex flex-col items-center"
+            initial={{ opacity: 0, scale: 0.94, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 6 }}
+            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+          >
             <button
               onClick={() => setShowQrModal(false)}
               className="absolute top-4 left-4 p-1.5 rounded-xl bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer"
@@ -251,9 +327,11 @@ export function AdminClientWrapper({
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
+    </MotionConfig>
   );
 }

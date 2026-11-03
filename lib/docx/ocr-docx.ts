@@ -46,6 +46,9 @@ export interface OcrDocxOptions {
   figures?: Record<number, OcrFigure>;
   /** Landscape A4 (wide forms and tables scanned sideways) */
   landscape?: boolean;
+  /** Body text size in points. Printed pages keep 14 pt (matches the originals); handwritten pages,
+   *  which have no printed size to copy, use 18 pt. */
+  bodyPt?: number;
 }
 
 export interface OcrFigure {
@@ -62,14 +65,30 @@ export const FIGURE_LINE = /^\[(?:شكل|FIGURE|Figure)\s*(\d+)\]$/;
 
 export const FALLBACK_FONT = "Arial";
 
+/**
+ * The "{1.4}" heading size ratio at the end of a line (optionally before </center>). Not preceded by "}",
+ * "^", "_", a backslash or a \command name, so a LaTeX group such as \frac{3}{4}, \sqrt{25} or x^{2} is
+ * never taken for it.
+ */
+const SIZE_TAG = /\s*(?<![}^_\\])(?<!\\[A-Za-z]+)\{\s*\d+(?:\.\d+)?\s*\}(?=\s*(?:<\/center>)?\s*$)/;
+
 // Type scale (half-points) tuned so a one-page A4 contract fills the page like the printed original
-const SIZE_BODY = 28; // 14pt
+// Body size (half-points) and line pitch for the document being built; set per document by
+// applyBodySize (14 pt printed default, 18 pt handwritten). Building is synchronous, so one at a time.
+let SIZE_BODY = 28; // 14pt
 const SIZE_BASMALA = 40; // 20pt
 const SIZE_TITLE = 52; // 26pt
 const SIZE_CLAUSE = 36; // 18pt
 const SIZE_PHOTO_LABEL = 26; // 13pt
 // Exact 19.5pt pitch: matches printed contracts (~30 lines + photo header on one A4 page)
-const LINE_BODY = 390;
+let LINE_BODY = 390;
+
+function applyBodySize(pt = 14) {
+  const clamped = Math.min(24, Math.max(10, pt));
+  SIZE_BODY = Math.round(clamped * 2);
+  // Same rhythm as the 14 pt / 19.5 pt pitch the contracts were tuned on
+  LINE_BODY = Math.round((390 / 28) * SIZE_BODY);
+}
 const LINE_RULE = LineRuleType.EXACT;
 
 const A4_SHORT_MM = 210;
@@ -100,8 +119,9 @@ function sanitizeText(raw: string): { text: string; isCentered: boolean } {
     .replace(/&quot;/gi, '"')
     .replace(/\\([*_#[\]()-])/g, "$1") // Unescape markdown backslashes like \* or \_
     .replace(/<\/?(span|div|p)[^>]*>/gi, "")
-    // Heading size ratio ("{1.8}") is layout data, never printed
-    .replace(/\s*\{\s*\d+(?:\.\d+)?\s*\}/g, "")
+    // Heading size ratio ("{1.8}") is layout data, never printed. Only the trailing tag: a global match
+    // also ate LaTeX groups ($\frac{3}{4}$ became $\frac + \frac$, $\sqrt{25}$ lost its 25).
+    .replace(SIZE_TAG, "")
     .replace(/###\s*/g, "")
     .replace(/##\s*/g, "")
     .replace(/#\s*/g, "")
@@ -663,7 +683,9 @@ export function buildOcrDocument({
   language = "auto",
   figures,
   landscape = false,
+  bodyPt,
 }: OcrDocxOptions): Document {
+  applyBodySize(bodyPt);
   const PAGE_W_MM = landscape ? A4_LONG_MM : A4_SHORT_MM;
   const fullText = rawText || content || "";
   const lines = mergeWrappedLines(fullText.split(/\r?\n/).map((l) => liftBlanksOutOfMath(l.trimEnd())));
@@ -787,7 +809,7 @@ export function buildOcrDocument({
     const ratio = Math.min(2.4, Math.max(1, parseFloat(m[1])));
     return Math.round((SIZE_BODY * ratio) / 2) * 2;
   };
-  const stripSizeTag = (line: string) => line.replace(/\s*\{\s*\d+(?:\.\d+)?\s*\}/, "");
+  const stripSizeTag = (line: string) => line.replace(SIZE_TAG, "");
 
   const figureParagraph = (fig: OcrFigure) => {
     // Printed size: the figure keeps its share of the page width, never wider than the text block
@@ -1009,7 +1031,7 @@ export async function packOcrDocx(options: OcrDocxOptions): Promise<Blob> {
   const xml = await zip.file("word/document.xml")?.async("string");
   if (!xml || !xml.includes("<m:r>")) return blob;
   const font = options.font && options.font.trim() && options.font.toLowerCase() !== "auto" ? options.font.trim() : FALLBACK_FONT;
-  zip.file("word/document.xml", patchEquationRunFonts(xml, font, SIZE_BODY));
+  zip.file("word/document.xml", patchEquationRunFonts(xml, font, Math.round(Math.min(24, Math.max(10, options.bodyPt ?? 14)) * 2)));
   return zip.generateAsync({
     type: "blob",
     mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

@@ -55,15 +55,42 @@
   --spacing-sidebar-width-expanded: 16rem;
   --spacing-sidebar-width-collapsed: 4.5rem;
 
-  --font-label-tag: "Inter", sans-serif;
-  --font-label-code: "JetBrains Mono", monospace;
-  --font-headline-sm: "Inter", sans-serif;
-  --font-headline-md: "Inter", sans-serif;
-  --font-headline-lg: "Inter", sans-serif;
-  --font-body-sm: "Inter", sans-serif;
-  --font-body-md: "Inter", sans-serif;
-  --font-body-lg: "Inter", sans-serif;
-  --font-display-hero: "Inter", sans-serif;
+  --font-label-tag: var(--font-cairo), system-ui, sans-serif;
+  --font-label-code: var(--font-cairo), ui-monospace, monospace;
+  --font-headline-sm: var(--font-cairo), system-ui, sans-serif;
+  --font-headline-md: var(--font-cairo), system-ui, sans-serif;
+  --font-headline-lg: var(--font-cairo), system-ui, sans-serif;
+  --font-body-sm: var(--font-cairo), system-ui, sans-serif;
+  --font-body-md: var(--font-cairo), system-ui, sans-serif;
+  --font-body-lg: var(--font-cairo), system-ui, sans-serif;
+  --font-display-hero: var(--font-cairo), system-ui, sans-serif;
+  /* `font-mono` is used all over the admin for numbers and prices, often on Arabic words too. Courier's
+     Arabic glyphs look broken, so mono = Cairo with fixed-width digits (see .font-mono below). */
+  /* Type scale used by the InstaPay / OCR / Photos pages (text-body-sm etc.). They were missing, so those
+     classes did nothing and every label rendered at 16px. */
+  --text-body-xs: 0.75rem;
+  --text-body-xs--line-height: 1.1rem;
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.35rem;
+  --text-body-md: 1rem;
+  --text-body-md--line-height: 1.6rem;
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.75rem;
+  --text-label-code: 0.75rem;
+  --text-label-tag: 0.75rem;
+  --text-headline-sm: 1.125rem;
+  --text-headline-sm--line-height: 1.6rem;
+  --text-headline-md: 1.375rem;
+  --text-headline-md--line-height: 1.9rem;
+  --text-headline-lg: 1.75rem;
+  --text-headline-lg--line-height: 2.25rem;
+
+  --font-mono: var(--font-cairo), ui-monospace, Consolas, monospace;
+}
+
+.font-mono,
+.font-label-code {
+  font-variant-numeric: tabular-nums;
 }
 
 :root {
@@ -84,20 +111,23 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Base Light UI Styling */
-input,
-select,
-textarea {
-  background-color: #ffffff;
-  color: #0f172a;
-  border-color: #cbd5e1;
-}
+/* Base Light UI Styling. Inside @layer base so Tailwind classes on a field (bg-slate-50, border-0, ...)
+   still win; unlayered rules here used to override every utility on inputs. */
+@layer base {
+  input,
+  select,
+  textarea {
+    background-color: #ffffff;
+    color: #0f172a;
+    border-color: #cbd5e1;
+  }
 
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
 }
 
 /* Custom scrollbars */
@@ -160,13 +190,13 @@ table, .product-grid, .doc-grid {
 .cc-fade-up { animation: cc-fade-up 0.35s ease-out both; }
 .cc-pop { animation: cc-pop 0.25s ease-out both; }
 /* Grid items (tool cards, photo cards, card pairs) rise in with a small stagger */
-.admin-shell .grid > * { animation: cc-fade-up 0.4s ease-out both; }
-.admin-shell .grid > *:nth-child(2) { animation-delay: 40ms; }
-.admin-shell .grid > *:nth-child(3) { animation-delay: 80ms; }
-.admin-shell .grid > *:nth-child(4) { animation-delay: 120ms; }
-.admin-shell .grid > *:nth-child(5) { animation-delay: 160ms; }
-.admin-shell .grid > *:nth-child(6) { animation-delay: 200ms; }
-.admin-shell .grid > *:nth-child(n + 7) { animation-delay: 240ms; }
+.admin-shell .grid:not(.no-stagger) > * { animation: cc-fade-up 0.4s ease-out both; }
+.admin-shell .grid:not(.no-stagger) > *:nth-child(2) { animation-delay: 40ms; }
+.admin-shell .grid:not(.no-stagger) > *:nth-child(3) { animation-delay: 80ms; }
+.admin-shell .grid:not(.no-stagger) > *:nth-child(4) { animation-delay: 120ms; }
+.admin-shell .grid:not(.no-stagger) > *:nth-child(5) { animation-delay: 160ms; }
+.admin-shell .grid:not(.no-stagger) > *:nth-child(6) { animation-delay: 200ms; }
+.admin-shell .grid:not(.no-stagger) > *:nth-child(n + 7) { animation-delay: 240ms; }
 /* Modals: backdrop fades, the box pops */
 .admin-shell .fixed.inset-0 { animation: cc-fade 0.2s ease-out both; }
 .admin-shell .fixed.inset-0 > div { animation: cc-pop 0.25s ease-out both; }
@@ -181,6 +211,6 @@ table, .product-grid, .doc-grid {
   animation: cc-shimmer 1.4s ease infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .cc-page-in, .cc-fade-up, .cc-pop, .admin-shell .grid > *, .admin-shell .fixed.inset-0, .admin-shell .fixed.inset-0 > div, .cc-shimmer { animation: none !important; }
+  .cc-page-in, .cc-fade-up, .cc-pop, .admin-shell .grid:not(.no-stagger) > *, .admin-shell .fixed.inset-0, .admin-shell .fixed.inset-0 > div, .cc-shimmer { animation: none !important; }
   .admin-shell button:not(:disabled):active { scale: none; }
 }

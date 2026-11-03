@@ -2050,29 +2050,6 @@ export const INITIAL_PRODUCTS: InventoryItem[] = [
     ]
   },
   {
-    "id": 163,
-    "name": "لزق صاروخ",
-    "category": "لواصق ومثبتات",
-    "price": 7,
-    "stock_count": 12,
-    "notes": "سعر جملة/كمية: 60 ج.م",
-    "image": "/products/glue-gun.jpg",
-    "images": [
-      "/products/glue-gun.jpg"
-    ]
-  },
-  {
-    "id": 164,
-    "name": "صلصال فوم صغير",
-    "category": "ورق وخامات فنية",
-    "price": 20,
-    "stock_count": 999,
-    "image": "/products/crepe-paper.jpg",
-    "images": [
-      "/products/crepe-paper.jpg"
-    ]
-  },
-  {
     "id": 165,
     "name": "شمع مسدس شمع صغير",
     "category": "لواصق ومثبتات",
@@ -4031,17 +4008,6 @@ export const INITIAL_PRODUCTS: InventoryItem[] = [
     "name": "قلم سنون 2مم",
     "category": "أدوات كتابة ورسم",
     "price": 6,
-    "stock_count": 999,
-    "image": "/products/wooden-pencils.jpg",
-    "images": [
-      "/products/wooden-pencils.jpg"
-    ]
-  },
-  {
-    "id": 350,
-    "name": "سنون 2مم",
-    "category": "أدوات كتابة ورسم",
-    "price": 5,
     "stock_count": 999,
     "image": "/products/wooden-pencils.jpg",
     "images": [

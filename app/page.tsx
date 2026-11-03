@@ -26,8 +26,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import confetti from "canvas-confetti";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
-import { formatCurrency, safeOpenUrl, getWhatsAppUrl, openWhatsAppChat } from "@/lib/utils";
+import { formatCurrency, getWhatsAppUrl, openWhatsAppChat } from "@/lib/utils";
 import { useToast } from "@/components/toast-provider";
 import { INITIAL_PRODUCTS, sanitizeItem, type InventoryItem } from "@/lib/inventory";
 import { SITE_CONFIG } from "@/lib/site-config";
@@ -44,26 +43,6 @@ interface CartItem {
   quantity: number;
 }
 
-function subscribeAnnouncement(callback: () => void) {
-  window.addEventListener("storage", callback);
-  return () => {
-    window.removeEventListener("storage", callback);
-  };
-}
-
-function getAnnouncementSnapshot(): string {
-  try {
-    const saved = localStorage.getItem("copycat_announcement_banner");
-    if (saved && saved.trim()) {
-      return saved.trim();
-    }
-  } catch { }
-  return DEFAULT_ANNOUNCEMENT;
-}
-
-function getAnnouncementServerSnapshot(): string {
-  return DEFAULT_ANNOUNCEMENT;
-}
 
 function subscribeStoreHours(callback: () => void) {
   const intervalId = window.setInterval(callback, 30000);
@@ -121,11 +100,16 @@ export default function StorefrontPage() {
   const [mapType, setMapType] = useState<"k" | "m">("k"); // "k": 3D/satellite photorealistic, "m": streets
   const [mapZoom, setMapZoom] = useState<number>(19); // 19: ~150m radius view around the store
 
-  const announcementText = useSyncExternalStore(
-    subscribeAnnouncement,
-    getAnnouncementSnapshot,
-    getAnnouncementServerSnapshot
-  );
+  // Shop announcement, edited from the admin dashboard and shared through /api/public/banner
+  const [announcementText, setAnnouncementText] = useState(DEFAULT_ANNOUNCEMENT);
+  useEffect(() => {
+    fetch("/api/public/banner")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (typeof d?.text === "string" && d.text.trim()) setAnnouncementText(d.text.trim());
+      })
+      .catch(() => {});
+  }, []);
 
   const isStoreOpen = useSyncExternalStore(
     subscribeStoreHours,
@@ -155,7 +139,8 @@ export default function StorefrontPage() {
               });
             }
             const initMatch = INITIAL_PRODUCTS.find((p) => p.id === it.id || p.name === it.name);
-            if (initMatch) {
+            // A photo saved from the admin (database) wins over the built-in catalog photo
+            if (initMatch && !it.image) {
               return sanitizeItem({
                 ...it,
                 image: initMatch.image,
@@ -179,17 +164,21 @@ export default function StorefrontPage() {
           setProducts(mergeWithCustomImages(INITIAL_PRODUCTS));
         }
 
-        if (isSupabaseConfigured) {
-          const { data, error } = await supabase
-            .from("inventory")
-            .select("*")
-            .order("id", { ascending: true });
-
-          if (!error && data && data.length > 0) {
-            const hydrated = mergeWithCustomImages(data as InventoryItem[]);
-            setProducts(hydrated);
-            localStorage.setItem(CURRENT_CACHE_KEY, JSON.stringify(hydrated));
-          }
+        // Shared catalog from the server (Firestore; no cost / wholesale prices). null = not reachable
+        const res = await fetch("/api/public/products");
+        const data = res.ok ? ((await res.json()) as { items: InventoryItem[] | null }) : null;
+        if (data?.items && data.items.length > 0) {
+          const hydrated = mergeWithCustomImages(
+            data.items.map((it) => ({
+              ...it,
+              price: Number(it.price),
+              notes: it.notes ?? undefined,
+              image: it.image ?? undefined,
+              images: Array.isArray(it.images) && it.images.length ? it.images : undefined,
+            }))
+          );
+          setProducts(hydrated);
+          localStorage.setItem(CURRENT_CACHE_KEY, JSON.stringify(hydrated));
         }
       } catch {
         console.log("Using fallback products");

@@ -24,8 +24,8 @@ import {
   Camera,
   ExternalLink,
 } from "lucide-react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
-import { formatCurrency, safeOpenUrl, compressImageToWebP, openWhatsAppChat } from "@/lib/utils";
+import { saveProduct, deleteProduct, loadProducts } from "@/lib/products-client";
+import { formatCurrency, compressImageToWebP, openWhatsAppChat } from "@/lib/utils";
 import { useToast } from "@/components/toast-provider";
 import { type InventoryItem, INITIAL_PRODUCTS, sanitizeItem } from "@/lib/inventory";
 import { SITE_CONFIG } from "@/lib/site-config";
@@ -203,7 +203,7 @@ export default function InventoryPage() {
     toast.success("الصور اتحطت", "الصورة الأساسية والصور الزيادة اتحطوا على المنتج.");
   };
 
-  // Load from Supabase with localStorage backup & auto image hydration
+  // Load from the shared database (/api/admin/inventory) with localStorage backup & auto image hydration
   useEffect(() => {
     async function loadData() {
       try {
@@ -261,7 +261,7 @@ export default function InventoryPage() {
               });
             }
             const initMatch = INITIAL_PRODUCTS.find((p) => p.id === it.id || p.name === it.name);
-            if (initMatch) {
+            if (initMatch && !it.image) {
               return sanitizeItem({
                 ...it,
                 image: initMatch.image,
@@ -291,18 +291,12 @@ export default function InventoryPage() {
           localStorage.setItem(CURRENT_CACHE_KEY, JSON.stringify(sanitizedInit));
         }
 
-        // 2. Fetch from Supabase only if configured
-        if (isSupabaseConfigured) {
-          const { data, error } = await supabase
-            .from("inventory")
-            .select("*")
-            .order("id", { ascending: true });
-
-          if (!error && data && data.length > 0) {
-            const hydrated = mergeWithCustomImages(data as InventoryItem[]);
-            setItems(hydrated);
-            localStorage.setItem(CURRENT_CACHE_KEY, JSON.stringify(hydrated));
-          }
+        // 2. The shared catalog on the server (cost prices included; staff only)
+        const remote = await loadProducts();
+        if (remote && remote.length > 0) {
+          const hydrated = mergeWithCustomImages(remote);
+          setItems(hydrated);
+          localStorage.setItem(CURRENT_CACHE_KEY, JSON.stringify(hydrated));
         }
       } catch {
         console.log("Using local cache for inventory data");
@@ -382,13 +376,8 @@ export default function InventoryPage() {
     resetForm();
     showNotification("المنتج اتضاف");
 
-    if (isSupabaseConfigured) {
-      try {
-        await supabase.from("inventory").insert([newItem]);
-      } catch (err) {
-        console.warn("Supabase sync note:", err);
-      }
-    }
+    const saved = await saveProduct(newItem);
+    if (saved === "error") toast.error("المنتج متحفظش على السيرفر", "اتحفظ على الجهاز ده بس، جرب تاني.");
   };
 
   const handleEditItem = (item: InventoryItem) => {
@@ -451,24 +440,8 @@ export default function InventoryPage() {
     resetForm();
     showNotification("المنتج اتعدل");
 
-    if (isSupabaseConfigured) {
-      try {
-        await supabase
-          .from("inventory")
-          .update({
-            name: updatedItem.name,
-            category: updatedItem.category,
-            price: updatedItem.price,
-            wholesale_price: updatedItem.wholesale_price,
-            wholesale_min_qty: updatedItem.wholesale_min_qty,
-            stock_count: updatedItem.stock_count,
-            notes: updatedItem.notes,
-          })
-          .eq("id", editingItem.id);
-      } catch (err) {
-        console.warn("Supabase sync note:", err);
-      }
-    }
+    const saved = await saveProduct(updatedItem);
+    if (saved === "error") toast.error("التعديل متحفظش على السيرفر", "اتحفظ على الجهاز ده بس، جرب تاني.");
   };
 
   const handleDeleteItem = async (id: number) => {
@@ -483,13 +456,8 @@ export default function InventoryPage() {
     } catch {}
     showNotification("المنتج اتمسح");
 
-    if (isSupabaseConfigured) {
-      try {
-        await supabase.from("inventory").delete().eq("id", id);
-      } catch (err) {
-        console.warn("Supabase sync note:", err);
-      }
-    }
+    const removed = await deleteProduct(id);
+    if (removed === "error") toast.error("المنتج متمسحش من السيرفر", "جرب تاني.");
   };
 
   const resetForm = () => {
@@ -911,7 +879,7 @@ export default function InventoryPage() {
                       {item.price && item.price > 0 ? (
                         <span className="text-emerald-700">{formatCurrency(item.price)}</span>
                       ) : (
-                        <span className="text-amber-700 text-xs font-bold">⚠️ اكتب السعر</span>
+                        <span className="inline-flex items-center gap-1 text-amber-700 text-xs font-bold"><AlertTriangle className="w-3.5 h-3.5" />اكتب السعر</span>
                       )}
                     </td>
                     <td className="p-3.5 text-xs whitespace-nowrap">
@@ -1182,7 +1150,7 @@ export default function InventoryPage() {
                   {showAiPrompt && (
                     <div className="bg-white border border-blue-200 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-xs">
                       <p className="text-xs text-blue-900 font-medium">
-                        📸 الصورة اترفعت. عايز الذكاء الاصطناعي يدوّر على 3 صور زيادة؟
+                        الصورة اترفعت. عايز الذكاء الاصطناعي يدوّر على 3 صور زيادة؟
                       </p>
                       <button
                         type="button"
@@ -1530,7 +1498,7 @@ export default function InventoryPage() {
                   {showAiPrompt && (
                     <div className="bg-white border border-blue-200 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-xs">
                       <p className="text-xs text-blue-900 font-medium">
-                        📸 الصورة اترفعت. عايز الذكاء الاصطناعي يدوّر على 3 صور زيادة؟
+                        الصورة اترفعت. عايز الذكاء الاصطناعي يدوّر على 3 صور زيادة؟
                       </p>
                       <button
                         type="button"

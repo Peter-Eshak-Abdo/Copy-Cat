@@ -43,13 +43,14 @@ const EXTRACT_PROMPT = `
 - حافظ على شكل الأرقام كما طُبعت (٠١٢٣ أو 0123) وعلى ترتيب الأسئلة والاختيارات.
 - إذا كانت كلمة غير مقروءة فعلاً اكتب مكانها [؟].
 
-أول أربعة أسطر من إجابتك بيانات الصفحة:
+أول خمسة أسطر من إجابتك بيانات الصفحة:
 [FONT: اسم_الخط]   ← الأقرب للأصل: Simplified Arabic أو Traditional Arabic أو Arial أو Times New Roman أو Calibri أو Amiri أو Tahoma
 [LANG: ar أو en أو fr]
 [BORDER: none أو single أو double أو decorative]   ← decorative لإطار مزخرف/نباتي حول الورقة، single أو double لإطار خطي
 [WEIGHT: bold أو normal]   ← bold فقط إذا كان نص الفقرات العادية نفسه عريضاً
+[WRITING: printed أو handwritten]   ← handwritten إذا كان معظم نص الصفحة مكتوباً بخط اليد
 ${MARKUP_RULES}
-بعد الأسطر الأربعة اكتب المحتوى مباشرة.
+بعد الأسطر الخمسة اكتب المحتوى مباشرة.
 `;
 
 const verifyPrompt = (draft: string) => `
@@ -64,13 +65,19 @@ const verifyPrompt = (draft: string) => `
 لا تغير أي شيء صحيح، ولا تصحح أخطاء موجودة فعلاً في الأصل المطبوع.
 ممنوع منعاً باتاً حل الأسئلة أو ملء الفراغات أو خانات الجداول الفارغة أو إضافة أي إجابة: الفراغ المنقط يبقى نقاطاً كما هو.
 ${MARKUP_RULES}
-أخرج النسخة الكاملة المصححة فقط بنفس الصيغة (بدون أسطر [FONT] و [LANG] و [BORDER] و [WEIGHT])، بدون أي تعليق. وإذا كانت النسخة مطابقة تماماً أخرجها كما هي.
+أخرج النسخة الكاملة المصححة فقط بنفس الصيغة (بدون أسطر [FONT] و [LANG] و [BORDER] و [WEIGHT] و [WRITING])، بدون أي تعليق. وإذا كانت النسخة مطابقة تماماً أخرجها كما هي.
 
 النسخة المستخرجة:
 """
 ${draft}
 """
 `;
+
+const WORDS_PROMPT = `This is a phone photo of part of a school book page, usually a vocabulary list (English words with
+their Arabic meanings). Find every Arabic entry: a single Arabic word, or the Arabic meaning of one item when it is
+a short phrase (keep the phrase together as one entry). Ignore English text, numbers alone and page decoration.
+Return ONLY a JSON array in reading order: [{"text": "<the Arabic exactly as printed, with its diacritics if
+printed>", "box_2d": [ymin, xmin, ymax, xmax]}] with the box in 0-1000 coordinates of this image.`;
 
 const ORIENT_PROMPT = `Look at the text on this scanned page (Arabic, English or French; printed or handwritten).
 Which edge of the image does the TOP of the text lines face (where the title / first line of the document is)?
@@ -97,6 +104,28 @@ export async function POST(req: NextRequest) {
     if (!imageBase64) {
       return NextResponse.json({ error: "لم يتم إرسال بيانات الصورة." }, { status: 400 });
     }
+    if (typeof imageBase64 !== "string" || imageBase64.length > 15_000_000) {
+      return NextResponse.json({ error: "الصورة كبيرة جداً." }, { status: 413 });
+    }
+
+    // "نسخ الكلمات": every Arabic entry on a vocabulary page with its box, so the page can put a copy
+    // button on top of each one
+    if (action === "words") {
+      const answer = await geminiVisionJson(WORDS_PROMPT, imageBase64, 6000);
+      const list = Array.isArray(answer) ? answer : [];
+      const words = list
+        .map((e: { text?: unknown; box_2d?: unknown }) => {
+          const text = typeof e?.text === "string" ? e.text.trim().slice(0, 120) : "";
+          const box =
+            Array.isArray(e?.box_2d) && e.box_2d.length === 4 && e.box_2d.every((v) => typeof v === "number")
+              ? (e.box_2d as number[]).map((v) => Math.max(0, Math.min(1000, v)))
+              : null;
+          return text && /[؀-ۿ]/.test(text) ? { text, box } : null;
+        })
+        .filter(Boolean)
+        .slice(0, 400);
+      return NextResponse.json({ success: words.length > 0, words });
+    }
 
     // Scans and phone photos often arrive sideways: the page asks first which edge the text's top faces
     // and turns the image upright, so the transcription, the figure boxes and the page shape are right
@@ -116,8 +145,8 @@ export async function POST(req: NextRequest) {
 
       const meta: Record<string, string | null> = {};
       let text = cleanTranscript(result.text);
-      for (const key of ["FONT", "LANG", "BORDER", "WEIGHT"]) [meta[key], text] = takeMeta(text, key);
-      const { FONT: font, LANG: lang, BORDER: border, WEIGHT: weight } = meta;
+      for (const key of ["FONT", "LANG", "BORDER", "WEIGHT", "WRITING"]) [meta[key], text] = takeMeta(text, key);
+      const { FONT: font, LANG: lang, BORDER: border, WEIGHT: weight, WRITING: writing } = meta;
 
       return NextResponse.json({
         success: true,
@@ -126,6 +155,8 @@ export async function POST(req: NextRequest) {
         detectedLang: (lang || "ar").toLowerCase(),
         detectedBorder: (border || "none").toLowerCase(),
         detectedWeight: (weight || "normal").toLowerCase(),
+        // Handwritten pages have no printed size to copy: the Word file uses 18 pt for them
+        handwritten: (writing || "").toLowerCase().startsWith("hand"),
         provider: result.provider,
         lowAccuracy: result.lowAccuracy,
       });

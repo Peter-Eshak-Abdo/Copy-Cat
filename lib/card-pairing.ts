@@ -6,6 +6,8 @@ export interface ScannedSide {
   nationalId?: string | null;
   /** Last 6 digits of the national number, when only the end of it was readable */
   idTail?: string | null;
+  /** 14 positions, digit where readable and "?" where not (at least 5 digits), when the full number was not */
+  idPattern?: string | null;
 }
 
 export interface SidePairing {
@@ -29,7 +31,50 @@ function hamming(a: string, b: string): number {
 }
 
 const tailOf = (s: ScannedSide) => s.idTail || (s.nationalId ? s.nationalId.slice(-6) : null);
-const hasNumber = (s: ScannedSide) => !!(s.nationalId || s.idTail);
+const hasNumber = (s: ScannedSide) => !!(s.nationalId || s.idTail || s.idPattern);
+
+/** The number as 14 positions ("?" = unreadable), from whatever this side gave */
+function patternOf(s: ScannedSide): string | null {
+  if (s.nationalId && s.nationalId.length === 14) return s.nationalId;
+  if (s.idPattern && s.idPattern.length === 14) {
+    // Merge in the readable tail when the AI gave both
+    if (s.idTail) {
+      const p = s.idPattern.split("");
+      const t = s.idTail;
+      for (let i = 0; i < t.length; i++) if (p[14 - t.length + i] === "?") p[14 - t.length + i] = t[i];
+      return p.join("");
+    }
+    return s.idPattern;
+  }
+  if (s.idTail) return "?".repeat(14 - s.idTail.length) + s.idTail;
+  return null;
+}
+
+/** Nothing the two sides read contradicts each other (no number, or no conflicting digit) */
+function compatible(a: ScannedSide, b: ScannedSide): boolean {
+  if (a.nationalId && b.nationalId) return hamming(a.nationalId, b.nationalId) <= MAX_ID_DISTANCE;
+  const pa = patternOf(a);
+  const pb = patternOf(b);
+  if (!pa || !pb) return true;
+  for (let i = 0; i < 14; i++) if (pa[i] !== "?" && pb[i] !== "?" && pa[i] !== pb[i]) return false;
+  return true;
+}
+
+/**
+ * Partly readable numbers (worn card, glare): the digits both sides could read must sit in the same
+ * positions. At least 5 shared digits with no conflict, or 10+ shared digits with one misread, count as
+ * the same card (a weaker match than two full numbers).
+ */
+function patternMatches(a: string, b: string): boolean {
+  let known = 0;
+  let conflicts = 0;
+  for (let i = 0; i < 14; i++) {
+    if (a[i] === "?" || b[i] === "?") continue;
+    known++;
+    if (a[i] !== b[i]) conflicts++;
+  }
+  return known >= 5 && (conflicts === 0 || (known >= 10 && conflicts <= 1));
+}
 
 /**
  * How far apart two sides' national numbers are. Two full numbers allow two misread digits. When one side
@@ -38,10 +83,10 @@ const hasNumber = (s: ScannedSide) => !!(s.nationalId || s.idTail);
  */
 function idDistance(a: ScannedSide, b: ScannedSide): number {
   if (a.nationalId && b.nationalId) return hamming(a.nationalId, b.nationalId);
-  const ta = tailOf(a);
-  const tb = tailOf(b);
-  if (!ta || !tb) return Infinity;
-  return ta === tb ? MAX_ID_DISTANCE + 0.5 : Infinity;
+  const pa = patternOf(a);
+  const pb = patternOf(b);
+  if (!pa || !pb) return Infinity;
+  return patternMatches(pa, pb) ? MAX_ID_DISTANCE + 0.5 : Infinity;
 }
 const MAX_MATCH = MAX_ID_DISTANCE + 0.5;
 
@@ -117,7 +162,7 @@ export function pairCardSides(sides: ScannedSide[]): SidePairing[] {
     if (usedBacks.has(b)) continue;
     // Only a directly neighbouring upload: guessing across other cards paired strangers' sides in testing
     const nearest = [b - 1, b + 1].find(
-      (f) => kind[f] === "front" && !backOf.has(f) && (!hasNumber(sides[f]) || !hasNumber(sides[b]))
+      (f) => kind[f] === "front" && !backOf.has(f) && compatible(sides[f], sides[b])
     );
     if (nearest === undefined) continue;
     backOf.set(nearest, b);
@@ -140,8 +185,10 @@ export function pairCardSides(sides: ScannedSide[]): SidePairing[] {
     if (!usedBacks.has(b)) pairs.push({ front: null, back: b, nationalId: sides[b].nationalId || null, idTail: tailOf(sides[b]) });
   }
 
+  // Complete cards in upload order; cards whose other side was not found go to the end, each on its own
   const firstIndex = (p: SidePairing) => Math.min(p.front ?? Infinity, p.back ?? Infinity);
-  return pairs.sort((a, b) => firstIndex(a) - firstIndex(b));
+  const incomplete = (p: SidePairing) => (p.front === null || p.back === null ? 1 : 0);
+  return pairs.sort((a, b) => incomplete(a) - incomplete(b) || firstIndex(a) - firstIndex(b));
 }
 
 /** The two scanned sides carry the same national number (full, or the last 6 digits) */

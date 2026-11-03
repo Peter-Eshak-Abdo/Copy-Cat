@@ -1,5 +1,5 @@
 // Copy-Cat Service Worker v6.1 - High Performance & Dynamic Admin Bypass
-const CACHE_NAME = "copycat-cache-v6.0";
+const CACHE_NAME = "copycat-cache-v6.1";
 // Browser AI models and their runtimes (background removal ~40MB, face detector, OCR language data, KaTeX):
 // version-pinned URLs that never change, kept cache-first for good so a slow line downloads them once
 const MODEL_CACHE = "copycat-models-v1";
@@ -18,7 +18,6 @@ const PRECACHE_ASSETS = [
   "/offline.html",
   "/login",
   "/logo.jpg",
-  "/image.png",
   "/manifest.json",
   "/favicon.ico",
 ];

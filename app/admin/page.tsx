@@ -1,95 +1,34 @@
 "use client";
 
-import React, { useState, useEffect, useSyncExternalStore } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/toast-provider";
+import { AnimatePresence, motion } from "motion/react";
 import {
   LayoutGrid,
-  ChevronUp,
-  BarChart3,
   RotateCcw,
   Printer,
   Eye,
-  MapPin,
   Monitor,
-  Calculator,
-  ClipboardCheck,
   Megaphone,
   Edit2,
-  Receipt,
-  CheckCheck,
   CheckCircle2,
   CreditCard,
   ArrowLeft,
-  PieChart,
   GripVertical,
   Store,
   Laptop,
   Smartphone,
   ExternalLink,
   X,
-  FileText,
-  ScanText,
-  Share2,
-  Contact,
-  Camera,
-  Sliders,
-  GraduationCap,
-  Globe,
-  Package,
-  Images,
-  Download,
+  Search,
+  SearchX,
 } from "lucide-react";
-
-function renderToolIcon(toolId: string, className: string = "w-8 h-8 sm:w-9 sm:h-9") {
-  switch (toolId) {
-    case "calculator":
-      return <Calculator className={className} />;
-    case "tasks":
-      return <ClipboardCheck className={className} />;
-    case "pdf-tools":
-      return <FileText className={className} />;
-    case "ocr":
-      return <ScanText className={className} />;
-    case "lan-transfer":
-      return <Share2 className={className} />;
-    case "id-cards":
-      return <Contact className={className} />;
-    case "passport-photos":
-      return <Camera className={className} />;
-    case "scanner":
-      return <Sliders className={className} />;
-    case "research":
-      return <GraduationCap className={className} />;
-    case "shortcuts":
-      return <Globe className={className} />;
-    case "inventory":
-      return <Package className={className} />;
-    case "photos":
-      return <Images className={className} />;
-    case "instapay":
-      return <CreditCard className={className} />;
-    case "fb-post-tools":
-      return <Download className={className} />;
-    default:
-      return <LayoutGrid className={className} />;
-  }
-}
-
-interface PrintTask {
-  id: string;
-  title: string;
-  customerName: string;
-  phone?: string;
-  deadline?: string;
-  totalCopies: number;
-  completedCopies: number;
-  bindingType?: string;
-  notes?: string;
-  status: "pending" | "in_progress" | "ready" | "completed";
-  createdAt: number;
-}
+import { ADMIN_TOOLS, type AdminTool } from "@/lib/admin-tools";
+import { api, useSyncedSetting } from "@/lib/admin-data";
+import { toolMatches } from "@/components/admin/tool-switcher";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms?: string[];
@@ -100,287 +39,15 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
-const STORAGE_KEY = "copycat_tasks_v1";
+const DEFAULT_BANNER = "خصم خاص وتجهيز فوري لكروت الرقم القومي والشهادات وطباعة الأبحاث وسحب المستندات";
+const isBanner = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0 && v.length <= 300;
 
-const DEFAULT_TASKS: PrintTask[] = [];
-
-// Helper for InstaPay summary
-function getPendingInstaPaySummary(): { count: number; total: number } {
-  if (typeof window === "undefined") return { count: 0, total: 0 };
-  try {
-    const raw = localStorage.getItem("copycat_instapay_v1");
-    if (!raw) return { count: 0, total: 0 };
-    const list = JSON.parse(raw);
-    if (!Array.isArray(list)) return { count: 0, total: 0 };
-    const pending = list.filter((r: { status?: string }) => r.status === "pending");
-    const total = pending.reduce((sum: number, r: { amount?: number }) => sum + (Number(r.amount) || 0), 0);
-    return { count: pending.length, total };
-  } catch {
-    return { count: 0, total: 0 };
-  }
-}
-
-// Cache for useSyncExternalStore snapshot to avoid infinite render loops
-let cachedRaw: string | null = null;
-let cachedTasks: PrintTask[] = DEFAULT_TASKS;
-const taskListeners = new Set<() => void>();
-
-function getTasksSnapshot(): PrintTask[] {
-  if (typeof window === "undefined") return DEFAULT_TASKS;
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved !== cachedRaw) {
-      cachedRaw = saved;
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          cachedTasks = parsed;
-          return cachedTasks;
-        }
-      }
-      cachedTasks = DEFAULT_TASKS;
-    }
-  } catch {
-    cachedTasks = DEFAULT_TASKS;
-  }
-  return cachedTasks;
-}
-
-function getTasksServerSnapshot(): PrintTask[] {
-  return DEFAULT_TASKS;
-}
-
-function subscribeTasks(callback: () => void) {
-  taskListeners.add(callback);
-  const onStorage = (e: StorageEvent) => {
-    if (!e.key || e.key === STORAGE_KEY) {
-      cachedRaw = null;
-      callback();
-    }
-  };
-  window.addEventListener("storage", onStorage);
-  return () => {
-    taskListeners.delete(callback);
-    window.removeEventListener("storage", onStorage);
-  };
-}
-
-
-// حساب الوردية الحالية بدقة بناءً على التوقيت الفعلي
-function getCurrentShift(date: Date = new Date()): {
-  id: "morning" | "evening";
-  label: string;
-  timeRange: string;
-} {
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const totalMinutes = hours * 60 + minutes;
-
-  // من 8:30 صباحاً (510 دقيقة) حتى 4:00 عصراً (960 دقيقة) = شفت صباحي
-  if (totalMinutes >= 510 && totalMinutes < 960) {
-    return {
-      id: "morning",
-      label: "شيفت الصبح",
-      timeRange: "08:30 ص - 04:00 م",
-    };
-  }
-
-  // من 4:00 عصراً حتى 11:30 مساءً = شفت مسائي
-  return {
-    id: "evening",
-    label: "شيفت بالليل",
-    timeRange: "04:00 م - 11:30 م",
-  };
-}
-
-interface WorkstationTool {
-  id: string;
-  title: string;
-  desc: string;
-  badge: string;
-  footerTag: string;
-  icon: string;
-  href: string;
-  colorClass: string;
-  borderHoverClass: string;
-  iconBgClass: string;
-}
-
-const WORKSTATION_TOOLS: WorkstationTool[] = [
-  {
-    id: "calculator",
-    title: "حاسبة سعر الملازم",
-    desc: "بتحسب سعر الملزمة (وش وضهر) والتجليد والسلوفان، وفيها آلة حاسبة عادية.",
-    badge: "وش وضهر",
-    footerTag: "بأسعار المكتبة",
-    icon: "calculate",
-    href: "/admin/calculator",
-    colorClass: "text-blue-600",
-    borderHoverClass: "hover:border-blue-400 hover:shadow-md",
-    iconBgClass: "bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white",
-  },
-  // {
-  //   id: "tasks",
-  //   title: "أوردرات الطباعة وتسليم الشفت",
-  //   desc: "متابعة أوردرات وملازم المدرسين، عداد النسخ المطبوعة الحي، مراسلة واتساب فورية، وتوليد تقرير تسليم الشفت بضغطة واحدة.",
-  //   badge: "مراسلة واتساب فورية",
-  //   footerTag: "تقرير شفت متكامل",
-  //   icon: "task_alt",
-  //   href: "/admin/tasks",
-  //   colorClass: "text-indigo-600",
-  //   borderHoverClass: "hover:border-indigo-400 hover:shadow-md",
-  //   iconBgClass: "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white",
-  // },
-  {
-    id: "pdf-tools",
-    title: "أدوات PDF",
-    desc: "امسح صفحات من الملزمة، جمّع صور في ملف PDF، وحوّل PDF عربي لـ Word.",
-    badge: "من غير نت",
-    footerTag: "مسح صفحات وصور لـ PDF",
-    icon: "picture_as_pdf",
-    href: "/admin/pdf-tools",
-    colorClass: "text-rose-600",
-    borderHoverClass: "hover:border-rose-400 hover:shadow-md",
-    iconBgClass: "bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white",
-  },
-  {
-    id: "ocr",
-    title: "صورة لـ Word (OCR)",
-    desc: "صوّر الورقة (مطبوعة أو بخط الإيد) وهتطلعلك ملف Word بنفس الشكل والجداول، حتى لو الصورة بالعرض أو مقلوبة.",
-    badge: "مطبوع وخط إيد",
-    footerTag: "بيطلع Word",
-    icon: "psychology",
-    href: "/admin/ocr",
-    colorClass: "text-amber-600",
-    borderHoverClass: "hover:border-amber-400 hover:shadow-md",
-    iconBgClass: "bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white",
-  },
-  {
-    id: "lan-transfer",
-    title: "نقل ملفات بين الأجهزة",
-    desc: "ابعت الملفات الكبيرة بين أجهزة المكتبة على نفس الراوتر من غير ما تصرف من باقة النت.",
-    badge: "من غير باقة",
-    footerTag: "سريع جداً",
-    icon: "share",
-    href: "/admin/lan-transfer",
-    colorClass: "text-cyan-600",
-    borderHoverClass: "hover:border-cyan-400 hover:shadow-md",
-    iconBgClass: "bg-cyan-50 text-cyan-600 group-hover:bg-cyan-600 group-hover:text-white",
-  },
-  {
-    id: "id-cards",
-    title: "البطايق (وش وضهر)",
-    desc: "ارفع صور البطايق بأي ترتيب، وهو يقصها ويعدلها ويحط كل وش مع ضهره بالرقم القومي في ورقة جاهزة للطباعة.",
-    badge: "Word A4 / A5",
-    footerTag: "وش مع ضهره",
-    icon: "badge",
-    href: "/admin/id-cards",
-    colorClass: "text-emerald-600",
-    borderHoverClass: "hover:border-emerald-400 hover:shadow-md",
-    iconBgClass: "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white",
-  },
-  {
-    id: "passport-photos",
-    title: "الصور الشخصية 4×6",
-    desc: "بيشيل الخلفية ويخليها بيضا، ويظبط الراس والكتاف، ويرص الصور في ورقة جاهزة للطباعة.",
-    badge: "مقاس 4×6",
-    footerTag: "4 أو 9 صور في الورقة",
-    icon: "photo_camera",
-    href: "/admin/passport-photos",
-    colorClass: "text-sky-600",
-    borderHoverClass: "hover:border-sky-400 hover:shadow-md",
-    iconBgClass: "bg-sky-50 text-sky-600 group-hover:bg-sky-600 group-hover:text-white",
-  },
-  {
-    id: "scanner",
-    title: "سكانر وتوفير الحبر",
-    desc: "بيقلب الشاشات السودا لأبيض، وبيبيّض الورق الأصفر ويشيل الضل عشان الطباعة متصرفش حبر.",
-    badge: "حبر أقل",
-    footerTag: "تبييض الورق",
-    icon: "invert_colors",
-    href: "/admin/scanner",
-    colorClass: "text-teal-600",
-    borderHoverClass: "hover:border-teal-400 hover:shadow-md",
-    iconBgClass: "bg-teal-50 text-teal-600 group-hover:bg-teal-600 group-hover:text-white",
-  },
-  {
-    id: "research",
-    title: "عمل الأبحاث",
-    desc: "اكتب عنوان البحث، وهيطلعلك ملف Word فيه غلاف وفهرس ومراجع جاهز للطباعة. تقدر تطلب كذا نسخة مختلفة.",
-    badge: "لحد 15 نسخة",
-    footerTag: "Word مقاس A4",
-    icon: "auto_stories",
-    href: "/admin/research",
-    colorClass: "text-purple-600",
-    borderHoverClass: "hover:border-purple-400 hover:shadow-md",
-    iconBgClass: "bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white",
-  },
-  {
-    id: "shortcuts",
-    title: "مواقع بنستخدمها كل يوم",
-    desc: "روابط المواقع الحكومية والتنسيق والجامعات والتقديم على الوظايف.",
-    badge: "بدوسة واحدة",
-    footerTag: "24 موقع",
-    icon: "language",
-    href: "/admin/shortcuts",
-    colorClass: "text-slate-600",
-    borderHoverClass: "hover:border-slate-400 hover:shadow-md",
-    iconBgClass: "bg-slate-100 text-slate-700 group-hover:bg-slate-800 group-hover:text-white",
-  },
-  {
-    id: "inventory",
-    title: "المخزن والأسعار",
-    desc: "تابع الورق والحبر والسلك اللي في المخزن، وغيّر أسعار الشرا والبيع.",
-    badge: "جرد المخزن",
-    footerTag: "الأسعار والموردين",
-    icon: "inventory",
-    href: "/admin/inventory",
-    colorClass: "text-emerald-700",
-    borderHoverClass: "hover:border-emerald-500 hover:shadow-md",
-    iconBgClass: "bg-emerald-50 text-emerald-700 group-hover:bg-emerald-700 group-hover:text-white",
-  },
-  {
-    id: "photos",
-    title: "صور المنتجات",
-    desc: "كل صور المنتجات من صفحة فيسبوك ومن كاميرا الموبايل في مكان واحد، وتقدر تحط أي صورة لأي منتج.",
-    badge: "كل الصور",
-    footerTag: "صوّر واربط بالمنتج",
-    icon: "photo_library",
-    href: "/admin/photos",
-    colorClass: "text-emerald-600",
-    borderHoverClass: "hover:border-emerald-400 hover:shadow-md",
-    iconBgClass: "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white",
-  },
-  {
-    id: "instapay",
-    title: "تحويلات إنستا باي",
-    desc: "سجّل تحويل الزبون (الاسم والرقم والمبلغ) لحد ما الباشمهندس يتأكد إن الفلوس وصلت.",
-    badge: "متابعة التحويلات",
-    footerTag: "سجّل وأكّد",
-    icon: "credit_card",
-    href: "/admin/instapay",
-    colorClass: "text-violet-600",
-    borderHoverClass: "hover:border-violet-400 hover:shadow-md",
-    iconBgClass: "bg-violet-50 text-violet-600 group-hover:bg-violet-600 group-hover:text-white",
-  },
-  {
-    id: "fb-post-tools",
-    title: "ملازم فيسبوك لـ PDF",
-    desc: "الزق رابط بوست فيسبوك عام فيه صور ملزمة، أو ارفع الصور بنفسك، وهتتجمع بالترتيب في ملف PDF.",
-    badge: "بوست كامل",
-    footerTag: "بالترتيب",
-    icon: "picture_as_pdf",
-    href: "/admin/fb-post-tools",
-    colorClass: "text-blue-600",
-    borderHoverClass: "hover:border-blue-400 hover:shadow-md",
-    iconBgClass: "bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white",
-  },
-];
+type WorkstationTool = AdminTool;
+const WORKSTATION_TOOLS: WorkstationTool[] = ADMIN_TOOLS.filter((t) => !t.hidden);
 
 export default function AdminDashboardPage() {
-  useAuth();
   const toast = useToast();
-  const tasks = useSyncExternalStore(subscribeTasks, getTasksSnapshot, getTasksServerSnapshot);
+  const router = useRouter();
 
   // Tools state with persistent Drag & Drop ordering
   const [tools, setTools] = useState<WorkstationTool[]>(() => {
@@ -407,10 +74,13 @@ export default function AdminDashboardPage() {
     return WORKSTATION_TOOLS;
   });
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [toolQuery, setToolQuery] = useState("");
+  const { isAdmin } = useAuth();
+  const roleTools = tools.filter((t) => !t.adminOnly || isAdmin);
+  const visibleTools = toolQuery.trim() ? roleTools.filter((t) => toolMatches(t, toolQuery)) : roleTools;
+  const canDrag = !toolQuery.trim();
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  // Collapsible top section (collapsed by default for ultra simplicity)
-  const [showOverview, setShowOverview] = useState(false);
 
   // Customer storefront preview modal
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -467,27 +137,24 @@ export default function AdminDashboardPage() {
     toast.info("الترتيب رجع", "الأدوات رجعت لترتيبها الأصلي.");
   };
 
-  // Shift & Real metrics calculations
-  const currentShift = getCurrentShift();
-  const activeOrdersCount = tasks.filter((t) => t.status === "in_progress" || t.status === "pending").length;
-  const inProgressCount = tasks.filter((t) => t.status === "in_progress").length;
-  const readyCount = tasks.filter((t) => t.status === "ready").length;
-  const completedCount = tasks.filter((t) => t.status === "completed").length;
+  // Pending InstaPay transfers (shared list on the server)
+  const [instaPay, setInstaPay] = useState<{ count: number; total: number } | null>(null);
+  useEffect(() => {
+    api<{ records: { status: string; amount: number | string }[] }>("/api/admin/instapay")
+      .then(({ records }) => {
+        const pending = records.filter((r) => r.status === "pending");
+        setInstaPay({ count: pending.length, total: pending.reduce((sum, r) => sum + Number(r.amount || 0), 0) });
+      })
+      .catch(() => setInstaPay(null));
+  }, []);
 
-  const totalCopiesToday = tasks.reduce(
-    (sum, t) => sum + (Number(t.completedCopies) || Number(t.totalCopies) || 0),
-    0
+  // The line at the top of the customer page (read by the storefront through /api/public/banner)
+  const [bannerText, saveBanner, bannerSync] = useSyncedSetting<string>(
+    "storefront.banner",
+    "copycat_announcement_banner_v2",
+    DEFAULT_BANNER,
+    isBanner
   );
-
-  const [bannerText, setBannerText] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("copycat_announcement_banner");
-        if (saved && saved.trim()) return saved.trim();
-      } catch {}
-    }
-    return "خصم خاص وتجهيز فوري لكروت الرقم القومي والشهادات وطباعة الأبحاث وسحب المستندات";
-  });
   const [isEditingBanner, setIsEditingBanner] = useState(false);
   const [bannerInput, setBannerInput] = useState("");
 
@@ -528,12 +195,14 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleSaveBanner = () => {
-    if (!bannerInput.trim()) return;
-    localStorage.setItem("copycat_announcement_banner", bannerInput.trim());
-    setBannerText(bannerInput.trim());
+  const handleSaveBanner = async () => {
+    const text = bannerInput.trim().slice(0, 300);
+    if (!text) return;
     setIsEditingBanner(false);
-    toast.success("الإعلان اتغير", "الكلام الجديد هيظهر فوق في صفحة الزباين.");
+    const ok = await saveBanner(text);
+    if (!ok) toast.error("الإعلان متحفظش", "جرب تاني.");
+    else if (bannerSync === "local") toast.info("اتحفظ على الجهاز ده بس", "قاعدة البيانات مش متوصلة، فالزباين مش هيشوفوه.");
+    else toast.success("الإعلان اتغير", "الكلام الجديد هيظهر فوق في صفحة الزباين.");
   };
 
   return (
@@ -548,29 +217,39 @@ export default function AdminDashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               أدوات الشغل
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 font-semibold mt-0.5">
-              💡 تقدر تسحب أي أداة وتحطها في المكان اللي يريحك
+            <p className="text-xs sm:text-sm text-slate-500 font-semibold mt-0.5 flex items-center gap-1.5">
+              <GripVertical className="w-4 h-4 text-slate-400" />
+              اسحب أي أداة وحطها في المكان اللي يريحك
             </p>
           </div>
+        </div>
+
+        {/* Quick filter: type part of a tool name and press Enter to open the first match */}
+        <div className="relative w-full md:max-w-xs md:flex-1">
+          <Search className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="search"
+            value={toolQuery}
+            onChange={(e) => setToolQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && visibleTools[0]) router.push(visibleTools[0].href);
+              if (e.key === "Escape") setToolQuery("");
+            }}
+            placeholder="دوّر على أداة..."
+            aria-label="دوّر على أداة"
+            className="w-full pr-10 pl-3 py-2.5 rounded-xl border-2 border-slate-200 bg-slate-50 focus:bg-white text-sm font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-semibold outline-none transition"
+          />
         </div>
 
         {/* Header Controls: Collapsible Overview Toggle & Quick Actions */}
         <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={() => setShowOverview(!showOverview)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all border cursor-pointer ${
-              showOverview
-                ? "bg-slate-900 text-white border-slate-900 shadow-xs"
-                : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300/80"
-            }`}
+            onClick={handleInstallPwa}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 transition cursor-pointer"
+            title="ثبّت صفحة الأدمن كبرنامج على الكمبيوتر"
           >
-            {showOverview ? <ChevronUp className="w-4 h-4" /> : <BarChart3 className="w-4 h-4" />}
-            <span>{showOverview ? "خبّي ملخص الشيفت ▲" : "وريني ملخص الشيفت ▼"}</span>
-            {activeOrdersCount > 0 && !showOverview && (
-              <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-xs font-bold mr-1">
-                {activeOrdersCount} أوردر
-              </span>
-            )}
+            <Monitor className="w-4 h-4" />
+            <span className="hidden sm:inline">{isPwaInstalled ? "البرنامج متثبت" : "ثبّت كبرنامج"}</span>
           </button>
 
           <button
@@ -603,305 +282,185 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Collapsible Section: Operations Welcome + Announcement Banner + KPI Metrics */}
-      {showOverview && (
-        <div className="flex flex-col space-y-5 animate-in fade-in slide-in-from-top-4 duration-300">
-          {/* Operations Welcome Banner */}
-          <div className="rounded-2xl sm:rounded-3xl bg-white p-6 shadow-xs border-2 border-slate-200">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200/60">
-                    <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                    مكتبة ومطبعة كوبي كات
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs border border-slate-200">
-                    <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                    فرع الإسماعيلية — شارع الدقهلية
-                  </span>
-                </div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                  أدوات مكتبة كوبي كات
-                </h2>
-                <p className="text-sm text-slate-500 max-w-2xl leading-relaxed">
-                  كل اللي محتاجه في الشغل: الأوردرات، تسليم الشيفت، صورة لـ Word، حاسبة الملازم، البطايق والصور.
-                </p>
-              </div>
+      {/* Quick strip: pending InstaPay + the storefront banner */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 no-stagger">
+        <Link
+          href="/admin/instapay"
+          className="group flex items-center gap-4 p-4 rounded-2xl bg-white border-2 border-slate-200/90 hover:border-violet-300 hover:shadow-md transition"
+        >
+          <span className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+            <CreditCard className="w-6 h-6" />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-xs font-bold text-slate-500">تحويلات إنستا باي مستنية تأكيد</span>
+            <span className="block text-lg font-black text-slate-900">
+              {instaPay === null
+                ? "—"
+                : instaPay.count === 0
+                ? "مفيش حاجة مستنية"
+                : `${instaPay.count} تحويل · ${instaPay.total.toLocaleString("en-US")} ج.م`}
+            </span>
+          </span>
+          <ArrowLeft className="w-5 h-5 text-violet-500 transition-transform group-hover:-translate-x-1" />
+        </Link>
 
-              {/* Quick Header Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-center">
+        <div className="lg:col-span-2 flex items-center gap-3 p-4 rounded-2xl bg-white border-2 border-slate-200/90">
+          <span className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <Megaphone className="w-6 h-6" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <span className="block text-xs font-bold text-slate-500">الإعلان اللي فوق في صفحة الزباين</span>
+            {isEditingBanner ? (
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="text"
+                  value={bannerInput}
+                  maxLength={300}
+                  autoFocus
+                  onChange={(e) => setBannerInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveBanner();
+                    if (e.key === "Escape") setIsEditingBanner(false);
+                  }}
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:bg-white"
+                />
                 <button
-                  onClick={handleInstallPwa}
-                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs transition cursor-pointer"
-                  title="ثبّت صفحة الأدمن كبرنامج على الكمبيوتر"
+                  onClick={handleSaveBanner}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shrink-0 cursor-pointer flex items-center gap-1"
                 >
-                  <Monitor className="w-4 h-4 text-emerald-600" />
-                  <span>{isPwaInstalled ? "البرنامج متثبت ✓" : "ثبّت كبرنامج"}</span>
+                  <CheckCircle2 className="w-4 h-4" /> احفظ
                 </button>
-
-                <Link
-                  href="/admin/calculator"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-xs"
+                <button
+                  onClick={() => setIsEditingBanner(false)}
+                  className="px-3 py-2 rounded-xl text-sm text-slate-500 hover:text-slate-800 cursor-pointer"
                 >
-                  <Calculator className="w-4 h-4" />
-                  <span>حاسبة الملازم</span>
-                </Link>
-                <Link
-                  href="/admin/tasks"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition border border-slate-200"
-                >
-                  <ClipboardCheck className="w-4 h-4 text-slate-600" />
-                  <span>أوردرات الشيفت</span>
-                </Link>
+                  إلغاء
+                </button>
               </div>
-            </div>
-          </div>
-
-          {/* Announcement Banner Management Card */}
-          <div className="rounded-2xl sm:rounded-3xl bg-white p-4 sm:p-5 border-2 border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-            <div className="flex items-center gap-3 flex-1 w-full">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-                <Megaphone className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs sm:text-sm font-bold text-slate-900">الإعلان اللي فوق في صفحة الزباين:</span>
-                  <span className="text-xs text-slate-400">بيظهر أول حاجة للزبون</span>
-                </div>
-                {isEditingBanner ? (
-                  <div className="flex items-center gap-2 mt-2 w-full">
-                    <input
-                      type="text"
-                      value={bannerInput}
-                      onChange={(e) => setBannerInput(e.target.value)}
-                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
-                    />
-                    <button
-                      onClick={handleSaveBanner}
-                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shrink-0 cursor-pointer"
-                    >
-                      احفظ ✓
-                    </button>
-                    <button
-                      onClick={() => setIsEditingBanner(false)}
-                      className="px-3 py-2 rounded-xl text-xs sm:text-sm text-slate-500 hover:text-slate-800 cursor-pointer"
-                    >
-                      إلغاء
-                    </button>
-                  </div>
-                ) : (
-                  <p className="text-xs sm:text-sm text-slate-600 font-medium truncate mt-0.5">
-                    {bannerText}
-                  </p>
-                )}
-              </div>
-            </div>
-            {!isEditingBanner && (
-              <button
-                onClick={() => {
-                  setBannerInput(bannerText);
-                  setIsEditingBanner(true);
-                }}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold shrink-0 transition cursor-pointer"
-              >
-                <Edit2 className="w-4 h-4" />
-                <span>غيّر الإعلان</span>
-              </button>
+            ) : (
+              <p className="text-sm font-bold text-slate-800 truncate">{bannerText}</p>
             )}
           </div>
-
-          {/* KPI Operational Metrics Grid (4 Clean Metric Cards) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            {/* Card 1: Active Orders */}
-            <div className="flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500">أوردرات النهارده الشغالة</span>
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100">
-                  <Receipt className="w-5 h-5 text-blue-600" />
-                </div>
-              </div>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                  {activeOrdersCount}
-                </span>
-                <span className="text-xs font-bold text-blue-600">أوردر</span>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-                  {inProgressCount > 0 ? (
-                    <>
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping"></span>
-                      {inProgressCount} شغالين على المكن
-                    </>
-                  ) : (
-                    <>
-                      <CheckCheck className="w-4 h-4 text-emerald-600" />
-                      كل الأوردرات متسجلة
-                    </>
-                  )}
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
-                  {currentShift.label}
-                </span>
-              </div>
-            </div>
-
-            {/* Card 2: Printed Sheets Total */}
-            <div className="flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500">اتطبع النهارده</span>
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
-                  <Printer className="w-5 h-5 text-indigo-600" />
-                </div>
-              </div>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                  {totalCopiesToday.toLocaleString("ar-EG")}
-                </span>
-                <span className="text-xs font-bold text-indigo-600">ورقة A4/A5</span>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  {readyCount > 0 ? `${readyCount} أوردر جاهز يتسلم` : `${completedCount} أوردر خلص`}
-                </span>
-                <span className="text-xs text-slate-400 font-medium">{currentShift.label}</span>
-              </div>
-            </div>
-
-            {/* Card 3: InstaPay Pending Transfers */}
-            <Link
-              href="/admin/instapay"
-              className="group flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-violet-300 hover:shadow-md transition cursor-pointer"
+          {!isEditingBanner && (
+            <button
+              onClick={() => {
+                setBannerInput(bannerText);
+                setIsEditingBanner(true);
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold shrink-0 transition cursor-pointer"
             >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500">تحويلات إنستا باي لسه متأكدتش</span>
-                <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-colors border border-violet-100">
-                  <CreditCard className="w-5 h-5 text-violet-600" />
-                </div>
-              </div>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-3xl font-extrabold text-violet-700 tracking-tight">
-                  {getPendingInstaPaySummary().total.toLocaleString("ar-EG")}
-                </span>
-                <span className="text-sm font-bold text-slate-600">ج.م</span>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <span className="text-xs text-amber-600 font-bold">
-                  {getPendingInstaPaySummary().count > 0 ? `${getPendingInstaPaySummary().count} مستنيين تأكيد` : "مفيش فلوس مستنية"}
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 font-bold flex items-center gap-0.5">
-                  <span>افتح السجل</span>
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                </span>
-              </div>
-            </Link>
-
-            {/* Card 4: Shift Completion & Progress */}
-            <div className="flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500">أوردرات الشيفت اللي خلصت</span>
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100">
-                  <PieChart className="w-5 h-5 text-emerald-600" />
-                </div>
-              </div>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                  {tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0}%
-                </span>
-                <span className="text-xs font-bold text-emerald-600">
-                  {tasks.length > 0 ? `${completedCount} من ${tasks.length}` : "0 أوردر"}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1 pt-2 border-t border-slate-100">
-                <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 transition-all duration-500 rounded-full"
-                    style={{ width: `${tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0}%` }}
-                  ></div>
-                </div>
-                <span className="text-[11px] text-slate-400 mt-1">
-                  {tasks.length > 0
-                    ? `${inProgressCount} أوردر شغالين فيه دلوقتي`
-                    : "جاهز لأوردرات الشيفت"}
-                </span>
-              </div>
-            </div>
-          </div>
+              <Edit2 className="w-4 h-4" />
+              <span>غيّر</span>
+            </button>
+          )}
         </div>
-      )}
-
-      {/* The Dynamic Workstation Cards Grid with Drag & Drop Reordering */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 lg:gap-6">
-        {tools.map((tool, index) => {
-          const isDragging = draggedIndex === index;
-          const isOver = dragOverIndex === index;
-
-          return (
-            <div
-              key={tool.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDrop={(e) => handleDrop(e, index)}
-              onDragEnd={handleDragEnd}
-              className={`relative transition-all duration-200 ${
-                isDragging ? "opacity-35 scale-95" : ""
-              } ${isOver ? "ring-4 ring-blue-500/40 rounded-3xl scale-[1.02]" : ""}`}
-            >
-              <Link
-                href={tool.href}
-                className={`group flex flex-col justify-between p-6 sm:p-7 rounded-2xl sm:rounded-3xl bg-white hover:bg-slate-50/90 transition-all shadow-xs border-2 border-slate-200/90 hover:border-blue-500 hover:shadow-xl ${tool.borderHoverClass} h-full`}
-              >
-                <div>
-                  {/* Top Row: Icon, Badge, Drag Handle */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center transition-colors shadow-xs ${tool.iconBgClass}`}
-                      >
-                        {renderToolIcon(tool.id)}
-                      </div>
-                      <span className="text-xs sm:text-sm font-extrabold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                        {tool.badge}
-                      </span>
-                    </div>
-
-                    {/* Drag Handle Indicator */}
-                    <div
-                      className="p-1.5 rounded-xl text-slate-300 group-hover:text-slate-500 hover:bg-slate-100 cursor-grab active:cursor-grabbing transition-colors"
-                      title="اسحب الأداة عشان تغير مكانها"
-                      onClick={(e) => e.preventDefault()}
-                    >
-                      <GripVertical className="w-5 h-5" />
-                    </div>
-                  </div>
-
-                  {/* Card Title (Large & Bold) */}
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 group-hover:text-blue-600 transition-colors mb-2.5 leading-snug">
-                    {tool.title}
-                  </h2>
-
-                  {/* Card Description (Enlarged & Easy to read) */}
-                  <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
-                    {tool.desc}
-                  </p>
-                </div>
-
-                {/* Footer Action Button */}
-                <div className="flex items-center justify-between pt-4 mt-5 border-t border-slate-100">
-                  <span
-                    className={`text-sm sm:text-base font-black ${tool.colorClass} flex items-center gap-1.5 group-hover:translate-x-[-4px] transition-transform`}
-                  >
-                    افتح
-                    <ArrowLeft className="w-4 h-4" />
-                  </span>
-                  <span className="text-xs sm:text-sm text-slate-400 font-bold">{tool.footerTag}</span>
-                </div>
-              </Link>
-            </div>
-          );
-        })}
       </div>
+
+      {/* The Dynamic Workstation Cards Grid with Drag & Drop Reordering (motion animates the reorder) */}
+      {visibleTools.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center gap-2 py-16 rounded-3xl border-2 border-dashed border-slate-200 bg-white text-center"
+        >
+          <SearchX className="w-10 h-10 text-slate-300" />
+          <p className="text-base font-black text-slate-700">مفيش أداة بالاسم ده</p>
+          <button
+            type="button"
+            onClick={() => setToolQuery("")}
+            className="text-sm font-bold text-blue-600 hover:underline cursor-pointer"
+          >
+            اعرض كل الأدوات
+          </button>
+        </motion.div>
+      ) : (
+        <motion.div layout className="no-stagger grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 lg:gap-6">
+          <AnimatePresence mode="popLayout">
+            {visibleTools.map((tool, shownIndex) => {
+              // Position in the full saved order (some tools can be hidden for this account)
+              const index = tools.indexOf(tool);
+              const isDragging = draggedIndex === index;
+              const isOver = dragOverIndex === index && draggedIndex !== index;
+              const Icon = tool.icon;
+
+              return (
+                <motion.div
+                  key={tool.id}
+                  layout
+                  initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                  animate={{ opacity: isDragging ? 0.4 : 1, y: 0, scale: isDragging ? 0.96 : 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 380,
+                    damping: 32,
+                    delay: draggedIndex === null && !toolQuery ? Math.min(shownIndex, 8) * 0.03 : 0,
+                  }}
+                  className={`relative rounded-2xl sm:rounded-3xl ${isOver ? "ring-4 ring-blue-500/40" : ""}`}
+                >
+                  {/* Native HTML5 drag lives on a plain div: motion's own drag props would clash with it */}
+                  <div
+                    draggable={canDrag}
+                    onDragStart={(e) => canDrag && handleDragStart(e, index)}
+                    onDragOver={(e) => canDrag && handleDragOver(e, index)}
+                    onDrop={(e) => canDrag && handleDrop(e, index)}
+                    onDragEnd={handleDragEnd}
+                    className="h-full"
+                  >
+                    <Link
+                      href={tool.href}
+                      draggable={false}
+                      className={`group flex flex-col justify-between p-6 sm:p-7 rounded-2xl sm:rounded-3xl bg-white transition-all duration-200 shadow-xs border-2 border-slate-200/90 hover:shadow-xl hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/40 ${tool.hoverBorder} h-full`}
+                    >
+                      <div>
+                        {/* Top Row: Icon, Badge, Drag Handle */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xs group-hover:scale-105 group-hover:-rotate-3 ${tool.iconTile}`}
+                            >
+                              <Icon className="w-8 h-8 sm:w-9 sm:h-9" strokeWidth={1.9} />
+                            </div>
+                            <span className="text-xs sm:text-sm font-extrabold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                              {tool.badge}
+                            </span>
+                          </div>
+
+                          {canDrag && (
+                            <div
+                              className="p-1.5 rounded-xl text-slate-300 group-hover:text-slate-500 hover:bg-slate-100 cursor-grab active:cursor-grabbing transition-colors"
+                              title="اسحب الأداة عشان تغير مكانها"
+                              onClick={(e) => e.preventDefault()}
+                            >
+                              <GripVertical className="w-5 h-5" />
+                            </div>
+                          )}
+                        </div>
+
+                        <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-2.5 leading-snug">
+                          {tool.title}
+                        </h2>
+
+                        <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+                          {tool.desc}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-4 mt-5 border-t border-slate-100">
+                        <span className={`text-sm sm:text-base font-black ${tool.accent} flex items-center gap-1.5`}>
+                          افتح
+                          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1.5" />
+                        </span>
+                        <span className="text-xs sm:text-sm text-slate-400 font-bold">{tool.footerTag}</span>
+                      </div>
+                    </Link>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
+      )}
 
       {/* Modal: Printable WhatsApp QR Stand / Wall Poster */}
       {printQrModal && (
@@ -1026,7 +585,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="text-emerald-700 font-bold flex items-center justify-center gap-1">
                   <span>⏰ مواعيد العمل:</span>
-                  <span>نستقبلكم يومياً حتى 11:30 مساءً</span>
+                  <span>يومياً من 9 الصبح لحد 10 بالليل</span>
                 </div>
               </div>
             </div>

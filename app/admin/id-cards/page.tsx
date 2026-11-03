@@ -1,5 +1,6 @@
 "use client";
 
+import { measureCardTone } from "@/lib/card-tone";
 import { useState, useRef, useEffect } from "react";
 import NextImage from "next/image";
 import {
@@ -88,12 +89,14 @@ export default function IdCardsPage() {
   const [isDragging, setIsDragging] = useState(false);
 
   // Paper & Duplex print options
-  const [paperSize, setPaperSize] = useState<PaperSize>("A4");
-  const [duplexAlignment, setDuplexAlignment] = useState<DuplexAlignment>("vertical");
+  const [paperSize, setPaperSize] = useState<PaperSize>("A5");
+  const [duplexAlignment, setDuplexAlignment] = useState<DuplexAlignment>("separate");
 
   // Print Preview Sheet Modal
   const [printPreviewPair, setPrintPreviewPair] = useState<CardPair | null>(null);
   const [printPreviewDataUrl, setPrintPreviewDataUrl] = useState<string | null>(null);
+  // One image per printed page (two for "each side on its own page")
+  const [printPages, setPrintPages] = useState<string[]>([]);
   const [isGeneratingPrintPreview, setIsGeneratingPrintPreview] = useState(false);
 
   // Modal for fine-angle rotation
@@ -255,6 +258,7 @@ export default function IdCardsPage() {
         side: data.side === "front" || data.side === "back" ? data.side : "unknown",
         nationalId: data.nationalId || null,
         idTail: data.idTail || null,
+        idPattern: data.idPattern || null,
       };
     } catch {}
 
@@ -291,12 +295,15 @@ export default function IdCardsPage() {
     // Without the AI's direction a card is at least made landscape (a sideways photo came out squashed)
     if (!aiTurned && img) quad = landscapeQuad(quad, img.naturalWidth, img.naturalHeight) as QuadCorners;
 
-    // 3. Perspective warp, CamScanner whitening and sharpening
-    const initialBrightness = 118;
-    const initialContrast = 105;
+    // 3. Perspective warp, then a tone made for THIS card: measured on the straightened card without any
+    // filter, so a dark photo is brightened and whitened and an already bright one is darkened instead
+    const neutral = await processSideImage(originalSrc, 100, 100, 0, 0, undefined, quad, false, false);
+    const tone = await measureCardTone(neutral);
+    const initialBrightness = tone.brightness;
+    const initialContrast = tone.contrast;
     const initialSharpness = 45;
     const warp = (q: QuadCorners) =>
-      processSideImage(originalSrc, initialBrightness, initialContrast, initialSharpness, 0, undefined, q, true, false);
+      processSideImage(originalSrc, initialBrightness, initialContrast, initialSharpness, 0, undefined, q, tone.whiten, false);
     let processedSrc = await warp(quad);
 
     // 4. No answer from the AI about the side (quota used up, no internet): the front is the side with the
@@ -327,7 +334,7 @@ export default function IdCardsPage() {
         thresholdMode: false,
         sideType: scan.side === "back" ? "back" : "front",
         quad,
-        camScannerMode: true,
+        camScannerMode: tone.whiten,
         scan,
       },
     };
@@ -886,7 +893,13 @@ export default function IdCardsPage() {
 
       toast.success(
         `ملف Word نزل (${paperSize})`,
-        `${pairs.length} بطاقة (الوش مع الضهر) بمقاس البطاقة الحقيقي 85.6×54 مم، والوش والضهر ${duplexAlignment === "vertical" ? "تحت بعض" : "جنب بعض"}.`
+        `${pairs.length} بطاقة بمقاس البطاقة الحقيقي 85.6×54 مم، ${
+          duplexAlignment === "separate"
+            ? "كل وش في ورقة وضهره في اللي بعدها (اطبع وش وضهر)"
+            : duplexAlignment === "vertical"
+            ? "والضهر تحت الوش"
+            : "والوش والضهر جنب بعض"
+        }.`
       );
     } catch (err) {
       console.error("Error generating docx:", err);
@@ -966,7 +979,34 @@ export default function IdCardsPage() {
         ctx.stroke();
       };
 
-      if (duplexAlignment === "vertical") {
+      if (duplexAlignment === "separate") {
+        // Each side on its own sheet, top-centred (5 mm under the 10 mm margin, like the Word file)
+        const x = Math.round((sheetW - cardW) / 2);
+        const y = Math.round((paperSize === "A4" ? 20 : 15) * pxPerMm);
+        const sheets: string[] = [];
+        for (const im of [frontImg, backImg]) {
+          if (!im) continue;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, sheetW, sheetH);
+          drawCardWithMarks(im, x, y);
+          sheets.push(canvas.toDataURL("image/jpeg", 0.95));
+        }
+        setPrintPages(sheets);
+        // On screen: the two sheets side by side
+        const both = document.createElement("canvas");
+        const gap = Math.round(8 * pxPerMm);
+        both.width = sheetW * sheets.length + gap * (sheets.length - 1);
+        both.height = sheetH;
+        const bctx = both.getContext("2d");
+        if (bctx) {
+          bctx.fillStyle = "#cbd5e1";
+          bctx.fillRect(0, 0, both.width, both.height);
+          const imgs = await Promise.all(sheets.map(loadImg));
+          imgs.forEach((im, i) => bctx.drawImage(im, i * (sheetW + gap), 0));
+        }
+        setPrintPreviewDataUrl(both.toDataURL("image/jpeg", 0.9));
+        return;
+      } else if (duplexAlignment === "vertical") {
         // Exact vertical center alignment: both cards share exact same X position
         const centerX = Math.round((sheetW - cardW) / 2);
         const topY = Math.round(sheetH * (paperSize === "A4" ? 0.18 : 0.1));
@@ -985,7 +1025,9 @@ export default function IdCardsPage() {
         if (backImg) drawCardWithMarks(backImg, rightX, centerY);
       }
 
-      setPrintPreviewDataUrl(canvas.toDataURL("image/jpeg", 0.95));
+      const sheet = canvas.toDataURL("image/jpeg", 0.95);
+      setPrintPages([sheet]);
+      setPrintPreviewDataUrl(sheet);
     } catch (err) {
       console.error("Print preview generation error:", err);
     } finally {
@@ -994,7 +1036,7 @@ export default function IdCardsPage() {
   };
 
   const triggerDirectPrint = () => {
-    if (!printPreviewDataUrl) return;
+    if (!printPages.length) return;
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
       toast.warning("اسمح للموقع يفتح نوافذ جديدة (Pop-ups) عشان الطباعة تشتغل");
@@ -1015,19 +1057,20 @@ export default function IdCardsPage() {
               margin: 0;
               padding: 0;
               background: #fff;
-              display: flex;
-              align-items: center;
-              justify-content: center;
             }
             img {
               width: 100vw;
               height: 100vh;
               object-fit: contain;
+              display: block;
+              page-break-after: always;
             }
+            img:last-child { page-break-after: auto; }
           </style>
         </head>
         <body>
-          <img src="${printPreviewDataUrl}" onload="window.print(); window.close();" />
+          ${printPages.map((src) => `<img src="${src}" />`).join("")}
+          <script>window.onload = function () { window.print(); window.close(); };</script>
         </body>
       </html>
     `);
@@ -1111,6 +1154,18 @@ export default function IdCardsPage() {
             <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200">
               <button
                 type="button"
+                onClick={() => setDuplexAlignment("separate")}
+                className={`px-4 py-1.5 rounded-lg text-xs sm:text-sm font-black transition cursor-pointer ${
+                  duplexAlignment === "separate"
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+                title="الوش في ورقة لوحده فوق في النص، وضهره في الورقة اللي بعدها: اطبع وش وضهر"
+              >
+                كل وش في ورقة
+              </button>
+              <button
+                type="button"
                 onClick={() => setDuplexAlignment("vertical")}
                 className={`px-4 py-1.5 rounded-lg text-xs sm:text-sm font-black transition cursor-pointer ${
                   duplexAlignment === "vertical"
@@ -1119,7 +1174,7 @@ export default function IdCardsPage() {
                 }`}
                 title="الوش فوق والضهر تحته بالظبط، عشان لما تقلب الورقة ييجوا على بعض"
               >
-                تحت بعض
+                الضهر تحت الوش
               </button>
               <button
                 type="button"
@@ -2040,7 +2095,7 @@ export default function IdCardsPage() {
                     معاينة ورقة الطباعة {paperSize} (مقاس البطاقة: 85.6mm × 54mm)
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    محاذاة الطباعة المزدوجة: {duplexAlignment === "vertical" ? "تحت بعض" : "جنب بعض"}
+                    طريقة الطباعة: {duplexAlignment === "separate" ? "كل وش في ورقة" : duplexAlignment === "vertical" ? "الضهر تحت الوش" : "جنب بعض"}
                   </p>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { syncLabel, useSyncedSetting } from "@/lib/admin-data";
 import {
   ExternalLink,
   Plus,
@@ -20,22 +21,20 @@ import {
 
 const STORAGE_KEY = "copycat_web_shortcuts_v1";
 
+const isShortcutList = (v: unknown): v is WebShortcut[] =>
+  Array.isArray(v) &&
+  v.length <= 300 &&
+  v.every((x) => x && typeof x.id === "string" && typeof x.title === "string" && typeof x.url === "string");
+
 export default function ShortcutsPage() {
   const { toast } = useToast();
-  const [shortcuts, setShortcuts] = useState<WebShortcut[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
-          }
-        }
-      } catch {}
-    }
-    return INITIAL_SHORTCUTS;
-  });
+  // Shared by every shop device (/api/admin/settings, key "shortcuts.list")
+  const [shortcuts, persistShortcuts, sync] = useSyncedSetting<WebShortcut[]>(
+    "shortcuts.list",
+    STORAGE_KEY,
+    INITIAL_SHORTCUTS,
+    isShortcutList
+  );
   const [selectedCategory, setSelectedCategory] = useState("الكل");
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -46,14 +45,6 @@ export default function ShortcutsPage() {
   const [url, setUrl] = useState("");
   const [category, setCategory] = useState("خدمات حكومية وبطاقات");
   const [description, setDescription] = useState("");
-
-  // Save to local storage
-  const persistShortcuts = (items: WebShortcut[]) => {
-    setShortcuts(items);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {}
-  };
 
   // Categories list
   const categories = useMemo(() => {
@@ -140,10 +131,7 @@ export default function ShortcutsPage() {
   };
 
   const handleOpenLink = (urlToOpen: string) => {
-    const success = safeOpenUrl(urlToOpen);
-    if (!success) {
-      window.location.assign(urlToOpen);
-    }
+    if (!safeOpenUrl(urlToOpen)) toast.error("الرابط ده مينفعش يتفتح", "لازم يبدأ بـ https://");
   };
 
   return (
@@ -165,6 +153,15 @@ export default function ShortcutsPage() {
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-500 font-bold">
               المواقع: {filteredShortcuts.length}
+            </span>
+            <span
+              className={`hidden sm:inline text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                syncLabel(sync).tone === "ok"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-amber-50 text-amber-800 border-amber-200"
+              }`}
+            >
+              {syncLabel(sync).text}
             </span>
             <button
               onClick={openAddModal}

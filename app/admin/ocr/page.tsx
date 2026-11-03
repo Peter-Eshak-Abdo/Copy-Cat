@@ -5,7 +5,7 @@ import { useToast } from "@/components/toast-provider";
 import { readFileAsDataURL } from "@/lib/utils";
 import { generateOcrDocx, PageBorderKind, FIGURE_LINE, type OcrFigure } from "@/lib/docx/ocr-docx";
 import { splitMath } from "@/lib/docx/latex-math";
-import { cropFigures, imageAspect, prepareOcrImage, tesseractOcr, uprightPage } from "@/lib/ocr-client";
+import { cropFigures, imageAspect, pdfToImages, prepareOcrImage, tesseractOcr, uprightPage } from "@/lib/ocr-client";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import {
@@ -23,6 +23,9 @@ import {
   FileText,
   Copy,
   Download,
+  CheckCircle2,
+  XCircle,
+  Clock,
 } from "lucide-react";
 
 
@@ -101,6 +104,8 @@ export default function MultiStageOcrPage() {
   // Page frame and body weight are detected from the scan, and can be overridden before export
   const [borderStyle, setBorderStyle] = useState<PageBorderKind>("none");
   const [boldBody, setBoldBody] = useState<boolean>(false);
+  // 14 pt like the printed original; 18 pt when the page is handwritten (owner's rule)
+  const [bodyPt, setBodyPt] = useState<number>(14);
   // Figures cropped from the scans, keyed by the number in their "[شكل n]" line
   const [figures, setFigures] = useState<Record<number, OcrFigure>>({});
   // Second pass: the same model re-reads the page image against its own draft
@@ -317,6 +322,25 @@ export default function MultiStageOcrPage() {
     const newItems: OcrPageItem[] = [];
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
+      // A PDF becomes one picture per page and is read like photographed pages
+      if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+        try {
+          toast.info("بنفتح الـ PDF", `${file.name}: بنحوّل الصفحات لصور...`);
+          const images = await pdfToImages(file, 2200);
+          images.forEach((dataUrl, p) =>
+            newItems.push({
+              id: Math.random().toString(36).substring(2, 9),
+              file,
+              dataUrl,
+              name: `${file.name.replace(/\.pdf$/i, "")} - ص ${p + 1}`,
+              status: "pending",
+            })
+          );
+        } catch {
+          toast.error("الـ PDF مفتحش", "ممكن يكون عليه باسورد أو بايظ.");
+        }
+        continue;
+      }
       if (!file.type.startsWith("image/")) continue;
       try {
         const dataUrl = await readFileAsDataURL(file);
@@ -333,7 +357,7 @@ export default function MultiStageOcrPage() {
     }
 
     if (newItems.length === 0) {
-      toast.warning("الملف ده مش صورة", "اختار صور بس (JPG أو PNG أو WEBP)");
+      toast.warning("الملف ده مش صورة", "اختار صور (JPG أو PNG أو WEBP) أو ملف PDF");
       return;
     }
 
@@ -476,6 +500,7 @@ export default function MultiStageOcrPage() {
             }
             // Framed legal forms are printed bold almost without exception
             setBoldBody(data.detectedWeight === "bold" || data.detectedBorder === "decorative");
+            setBodyPt(data.handwritten ? 18 : 14);
           }
           if (data.lowAccuracy) {
             toast.warning(
@@ -557,8 +582,9 @@ export default function MultiStageOcrPage() {
         language: selectedLanguage as "ar" | "en" | "fr" | "auto",
         figures,
         landscape,
+        bodyPt,
       });
-      toast.success("ملف Word نزل", `بخط ${selectedFont || "Arial"}`);
+      toast.success("ملف Word نزل", `بخط ${selectedFont || "Arial"} مقاس ${bodyPt}`);
     } catch {
       toast.error("ملف Word منزلش", "حصلت مشكلة. ممكن تنسخ النص وتلزقه في Word بإيدك.");
     }
@@ -593,7 +619,7 @@ export default function MultiStageOcrPage() {
         ref={fileInputRef}
         type="file"
         multiple
-        accept="image/*"
+        accept="image/*,application/pdf,.pdf"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -647,13 +673,23 @@ export default function MultiStageOcrPage() {
                             صفحة ({idx + 1}): {page.name.slice(0, 22)}
                           </span>
                           <span className="text-[11px] text-on-surface-variant">
-                            {page.status === "processing"
-                              ? "⏳ بنقراها..."
-                              : page.status === "done"
-                              ? "✅ اتقرت"
-                              : page.status === "error"
-                              ? "❌ حصلت مشكلة"
-                              : "مستنية دورها"}
+                            {page.status === "processing" ? (
+                              <span className="inline-flex items-center gap-1 text-blue-600 font-bold">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" /> بنقراها...
+                              </span>
+                            ) : page.status === "done" ? (
+                              <span className="inline-flex items-center gap-1 text-emerald-600 font-bold">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> اتقرت
+                              </span>
+                            ) : page.status === "error" ? (
+                              <span className="inline-flex items-center gap-1 text-red-600 font-bold">
+                                <XCircle className="w-3.5 h-3.5" /> حصلت مشكلة
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5" /> مستنية دورها
+                              </span>
+                            )}
                           </span>
                         </div>
                       </div>

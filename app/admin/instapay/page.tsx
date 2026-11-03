@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
+  Inbox,
   CreditCard,
   Plus,
   CheckCircle2,
@@ -11,12 +12,12 @@ import {
   MessageCircle,
   ShieldCheck,
   X,
-  AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 import { useAuth } from "@/lib/auth";
+import { api, ApiError, syncLabel, type SyncState } from "@/lib/admin-data";
 
-export interface InstaPayRecord {
+interface InstaPayRecord {
   id: string;
   customerName: string;
   phone: string;
@@ -27,34 +28,62 @@ export interface InstaPayRecord {
   status: "pending" | "confirmed";
   confirmedAt?: number;
   confirmedBy?: string;
+  createdBy?: string;
 }
 
+interface InstaPayRow {
+  id: string;
+  customer_name: string;
+  phone: string | null;
+  amount: number | string;
+  sender_account: string | null;
+  notes: string | null;
+  status: "pending" | "confirmed";
+  created_by: string;
+  created_at: string;
+  confirmed_by: string | null;
+  confirmed_at: string | null;
+}
+
+const fromRow = (r: InstaPayRow): InstaPayRecord => ({
+  id: r.id,
+  customerName: r.customer_name,
+  phone: r.phone || "",
+  amount: Number(r.amount),
+  senderAccount: r.sender_account || undefined,
+  notes: r.notes || undefined,
+  timestamp: Date.parse(r.created_at),
+  status: r.status,
+  confirmedAt: r.confirmed_at ? Date.parse(r.confirmed_at) : undefined,
+  confirmedBy: r.confirmed_by || undefined,
+  createdBy: r.created_by,
+});
+
+// Offline copy (and the only copy while the database is not connected)
 const INSTAPAY_STORAGE_KEY = "copycat_instapay_v1";
 
-export function getInstaPaySnapshot(): InstaPayRecord[] {
+function readLocalRecords(): InstaPayRecord[] {
   if (typeof window === "undefined") return [];
   try {
-    const saved = localStorage.getItem(INSTAPAY_STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch {}
-  return [];
+    const parsed = JSON.parse(localStorage.getItem(INSTAPAY_STORAGE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
-export function saveInstaPayRecords(records: InstaPayRecord[]) {
-  if (typeof window === "undefined") return;
+function saveLocalRecords(records: InstaPayRecord[]) {
   try {
     localStorage.setItem(INSTAPAY_STORAGE_KEY, JSON.stringify(records));
-    window.dispatchEvent(new Event("storage"));
   } catch {}
 }
 
 export default function InstaPayAdminPage() {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const [records, setRecords] = useState<InstaPayRecord[]>(() => getInstaPaySnapshot());
+  const { user, isAdmin } = useAuth();
+  const [records, setRecords] = useState<InstaPayRecord[]>(readLocalRecords);
+  const [sync, setSync] = useState<SyncState>("loading");
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed">("pending");
 
@@ -65,15 +94,29 @@ export default function InstaPayAdminPage() {
   const [senderAccount, setSenderAccount] = useState("");
   const [notes, setNotes] = useState("");
   const [isAddingModal, setIsAddingModal] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // Load records
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setRecords(getInstaPaySnapshot());
-    };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+  const load = useCallback(async () => {
+    try {
+      const data = await api<{ records: InstaPayRow[] }>("/api/admin/instapay");
+      const next = data.records.map(fromRow);
+      setRecords(next);
+      saveLocalRecords(next);
+      setSync("cloud");
+    } catch (err) {
+      setSync(err instanceof ApiError && err.status === 503 ? "local" : "error");
+    }
   }, []);
+
+  // Load, then refresh every 20 s while the page is visible so the engineer sees new transfers
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch
+    load();
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") load();
+    }, 20000);
+    return () => clearInterval(timer);
+  }, [load]);
 
   const resetForm = useCallback(() => {
     setCustomerName("");
@@ -84,7 +127,7 @@ export default function InstaPayAdminPage() {
   }, []);
 
   // Submit new transfer
-  const handleAddRecord = useCallback((e: React.FormEvent) => {
+  const handleAddRecord = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim()) {
       toast.error("في حاجة ناقصة", "اكتب اسم الزبون.");
@@ -94,56 +137,92 @@ export default function InstaPayAdminPage() {
       toast.error("المبلغ غلط", "اكتب المبلغ بالجنيه.");
       return;
     }
-
-    const now = Date.now();
-    const newRecord: InstaPayRecord = {
-      id: `INSTA-${now.toString().slice(-6)}`,
+    const payload = {
       customerName: customerName.trim(),
       phone: phone.trim(),
       amount: Number(amount),
-      senderAccount: senderAccount.trim() || undefined,
-      notes: notes.trim() || undefined,
-      timestamp: now,
-      status: "pending",
+      senderAccount: senderAccount.trim(),
+      notes: notes.trim(),
     };
 
-    const updated = [newRecord, ...records];
-    setRecords(updated);
-    saveInstaPayRecords(updated);
-
-    toast.success("التحويل اتسجل", `${newRecord.amount} ج.م، مستني الباشمهندس يأكده.`);
-    setIsAddingModal(false);
-    resetForm();
-  }, [amount, customerName, notes, phone, records, resetForm, senderAccount, toast]);
-
-
-  // Confirm a payment (Done by the Engineer)
-  const handleConfirmRecord = (id: string) => {
-    const engineerName = user?.name || "الباشمهندس";
-    const updated = records.map((rec) => {
-      if (rec.id === id) {
-        return {
-          ...rec,
-          status: "confirmed" as const,
-          confirmedAt: Date.now(),
-          confirmedBy: engineerName,
+    setSaving(true);
+    try {
+      if (sync === "local") {
+        const local: InstaPayRecord = {
+          ...payload,
+          id: crypto.randomUUID(),
+          senderAccount: payload.senderAccount || undefined,
+          notes: payload.notes || undefined,
+          timestamp: Date.now(),
+          status: "pending",
+          createdBy: user?.email,
         };
+        const updated = [local, ...records];
+        setRecords(updated);
+        saveLocalRecords(updated);
+      } else {
+        const data = await api<{ record: InstaPayRow }>("/api/admin/instapay", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        const updated = [fromRow(data.record), ...records];
+        setRecords(updated);
+        saveLocalRecords(updated);
       }
-      return rec;
-    });
-
-    setRecords(updated);
-    saveInstaPayRecords(updated);
-    toast.success("الفلوس وصلت ✓", `أكدها: ${engineerName}`);
+      toast.success("التحويل اتسجل", `${payload.amount} ج.م، مستني الباشمهندس يأكده.`);
+      setIsAddingModal(false);
+      resetForm();
+    } catch (err) {
+      toast.error("التحويل متسجلش", err instanceof Error ? err.message : "");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // Delete a record
-  const handleDeleteRecord = (id: string, name: string) => {
+  // Confirm a payment (engineer only; the server checks the role too)
+  const handleConfirmRecord = async (id: string) => {
+    if (!isAdmin) return;
+    setBusyId(id);
+    try {
+      let updated: InstaPayRecord[];
+      if (sync === "local") {
+        updated = records.map((rec) =>
+          rec.id === id ? { ...rec, status: "confirmed" as const, confirmedAt: Date.now(), confirmedBy: user?.name } : rec
+        );
+      } else {
+        const data = await api<{ record: InstaPayRow }>("/api/admin/instapay", {
+          method: "PATCH",
+          body: JSON.stringify({ id }),
+        });
+        const confirmed = fromRow(data.record);
+        updated = records.map((rec) => (rec.id === id ? confirmed : rec));
+      }
+      setRecords(updated);
+      saveLocalRecords(updated);
+      toast.success("الفلوس وصلت", "التحويل اتأكد.");
+    } catch (err) {
+      toast.error("متأكدش", err instanceof Error ? err.message : "");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // Delete a record (engineer only)
+  const handleDeleteRecord = async (id: string, name: string) => {
+    if (!isAdmin) return;
     if (!confirm(`متأكد إنك عايز تمسح تحويل "${name}"؟`)) return;
-    const updated = records.filter((r) => r.id !== id);
-    setRecords(updated);
-    saveInstaPayRecords(updated);
-    toast.info("اتمسح", "التحويل اتمسح من السجل.");
+    setBusyId(id);
+    try {
+      if (sync !== "local") await api(`/api/admin/instapay?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      const updated = records.filter((r) => r.id !== id);
+      setRecords(updated);
+      saveLocalRecords(updated);
+      toast.info("اتمسح", "التحويل اتمسح من السجل.");
+    } catch (err) {
+      toast.error("متمسحش", err instanceof Error ? err.message : "");
+    } finally {
+      setBusyId(null);
+    }
   };
 
   // Metrics
@@ -184,10 +263,21 @@ export default function InstaPayAdminPage() {
         {/* Action Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-md pb-space-md border-b border-surface-container-high/40">
           <div className="flex items-center gap-2.5">
-            <span className="p-1.5 rounded-xl bg-purple-500/10 text-purple-400">
+            <span className="p-1.5 rounded-xl bg-purple-500/10 text-purple-700">
               <CreditCard className="w-5 h-5" />
             </span>
             <span className="text-base font-black text-on-surface">تحويلات إنستا باي</span>
+            <span
+              className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                syncLabel(sync).tone === "ok"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : syncLabel(sync).tone === "warn"
+                  ? "bg-amber-50 text-amber-800 border-amber-200"
+                  : "bg-slate-50 text-slate-500 border-slate-200"
+              }`}
+            >
+              {syncLabel(sync).text}
+            </span>
           </div>
 
           <div className="flex items-center gap-space-xs">
@@ -206,20 +296,20 @@ export default function InstaPayAdminPage() {
           {/* Pending Card */}
           <div className="p-space-md rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between">
             <div>
-              <span className="text-body-xs font-label-code text-amber-400 font-bold block">
+              <span className="text-body-xs font-label-code text-amber-700 font-bold block">
                 لسه متأكدتش
               </span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-headline-lg font-extrabold text-amber-300">
-                  {totalPendingAmount.toLocaleString("ar-EG")}
+                <span className="text-headline-lg font-extrabold text-amber-800">
+                  {totalPendingAmount.toLocaleString("en-US")}
                 </span>
-                <span className="text-body-sm font-bold text-amber-400">ج.م</span>
+                <span className="text-body-sm font-bold text-amber-700">ج.م</span>
               </div>
-              <span className="text-body-xs text-amber-400/80 mt-1 block">
+              <span className="text-body-xs text-amber-700/80 mt-1 block">
                 {pendingRecords.length} تحويل مستنيين الباشمهندس يأكدهم
               </span>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center">
               <Clock className="w-6 h-6 animate-pulse" />
             </div>
           </div>
@@ -227,20 +317,20 @@ export default function InstaPayAdminPage() {
           {/* Confirmed Card */}
           <div className="p-space-md rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between">
             <div>
-              <span className="text-body-xs font-label-code text-emerald-400 font-bold block">
+              <span className="text-body-xs font-label-code text-emerald-700 font-bold block">
                 اتأكدت ووصلت
               </span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-headline-lg font-extrabold text-emerald-300">
-                  {totalConfirmedAmount.toLocaleString("ar-EG")}
+                <span className="text-headline-lg font-extrabold text-emerald-800">
+                  {totalConfirmedAmount.toLocaleString("en-US")}
                 </span>
-                <span className="text-body-sm font-bold text-emerald-400">ج.م</span>
+                <span className="text-body-sm font-bold text-emerald-700">ج.م</span>
               </div>
-              <span className="text-body-xs text-emerald-400/80 mt-1 block">
+              <span className="text-body-xs text-emerald-700/80 mt-1 block">
                 {confirmedRecords.length} تحويل وصلوا حساب المكتبة
               </span>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-700 flex items-center justify-center">
               <CheckCircle2 className="w-6 h-6" />
             </div>
           </div>
@@ -252,8 +342,8 @@ export default function InstaPayAdminPage() {
                 كل التحويلات
               </span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-headline-lg font-extrabold text-purple-400">
-                  {(totalPendingAmount + totalConfirmedAmount).toLocaleString("ar-EG")}
+                <span className="text-headline-lg font-extrabold text-purple-700">
+                  {(totalPendingAmount + totalConfirmedAmount).toLocaleString("en-US")}
                 </span>
                 <span className="text-body-sm font-bold text-on-surface-variant">ج.م</span>
               </div>
@@ -261,7 +351,7 @@ export default function InstaPayAdminPage() {
                 {records.length} تحويل
               </span>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-700 flex items-center justify-center">
               <CreditCard className="w-6 h-6" />
             </div>
           </div>
@@ -278,7 +368,7 @@ export default function InstaPayAdminPage() {
                   : "bg-surface-container hover:bg-surface-container-high text-on-surface"
               }`}
             >
-              ⚠️ لسه متأكدتش ({pendingRecords.length})
+              <span className="inline-flex items-center gap-1.5"><Clock className="w-4 h-4 shrink-0" />لسه متأكدتش ({pendingRecords.length})</span>
             </button>
             <button
               onClick={() => setFilterStatus("confirmed")}
@@ -288,7 +378,7 @@ export default function InstaPayAdminPage() {
                   : "bg-surface-container hover:bg-surface-container-high text-on-surface"
               }`}
             >
-              ✓ اتأكدت ({confirmedRecords.length})
+              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 shrink-0" />اتأكدت ({confirmedRecords.length})</span>
             </button>
             <button
               onClick={() => setFilterStatus("all")}
@@ -319,7 +409,9 @@ export default function InstaPayAdminPage() {
       <div className="w-full">
         {filteredRecords.length === 0 ? (
           <div className="py-20 text-center rounded-2xl bg-surface-container-low border border-surface-container-high/40 p-space-xl">
-            <AlertCircle className="w-12 h-12 text-on-surface-variant mx-auto mb-space-sm opacity-50" />
+            <div className="w-16 h-16 rounded-2xl bg-violet-50 text-violet-500 flex items-center justify-center mx-auto mb-space-sm">
+              {filterStatus === "pending" ? <CheckCircle2 className="w-8 h-8" /> : <Inbox className="w-8 h-8" />}
+            </div>
             <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">مفيش تحويلات</h3>
             <p className="font-body-md text-body-md text-on-surface-variant mt-1">
               {filterStatus === "pending"
@@ -380,7 +472,7 @@ export default function InstaPayAdminPage() {
                               href={`https://wa.me/2${rec.phone.replace(/[^0-9]/g, "")}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-emerald-500 hover:text-emerald-400 p-1 rounded"
+                              className="text-emerald-500 hover:text-emerald-700 p-1 rounded"
                               title="كلّمه واتساب"
                             >
                               <MessageCircle className="w-4 h-4" />
@@ -392,8 +484,8 @@ export default function InstaPayAdminPage() {
                       </td>
 
                       <td className="p-space-sm">
-                        <span className="font-bold text-base text-purple-400">
-                          {rec.amount.toLocaleString("ar-EG")} ج.م
+                        <span className="font-bold text-base text-purple-700">
+                          {rec.amount.toLocaleString("en-US")} ج.م
                         </span>
                       </td>
 
@@ -409,12 +501,12 @@ export default function InstaPayAdminPage() {
 
                       <td className="p-space-sm text-center">
                         {isPending ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-700 border border-amber-500/30">
                             <Clock className="w-3.5 h-3.5 animate-spin" />
                             <span>مستني تأكيد</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-700 border border-emerald-500/30">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>وصل ({rec.confirmedBy || "الباشمهندس"})</span>
                           </span>
@@ -423,28 +515,34 @@ export default function InstaPayAdminPage() {
 
                       <td className="p-space-sm text-left">
                         <div className="flex items-center justify-end gap-2">
-                          {isPending ? (
+                          {isPending && isAdmin ? (
                             <button
                               onClick={() => handleConfirmRecord(rec.id)}
+                              disabled={busyId === rec.id}
                               className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow transition cursor-pointer"
                               title="أكّد إن الفلوس وصلت الحساب"
                             >
                               <ShieldCheck className="w-4 h-4" />
-                              <span>وصلت ✓</span>
+                              <span>وصلت</span>
                             </button>
+                          ) : isPending ? (
+                            <span className="text-[11px] text-amber-700 font-bold">الباشمهندس هيأكده</span>
                           ) : (
-                            <span className="text-[11px] text-emerald-400 font-medium">
+                            <span className="text-[11px] text-emerald-700 font-medium">
                               اتأكدت
                             </span>
                           )}
 
+                          {isAdmin && (
                           <button
                             onClick={() => handleDeleteRecord(rec.id, rec.customerName)}
+                            disabled={busyId === rec.id}
                             className="p-1.5 rounded-lg text-on-surface-variant hover:text-rose-500 hover:bg-surface-container transition cursor-pointer"
                             title="امسح"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -462,7 +560,7 @@ export default function InstaPayAdminPage() {
           <div className="bg-surface-container-low border border-surface-container-high rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-surface-container-high/40">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-700 flex items-center justify-center">
                   <CreditCard className="w-4 h-4" />
                 </div>
                 <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">
@@ -497,7 +595,7 @@ export default function InstaPayAdminPage() {
                   placeholder="مثلاً: 150"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value ? Number(e.target.value) : "")}
-                  className="w-full bg-surface-container border border-surface-container-high rounded-xl p-2.5 text-sm font-bold text-purple-400 focus:border-purple-500 focus:outline-none"
+                  className="w-full bg-surface-container border border-surface-container-high rounded-xl p-2.5 text-sm font-bold text-purple-700 focus:border-purple-500 focus:outline-none"
                 />
               </div>
 
@@ -544,9 +642,10 @@ export default function InstaPayAdminPage() {
                 </button>
                 <button
                   type="submit"
-                  className="w-1/2 py-2.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg transition"
+                  disabled={saving}
+                  className="w-1/2 py-2.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg transition disabled:opacity-60"
                 >
-                  احفظ التحويل
+                  {saving ? "بنحفظ..." : "احفظ التحويل"}
                 </button>
               </div>
             </form>

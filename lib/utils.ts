@@ -71,18 +71,30 @@ export function readFileAsDataURL(file: File): Promise<string> {
 /**
  * Opens a URL in a new window/tab safely, returning false if blocked by popup blocker
  */
-export function safeOpenUrl(url: string, target = "_blank"): boolean {
-  if (typeof window === "undefined") return false;
+/** Only web, WhatsApp, mail and phone links may be opened (never javascript:/data: URLs) */
+export function isSafeExternalUrl(url: string): boolean {
   try {
-    const win = window.open(url, target);
-    if (!win || win.closed || typeof win.closed === "undefined") {
-      // Popup blocked, fallback to direct location
-      return false;
-    }
-    return true;
+    const parsed = new URL(url, typeof window !== "undefined" ? window.location.href : "https://x.invalid");
+    return ["http:", "https:", "mailto:", "tel:", "whatsapp:"].includes(parsed.protocol);
   } catch {
     return false;
   }
+}
+
+/**
+ * Opens a link in a new tab without giving that tab a handle on the admin window (noopener) and only
+ * for safe protocols. Returns false when the URL was refused.
+ */
+export function safeOpenUrl(url: string, target = "_blank"): boolean {
+  if (typeof window === "undefined" || !isSafeExternalUrl(url)) return false;
+  const a = document.createElement("a");
+  a.href = url;
+  a.target = target;
+  a.rel = "noopener noreferrer";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  return true;
 }
 
 /**

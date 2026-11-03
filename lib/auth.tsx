@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export interface UserSession {
   email: string;
@@ -14,186 +13,89 @@ interface AuthContextType {
   user: UserSession | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  /** Engineer account: confirms InstaPay transfers, reviews the change log */
   isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const MASTER_EMAIL = process.env.NEXT_PUBLIC_MASTER_EMAIL || "";
+/**
+ * The server is the only source of truth: the session is an httpOnly cookie checked by proxy.ts and
+ * /api/auth/me. This localStorage copy only paints the admin shell instantly; it is replaced by what
+ * /api/auth/me says (or cleared) right after, so editing it in DevTools grants nothing.
+ */
 const STORAGE_KEY = "copycat_session";
 
+function readCachedUser(): UserSession | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (parsed?.email && (parsed.role === "admin" || parsed.role === "staff")) return parsed;
+  } catch {}
+  return null;
+}
+
+function needsSessionCheck(): boolean {
+  if (typeof window === "undefined") return false;
+  const p = window.location.pathname;
+  return p.startsWith("/admin") || p.startsWith("/login");
+}
+
+function cacheUser(user: UserSession | null) {
+  try {
+    if (user) localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    else localStorage.removeItem(STORAGE_KEY);
+  } catch {}
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserSession | null>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed?.email) return parsed;
-      }
-    } catch {}
-    return null;
-  });
-
-  const [loading, setLoading] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed?.email) return false;
-      }
-    } catch {}
-    return isSupabaseConfigured;
-  });
-
+  const [user, setUser] = useState<UserSession | null>(readCachedUser);
+  // Only the staff side needs the session; the storefront never asks
+  const [loading, setLoading] = useState(needsSessionCheck);
   const router = useRouter();
 
   useEffect(() => {
-    let isMounted = true;
-
-    if (!isSupabaseConfigured) {
-      return;
-    }
-
-    // Check Supabase auth state if available
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
-        if (!isMounted) return;
-        if (session?.user?.email) {
-          const userObj: UserSession = {
-            email: session.user.email,
-            role: session.user.email === MASTER_EMAIL ? "admin" : "staff",
-            name: session.user.user_metadata?.full_name || session.user.email.split("@")[0],
-          };
-          setUser(userObj);
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(userObj));
-          } catch {}
+    if (!needsSessionCheck()) return;
+    let alive = true;
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then(async (res) => {
+        if (!alive) return;
+        if (res.ok) {
+          const data = await res.json();
+          const next: UserSession = { email: data.email, role: data.role, name: data.name };
+          setUser(next);
+          cacheUser(next);
+        } else if (res.status === 401) {
+          setUser(null);
+          cacheUser(null);
         }
+        // Other errors (offline, 5xx): keep the cached user, the next request will tell
       })
-      .catch(() => {
-        // Supabase offline/not configured
-      })
-      .finally(() => {
-        if (isMounted) {
-          setLoading(false);
-        }
-      });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user?.email) {
-        const userObj: UserSession = {
-          email: session.user.email,
-          role: session.user.email === MASTER_EMAIL ? "admin" : "staff",
-          name: session.user.user_metadata?.full_name || session.user.email.split("@")[0],
-        };
-        setUser(userObj);
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(userObj));
-        } catch {}
-      }
-    });
-
+      .catch(() => {})
+      .finally(() => alive && setLoading(false));
     return () => {
-      isMounted = false;
-      subscription.unsubscribe();
+      alive = false;
     };
   }, []);
 
-  const login = async (
-    emailInput: string,
-    passInput: string
-  ): Promise<{ success: boolean; error?: string }> => {
-    const cleanEmail = emailInput.trim().toLowerCase();
-    const cleanPass = passInput.trim();
-
-    // Verification 1: Server-side Designated Master Admin (keys protected in .env)
+  const login = async (emailInput: string, passInput: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail, password: cleanPass }),
+        body: JSON.stringify({ email: emailInput.trim().toLowerCase(), password: passInput }),
       });
-      const data = await res.json();
-      if (data?.isMaster && data?.success) {
-        const adminUser: UserSession = {
-          email: data.email || MASTER_EMAIL,
-          role: "admin",
-          name: data.name || "مدير كوبي كات",
-        };
-        setUser(adminUser);
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(adminUser));
-          document.cookie = `copycat_auth=admin; path=/; max-age=86400; SameSite=Lax`;
-        } catch {}
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.success) {
+        const next: UserSession = { email: data.email, role: data.role, name: data.name };
+        setUser(next);
+        cacheUser(next);
         return { success: true };
       }
-    } catch (err) {
-      console.warn("Server-side master check skipped/failed:", err);
-    }
-
-    // Verification 2: Supabase Auth
-    if (isSupabaseConfigured) {
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password: cleanPass,
-        });
-
-        if (!error && data?.user?.email) {
-          const staffUser: UserSession = {
-            email: data.user.email,
-            role: data.user.email === MASTER_EMAIL ? "admin" : "staff",
-            name: data.user.user_metadata?.full_name || data.user.email.split("@")[0],
-          };
-          setUser(staffUser);
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(staffUser));
-            document.cookie = `copycat_auth=staff; path=/; max-age=86400; SameSite=Lax`;
-          } catch {}
-          return { success: true };
-        }
-
-        if (error) {
-          return {
-            success: false,
-            error: "بيانات الدخول غير صحيحة، يرجى التأكد من البريد وكلمة المرور.",
-          };
-        }
-      } catch (err: unknown) {
-        console.warn("Supabase auth error:", err);
-      }
-    }
-
-    return {
-      success: false,
-      error: "بيانات الدخول غير صحيحة. يرجى التأكد من كتابة البريد وكلمة المرور بدقة.",
-    };
-  };
-
-  const loginWithGoogle = async () => {
-    try {
-      const redirectUrl =
-        typeof window !== "undefined" ? `${window.location.origin}/admin` : undefined;
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: redirectUrl,
-        },
-      });
-      if (error) {
-        throw error;
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "فشل تسجيل الدخول بجوجل";
-      console.warn("Google OAuth Note:", msg);
-      throw new Error(`تعذر تسجيل الدخول بجوجل: ${msg}. يرجى التحقق من إعدادات Supabase.`);
+      return { success: false, error: data?.error || "الإيميل أو الباسورد غلط." };
+    } catch {
+      return { success: false, error: "مفيش اتصال بالسيرفر، جرب تاني." };
     }
   };
 
@@ -201,28 +103,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } catch {}
-    try {
-      await supabase.auth.signOut();
-    } catch {}
     setUser(null);
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-      document.cookie = "copycat_auth=; path=/; max-age=0";
-    } catch {}
+    cacheUser(null);
     router.push("/login");
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        loginWithGoogle,
-        logout,
-        isAdmin: !!user,
-      }}
-    >
+    <AuthContext.Provider value={{ user, loading, login, logout, isAdmin: user?.role === "admin" }}>
       {children}
     </AuthContext.Provider>
   );

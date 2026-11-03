@@ -8,6 +8,7 @@ import { PwaAndErrorGuard } from "@/components/pwa-and-error-guard";
 import { SITE_CONFIG } from "@/lib/site-config";
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { FirebaseAnalytics } from "@/components/firebase-analytics";
 
 const cairo = localFont({
   src: "./fonts/Cairo-VariableFont_wght.ttf",
@@ -198,6 +199,7 @@ export default function RootLayout({
       >
         <SpeedInsights />
         <Analytics />
+        <FirebaseAnalytics />
         <PwaAndErrorGuard />
         <ThemeProvider>
           <AuthProvider>

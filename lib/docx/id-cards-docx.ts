@@ -36,7 +36,13 @@ export interface IdCardDocxPair {
 }
 
 export type PaperSize = "A4" | "A5";
-export type DuplexAlignment = "vertical" | "horizontal";
+/**
+ * vertical   = back under the front on the same sheet
+ * horizontal = back beside the front
+ * separate   = every side on its own page (front, then its back on the next page), top-centred: the shop's
+ *              usual A5 job, printed double-sided so each back lands behind its front
+ */
+export type DuplexAlignment = "vertical" | "horizontal" | "separate";
 export type LayoutMode = "single_sheet" | "separate_pages";
 
 export interface GenerateIdCardsDocxOptions {
@@ -111,6 +117,52 @@ export async function generateIdCardsDocx(
     }
   } else {
     pairs.push(...(input as IdCardDocxPair[]));
+  }
+
+  const pageProperties = {
+    page: {
+      size: {
+        width: convertMillimetersToTwip(pageWidthMm),
+        height: convertMillimetersToTwip(pageHeightMm),
+      },
+      margin: {
+        top: convertMillimetersToTwip(10),
+        bottom: convertMillimetersToTwip(10),
+        left: convertMillimetersToTwip(10),
+        right: convertMillimetersToTwip(10),
+      },
+    },
+  };
+
+  if (duplexAlignment === "separate") {
+    const topCard = (src: string) =>
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: convertMillimetersToTwip(isA4 ? 10 : 5) },
+        children: [
+          new ImageRun({
+            data: base64ToUint8Array(src),
+            transformation: { width: cardWidthPx, height: cardHeightPx },
+            type: src.includes("image/png") ? "png" : "jpg",
+          }),
+        ],
+      });
+    const pages: { properties: typeof pageProperties; children: Paragraph[] }[] = [];
+    pairs.forEach((pair, i) => {
+      const first = pair.front || pair.back;
+      if (!first) return;
+      pages.push({ properties: pageProperties, children: [topCard(first)] });
+      const second = pair.front && pair.back ? pair.back : null;
+      const isLast = i === pairs.length - 1;
+      // A card without a back still gets an empty back page (unless it is the last one), so the cards
+      // after it keep printing front-on-front-side when the sheets go through double-sided
+      if (second) pages.push({ properties: pageProperties, children: [topCard(second)] });
+      else if (!isLast) pages.push({ properties: pageProperties, children: [new Paragraph({ children: [] })] });
+    });
+    const sepDoc = new Document({ sections: pages });
+    const sepBlob = await Packer.toBlob(sepDoc);
+    if (typeof window !== "undefined") saveAs(sepBlob, filename);
+    return sepBlob;
   }
 
   const sections = pairs.map((pair) => {

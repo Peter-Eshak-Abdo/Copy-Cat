@@ -19,14 +19,17 @@ const ORIENT_PROMPT =
 
 const SIDE_PROMPT =
   "This photo shows one side of an ID card (usually an Egyptian national ID card). Return ONLY JSON " +
-  '{"upright": true | false, "side": "front" | "back" | "unknown", "national_id": "...", "id_tail": "..."}. ' +
+  '{"upright": true | false, "side": "front" | "back" | "unknown", "national_id": "...", "id_tail": "...", "id_pattern": "..."}. ' +
   "upright = the card's text reads normally (not sideways, not upside down). " +
   "front = the side with the person's portrait photo, name and address. " +
   "back = the side without a portrait (profession, gender, religion, marital status, expiry date, barcode). " +
   "national_id = the 14-digit national number printed on this side, written with Western digits 0-9 " +
   "(convert Arabic-Indic digits), no spaces; an empty string if you cannot read all 14 digits for sure. " +
   "id_tail = the LAST digits of that national number that you can read for sure (at least the last 6, Western " +
-  "digits), even when the start is unreadable; an empty string if not even 6 are readable.";
+  "digits), even when the start is unreadable; an empty string if not even 6 are readable. " +
+  "id_pattern = the national number as exactly 14 characters, one per digit position from left to right: the " +
+  "Western digit where you can read it for sure, ? where you cannot (example: 2980?01?2345?7); an empty string " +
+  "if fewer than 5 digits are readable.";
 
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 const EXTENDED_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
@@ -42,6 +45,17 @@ function westernDigits(raw: unknown): string {
 function normalizeNationalId(raw: unknown): string | null {
   const digits = westernDigits(raw);
   return digits.length === 14 ? digits : null;
+}
+
+/** "2980?01?2345?7": 14 positions, digits where readable; kept only with at least 5 readable digits */
+function normalizePattern(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const p = raw
+    .replace(/[٠-٩]/g, (c) => String(ARABIC_DIGITS.indexOf(c)))
+    .replace(/[۰-۹]/g, (c) => String(EXTENDED_DIGITS.indexOf(c)))
+    .replace(/[^0-9?]/g, "");
+  if (p.length !== 14) return null;
+  return (p.match(/\d/g) || []).length >= 5 ? p : null;
 }
 
 /** Clockwise turn that makes the card upright, from the edge its text's top faces */
@@ -67,14 +81,14 @@ async function uprightImage(imageBase64: string, rotation: number): Promise<stri
 
 async function detectSide(imageBase64: string) {
   const answer = (await geminiVisionJson(SIDE_PROMPT, imageBase64, 250)) as
-    | { upright?: unknown; side?: unknown; national_id?: unknown; id_tail?: unknown }
+    | { upright?: unknown; side?: unknown; national_id?: unknown; id_tail?: unknown; id_pattern?: unknown }
     | null;
   const side = answer?.side === "front" || answer?.side === "back" ? answer.side : "unknown";
   const nationalId = normalizeNationalId(answer?.national_id);
   // A partly readable number still pairs sides by its last digits (see lib/card-pairing.ts)
   const tail = westernDigits(answer?.id_tail);
   const idTail = nationalId ? nationalId.slice(-6) : tail.length >= 6 ? tail.slice(-6) : null;
-  return { side, nationalId, idTail, upright: answer?.upright !== false };
+  return { side, nationalId, idTail, idPattern: nationalId ? null : normalizePattern(answer?.id_pattern), upright: answer?.upright !== false };
 }
 
 /**
@@ -96,6 +110,10 @@ export async function POST(req: NextRequest) {
   try {
     const { imageBase64 } = await req.json();
 
+    // A phone photo is a few MB of base64; anything far bigger is not a card photo
+    if (typeof imageBase64 !== "string" || imageBase64.length > 15_000_000) {
+      return NextResponse.json({ error: "الصورة كبيرة جداً أو مش صورة." }, { status: 413 });
+    }
     if (!imageBase64) {
       return NextResponse.json({ error: "لم يتم تقديم بيانات الصورة." }, { status: 400 });
     }

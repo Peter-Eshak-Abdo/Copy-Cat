@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useState, useRef } from "react";
 import {
   FileText,
@@ -16,7 +17,7 @@ import {
   Square,
   Archive,
   Minimize2,
-  Sparkles,
+  ScanText,
   Loader2,
   CheckCircle2,
   ZoomIn,
@@ -24,8 +25,6 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 import { PDFDocument, degrees } from "pdf-lib";
-import { generateOcrDocx } from "@/lib/docx/ocr-docx";
-import { readFileAsDataURL } from "@/lib/utils";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
@@ -69,12 +68,6 @@ export default function PdfToolsPage() {
   const [isConvertingImages, setIsConvertingImages] = useState<boolean>(false);
   const [isImagesDragging, setIsImagesDragging] = useState<boolean>(false);
 
-  // Tab 3: PDF to Word State
-  const pdfWordInputRef = useRef<HTMLInputElement>(null);
-  const [selectedWordPdf, setSelectedWordPdf] = useState<File | null>(null);
-  const [isConvertingWord, setIsConvertingWord] = useState<boolean>(false);
-  const [isPdfWordDragging, setIsPdfWordDragging] = useState<boolean>(false);
-  const [wordConvertedText, setWordConvertedText] = useState<string>("");
 
   // Helper: Render Page Thumbnails using pdfjs-dist
   const renderThumbnailsForDoc = async (
@@ -125,9 +118,16 @@ export default function PdfToolsPage() {
   };
 
   // Handler: Load Primary PDF
+  const [isPdfDragOver, setIsPdfDragOver] = useState(false);
+
   const handlePdfFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    await openPdfFile(file);
+  };
+
+  // Shared by the file picker and drag-and-drop on the empty area
+  const openPdfFile = async (file: File) => {
 
     if (!file.name.toLowerCase().endsWith(".pdf")) {
       toast.error("ده مش PDF", "اختار ملف PDF");
@@ -600,57 +600,6 @@ export default function PdfToolsPage() {
   };
 
   // Tab 3: PDF to Word Handler
-  const handlePdfToWordConvert = async () => {
-    if (!selectedWordPdf) {
-      toast.warning("مفيش ملف", "اختار ملف PDF الأول");
-      return;
-    }
-
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
-      toast.error("النت فاصل", "تحويل PDF لـ Word محتاج إنترنت");
-      return;
-    }
-
-    setIsConvertingWord(true);
-
-    try {
-      const dataUrl = await readFileAsDataURL(selectedWordPdf);
-
-      const res = await fetch("/api/pdf-to-word", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pdfBase64: dataUrl,
-          fileName: selectedWordPdf.name,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "الملف متحولش");
-      }
-
-      const data = await res.json();
-      const extractedText = data.text || data.formattedText || "";
-      setWordConvertedText(extractedText);
-
-      await generateOcrDocx({
-        title: selectedWordPdf.name.replace(/\.pdf$/i, ""),
-        content: extractedText,
-        fileName: `${selectedWordPdf.name.replace(/\.pdf$/i, "")}.docx`,
-        font: data.detectedFont || "Arial",
-        language: data.detectedLang || "auto",
-        hasPageBorder: false,
-      });
-
-      toast.success("ملف Word نزل", "الملف جاهز تعدل فيه");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "الملف متحولش لـ Word";
-      toast.error("الملف متحولش", msg);
-    } finally {
-      setIsConvertingWord(false);
-    }
-  };
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -898,14 +847,29 @@ export default function PdfToolsPage() {
           {pages.length === 0 ? (
             <div
               onClick={() => pdfInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-200 hover:border-blue-500/60 transition cursor-pointer rounded-2xl p-12 text-center bg-slate-50 hover:bg-white flex flex-col items-center justify-center gap-3 min-h-[300px]"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsPdfDragOver(true);
+              }}
+              onDragLeave={() => setIsPdfDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsPdfDragOver(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file) openPdfFile(file);
+              }}
+              className={`group border-2 border-dashed transition cursor-pointer rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3 min-h-[300px] ${
+                isPdfDragOver
+                  ? "border-blue-500 bg-blue-50 scale-[1.01]"
+                  : "border-slate-200 hover:border-blue-500/60 bg-slate-50 hover:bg-white"
+              }`}
             >
-              <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-200 text-blue-400 flex items-center justify-center">
-                <FileText className="w-8 h-8" />
+              <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-200 text-blue-500 flex items-center justify-center transition-transform group-hover:-translate-y-1">
+                {isPdfDragOver ? <Upload className="w-8 h-8 animate-bounce" /> : <FileText className="w-8 h-8" />}
               </div>
               <div>
                 <h3 className="text-base font-black text-slate-900 mb-1">
-                  دوس واختار ملف PDF عشان تشوف صفحاته
+                  {isPdfDragOver ? "سيب الملف هنا" : "دوس واختار ملف PDF، أو اسحبه وسيبه هنا"}
                 </h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
                   هتشوف كل صفحة بصورتها. تقدر تنقل صفحة بكتابة رقمها، تمسح صفحات، تنزّل صفحات معينة PDF أو صور، أو تصغّر حجم الملف.
@@ -1229,126 +1193,24 @@ export default function PdfToolsPage() {
 
       {/* Tab 3: PDF to Word */}
       {activeTab === "pdf_to_word" && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-xs flex flex-col items-center text-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <ScanText className="w-8 h-8" />
+          </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900">حوّل PDF لـ Word تعدل فيه</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              الذكاء الاصطناعي بيقرا الـ PDF ويطلعه ملف Word مقاس A4.
+            <h2 className="text-lg font-black text-slate-900">PDF لـ Word بقى في صفحة «صورة لـ Word»</h2>
+            <p className="text-sm text-slate-500 mt-1 max-w-xl">
+              ارفع ملف الـ PDF هناك زي ما بترفع الصور: كل صفحة بتتقري بنفس الطريقة (الجداول، الكسور، الأشكال، والبرواز)
+              وبيطلع ملف Word بنفس الشكل.
             </p>
           </div>
-
-          <div
-            onClick={(e) => {
-              if (!selectedWordPdf) {
-                pdfWordInputRef.current?.click();
-              }
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsPdfWordDragging(true);
-            }}
-            onDragLeave={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsPdfWordDragging(false);
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsPdfWordDragging(false);
-              const file = e.dataTransfer?.files?.[0];
-              if (file) {
-                if (file.name.toLowerCase().endsWith(".pdf")) {
-                  setSelectedWordPdf(file);
-                  toast.success("اخترت الملف", `${file.name}`);
-                } else {
-                  toast.error("ده مش PDF", "اختار ملف PDF بس");
-                }
-              }
-            }}
-            className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center transition-all cursor-pointer ${
-              isPdfWordDragging
-                ? "border-blue-500 bg-blue-50/70 scale-[1.01] shadow-xl"
-                : selectedWordPdf
-                ? "border-emerald-300 bg-emerald-50/20"
-                : "border-slate-200 hover:border-blue-500/50 bg-slate-50 hover:bg-white"
-            }`}
+          <Link
+            href="/admin/ocr"
+            className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-sm flex items-center gap-2 shadow-md shadow-amber-500/20"
           >
-            <input
-              ref={pdfWordInputRef}
-              type="file"
-              accept=".pdf"
-              className="hidden"
-              onChange={(e) => setSelectedWordPdf(e.target.files?.[0] || null)}
-            />
-
-            <FileText className={`w-12 h-12 mb-3 transition-transform ${isPdfWordDragging ? "scale-110 text-blue-600" : "text-blue-500"}`} />
-
-            {selectedWordPdf ? (
-              <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-                <span className="text-sm font-bold text-slate-900 block">{selectedWordPdf.name}</span>
-                <span className="text-xs text-slate-500 block">
-                  الحجم: {(selectedWordPdf.size / 1024).toFixed(1)} KB
-                </span>
-                <div className="flex items-center justify-center gap-2">
-                  <button
-                    onClick={() => setSelectedWordPdf(null)}
-                    className="px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 cursor-pointer"
-                  >
-                    غيّر الملف
-                  </button>
-                  <button
-                    onClick={handlePdfToWordConvert}
-                    disabled={isConvertingWord}
-                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold flex items-center gap-2 cursor-pointer shadow-lg shadow-blue-600/30 disabled:opacity-50"
-                  >
-                    {isConvertingWord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    <span>{isConvertingWord ? "بنحوّل لـ Word..." : "حوّل ونزّل Word"}</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <span className="text-sm sm:text-base font-bold text-slate-900 block mb-1">
-                  {isPdfWordDragging ? "سيب الملف هنا" : "اسحب ملف PDF وسيبه هنا، أو دوس واختاره"}
-                </span>
-                <span className="text-xs text-slate-500 block max-w-md mx-auto mb-4">
-                  بيحافظ على الجداول والخط اللي تحت الكلام
-                </span>
-                <button
-                  type="button"
-                  onClick={() => pdfWordInputRef.current?.click()}
-                  className="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition cursor-pointer shadow-lg shadow-blue-600/20"
-                >
-                  اختار ملف PDF
-                </button>
-              </div>
-            )}
-          </div>
-
-          {wordConvertedText && (
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-              <span className="text-xs font-bold text-emerald-600 block">النص اللي اتقرا:</span>
-              {(() => {
-                const isWordArabic = /[\u0600-\u06FF]/.test(wordConvertedText);
-                return (
-                  <pre
-                    dir={isWordArabic ? "rtl" : "ltr"}
-                    className={`text-xs text-slate-800 max-h-60 overflow-y-auto whitespace-pre-wrap font-sans p-3 bg-white rounded-xl leading-relaxed border border-slate-200 ${
-                      isWordArabic ? "text-right" : "text-left"
-                    }`}
-                    style={{
-                      direction: isWordArabic ? "rtl" : "ltr",
-                      textAlign: isWordArabic ? "right" : "left",
-                    }}
-                  >
-                    {wordConvertedText}
-                  </pre>
-                );
-              })()}
-            </div>
-          )}
+            <ScanText className="w-4 h-4" />
+            افتح صورة لـ Word
+          </Link>
         </div>
       )}
     </div>

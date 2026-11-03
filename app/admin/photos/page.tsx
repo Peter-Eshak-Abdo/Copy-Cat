@@ -21,10 +21,13 @@ import {
   Sliders,
   Bot,
   Lightbulb,
+  AlertTriangle,
+  Star,
+  ImagePlus,
 } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 import { INITIAL_PRODUCTS, type InventoryItem, sanitizeItem } from "@/lib/inventory";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
+import { loadProducts, saveProduct } from "@/lib/products-client";
 import { enhanceProductPhotoCanvas, ProductEnhanceOptions } from "@/lib/product-enhancer";
 
 interface PoolPhoto {
@@ -43,13 +46,36 @@ interface PhotoLinkInfo {
   isPrimary: boolean;
 }
 
+const PAGE_SIZE = 40;
+
+type LinkMap = Record<string, { productId: number; productName: string; category: string; isPrimary: boolean }>;
+
+/** Which pool photo is on which product, read from the products' own image lists */
+function linksFromCatalog(items: InventoryItem[]): LinkMap {
+  const map: LinkMap = {};
+  for (const p of items) {
+    for (const url of p.images || []) {
+      if (url && !url.startsWith("data:")) {
+        map[url] = { productId: p.id, productName: p.name, category: p.category, isPrimary: url === p.image };
+      }
+    }
+    if (p.image && !p.image.startsWith("data:")) {
+      map[p.image] = { productId: p.id, productName: p.name, category: p.category, isPrimary: true };
+    }
+  }
+  return map;
+}
+
 export default function PhotoPoolPage() {
   const { toast } = useToast();
   const [photos, setPhotos] = useState<PoolPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "unassigned" | "assigned">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "unassigned" | "assigned">("unassigned");
+  // The shop PCs are slow and the connection is weak: show 40 photos, load 40 more on scroll
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   const [sourceFilter, setSourceFilter] = useState<"all" | "facebook" | "upload">("all");
 
   // Catalog items for linking
@@ -226,12 +252,25 @@ export default function PhotoPoolPage() {
       } catch {}
 
       // Load links map from localStorage
+      let localLinks: LinkMap = {};
       try {
         const savedLinks = localStorage.getItem("copycat_photo_pool_links");
         if (savedLinks) {
-          setLinkMap(JSON.parse(savedLinks));
+          localLinks = JSON.parse(savedLinks);
+          setLinkMap(localLinks);
         }
       } catch {}
+
+      // The shared catalog on the server: its photos say which pool photo belongs to which product,
+      // so every device sees the same links
+      const remote = await loadProducts();
+      if (remote && remote.length > 0) {
+        setCatalogItems(remote);
+        try {
+          localStorage.setItem("copycat_inventory_v8_local_catalog", JSON.stringify(remote));
+        } catch {}
+        setLinkMap({ ...localLinks, ...linksFromCatalog(remote) });
+      }
     }
 
     loadInitialData();
@@ -354,18 +393,11 @@ export default function PhotoPoolPage() {
       setLinkMap(updatedLinkMap);
       localStorage.setItem("copycat_photo_pool_links", JSON.stringify(updatedLinkMap));
 
-      // 4. Update Supabase if configured
-      if (isSupabaseConfigured) {
-        try {
-          await supabase
-            .from("inventory")
-            .update({
-              image: linkAsPrimary ? photoUrl : undefined,
-            })
-            .eq("id", selectedProductId);
-        } catch (err) {
-          console.warn("Supabase sync note:", err);
-        }
+      // 4. Shared catalog on the server (logged in the change log)
+      const updatedProduct = updatedCatalog.find((p) => p.id === selectedProductId);
+      if (updatedProduct) {
+        const result = await saveProduct(updatedProduct);
+        if (result === "error") toast.error("متحفظش على السيرفر", "الصورة اتحطت على الجهاز ده بس، جرب تاني.");
       }
 
       toast.success(
@@ -423,6 +455,26 @@ export default function PhotoPoolPage() {
       return true;
     });
   }, [photos, linkMap, statusFilter, sourceFilter, searchQuery]);
+
+  // New filter or search: back to the first 40
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- paging follows the filters
+    setVisibleCount(PAGE_SIZE);
+  }, [statusFilter, sourceFilter, searchQuery]);
+
+  // Load the next 40 when the "load more" row scrolls into view
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) setVisibleCount((n) => n + PAGE_SIZE);
+      },
+      { rootMargin: "600px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [visibleCount, filteredPhotos.length]);
 
   // Filtered products for modal search
   const filteredProducts = useMemo(() => {
@@ -548,7 +600,7 @@ export default function PhotoPoolPage() {
                   : "bg-surface-container hover:bg-surface-container-high text-on-surface"
               }`}
             >
-              ⚠️ من غير منتج ({unassignedCount})
+              <span className="inline-flex items-center gap-1.5"><AlertTriangle className="w-4 h-4 shrink-0" />من غير منتج ({unassignedCount})</span>
             </button>
             <button
               onClick={() => setStatusFilter("assigned")}
@@ -558,7 +610,7 @@ export default function PhotoPoolPage() {
                   : "bg-surface-container hover:bg-surface-container-high text-on-surface"
               }`}
             >
-              ✓ عليها منتج ({assignedCount})
+              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 shrink-0" />عليها منتج ({assignedCount})</span>
             </button>
 
             <span className="h-4 w-px bg-surface-container-high mx-1" />
@@ -648,7 +700,7 @@ export default function PhotoPoolPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-space-sm">
-            {filteredPhotos.map((photo) => {
+            {filteredPhotos.slice(0, visibleCount).map((photo) => {
               const linkInfo = linkMap[photo.url];
               const isLinked = Boolean(linkInfo);
 
@@ -747,7 +799,7 @@ export default function PhotoPoolPage() {
                         title="حسّن الإضاءة وشيل الصفار من صورة الموبايل"
                       >
                         <Wand2 className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span>حسّن ✨</span>
+                        <span>حسّن</span>
                       </button>
 
                       <button
@@ -776,6 +828,20 @@ export default function PhotoPoolPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+        {!isLoading && filteredPhotos.length > visibleCount && (
+          <div ref={loadMoreRef} className="flex flex-col items-center gap-2 py-6">
+            <span className="text-xs font-bold text-slate-500">
+              ظاهر {visibleCount} من {filteredPhotos.length} صورة
+            </span>
+            <button
+              type="button"
+              onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+              className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-bold border border-slate-200 cursor-pointer"
+            >
+              حمّل {Math.min(PAGE_SIZE, filteredPhotos.length - visibleCount)} صورة كمان
+            </button>
           </div>
         )}
       </div>
@@ -832,7 +898,7 @@ export default function PhotoPoolPage() {
                         onChange={() => setLinkAsPrimary(true)}
                         className="text-primary focus:ring-primary"
                       />
-                      <span>🌟 الصورة الأساسية للمنتج</span>
+                      <span className="inline-flex items-center gap-1.5"><Star className="w-4 h-4 shrink-0" />الصورة الأساسية للمنتج</span>
                     </label>
                     <label className="flex items-center gap-2 text-body-xs text-on-surface cursor-pointer">
                       <input
@@ -842,7 +908,7 @@ export default function PhotoPoolPage() {
                         onChange={() => setLinkAsPrimary(false)}
                         className="text-primary focus:ring-primary"
                       />
-                      <span>🖼️ صورة زيادة للمنتج</span>
+                      <span className="inline-flex items-center gap-1.5"><ImagePlus className="w-4 h-4 shrink-0" />صورة زيادة للمنتج</span>
                     </label>
                   </div>
                 </div>
@@ -982,7 +1048,7 @@ export default function PhotoPoolPage() {
                     <span>بعد التحسين</span>
                   </span>
                   <div className="flex items-center gap-2 text-[11px] text-on-surface-variant">
-                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-200 px-2 py-0.5 rounded-md font-mono font-bold">
+                    <span className="bg-emerald-500/10 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md font-mono font-bold">
                       مش بتترفع على النت
                     </span>
                   </div>
@@ -1063,7 +1129,7 @@ export default function PhotoPoolPage() {
                   <div className="space-y-2 pt-1 border-t border-surface-container-high/40">
                     <label className="flex items-center justify-between text-xs cursor-pointer p-1.5 rounded-lg hover:bg-surface-container">
                       <span className="flex items-center gap-1.5">
-                        <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
+                        <Lightbulb className="w-3.5 h-3.5 text-amber-700" />
                         <span>شيل الصفار</span>
                       </span>
                       <input
@@ -1076,7 +1142,7 @@ export default function PhotoPoolPage() {
 
                     <label className="flex items-center justify-between text-xs cursor-pointer p-1.5 rounded-lg hover:bg-surface-container">
                       <span className="flex items-center gap-1.5">
-                        <PackageCheck className="w-3.5 h-3.5 text-emerald-400" />
+                        <PackageCheck className="w-3.5 h-3.5 text-emerald-700" />
                         <span>وضّح الباركود والكلام</span>
                       </span>
                       <input
@@ -1157,8 +1223,8 @@ export default function PhotoPoolPage() {
                 {/* Gemini AI Vision Card */}
                 <div className="p-3.5 rounded-xl bg-linear-to-br from-violet-950/30 to-surface-container/50 border border-violet-500/20 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-xs flex items-center gap-1.5 text-violet-300">
-                      <Bot className="w-4 h-4 text-violet-400" />
+                    <h3 className="font-bold text-xs flex items-center gap-1.5 text-violet-800">
+                      <Bot className="w-4 h-4 text-violet-700" />
                       <span>اعرف المنتج بالذكاء الاصطناعي</span>
                     </h3>
                   </div>
@@ -1175,12 +1241,12 @@ export default function PhotoPoolPage() {
                       >
                         {isEnhancingProcess ? (
                           <>
-                            <Loader2 className="w-4 h-4 animate-spin text-violet-300" />
+                            <Loader2 className="w-4 h-4 animate-spin text-violet-800" />
                             <span>بنشوف المنتج ده إيه...</span>
                           </>
                         ) : (
                           <>
-                            <Sparkles className="w-4 h-4 text-violet-300" />
+                            <Sparkles className="w-4 h-4 text-violet-800" />
                             <span>اعرف المنتج</span>
                           </>
                         )}
@@ -1190,8 +1256,8 @@ export default function PhotoPoolPage() {
                     <div className="space-y-2 text-xs animate-in fade-in">
                       <div className="p-2.5 rounded-lg bg-surface-container-high/40 border border-violet-500/30 space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-violet-400 font-bold">الاسم المقترح:</span>
-                          <span className="text-[10px] bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded-md font-bold">
+                          <span className="text-[10px] text-violet-700 font-bold">الاسم المقترح:</span>
+                          <span className="text-[10px] bg-violet-500/20 text-violet-800 px-2 py-0.5 rounded-md font-bold">
                             {geminiAnalysis.category}
                           </span>
                         </div>
@@ -1200,8 +1266,8 @@ export default function PhotoPoolPage() {
                           {geminiAnalysis.description}
                         </p>
                         {geminiAnalysis.aiAdvice && (
-                          <div className="pt-1.5 border-t border-surface-container-high/40 text-[10px] text-amber-300/90 flex items-start gap-1">
-                            <Lightbulb className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-400" />
+                          <div className="pt-1.5 border-t border-surface-container-high/40 text-[10px] text-amber-800/90 flex items-start gap-1">
+                            <Lightbulb className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-700" />
                             <span>نصيحة: {geminiAnalysis.aiAdvice}</span>
                           </div>
                         )}
@@ -1209,7 +1275,7 @@ export default function PhotoPoolPage() {
                       <button
                         onClick={handleRunGeminiAnalysis}
                         disabled={isEnhancingProcess}
-                        className="text-[11px] text-violet-400 hover:text-violet-300 underline"
+                        className="text-[11px] text-violet-700 hover:text-violet-800 underline"
                       >
                         جرب تاني
                       </button>
@@ -1240,7 +1306,7 @@ export default function PhotoPoolPage() {
                 ) : (
                   <>
                     <Check className="w-4 h-4" />
-                    <span>احفظ الصورة المتحسنة 💾</span>
+                    <span>احفظ الصورة المتحسنة</span>
                   </>
                 )}
               </button>

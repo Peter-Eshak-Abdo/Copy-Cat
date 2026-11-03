@@ -2,31 +2,19 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  FileText,
   Download,
-  Printer,
   Sparkles,
   Loader2,
   CheckCircle2,
   FolderDown,
   Layers,
-  RefreshCw,
   Image as ImageIcon,
+  Link2,
+  FolderUp,
+  Lightbulb,
 } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 import { FB_BOOKMARKLET } from "@/lib/fb-bookmarklet";
-
-interface DownloadedDoc {
-  id: string;
-  title: string;
-  dirName: string;
-  pdfUrl: string | null;
-  pdfFilename: string | null;
-  imageCount: number;
-  previewImage: string | null;
-  images: string[];
-  createdAt: number;
-}
 
 export default function FacebookPostToolsPage() {
   const { toast } = useToast();
@@ -37,7 +25,11 @@ export default function FacebookPostToolsPage() {
   const bookmarkletRef = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
     // React refuses javascript: URLs in JSX, so the helper link is set on the element directly
-    bookmarkletRef.current?.setAttribute("href", FB_BOOKMARKLET);
+    // The helper's "send" button opens this page on whatever origin it was installed from
+    bookmarkletRef.current?.setAttribute(
+      "href",
+      FB_BOOKMARKLET.replace("__COPYCAT_ORIGIN__", encodeURIComponent(encodeURIComponent(window.location.origin)))
+    );
   });
   const [docTitle, setDocTitle] = useState("");
   const [maxPhotos, setMaxPhotos] = useState(120);
@@ -60,15 +52,8 @@ export default function FacebookPostToolsPage() {
     title: string;
   } | null>(null);
 
-  const [historyDocs, setHistoryDocs] = useState<DownloadedDoc[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-
   const logEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    fetchHistory();
-  }, []);
 
   useEffect(() => {
     if (logEndRef.current) {
@@ -76,25 +61,6 @@ export default function FacebookPostToolsPage() {
     }
   }, [logs]);
 
-  const fetchHistory = async () => {
-    setIsLoadingHistory(true);
-    try {
-      const res = await fetch("/api/admin/fb-download");
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        console.warn("Fetch history notice:", errJson.error || res.statusText);
-        return;
-      }
-      const data = await res.json();
-      if (data.success) {
-        setHistoryDocs(data.documents || []);
-      }
-    } catch (e) {
-      console.warn("Error fetching history:", e);
-    } finally {
-      setIsLoadingHistory(false);
-    }
-  };
 
   const startScraping = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,6 +121,7 @@ export default function FacebookPostToolsPage() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      const pdfChunks: string[] = [];
 
       while (true) {
         const { value, done } = await reader.read();
@@ -180,17 +147,26 @@ export default function FacebookPostToolsPage() {
               setLogs((prev) => [...prev, `[لقينا] صورة رقم ${data.current}`]);
             } else if (data.type === "download_progress") {
               setDownloadedCount(data.downloaded);
+            } else if (data.type === "pdf_chunk") {
+              pdfChunks.push(data.data);
             } else if (data.type === "completed") {
               setStatusMessage(data.message);
+              let pdfUrl: string = data.pdf_url;
+              if (data.pdf_inline) {
+                // Vercel: the PDF came back in the stream (base64 pieces), saved from memory
+                const bin = atob(pdfChunks.join(""));
+                const bytes = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                pdfUrl = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+              }
               setCompletedDoc({
-                pdfUrl: data.pdf_url,
+                pdfUrl,
                 pdfFilename: data.pdf_filename,
                 totalImages: data.total_images,
                 title: data.title || docTitle || "ملزمة فيسبوك",
               });
               setLogs((prev) => [...prev, `✅ ${data.message}`]);
               toast.success("ملف PDF جاهز", `${data.total_images} صفحة بالترتيب.`);
-              fetchHistory();
             } else if (data.type === "error") {
               setStatusMessage(`خطأ: ${data.message}`);
               setLogs((prev) => [...prev, `❌ [خطأ] ${data.message}`]);
@@ -211,6 +187,28 @@ export default function FacebookPostToolsPage() {
       setIsRunning(false);
     }
   };
+
+  // Links sent by the helper's "ابعتهم لكوبي كات" button arrive in the hash (#fb-links=...): start right away
+  const runDownloadRef = useRef(runDownload);
+  runDownloadRef.current = runDownload;
+  useEffect(() => {
+    const m = window.location.hash.match(/^#fb-links=(.*)$/);
+    if (!m) return;
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    let text = "";
+    try {
+      text = decodeURIComponent(m[1]);
+    } catch {
+      return;
+    }
+    const links = text
+      .split(/\s+/)
+      .filter((l) => /^https:\/\/[^/]*fbcdn\.net\//.test(l))
+      .slice(0, 300);
+    if (!links.length) return;
+    setHelperLinks(links.join("\n"));
+    void runDownloadRef.current({ imageUrls: links });
+  }, []);
 
   // Direct File Selection Handling
   const handleFilesSelected = (files: FileList | null) => {
@@ -294,32 +292,6 @@ export default function FacebookPostToolsPage() {
     }
   };
 
-  // 1-Click Send to Print Queue
-  const sendToPrintQueue = (doc: { title: string; pdfUrl: string; totalImages: number }) => {
-    try {
-      const existing = JSON.parse(localStorage.getItem("copycat_tasks_v1") || "[]");
-      const newTask = {
-        id: `fb_doc_${Date.now()}`,
-        title: `طباعة ملزمة: ${doc.title} (${doc.totalImages} ص)`,
-        customerName: "عميل فيسبوك / تحميل مباشر",
-        phone: "",
-        deadline: "فوري",
-        totalCopies: doc.totalImages,
-        completedCopies: 0,
-        bindingType: "سلك بلاستيك / كعب",
-        notes: `ملف PDF تم سحبه أو تجهيزه آلياً: ${doc.pdfUrl}`,
-        status: "pending",
-        createdAt: Date.now(),
-      };
-      localStorage.setItem("copycat_tasks_v1", JSON.stringify([newTask, ...existing]));
-      toast.success(
-        "اتضاف لشغل الطباعة 🖨️",
-        `"${doc.title}" اتضاف في صفحة الأوردرات.`
-      );
-    } catch {
-      toast.error("الأوردر متحفظش");
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -337,7 +309,8 @@ export default function FacebookPostToolsPage() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <span>🔗 اسحب الصور من رابط البوست</span>
+              <Link2 className="w-4 h-4" />
+              <span>اسحب الصور من رابط البوست</span>
             </button>
             <button
               type="button"
@@ -348,7 +321,8 @@ export default function FacebookPostToolsPage() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <span>📁 ارفع صور الملزمة بنفسك</span>
+              <FolderUp className="w-4 h-4" />
+              <span>ارفع صور الملزمة بنفسك</span>
             </button>
           </div>
 
@@ -416,7 +390,7 @@ export default function FacebookPostToolsPage() {
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>🚀 اسحب الصور واعمل PDF</span>
+                    <span>اسحب الصور واعمل PDF</span>
                   </>
                 )}
               </button>
@@ -444,8 +418,11 @@ export default function FacebookPostToolsPage() {
                     </a>
                   </li>
                   <li>افتح البوست على فيسبوك من حسابك، ودوس على أول صورة عشان تفتح كبيرة.</li>
-                  <li>دوس «اسحب صور البوست» من شريط الإشارات. هيقلب الصور لوحده ويجمعهم، وبعدين دوس «انسخ».</li>
-                  <li>ارجع هنا، الزق الروابط تحت ودوس «اعمل PDF».</li>
+                  <li>دوس «اسحب صور البوست» من شريط الإشارات. هيقلب الصور لوحده ويجمعهم.</li>
+                  <li>
+                    دوس «ابعتهم لكوبي كات»: الصفحة دي هتفتح وتعمل الـ PDF لوحدها. (أو دوس «انسخ» وارجع هنا، الزق
+                    الروابط تحت ودوس «اعمل PDF».)
+                  </li>
                 </ol>
                 <textarea
                   value={helperLinks}
@@ -469,7 +446,7 @@ export default function FacebookPostToolsPage() {
               {showUploadFallbackPrompt && (
                 <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-3 animate-in fade-in">
                   <div className="flex items-start gap-2.5">
-                    <span className="text-lg">💡</span>
+                    <Lightbulb className="w-5 h-5 text-amber-600 shrink-0" />
                     <div className="space-y-1">
                       <h4 className="text-xs font-bold text-amber-950">
                         البوست في جروب مقفول أو محتاج تسجيل دخول؟
@@ -488,7 +465,7 @@ export default function FacebookPostToolsPage() {
                     className="w-full py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                   >
                     <FolderDown className="w-4 h-4" />
-                    <span>📁 ارفع الصور بنفسك</span>
+                    <span>ارفع الصور بنفسك</span>
                   </button>
                 </div>
               )}
@@ -594,7 +571,7 @@ export default function FacebookPostToolsPage() {
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>⚡ اعمل PDF ({uploadedFiles.length} صفحة)</span>
+                    <span>اعمل PDF ({uploadedFiles.length} صفحة)</span>
                   </>
                 )}
               </button>
@@ -651,14 +628,6 @@ export default function FacebookPostToolsPage() {
                   <span>نزّل PDF ({completedDoc.pdfFilename})</span>
                 </a>
 
-                <button
-                  type="button"
-                  onClick={() => sendToPrintQueue(completedDoc)}
-                  className="py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition cursor-pointer"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>ضيفه لشغل الطباعة 🖨️</span>
-                </button>
               </div>
             </div>
           )}
@@ -698,96 +667,15 @@ export default function FacebookPostToolsPage() {
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-200 text-[11px] text-slate-500 leading-relaxed">
-            💡 <strong className="text-slate-900">معلومة:</strong> الصفحات بتتجمع بنفس ترتيبها في البوست
-            عشان الملزمة تطلع مترتبة صح.
+          <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-900 leading-relaxed flex items-start gap-2">
+            <Lightbulb className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+            <span>
+              <strong>معلومة:</strong> الصفحات بتتجمع بنفس ترتيبها في البوست عشان الملزمة تطلع مترتبة صح.
+            </span>
           </div>
         </div>
       </div>
 
-      {/* History of Downloaded Documents */}
-      {/* <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FolderDown className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-black text-slate-900">الملازم اللي اتسحبت قبل كده</h2>
-          </div>
-          <button
-            onClick={fetchHistory}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
-            title="حدّث القايمة"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoadingHistory ? "animate-spin" : ""}`} />
-          </button>
-        </div>
-
-        {historyDocs.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 text-xs">
-            لسه مفيش ملازم اتسحبت من فيسبوك.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {historyDocs.map((doc) => (
-              <div
-                key={doc.id}
-                className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between space-y-3 hover:border-slate-200 transition"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-14 h-18 bg-white rounded-xl overflow-hidden border border-slate-200 shrink-0 flex items-center justify-center">
-                    {doc.previewImage ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={doc.previewImage} alt={doc.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <FileText className="w-6 h-6 text-slate-600" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-black text-slate-900 line-clamp-2 leading-tight">
-                      {doc.title}
-                    </h3>
-                    <span className="text-[11px] text-blue-400 font-bold block mt-1">
-                      {doc.imageCount} صفحة
-                    </span>
-                    <span className="text-[10px] text-slate-500 block">
-                      {new Date(doc.createdAt).toLocaleString("ar-EG")}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2 border-t border-slate-900">
-                  {doc.pdfUrl && (
-                    <a
-                      href={doc.pdfUrl}
-                      download={doc.pdfFilename || "ملزمة.pdf"}
-                      className="flex-1 py-1.5 px-2.5 rounded-lg bg-slate-100 hover:bg-emerald-600 text-slate-700 hover:text-white font-bold text-xs flex items-center justify-center gap-1 transition"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>نزّل PDF</span>
-                    </a>
-                  )}
-
-                  {doc.pdfUrl && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        sendToPrintQueue({
-                          title: doc.title,
-                          pdfUrl: doc.pdfUrl!,
-                          totalImages: doc.imageCount,
-                        })
-                      }
-                      className="p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white transition cursor-pointer"
-                      title="ضيفه لشغل الطباعة"
-                    >
-                      <Printer className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div> */}
     </div>
   );
 }

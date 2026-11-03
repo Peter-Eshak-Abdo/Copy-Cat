@@ -1,53 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySessionTokenEdge } from "@/lib/edge-auth";
+import { verifySessionTokenEdge, SESSION_COOKIE } from "@/lib/edge-auth";
+
+/**
+ * Login gate for the staff side. Admin pages redirect to /login; admin APIs answer 401.
+ * The AI routes (OCR, research, photo enhancement, product images) spend paid/free-quota API
+ * keys, so they are staff-only too even though they live outside /api/admin.
+ */
+const PROTECTED_API_PREFIXES = [
+  "/api/admin",
+  "/api/ocr",
+  "/api/research",
+  "/api/enhance-portrait",
+  "/api/ai",
+];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const isAdminPage = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isProtectedApi = PROTECTED_API_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 
-  // Protect Admin dashboard and Admin API routes
-  const isAdminPage = pathname.startsWith("/admin");
-  const isAdminApi = pathname.startsWith("/api/admin");
+  if (!isAdminPage && !isProtectedApi) return NextResponse.next();
 
-  if (isAdminPage || isAdminApi) {
-    const urlToken = req.nextUrl.searchParams.get("token");
-    const token =
-      req.cookies.get("copycat_session_token")?.value ||
-      req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
-      urlToken;
+  const token =
+    req.cookies.get(SESSION_COOKIE)?.value ||
+    req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
+    null;
+  const auth = await verifySessionTokenEdge(token);
 
-    const auth = await verifySessionTokenEdge(token);
-
-    if (!auth.isValid) {
-      if (isAdminApi) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "وصول أمني غير مصرح به. جلسة الدخول مفقودة أو غير صالحة.",
-          },
-          { status: 401 }
-        );
-      }
-
-      // Redirect browser to login page
-      const loginUrl = new URL("/login", req.url);
-      loginUrl.searchParams.set("from", pathname);
-      return NextResponse.redirect(loginUrl);
+  if (!auth.isValid) {
+    if (isProtectedApi) {
+      return NextResponse.json({ success: false, error: "لازم تسجل دخول الأول." }, { status: 401 });
     }
-
-    if (urlToken && auth.isValid) {
-      const response = NextResponse.next();
-      response.cookies.set("copycat_session_token", urlToken, {
-        path: "/",
-        httpOnly: false,
-        maxAge: 7 * 24 * 60 * 60,
-      });
-      return response;
-    }
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("from", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: [
+    "/admin",
+    "/admin/:path*",
+    "/api/admin/:path*",
+    "/api/ocr/:path*",
+    "/api/research/:path*",
+    "/api/enhance-portrait/:path*",
+    "/api/ai/:path*",
+  ],
 };

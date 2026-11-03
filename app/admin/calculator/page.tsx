@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useToast } from "@/components/toast-provider";
+import { CasioCalculator } from "@/components/admin/casio-calculator";
+import { syncLabel, useSyncedSetting } from "@/lib/admin-data";
 import { SITE_CONFIG } from "@/lib/site-config";
 import { openWhatsAppChat } from "@/lib/utils";
 import {
@@ -37,18 +39,32 @@ export interface QuickPricingButton {
   label: string;
   price: number;
   colorDot?: string;
+  /** Shown only in this print mode; buttons without a mode show in both */
+  mode?: "single" | "duplex";
+  /** id of the same paper in the other mode, picked automatically when "وش بس / وش وضهر" changes */
+  pair?: string;
 }
 
+// Prices from the owner's list (claude-que.md #6). Black & white has a single-side and a duplex price that
+// switch together with "وش بس / وش وضهر"; colour is one price per level, whichever the print mode.
 const DEFAULT_QUICK_BUTTONS: QuickPricingButton[] = [
-  { id: "bw-single", label: "أبيض وأسود (وجه)", price: 0.8, colorDot: "bg-slate-400" },
-  { id: "bw-duplex", label: "أبيض وأسود (وش وظهر)", price: 0.9, colorDot: "bg-cyan-400 animate-pulse" },
-  { id: "color-light", label: "ألوان خفيف / هيدر", price: 1.25, colorDot: "bg-amber-400" },
-  { id: "color-med", label: "ألوان متوسط (ملازم)", price: 1.5, colorDot: "bg-blue-400" },
-  { id: "color-heavy", label: "ألوان ثقيل / تغطية", price: 2.5, colorDot: "bg-pink-400" },
-  { id: "glossy", label: "كوشيه / جلوسي", price: 10.0, colorDot: "bg-emerald-400" },
+  { id: "bw-single", label: "أبيض وأسود (وش)", price: 0.8, colorDot: "bg-slate-400", mode: "single", pair: "bw-duplex" },
+  { id: "bw-duplex", label: "أبيض وأسود (وش وضهر)", price: 0.9, colorDot: "bg-slate-500", mode: "duplex", pair: "bw-single" },
+  { id: "color-100", label: "ألوان خفيفة جداً", price: 1.0, colorDot: "bg-amber-300" },
+  { id: "color-125", label: "ألوان خفيفة", price: 1.25, colorDot: "bg-amber-400" },
+  { id: "color-150", label: "ألوان متوسطة", price: 1.5, colorDot: "bg-orange-400" },
+  { id: "color-200", label: "ألوان كتير", price: 2.0, colorDot: "bg-pink-400" },
+  { id: "color-300", label: "ألوان مليانة (صورة كاملة)", price: 3.0, colorDot: "bg-rose-500" },
+  { id: "glossy-single", label: "جلوسي / استيكر A4 (وش)", price: 10, colorDot: "bg-emerald-400", mode: "single", pair: "glossy-duplex" },
+  { id: "glossy-duplex", label: "جلوسي A4 (وش وضهر)", price: 12, colorDot: "bg-emerald-500", mode: "duplex", pair: "glossy-single" },
+  { id: "glossy-bulk", label: "جلوسي / استيكر A4 (كمية)", price: 9, colorDot: "bg-emerald-600" },
+  { id: "glossy-a3", label: "جلوسي / استيكر A3", price: 25, colorDot: "bg-teal-500" },
+  { id: "glossy-a5", label: "جلوسي A5", price: 7, colorDot: "bg-teal-400" },
+  { id: "glossy-a6", label: "جلوسي A6", price: 5, colorDot: "bg-teal-300" },
 ];
 
-const BUTTONS_STORAGE_KEY = "copycat_custom_pricing_buttons_v1";
+// v2: new price list; saved copies of the old list are not reused
+const BUTTONS_STORAGE_KEY = "copycat_pricing_buttons_v2";
 
 export interface CustomAddon {
   id: string;
@@ -59,61 +75,43 @@ export interface CustomAddon {
 }
 
 const DEFAULT_ADDONS: CustomAddon[] = [
-  { id: "wire-small", category: "wire", name: "سلك معدني صغير (حتى 60 ورقة)", label: "سلك صغير (حتى 60 ورقة)", price: 15 },
-  { id: "wire-med", category: "wire", name: "سلك معدني وسط (حتى 120 ورقة)", label: "سلك وسط (حتى 120 ورقة)", price: 20 },
-  { id: "wire-large", category: "wire", name: "سلك معدني كبير (حتى 250 ورقة)", label: "سلك كبير (حتى 250 ورقة)", price: 25 },
-  { id: "plastic-small", category: "plastic", name: "تجليد بلاستيك صغير", label: "بلاستيك صغير", price: 10 },
-  { id: "plastic-med", category: "plastic", name: "تجليد بلاستيك وسط", label: "بلاستيك وسط", price: 15 },
-  { id: "plastic-large", category: "plastic", name: "تجليد بلاستيك كبير", label: "بلاستيك كبير", price: 20 },
+  { id: "wire-small", category: "wire", name: "سلك صغير", label: "سلك صغير", price: 15 },
+  { id: "wire-med", category: "wire", name: "سلك وسط", label: "سلك وسط", price: 20 },
+  { id: "wire-large", category: "wire", name: "سلك كبير", label: "سلك كبير", price: 25 },
+  { id: "wire-xl", category: "wire", name: "سلك كبير خالص", label: "سلك كبير خالص", price: 30 },
+  { id: "plastic-10", category: "plastic", name: "بلاستيك صغير", label: "بلاستيك صغير", price: 10 },
+  { id: "plastic-12", category: "plastic", name: "بلاستيك صغير+", label: "بلاستيك صغير+", price: 12 },
+  { id: "plastic-15", category: "plastic", name: "بلاستيك وسط", label: "بلاستيك وسط", price: 15 },
+  { id: "plastic-20", category: "plastic", name: "بلاستيك كبير", label: "بلاستيك كبير", price: 20 },
+  { id: "plastic-25", category: "plastic", name: "بلاستيك كبير+", label: "بلاستيك كبير+", price: 25 },
+  { id: "plastic-30", category: "plastic", name: "بلاستيك كبير خالص", label: "بلاستيك كبير خالص", price: 30 },
   { id: "finish-cellophane", category: "finishing", name: "سلوفان حراري مط/لامع", label: "سلوفان حراري مط/لامع", price: 5 },
   { id: "finish-glue", category: "finishing", name: "كعب غراء حراري", label: "كعب غراء حراري", price: 12 },
+  { id: "finish-laminate-a4", category: "finishing", name: "تغليف حراري A4", label: "تغليف حراري A4", price: 10 },
+  { id: "finish-laminate-a5", category: "finishing", name: "تغليف حراري A5", label: "تغليف حراري A5", price: 6 },
+  { id: "finish-laminate-a6", category: "finishing", name: "تغليف حراري A6 أو أصغر", label: "تغليف حراري A6 أو أصغر", price: 5 },
 ];
 
-const ADDONS_STORAGE_KEY = "copycat_custom_addons_v1";
+const ADDONS_STORAGE_KEY = "copycat_pricing_addons_v2";
 
-interface PricingConfig {
-  bwSingle: number;
-  bwDuplex: number;
-  colorLightSingle: number;
-  colorLightDuplex: number;
-  colorMediumSingle: number;
-  colorMediumDuplex: number;
-  colorHeavySingle: number;
-  colorHeavyDuplex: number;
-  glossy: number;
-  sticker: number;
-  wireBindingSmall: number;
-  wireBindingMed: number;
-  wireBindingLarge: number;
-  plasticBindingSmall: number;
-  plasticBindingMed: number;
-  plasticBindingLarge: number;
-  cellophane: number;
-  glue: number;
-}
+const isButtonList = (v: unknown): v is QuickPricingButton[] =>
+  Array.isArray(v) &&
+  v.length > 0 &&
+  v.length <= 60 &&
+  v.every((b) => b && typeof b.id === "string" && typeof b.label === "string" && Number.isFinite(b.price));
 
-const DEFAULT_PRICING: PricingConfig = {
-  bwSingle: 0.8,
-  bwDuplex: 0.9,
-  colorLightSingle: 1.0,
-  colorLightDuplex: 1.25,
-  colorMediumSingle: 1.5,
-  colorMediumDuplex: 1.8,
-  colorHeavySingle: 2.0,
-  colorHeavyDuplex: 2.5,
-  glossy: 10.0,
-  sticker: 8.5,
-  wireBindingSmall: 15,
-  wireBindingMed: 20,
-  wireBindingLarge: 25,
-  plasticBindingSmall: 10,
-  plasticBindingMed: 15,
-  plasticBindingLarge: 20,
-  cellophane: 5,
-  glue: 12,
-};
-
-const STORAGE_KEY = "copycat_calculator_pricing_v1";
+const isAddonList = (v: unknown): v is CustomAddon[] =>
+  Array.isArray(v) &&
+  v.length > 0 &&
+  v.length <= 80 &&
+  v.every(
+    (a) =>
+      a &&
+      typeof a.id === "string" &&
+      typeof a.name === "string" &&
+      ["wire", "plastic", "finishing"].includes(a.category) &&
+      Number.isFinite(a.price)
+  );
 
 export default function SmartCalculatorPage() {
   const toast = useToast();
@@ -121,19 +119,19 @@ export default function SmartCalculatorPage() {
   // Mode: print calculator or quick numpad
   const [activeTab, setActiveTab] = useState<"print" | "numpad">("print");
 
-  // Dynamic quick buttons state
-  const [quickButtons, setQuickButtons] = useState<QuickPricingButton[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(BUTTONS_STORAGE_KEY);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        } catch {}
-      }
-    }
-    return DEFAULT_QUICK_BUTTONS;
-  });
+  // Paper prices and binding add-ons, the same on every shop device (/api/admin/settings)
+  const [quickButtons, setQuickButtons, pricesSync] = useSyncedSetting<QuickPricingButton[]>(
+    "calculator.paper",
+    BUTTONS_STORAGE_KEY,
+    DEFAULT_QUICK_BUTTONS,
+    isButtonList
+  );
+  const [customAddons, setCustomAddons] = useSyncedSetting<CustomAddon[]>(
+    "calculator.addons",
+    ADDONS_STORAGE_KEY,
+    DEFAULT_ADDONS,
+    isAddonList
+  );
 
   const [isManageButtonsOpen, setIsManageButtonsOpen] = useState(false);
   const [newBtnLabel, setNewBtnLabel] = useState("");
@@ -142,45 +140,15 @@ export default function SmartCalculatorPage() {
   const [editBtnLabel, setEditBtnLabel] = useState("");
   const [editBtnPrice, setEditBtnPrice] = useState("");
 
-  // Pricing configuration loaded from localStorage
-  const [pricing, setPricing] = useState<PricingConfig>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try {
-          return { ...DEFAULT_PRICING, ...JSON.parse(saved) };
-        } catch {}
-      }
-    }
-    return DEFAULT_PRICING;
-  });
-
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [tempPricing, setTempPricing] = useState<PricingConfig>(pricing);
-
   // Core Job Inputs - Default to 0 as requested
   const [pageCount, setPageCount] = useState<number>(0);
   const [copiesCount, setCopiesCount] = useState<number>(0);
   const [isDuplex, setIsDuplex] = useState<boolean>(true);
   const [paperRate, setPaperRate] = useState<number>(0.9);
-  const [rateLabel, setRateLabel] = useState<string>("أبيض وأسود (وش وظهر)");
+  const [rateLabel, setRateLabel] = useState<string>("أبيض وأسود (وش وضهر)");
 
   // Binding selections - Default to null
   const [selectedBinding, setSelectedBinding] = useState<{ name: string; price: number } | null>(null);
-
-  // Dynamic custom add-ons state
-  const [customAddons, setCustomAddons] = useState<CustomAddon[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(ADDONS_STORAGE_KEY);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        } catch {}
-      }
-    }
-    return DEFAULT_ADDONS;
-  });
 
   const [isManageAddonsOpen, setIsManageAddonsOpen] = useState(false);
   const [newAddonName, setNewAddonName] = useState("");
@@ -199,10 +167,6 @@ export default function SmartCalculatorPage() {
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
-
-  // Numpad Calculator State
-  const [numpadDisplay, setNumpadDisplay] = useState<string>("0");
-  const [numpadEquation, setNumpadEquation] = useState<string>("");
 
   // Mathematical Calculations
   const sheetCountPerCopy = useMemo(() => {
@@ -239,92 +203,11 @@ export default function SmartCalculatorPage() {
     return singleCopyTotalCost * copiesCount;
   }, [singleCopyTotalCost, copiesCount]);
 
-  // Estimated production paper/toner cost (~52% baseline for print houses)
-  const estProductionCost = useMemo(() => {
-    return Math.round(grandTotalCost * 0.52);
-  }, [grandTotalCost]);
-
-
   // Quick preset selections
   const handlePresetSelect = (rate: number, label: string) => {
     setPaperRate(rate);
     setRateLabel(label);
   };
-
-  // Numpad actions
-  const handleNumpadNum = useCallback((num: string) => {
-    setNumpadDisplay((prev) => (prev === "0" ? num : prev + num));
-  }, []);
-
-  const handleNumpadAction = useCallback((op: string) => {
-    if (op === "C") {
-      setNumpadDisplay("0");
-      setNumpadEquation("");
-    } else if (op === "DEL") {
-      setNumpadDisplay((prev) => (prev.length > 1 ? prev.slice(0, -1) : "0"));
-    } else {
-      setNumpadDisplay((prev) => {
-        setNumpadEquation((prevEq) => (prevEq ? `${prevEq} ${prev} ${op}` : `${prev} ${op}`));
-        return "0";
-      });
-    }
-  }, []);
-
-  const handleNumpadEquals = useCallback(() => {
-    try {
-      if (!numpadEquation) return;
-      const expr = `${numpadEquation} ${numpadDisplay}`.replace(/×/g, "*").replace(/÷/g, "/");
-      const result = new Function(`return (${expr})`)();
-      if (Number.isFinite(result)) {
-        setNumpadEquation(`${numpadEquation} ${numpadDisplay} =`);
-        setNumpadDisplay(String(Math.round(result * 1000) / 1000));
-      } else {
-        setNumpadDisplay("Error");
-      }
-    } catch {
-      setNumpadDisplay("Error");
-    }
-  }, [numpadEquation, numpadDisplay]);
-
-  // Keyboard listener for Numpad
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (activeTab !== "numpad") return;
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      if (e.key >= "0" && e.key <= "9") {
-        e.preventDefault();
-        handleNumpadNum(e.key);
-      } else if (e.key === ".") {
-        e.preventDefault();
-        if (!numpadDisplay.includes(".")) handleNumpadNum(".");
-      } else if (e.key === "+") {
-        e.preventDefault();
-        handleNumpadAction("+");
-      } else if (e.key === "-") {
-        e.preventDefault();
-        handleNumpadAction("-");
-      } else if (e.key === "*") {
-        e.preventDefault();
-        handleNumpadAction("×");
-      } else if (e.key === "/") {
-        e.preventDefault();
-        handleNumpadAction("÷");
-      } else if (e.key === "Enter" || e.key === "=") {
-        e.preventDefault();
-        handleNumpadEquals();
-      } else if (e.key === "Backspace") {
-        e.preventDefault();
-        handleNumpadAction("DEL");
-      } else if (e.key === "Escape" || e.key.toLowerCase() === "c") {
-        e.preventDefault();
-        handleNumpadAction("C");
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeTab, numpadDisplay, handleNumpadNum, handleNumpadAction, handleNumpadEquals]);
 
   // Copy invoice text
   const handleCopyInvoice = async () => {
@@ -334,7 +217,7 @@ export default function SmartCalculatorPage() {
     text += `• طريقة الطباعة: ${isDuplex ? "وش وظهر (Duplex) توفير 50% ورق" : "وجه واحد (Single-Sided)"}\n`;
     text += `• الورق الفعلي لكل نسخة: ${sheetCountPerCopy} ورقة\n`;
     text += `• عدد النسخ المطلوبة: ${copiesCount} نسخة\n`;
-    text += `• إجمالي الورق المستهلك: ${totalSheetsOrder.toLocaleString("ar-EG")} ورقة (حوالي ${packetsA4Count} باكيت A4)\n`;
+    text += `• إجمالي الورق المستهلك: ${totalSheetsOrder.toLocaleString("en-US")} ورقة (حوالي ${packetsA4Count} باكيت A4)\n`;
     text += `• سعر الورقة (${rateLabel}): ${paperRate.toFixed(2)} ج.م\n`;
     text += `• تكلفة الطباعة للنسخة: ${printCostPerCopy.toFixed(2)} ج.م\n`;
     if (selectedBinding) {
@@ -347,7 +230,7 @@ export default function SmartCalculatorPage() {
       });
     text += `• إجمالي سعر النسخة الواحدة: ${singleCopyTotalCost.toFixed(2)} ج.م\n`;
     text += `━━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `💰 *الإجمالي: ${grandTotalCost.toLocaleString("ar-EG")} ج.م*\n`;
+    text += `💰 *الإجمالي: ${grandTotalCost.toLocaleString("en-US")} ج.م*\n`;
     text += `📍 ${SITE_CONFIG.store.address} | هاتف: ${SITE_CONFIG.store.phone}\n`;
 
     try {
@@ -370,20 +253,37 @@ export default function SmartCalculatorPage() {
         msg += `✨ إضافة ${a.name}: +${a.price} ج.م\n`;
       });
     msg += `💵 سعر النسخة: *${singleCopyTotalCost.toFixed(2)} ج.م*\n`;
-    msg += `✨ *الإجمالي الكلي: ${grandTotalCost.toLocaleString("ar-EG")} ج.م*\n\n`;
+    msg += `✨ *الإجمالي الكلي: ${grandTotalCost.toLocaleString("en-US")} ج.م*\n\n`;
     msg += `جاهزون للطباعة الفورية والتسليم في الموعد المحدد بإذن الله.`;
 
     openWhatsAppChat(undefined, msg);
   };
 
 
+  // Only the papers for the current mode (plus the ones that work for both)
+  const visibleQuickButtons = quickButtons.filter(
+    (b) => !b.mode || b.mode === (isDuplex ? "duplex" : "single")
+  );
+
+  // "وش بس / وش وضهر": move the selected paper to its price in the other mode
+  const switchPrintMode = (duplex: boolean) => {
+    setIsDuplex(duplex);
+    const current = quickButtons.find((b) => b.price === paperRate && b.label === rateLabel);
+    const paired = current?.pair ? quickButtons.find((b) => b.id === current.pair) : undefined;
+    if (paired) {
+      setPaperRate(paired.price);
+      setRateLabel(paired.label);
+    }
+  };
+
   // Reset Calculator - Zeroes out all page and copy numbers
   const handleReset = () => {
     setPageCount(0);
     setCopiesCount(0);
     setIsDuplex(true);
-    setPaperRate(pricing.bwDuplex);
-    setRateLabel("أبيض وأسود (وش وظهر)");
+    const bw = quickButtons.find((b) => b.id === "bw-duplex") || quickButtons[0];
+    setPaperRate(bw?.price ?? 0.9);
+    setRateLabel(bw?.label ?? "");
     setSelectedBinding(null);
     setSelectedFinishingIds([]);
     toast.info("اتصفرت", "ابدأ حساب جديد");
@@ -404,9 +304,6 @@ export default function SmartCalculatorPage() {
     };
     const updated = [...customAddons, newAddon];
     setCustomAddons(updated);
-    try {
-      localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
     setNewAddonName("");
     setNewAddonPrice("");
     toast.success("اتضافت", `"${newAddon.name}"`);
@@ -429,9 +326,6 @@ export default function SmartCalculatorPage() {
         : a
     );
     setCustomAddons(updated);
-    try {
-      localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
     setEditingAddonId(null);
     toast.success("اتعدلت", "التعديل اتحفظ");
   };
@@ -443,9 +337,6 @@ export default function SmartCalculatorPage() {
     }
     const updated = customAddons.filter((a) => a.id !== id);
     setCustomAddons(updated);
-    try {
-      localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
     if (selectedBinding && !updated.some((a) => a.name === selectedBinding.name)) {
       setSelectedBinding(null);
     }
@@ -455,9 +346,6 @@ export default function SmartCalculatorPage() {
 
   const handleResetAddons = () => {
     setCustomAddons(DEFAULT_ADDONS);
-    try {
-      localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(DEFAULT_ADDONS));
-    } catch {}
     toast.success("رجعت", "خدمات التجليد رجعت زي الأول");
   };
 
@@ -475,9 +363,6 @@ export default function SmartCalculatorPage() {
     };
     const updated = [...quickButtons, newBtn];
     setQuickButtons(updated);
-    try {
-      localStorage.setItem(BUTTONS_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
     setNewBtnLabel("");
     setNewBtnPrice("");
     toast.success("اتضاف", `زرار "${newBtn.label}"`);
@@ -492,9 +377,6 @@ export default function SmartCalculatorPage() {
       b.id === id ? { ...b, label: editBtnLabel.trim(), price: parseFloat(editBtnPrice) } : b
     );
     setQuickButtons(updated);
-    try {
-      localStorage.setItem(BUTTONS_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
     setEditingBtnId(null);
     toast.success("اتعدل", "الزرار اتعدل");
   };
@@ -506,30 +388,12 @@ export default function SmartCalculatorPage() {
     }
     const updated = quickButtons.filter((b) => b.id !== id);
     setQuickButtons(updated);
-    try {
-      localStorage.setItem(BUTTONS_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
     toast.info("اتمسح", "الزرار اتمسح");
   };
 
   const handleResetButtons = () => {
     setQuickButtons(DEFAULT_QUICK_BUTTONS);
-    try {
-      localStorage.setItem(BUTTONS_STORAGE_KEY, JSON.stringify(DEFAULT_QUICK_BUTTONS));
-    } catch {}
     toast.success("رجعت", "أزرار الأسعار رجعت زي الأول");
-  };
-
-  // Save Settings
-  const handleSavePricing = () => {
-    setPricing(tempPricing);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tempPricing));
-      toast.success("اتحفظت", "الأسعار الجديدة اتحفظت");
-    } catch {
-      toast.error("متحفظتش", "جرب تاني");
-    }
-    setIsSettingsOpen(false);
   };
 
   return (
@@ -566,10 +430,7 @@ export default function SmartCalculatorPage() {
         <button
           className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-slate-200"
           title="الأسعار"
-          onClick={() => {
-            setTempPricing(pricing);
-            setIsSettingsOpen(true);
-          }}
+          onClick={() => setIsManageButtonsOpen(true)}
           type="button"
         >
           <Settings className="w-4 h-4" />
@@ -579,154 +440,8 @@ export default function SmartCalculatorPage() {
 
       {/* Numpad View */}
       {activeTab === "numpad" ? (
-        <div className="flex flex-col items-center justify-center pt-4">
-          <div className="max-w-md mx-auto w-full bg-white rounded-2xl p-6 shadow-xs flex flex-col gap-4 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-base font-bold text-slate-900">آلة حاسبة</span>
-              <span className="text-xs text-slate-500 font-medium">تقدر تكتب بالكيبورد</span>
-            </div>
-            <div
-              className="bg-slate-50 p-4 rounded-xl text-left font-mono text-2xl text-blue-600 font-bold tracking-wider overflow-x-auto min-h-[58px] flex items-center justify-end border border-slate-200"
-              dir="ltr"
-            >
-              {numpadEquation && <span className="text-slate-400 text-sm mr-2">{numpadEquation}</span>}
-              <span>{numpadDisplay}</span>
-            </div>
-            <div className="grid grid-cols-4 gap-2 font-mono text-lg" dir="ltr">
-              <button
-                className="p-3 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors font-bold cursor-pointer border border-rose-100"
-                onClick={() => handleNumpadAction("C")}
-                type="button"
-              >
-                C
-              </button>
-              <button
-                className="p-3 rounded-xl bg-slate-100 text-blue-600 hover:bg-blue-50 transition-colors font-bold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadAction("÷")}
-                type="button"
-              >
-                ÷
-              </button>
-              <button
-                className="p-3 rounded-xl bg-slate-100 text-blue-600 hover:bg-blue-50 transition-colors font-bold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadAction("×")}
-                type="button"
-              >
-                ×
-              </button>
-              <button
-                className="p-3 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors font-bold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadAction("DEL")}
-                type="button"
-              >
-                ⌫
-              </button>
-
-              <button
-                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadNum("7")}
-                type="button"
-              >
-                7
-              </button>
-              <button
-                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadNum("8")}
-                type="button"
-              >
-                8
-              </button>
-              <button
-                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadNum("9")}
-                type="button"
-              >
-                9
-              </button>
-              <button
-                className="p-3 rounded-xl bg-slate-100 text-blue-600 hover:bg-blue-50 transition-colors font-bold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadAction("-")}
-                type="button"
-              >
-                -
-              </button>
-
-              <button
-                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadNum("4")}
-                type="button"
-              >
-                4
-              </button>
-              <button
-                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadNum("5")}
-                type="button"
-              >
-                5
-              </button>
-              <button
-                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadNum("6")}
-                type="button"
-              >
-                6
-              </button>
-              <button
-                className="p-3 rounded-xl bg-slate-100 text-blue-600 hover:bg-blue-50 transition-colors font-bold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadAction("+")}
-                type="button"
-              >
-                +
-              </button>
-
-              <button
-                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadNum("1")}
-                type="button"
-              >
-                1
-              </button>
-              <button
-                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadNum("2")}
-                type="button"
-              >
-                2
-              </button>
-              <button
-                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadNum("3")}
-                type="button"
-              >
-                3
-              </button>
-              <button
-                className="row-span-2 p-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all flex items-center justify-center text-xl cursor-pointer shadow-xs"
-                onClick={handleNumpadEquals}
-                type="button"
-              >
-                =
-              </button>
-
-              <button
-                className="col-span-2 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
-                onClick={() => handleNumpadNum("0")}
-                type="button"
-              >
-                0
-              </button>
-              <button
-                className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 transition-colors font-semibold cursor-pointer border border-slate-200"
-                onClick={() => {
-                  if (!numpadDisplay.includes(".")) handleNumpadNum(".");
-                }}
-                type="button"
-              >
-                .
-              </button>
-            </div>
-          </div>
+        <div className="pt-4">
+          <CasioCalculator />
         </div>
       ) : (
         /* Primary Calculator Workspace (2 Columns Grid) */
@@ -822,13 +537,7 @@ export default function SmartCalculatorPage() {
                         ? "bg-blue-50 text-blue-700 border-blue-300 shadow-xs"
                         : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200"
                     }`}
-                    onClick={() => {
-                      setIsDuplex(true);
-                      if (paperRate === pricing.bwSingle) {
-                        setPaperRate(pricing.bwDuplex);
-                        setRateLabel("أبيض وأسود (وش وظهر)");
-                      }
-                    }}
+                    onClick={() => switchPrintMode(true)}
                     type="button"
                   >
                     <div className="flex items-center gap-3 text-right">
@@ -852,13 +561,7 @@ export default function SmartCalculatorPage() {
                         ? "bg-blue-50 text-blue-700 border-blue-300 shadow-xs"
                         : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200"
                     }`}
-                    onClick={() => {
-                      setIsDuplex(false);
-                      if (paperRate === pricing.bwDuplex) {
-                        setPaperRate(pricing.bwSingle);
-                        setRateLabel("أبيض وأسود (وجه)");
-                      }
-                    }}
+                    onClick={() => switchPrintMode(false)}
                     type="button"
                   >
                     <div className="flex items-center gap-3 text-right">
@@ -890,7 +593,7 @@ export default function SmartCalculatorPage() {
                 <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white border border-slate-200 shadow-xs">
                   <span className="text-xs text-slate-500 font-medium">الأوردر كله:</span>
                   <span className="font-mono text-xs font-bold text-emerald-700" id="banner-total-sheets">
-                    {totalSheetsOrder.toLocaleString("ar-EG")} ورقة ({packetsA4Count} باكيت A4)
+                    {totalSheetsOrder.toLocaleString("en-US")} ورقة ({packetsA4Count} باكيت A4)
                   </span>
                 </div>
               </div>
@@ -903,6 +606,17 @@ export default function SmartCalculatorPage() {
                   <Tag className="w-6 h-6 text-blue-600" />
                   <span className="text-base font-bold text-slate-900">
                     سعر الورقة
+                  </span>
+                  <span
+                    className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                      syncLabel(pricesSync).tone === "ok"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : syncLabel(pricesSync).tone === "warn"
+                        ? "bg-amber-50 text-amber-800 border-amber-200"
+                        : "bg-slate-50 text-slate-500 border-slate-200"
+                    }`}
+                  >
+                    {syncLabel(pricesSync).text}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -925,7 +639,7 @@ export default function SmartCalculatorPage() {
 
               {/* Dynamic Quick Presets Grid */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3" id="preset-grid">
-                {quickButtons.map((btn) => (
+                {visibleQuickButtons.map((btn) => (
                   <button
                     key={btn.id}
                     className={`p-3.5 rounded-xl text-right flex flex-col justify-between h-20 transition-all cursor-pointer border relative group ${
@@ -1200,14 +914,9 @@ export default function SmartCalculatorPage() {
                 </span>
                 <div className="flex items-baseline gap-1">
                   <span className="font-mono text-3xl font-extrabold text-blue-600 tracking-tight">
-                    {grandTotalCost.toLocaleString("ar-EG")}
+                    {grandTotalCost.toLocaleString("en-US")}
                   </span>
                   <span className="text-sm font-bold text-blue-600">ج.م</span>
-                </div>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600 font-medium">
-                    بتكلفنا تقريباً: ~{estProductionCost.toLocaleString("ar-EG")} ج.م
-                  </span>
                 </div>
               </div>
 
@@ -1243,145 +952,6 @@ export default function SmartCalculatorPage() {
                   في الوش والضهر سعر الورقة بيحسب الوشين. ولو عدد الصفحات فردي (مثلاً 121) آخر ورقة بتتحسب كاملة.
                 </p>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Settings Modal Dialog */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <Settings className="w-5 h-5 text-blue-600" />
-                <h3 className="font-bold text-base text-slate-900">أسعار الطباعة والتجليد</h3>
-              </div>
-              <button
-                onClick={() => setIsSettingsOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <span className="font-bold text-blue-600 block">سعر الورقة (ج.م):</span>
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="text-xs text-slate-600 block mb-1">أبيض وأسود (وجه):</label>
-                  <input
-                    type="number"
-                    step="0.05"
-                    value={tempPricing.bwSingle}
-                    onChange={(e) =>
-                      setTempPricing({ ...tempPricing, bwSingle: parseFloat(e.target.value) || 0 })
-                    }
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600 block mb-1">أبيض وأسود (وش وظهر):</label>
-                  <input
-                    type="number"
-                    step="0.05"
-                    value={tempPricing.bwDuplex}
-                    onChange={(e) =>
-                      setTempPricing({ ...tempPricing, bwDuplex: parseFloat(e.target.value) || 0 })
-                    }
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600 block mb-1">ألوان خفيف (وش وظهر):</label>
-                  <input
-                    type="number"
-                    step="0.05"
-                    value={tempPricing.colorLightDuplex}
-                    onChange={(e) =>
-                      setTempPricing({ ...tempPricing, colorLightDuplex: parseFloat(e.target.value) || 0 })
-                    }
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600 block mb-1">ألوان ملازم (وش وظهر):</label>
-                  <input
-                    type="number"
-                    step="0.05"
-                    value={tempPricing.colorMediumDuplex}
-                    onChange={(e) =>
-                      setTempPricing({ ...tempPricing, colorMediumDuplex: parseFloat(e.target.value) || 0 })
-                    }
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
-                  />
-                </div>
-              </div>
-
-              <span className="font-bold text-blue-600 block pt-2">سعر التجليد للنسخة (ج.م):</span>
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="text-xs text-slate-600 block mb-1">سلك صغير:</label>
-                  <input
-                    type="number"
-                    value={tempPricing.wireBindingSmall}
-                    onChange={(e) =>
-                      setTempPricing({ ...tempPricing, wireBindingSmall: parseFloat(e.target.value) || 0 })
-                    }
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600 block mb-1">سلك وسط:</label>
-                  <input
-                    type="number"
-                    value={tempPricing.wireBindingMed}
-                    onChange={(e) =>
-                      setTempPricing({ ...tempPricing, wireBindingMed: parseFloat(e.target.value) || 0 })
-                    }
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600 block mb-1">سلوفان حراري:</label>
-                  <input
-                    type="number"
-                    value={tempPricing.cellophane}
-                    onChange={(e) =>
-                      setTempPricing({ ...tempPricing, cellophane: parseFloat(e.target.value) || 0 })
-                    }
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600 block mb-1">كعب غراء حراري:</label>
-                  <input
-                    type="number"
-                    value={tempPricing.glue}
-                    onChange={(e) =>
-                      setTempPricing({ ...tempPricing, glue: parseFloat(e.target.value) || 0 })
-                    }
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setIsSettingsOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-semibold cursor-pointer"
-              >
-                إلغاء
-              </button>
-              <button
-                type="button"
-                onClick={handleSavePricing}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer"
-              >
-                احفظ الأسعار
-              </button>
             </div>
           </div>
         </div>
