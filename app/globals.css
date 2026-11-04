@@ -214,3 +214,32 @@ table, .product-grid, .doc-grid {
   .cc-page-in, .cc-fade-up, .cc-pop, .admin-shell .grid:not(.no-stagger) > *, .admin-shell .fixed.inset-0, .admin-shell .fixed.inset-0 > div, .cc-shimmer { animation: none !important; }
   .admin-shell button:not(:disabled):active { scale: none; }
 }
+
+/* Storefront: scrolling announcement, button shine, moving gradient text. Off for reduced motion. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+@keyframes cc-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(50%); }
+}
+.cc-marquee { animation: cc-marquee 40s linear infinite; }
+.cc-marquee:hover { animation-play-state: paused; }
+@keyframes cc-shine {
+  0% { transform: translateX(120%) skewX(-20deg); }
+  60%, 100% { transform: translateX(-220%) skewX(-20deg); }
+}
+.cc-shine {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  width: 45%;
+  animation: cc-shine 3.2s ease-in-out infinite;
+}
+@keyframes cc-gradient-pan {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.cc-gradient-pan { background-size: 200% 200%; animation: cc-gradient-pan 6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .cc-marquee, .cc-shine, .cc-gradient-pan { animation: none !important; }
+}

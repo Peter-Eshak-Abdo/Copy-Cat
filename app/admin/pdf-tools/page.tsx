@@ -44,6 +44,25 @@ interface VisualPdfPage {
   rotation: number;
   fileName: string;
   thumbnail?: string;
+  /** width / height of the page as it shows before our own rotation (landscape > 1). */
+  aspect?: number;
+}
+
+const A4_PORTRAIT = 1 / 1.414;
+
+/** Page width/height ratios, honouring the page's own /Rotate. */
+function pageAspects(pdfDoc: PDFDocument): number[] {
+  return pdfDoc.getPages().map((p) => {
+    const { width, height } = p.getSize();
+    if (!width || !height) return A4_PORTRAIT;
+    const turned = Math.abs(p.getRotation().angle) % 180 === 90;
+    return turned ? height / width : width / height;
+  });
+}
+
+const IMAGE_EXT = /\.(jpe?g|png|webp|gif|bmp|heic|heif|avif)$/i;
+function isImageFile(f: File): boolean {
+  return f.type.startsWith("image/") || IMAGE_EXT.test(f.name);
 }
 
 export default function PdfToolsPage() {
@@ -67,6 +86,30 @@ export default function PdfToolsPage() {
   const [imageFiles, setImageFiles] = useState<{ file: File; preview: string }[]>([]);
   const [isConvertingImages, setIsConvertingImages] = useState<boolean>(false);
   const [isImagesDragging, setIsImagesDragging] = useState<boolean>(false);
+
+  // Picker and drag-and-drop both land here, so a PDF (or any non-image) gets a message
+  // instead of silently showing nothing.
+  const addImageFiles = (files: File[], more: boolean) => {
+    const images = files.filter(isImageFile);
+    const rejected = files.filter((f) => !isImageFile(f));
+    if (rejected.length > 0) {
+      const hasPdf = rejected.some(
+        (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
+      );
+      toast.error(
+        images.length > 0 ? `${rejected.length} ملف مش صورة اتشال` : "ده مش صورة",
+        hasPdf
+          ? "الجزء ده للصور بس (JPG أو PNG). ملف الـ PDF افتحه من تبويب «رتّب وامسح صفحات»"
+          : "ارفع صورة JPG أو PNG أو WEBP"
+      );
+    }
+    if (images.length === 0) return;
+    setImageFiles((prev) => [
+      ...prev,
+      ...images.map((f) => ({ file: f, preview: URL.createObjectURL(f) })),
+    ]);
+    toast.success("الصور اتضافت", `${images.length} صورة${more ? " زيادة" : ""}.`);
+  };
 
 
   // Helper: Render Page Thumbnails using pdfjs-dist
@@ -101,7 +144,7 @@ export default function PdfToolsPage() {
             setPages((prev) =>
               prev.map((p) =>
                 p.sourcePageIndex === i - 1 && p.docIndex === startIndex
-                  ? { ...p, thumbnail: thumbUrl }
+                  ? { ...p, thumbnail: thumbUrl, aspect: viewport.width / viewport.height }
                   : p
               )
             );
@@ -138,6 +181,7 @@ export default function PdfToolsPage() {
       const buffer = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(buffer);
       const count = pdfDoc.getPageCount();
+      const aspects = pageAspects(pdfDoc);
 
       const newDoc: LoadedDoc = {
         id: Math.random().toString(36).substring(2, 9),
@@ -154,6 +198,7 @@ export default function PdfToolsPage() {
           sourcePageIndex: i,
           rotation: 0,
           fileName: file.name,
+          aspect: aspects[i],
         });
       }
 
@@ -188,6 +233,7 @@ export default function PdfToolsPage() {
       const buffer = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(buffer);
       const count = pdfDoc.getPageCount();
+      const aspects = pageAspects(pdfDoc);
 
       const newDocIndex = loadedDocs.length;
       const newDoc: LoadedDoc = {
@@ -205,6 +251,7 @@ export default function PdfToolsPage() {
           sourcePageIndex: i,
           rotation: 0,
           fileName: file.name,
+          aspect: aspects[i],
         });
       }
 
@@ -548,12 +595,35 @@ export default function PdfToolsPage() {
 
       for (const item of imageFiles) {
         const arrayBuf = await item.file.arrayBuffer();
+        const head = new Uint8Array(arrayBuf.slice(0, 4));
+        const isPng = head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47;
+        const isJpg = head[0] === 0xff && head[1] === 0xd8;
         let pdfImage;
 
-        if (item.file.type === "image/png") {
+        if (isPng) {
           pdfImage = await pdfDoc.embedPng(arrayBuf);
-        } else {
+        } else if (isJpg) {
           pdfImage = await pdfDoc.embedJpg(arrayBuf);
+        } else {
+          // WEBP, GIF, BMP...: pdf-lib only embeds PNG/JPEG, so re-encode through a canvas.
+          let bitmap: ImageBitmap;
+          try {
+            bitmap = await createImageBitmap(item.file);
+          } catch {
+            throw new Error(`unsupported:${item.file.name}`);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) throw new Error("canvas");
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(bitmap, 0, 0);
+          bitmap.close();
+          const jpg = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.92));
+          if (!jpg) throw new Error("canvas");
+          pdfImage = await pdfDoc.embedJpg(await jpg.arrayBuffer());
         }
 
         const imgDims = pdfImage.scale(1);
@@ -592,8 +662,13 @@ export default function PdfToolsPage() {
       URL.revokeObjectURL(url);
 
       toast.success("ملف PDF جاهز", `${imageFiles.length} صورة في ملف واحد`);
-    } catch {
-      toast.error("ملف PDF متعملش", "جرب تاني");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.startsWith("unsupported:")) {
+        toast.error("صورة مش مدعومة", `«${msg.slice(12)}» مش بتتفتح هنا، امسحها أو حولها JPG`);
+      } else {
+        toast.error("ملف PDF متعملش", "جرب تاني");
+      }
     } finally {
       setIsConvertingImages(false);
     }
@@ -891,6 +966,20 @@ export default function PdfToolsPage() {
             >
               {pages.map((page, index) => {
                 const isSelected = selectedPageIds.has(page.id);
+                // Card follows the page shape: landscape pages get a landscape card,
+                // and a 90°/270° turn swaps it.
+                const aspect = page.aspect ?? A4_PORTRAIT;
+                const sideways = page.rotation % 180 === 90;
+                const shownAspect = sideways ? 1 / aspect : aspect;
+                const turnStyle: React.CSSProperties = {
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  width: sideways ? `${aspect * 100}%` : "100%",
+                  height: sideways ? `${100 / aspect}%` : "100%",
+                  transform: `translate(-50%, -50%) rotate(${page.rotation}deg)`,
+                  transition: "transform 0.2s ease-in-out",
+                };
                 return (
                   <div
                     key={page.id}
@@ -925,14 +1014,14 @@ export default function PdfToolsPage() {
                     </div>
 
                     {/* Visual Sheet Card: Real Thumbnail Image or Fallback */}
-                    <div className="aspect-[1/1.414] bg-slate-50 rounded-xl shadow-inner border border-slate-200 flex flex-col items-center justify-center relative overflow-hidden my-1">
+                    <div
+                      style={{ aspectRatio: shownAspect }}
+                      className="bg-slate-50 rounded-xl shadow-inner border border-slate-200 flex flex-col items-center justify-center relative overflow-hidden my-1"
+                    >
                       {page.thumbnail ? (
                         <div
-                          style={{
-                            transform: `rotate(${page.rotation}deg)`,
-                            transition: "transform 0.2s ease-in-out",
-                          }}
-                          className="w-full h-full flex items-center justify-center p-1"
+                          style={turnStyle}
+                          className="flex items-center justify-center p-1"
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
@@ -943,11 +1032,8 @@ export default function PdfToolsPage() {
                         </div>
                       ) : (
                         <div
-                          style={{
-                            transform: `rotate(${page.rotation}deg)`,
-                            transition: "transform 0.2s ease-in-out",
-                          }}
-                          className="w-full h-full flex flex-col items-center justify-center text-slate-700 text-center select-none bg-slate-50 p-2"
+                          style={turnStyle}
+                          className="flex flex-col items-center justify-center text-slate-700 text-center select-none bg-slate-50 p-2"
                         >
                           <FileText className="w-8 h-8 text-slate-500 mb-1" />
                           <span className="text-xs font-bold text-slate-200">
@@ -1064,12 +1150,8 @@ export default function PdfToolsPage() {
                 accept="image/*"
                 className="hidden"
                 onChange={(e) => {
-                  const files = Array.from(e.target.files || []);
-                  const newItems = files.map((f) => ({
-                    file: f,
-                    preview: URL.createObjectURL(f),
-                  }));
-                  setImageFiles((prev) => [...prev, ...newItems]);
+                  addImageFiles(Array.from(e.target.files || []), imageFiles.length > 0);
+                  e.target.value = "";
                 }}
               />
               <button
@@ -1109,17 +1191,7 @@ export default function PdfToolsPage() {
                 e.preventDefault();
                 e.stopPropagation();
                 setIsImagesDragging(false);
-                const files = Array.from(e.dataTransfer?.files || []).filter((f) =>
-                  f.type.startsWith("image/")
-                );
-                if (files.length > 0) {
-                  const newItems = files.map((f) => ({
-                    file: f,
-                    preview: URL.createObjectURL(f),
-                  }));
-                  setImageFiles((prev) => [...prev, ...newItems]);
-                  toast.success("الصور اتضافت", `${files.length} صورة.`);
-                }
+                addImageFiles(Array.from(e.dataTransfer?.files || []), false);
               }}
               className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-3 transition-all ${
                 isImagesDragging
@@ -1149,17 +1221,7 @@ export default function PdfToolsPage() {
                 e.preventDefault();
                 e.stopPropagation();
                 setIsImagesDragging(false);
-                const files = Array.from(e.dataTransfer?.files || []).filter((f) =>
-                  f.type.startsWith("image/")
-                );
-                if (files.length > 0) {
-                  const newItems = files.map((f) => ({
-                    file: f,
-                    preview: URL.createObjectURL(f),
-                  }));
-                  setImageFiles((prev) => [...prev, ...newItems]);
-                  toast.success("الصور اتضافت", `${files.length} صورة زيادة.`);
-                }
+                addImageFiles(Array.from(e.dataTransfer?.files || []), true);
               }}
               className={`grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 p-1 rounded-2xl transition-all ${
                 isImagesDragging ? "ring-2 ring-blue-500 bg-blue-50/30" : ""

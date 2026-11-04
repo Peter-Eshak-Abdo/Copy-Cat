@@ -5,7 +5,8 @@ import { useToast } from "@/components/toast-provider";
 import { readFileAsDataURL } from "@/lib/utils";
 import { generateOcrDocx, PageBorderKind, FIGURE_LINE, type OcrFigure } from "@/lib/docx/ocr-docx";
 import { splitMath } from "@/lib/docx/latex-math";
-import { cropFigures, imageAspect, pdfToImages, prepareOcrImage, tesseractOcr, uprightPage } from "@/lib/ocr-client";
+import { looksLikeGarbage } from "@/lib/degenerate-text";
+import { cropFigures, imageAspect, pdfToImages, prepareOcrImage, splitColumns, tesseractOcr, uprightPage } from "@/lib/ocr-client";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import {
@@ -486,40 +487,110 @@ export default function MultiStageOcrPage() {
         const image = await prepareOcrImage(upright.dataUrl);
         stage("بنقرا الكلام");
         let pageText = "";
+        // The models got stuck repeating themselves on this page (seen on a two-column exam: a page of "||")
+        let looped = false;
+        // What was read before they got stuck, kept only as a last resort
+        let partialText = "";
         const extract = await callOcr({ action: "extract", imageBase64: image }).catch(() => ({ ok: false, data: {} }));
 
-        if (extract.ok && extract.data.extractedText) {
-          const data = extract.data;
-          pageText = data.extractedText;
-
+        const applyPageStyle = (data: {
+          detectedFont?: string;
+          detectedLang?: string;
+          detectedBorder?: string;
+          detectedWeight?: string;
+          handwritten?: boolean;
+        }) => {
           if (data.detectedFont && !fontManuallyChanged) setSelectedFont(data.detectedFont);
           if (data.detectedLang && selectedLanguage === "auto") setSelectedLanguage(data.detectedLang);
           if (i === 0) {
-            if (["none", "single", "double", "decorative"].includes(data.detectedBorder)) {
-              setBorderStyle(data.detectedBorder);
+            if (data.detectedBorder && ["none", "single", "double", "decorative"].includes(data.detectedBorder)) {
+              setBorderStyle(data.detectedBorder as typeof borderStyle);
             }
             // Framed legal forms are printed bold almost without exception
             setBoldBody(data.detectedWeight === "bold" || data.detectedBorder === "decorative");
             setBodyPt(data.handwritten ? 18 : 14);
           }
-          if (data.lowAccuracy) {
-            toast.warning(
-              "اتقرت بموديل احتياطي أضعف",
-              `Gemini مش متاح دلوقتي، فراجع نص الصفحة ${i + 1} كويس قبل ما تطبع.`
-            );
-          }
+        };
 
-          // 2. Verification: the model that made the draft re-reads the page image against it
-          if (verifyPass && !data.lowAccuracy) {
-            stage("بنراجع الكلام على الصورة حرف بحرف");
-            const verify = await callOcr({ action: "verify", imageBase64: image, draft: pageText, provider: data.provider }).catch(
-              () => ({ ok: false, data: {} })
-            );
-            if (verify.ok && verify.data.verified && verify.data.verifiedText) pageText = verify.data.verifiedText;
+        if (extract.ok && extract.data.extractedText) {
+          const data = extract.data;
+          applyPageStyle(data);
+          if (data.partial) {
+            looped = true;
+            partialText = data.extractedText;
+          } else {
+            pageText = data.extractedText;
+            if (data.lowAccuracy) {
+              toast.warning(
+                "اتقرت بموديل احتياطي أضعف",
+                `Gemini مش متاح دلوقتي، فراجع نص الصفحة ${i + 1} كويس قبل ما تطبع.`
+              );
+            }
+
+            // 2. Verification: the model that made the draft re-reads the page image against it
+            if (verifyPass && !data.lowAccuracy) {
+              stage("بنراجع الكلام على الصورة حرف بحرف");
+              const verify = await callOcr({ action: "verify", imageBase64: image, draft: pageText, provider: data.provider }).catch(
+                () => ({ ok: false, data: {} })
+              );
+              if (verify.ok && verify.data.verified && verify.data.verifiedText) pageText = verify.data.verifiedText;
+            }
           }
-        } else {
-          // 3. Every server model failed: Tesseract in the browser (plain text only)
-          toast.warning("الذكاء الاصطناعي مش متاح دلوقتي", `هنقرا الصفحة ${i + 1} من على الجهاز (نص بس من غير جداول، ودقته أقل)...`);
+        } else if (extract.data?.looped) {
+          looped = true;
+        }
+
+        // Last check: an answer that is one symbol repeated thousands of times is thrown away
+        if (pageText && looksLikeGarbage(pageText)) {
+          looped = true;
+          pageText = "";
+        }
+
+        // 3. Another way when the models got stuck: a page printed in two columns is read column by column
+        // (each column on its own reads fine; the models loop trying to put both on the same lines)
+        if (!pageText && looped) {
+          stage("الموديلات علقت، بنقرا الصفحة عمود عمود");
+          const rtl = !["en", "fr"].includes(selectedLanguage) && (!partialText || /[\u0600-\u06FF]/.test(partialText));
+          const columns = await splitColumns(image, rtl).catch(() => null);
+          if (columns) {
+            toast.info("الصفحة عمودين", `الموديلات علقت في الصفحة ${i + 1}، فهنقرا كل عمود لوحده.`);
+            const parts: string[] = [];
+            for (let k = 0; k < columns.length; k++) {
+              stage(`بنقرا العمود ${k === 0 ? "الأول" : "التاني"}`);
+              const col = await callOcr({ action: "extract", imageBase64: columns[k] }).catch(() => ({ ok: false, data: {} }));
+              let text: string =
+                col.ok && col.data.extractedText && !col.data.partial && !looksLikeGarbage(col.data.extractedText)
+                  ? col.data.extractedText
+                  : "";
+              if (text && k === 0 && !extract.data?.extractedText) applyPageStyle(col.data);
+              if (!text) {
+                stage(`بنقرا العمود ${k === 0 ? "الأول" : "التاني"} من على الجهاز`);
+                text = await tesseractOcr(columns[k]).catch(() => "");
+              }
+              // Figure boxes are relative to this column's image, so they are cut out of it here
+              const c = await cropFigures(columns[k], text, figureCount + 1, /[\u0600-\u06FF]/.test(text));
+              Object.assign(allFigures, c.figures);
+              figureCount += Object.keys(c.figures).length;
+              parts.push(c.text);
+            }
+            pageText = parts.filter((t) => t.trim()).join("\n\n");
+          }
+        }
+
+        if (!pageText && partialText) {
+          pageText = partialText;
+          toast.warning(
+            "الصفحة اتقرت ناقصة",
+            `الموديلات علقت وهي بتقرا الصفحة ${i + 1}، فده الجزء اللي اتقرا صح بس. راجعه وكمل الباقي بإيدك.`
+          );
+        }
+
+        if (!pageText) {
+          // 4. Every server model failed or got stuck: Tesseract in the browser (plain text only)
+          toast.warning(
+            looped ? "القراية طلعت غلط" : "الذكاء الاصطناعي مش متاح دلوقتي",
+            `${looped ? "الموديلات علقت، " : ""}هنقرا الصفحة ${i + 1} من على الجهاز (نص بس من غير جداول، ودقته أقل)...`
+          );
           stage("بنقرا من على الجهاز (أبطأ)");
           pageText = await tesseractOcr(image);
         }
@@ -558,10 +629,15 @@ export default function MultiStageOcrPage() {
     }
   };
 
-  // Seconds left: pages still to read at the measured pace, minus what the current page has used already
-  const secondsLeft = run
-    ? Math.max(5, Math.round(((run.total - run.done) * run.msPerPage - Math.max(0, now - run.pageStartedAt)) / 1000))
+  // Seconds left: pages still to read at the measured pace, minus what the current page has used already.
+  // Once the estimate runs out the panel says so (with the time spent) instead of sitting on "5 seconds".
+  const rawLeft = run
+    ? Math.round(((run.total - run.done) * run.msPerPage - Math.max(0, now - run.pageStartedAt)) / 1000)
     : 0;
+  const secondsLeft = Math.max(5, rawLeft);
+  const overdue = !!run && rawLeft < 5;
+  const pageSeconds = run ? Math.max(0, Math.round((now - run.pageStartedAt) / 1000)) : 0;
+  const totalSeconds = run ? Math.max(0, Math.round((now - run.startedAt) / 1000)) : 0;
   const formatLeft = (s: number) =>
     s < 60 ? `${s} ثانية` : `${Math.floor(s / 60)} دقيقة${s % 60 >= 10 ? ` و${s % 60} ثانية` : ""}`;
 
@@ -794,9 +870,19 @@ export default function MultiStageOcrPage() {
                     }}
                   />
                 </div>
-                <p className="text-xs text-blue-800">
-                  فاضل حوالي <strong>{formatLeft(secondsLeft)}</strong>. سيب الصفحة مفتوحة، الشغل شغال.
-                </p>
+                {overdue ? (
+                  <p className="text-xs text-amber-800">
+                    الصفحة دي واخدة وقت أطول من العادي (بقالها <strong>{formatLeft(pageSeconds)}</strong>). لو الموديل
+                    علق بنجرب غيره لوحدنا، وآخر حل بنقراها من على الجهاز. سيب الصفحة مفتوحة.
+                  </p>
+                ) : (
+                  <p className="text-xs text-blue-800">
+                    فاضل حوالي <strong>{formatLeft(secondsLeft)}</strong>. سيب الصفحة مفتوحة، الشغل شغال.
+                  </p>
+                )}
+                {totalSeconds >= 20 && (
+                  <p className="text-[11px] text-slate-500">عدّى {formatLeft(totalSeconds)} من الأول.</p>
+                )}
               </div>
             )}
 

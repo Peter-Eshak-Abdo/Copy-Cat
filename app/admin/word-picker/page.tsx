@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Copy, ImageUp, Loader2, RotateCcw, ScanText } from "lucide-react";
+import { Check, Copy, ImageUp, Loader2, Maximize, MoveHorizontal, RotateCcw, ScanText, ZoomIn, ZoomOut } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 import { prepareOcrImage, uprightPage } from "@/lib/ocr-client";
 
@@ -11,6 +11,9 @@ import { prepareOcrImage, uprightPage } from "@/lib/ocr-client";
  * into a Word table. Upload the photo and every Arabic entry gets a button right on top of it (and in a list
  * beside it): one click copies it, and the button stays ticked so you can see what you already pasted.
  */
+const MIN_ZOOM = 0.2;
+const MAX_ZOOM = 5;
+
 interface Word {
   text: string;
   box: number[] | null; // [ymin, xmin, ymax, xmax] in 0-1000
@@ -25,6 +28,77 @@ export default function WordPickerPage() {
   const [lastCopied, setLastCopied] = useState<number | null>(null);
   const [stage, setStage] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  // The photo sits in a box as tall as the screen with its own scroll; zoom 1 = photo as wide as the box
+  const viewRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const zoomRef = useRef(1);
+  const [imgAspect, setImgAspect] = useState(1.4); // height / width
+  // Content point to keep under the cursor (or the centre) across a zoom change
+  const anchorRef = useRef<{ x: number; y: number; vx: number; vy: number; from: number } | null>(null);
+
+  const zoomTo = useCallback((next: number, at?: { clientX: number; clientY: number }) => {
+    const view = viewRef.current;
+    const cur = zoomRef.current;
+    const z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
+    if (z === cur) return;
+    if (view) {
+      const r = view.getBoundingClientRect();
+      const vx = at ? at.clientX - r.left : view.clientWidth / 2;
+      const vy = at ? at.clientY - r.top : view.clientHeight / 2;
+      anchorRef.current = { x: view.scrollLeft + vx, y: view.scrollTop + vy, vx, vy, from: cur };
+    }
+    zoomRef.current = z;
+    setZoom(z);
+  }, []);
+
+  useLayoutEffect(() => {
+    const view = viewRef.current;
+    const a = anchorRef.current;
+    if (!view || !a) return;
+    anchorRef.current = null;
+    const f = zoom / a.from;
+    view.scrollLeft = a.x * f - a.vx;
+    view.scrollTop = a.y * f - a.vy;
+  }, [zoom]);
+
+  // Whole page visible in the box (never wider than it)
+  const fitPage = () => {
+    const view = viewRef.current;
+    if (!view) return;
+    zoomTo(Math.min(1, view.clientHeight / (view.clientWidth * imgAspect)));
+    view.scrollTo({ left: 0, top: 0 });
+  };
+
+  // Ctrl + wheel (or a trackpad pinch) zooms around the cursor; a plain wheel just scrolls
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      zoomTo(zoomRef.current * Math.exp(-e.deltaY * 0.0025), e);
+    };
+    view.addEventListener("wheel", onWheel, { passive: false });
+    return () => view.removeEventListener("wheel", onWheel);
+  }, [image, zoomTo]);
+
+  const resetZoom = () => {
+    zoomRef.current = 1;
+    setZoom(1);
+  };
+
+  // Clicking a word in the list brings it into view on the photo
+  const showWord = (i: number) => {
+    const view = viewRef.current;
+    const box = words[i]?.box;
+    if (!view || !box) return;
+    const w = view.clientWidth * zoom;
+    const h = w * imgAspect;
+    const cx = ((box[1] + box[3]) / 2000) * w;
+    const cy = ((box[0] + box[2]) / 2000) * h;
+    view.scrollTo({ left: cx - view.clientWidth / 2, top: cy - view.clientHeight / 2, behavior: "smooth" });
+  };
 
   const readFile = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -48,6 +122,7 @@ export default function WordPickerPage() {
       setStage("بنعدل اتجاه الصفحة");
       const upright = await uprightPage(raw);
       const prepared = await prepareOcrImage(upright.dataUrl, 2000);
+      resetZoom();
       setImage(prepared);
       setStage("بندوّر على الكلمات العربي");
       const res = await fetch("/api/ocr", {
@@ -81,6 +156,7 @@ export default function WordPickerPage() {
 
   const reset = () => {
     setImage(null);
+    resetZoom();
     setWords([]);
     setCopied(new Set());
     setLastCopied(null);
@@ -141,17 +217,74 @@ export default function WordPickerPage() {
                 <ScanText className="w-4 h-4 text-amber-600" />
                 دوس على الكلمة اللي على الصورة تتنسخ
               </span>
-              <button
-                type="button"
-                onClick={reset}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" /> صورة تانية
-              </button>
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-0.5 rounded-lg bg-slate-100 p-0.5" title="Ctrl + عجلة الماوس للزوم">
+                  <button
+                    type="button"
+                    onClick={() => zoomTo(zoom / 1.25)}
+                    disabled={zoom <= MIN_ZOOM}
+                    className="p-1.5 rounded-md hover:bg-white text-slate-700 disabled:opacity-40 cursor-pointer"
+                    title="صغّر"
+                  >
+                    <ZoomOut className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="text-[11px] font-bold text-slate-600 tabular-nums w-10 text-center">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => zoomTo(zoom * 1.25)}
+                    disabled={zoom >= MAX_ZOOM}
+                    className="p-1.5 rounded-md hover:bg-white text-slate-700 disabled:opacity-40 cursor-pointer"
+                    title="كبّر"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={fitPage}
+                    className="p-1.5 rounded-md hover:bg-white text-slate-700 cursor-pointer"
+                    title="الصفحة كلها"
+                  >
+                    <Maximize className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => zoomTo(1)}
+                    className="p-1.5 rounded-md hover:bg-white text-slate-700 cursor-pointer"
+                    title="على عرض المربع"
+                  >
+                    <MoveHorizontal className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> صورة تانية
+                </button>
+              </div>
             </div>
-            <div className="relative w-full rounded-xl overflow-hidden bg-slate-100">
+            <div className="relative">
+              {/* As tall as the screen with its own scroll; ltr so scrolling matches the left-based word boxes */}
+              <div
+                ref={viewRef}
+                dir="ltr"
+                className="w-full h-[calc(100vh-11rem)] min-h-[360px] overflow-auto rounded-xl bg-slate-100 overscroll-contain"
+              >
+                <div className="relative" style={{ width: `${zoom * 100}%`, margin: zoom < 1 ? "0 auto" : undefined }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image} alt="صفحة الكلمات" className="w-full h-auto block select-none" draggable={false} />
+              <img
+                src={image}
+                alt="صفحة الكلمات"
+                className="w-full h-auto block select-none"
+                draggable={false}
+                onLoad={(e) => {
+                  const im = e.currentTarget;
+                  if (im.naturalWidth) setImgAspect(im.naturalHeight / im.naturalWidth);
+                }}
+              />
               {words.map((w, i) =>
                 w.box ? (
                   <button
@@ -175,13 +308,15 @@ export default function WordPickerPage() {
                   />
                 ) : null
               )}
+                </div>
+              </div>
               <AnimatePresence>
                 {stage && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-white/75 backdrop-blur-sm flex flex-col items-center justify-center gap-2"
+                    className="absolute inset-0 rounded-xl bg-white/75 backdrop-blur-sm flex flex-col items-center justify-center gap-2"
                   >
                     <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
                     <span className="text-sm font-black text-slate-800">{stage}...</span>
@@ -192,7 +327,7 @@ export default function WordPickerPage() {
           </div>
 
           {/* The same words as a list */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-col max-h-[80vh]">
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-col max-h-[calc(100vh-7rem)] xl:sticky xl:top-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-black text-slate-800">الكلمات بالترتيب ({words.length})</span>
               {copied.size > 0 && (
@@ -207,7 +342,10 @@ export default function WordPickerPage() {
                   <button
                     key={i}
                     type="button"
-                    onClick={() => copyWord(i)}
+                    onClick={() => {
+                      copyWord(i);
+                      showWord(i);
+                    }}
                     className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-right cursor-pointer transition-colors ${
                       lastCopied === i
                         ? "border-emerald-400 bg-emerald-50"

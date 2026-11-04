@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { transcribeImage } from "@/lib/vision-text";
 import { geminiVisionJson } from "@/lib/gemini";
+import { looksLikeGarbage } from "@/lib/degenerate-text";
 
 export const maxDuration = 300;
 
@@ -111,7 +112,7 @@ export async function POST(req: NextRequest) {
     // "نسخ الكلمات": every Arabic entry on a vocabulary page with its box, so the page can put a copy
     // button on top of each one
     if (action === "words") {
-      const answer = await geminiVisionJson(WORDS_PROMPT, imageBase64, 6000);
+      const answer = await geminiVisionJson(WORDS_PROMPT, imageBase64, 6000, 90_000);
       const list = Array.isArray(answer) ? answer : [];
       const words = list
         .map((e: { text?: unknown; box_2d?: unknown }) => {
@@ -143,6 +144,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "تعذر الوصول لأي موديل ذكاء اصطناعي.", allProvidersFailed: true }, { status: 503 });
       }
 
+      if (!result.text) {
+        // Every model got stuck repeating itself: the page reads it another way (columns, then Tesseract)
+        return NextResponse.json({ error: "الموديلات علقت وهي بتقرا الصفحة.", looped: true, allProvidersFailed: true }, { status: 503 });
+      }
+
       const meta: Record<string, string | null> = {};
       let text = cleanTranscript(result.text);
       for (const key of ["FONT", "LANG", "BORDER", "WEIGHT", "WRITING"]) [meta[key], text] = takeMeta(text, key);
@@ -159,6 +165,7 @@ export async function POST(req: NextRequest) {
         handwritten: (writing || "").toLowerCase().startsWith("hand"),
         provider: result.provider,
         lowAccuracy: result.lowAccuracy,
+        partial: !!result.partial,
       });
     }
 
@@ -175,8 +182,8 @@ export async function POST(req: NextRequest) {
       }
       let text = cleanTranscript(result.text);
       for (const key of ["FONT", "LANG", "BORDER", "WEIGHT"]) text = takeMeta(text, key)[1];
-      // Guard against a truncated answer replacing a full page
-      const verified = text.length > String(draft).length * 0.6;
+      // Guard against a truncated answer (or a review that got stuck repeating itself) replacing a full page
+      const verified = text.length > String(draft).length * 0.6 && !looksLikeGarbage(text);
       return NextResponse.json({ success: true, verifiedText: verified ? text : draft, verified, provider: result.provider });
     }
 

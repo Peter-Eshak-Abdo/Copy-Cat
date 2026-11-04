@@ -1,6 +1,7 @@
 "use client";
 
 import type { OcrFigure } from "@/lib/docx/ocr-docx";
+import { findColumnSplit } from "@/lib/column-split";
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -47,6 +48,50 @@ export async function rotateImage(dataUrl: string, degrees: number): Promise<str
   ctx.rotate((deg * Math.PI) / 180);
   ctx.drawImage(img, -w / 2, -h / 2);
   return canvas.toDataURL("image/jpeg", 0.92);
+}
+
+/**
+ * A page printed in two side-by-side columns, cut into its columns in reading order (right column first
+ * for Arabic). Null when no clear divider or gutter is found. See lib/column-split.ts.
+ */
+export async function splitColumns(dataUrl: string, rtl: boolean): Promise<[string, string] | null> {
+  const img = await loadImage(dataUrl);
+  const W = img.naturalWidth;
+  const H = img.naturalHeight;
+  // Measured on a small copy (fast), cut on the full one
+  const sw = Math.min(900, W);
+  const sh = Math.max(1, Math.round((H * sw) / W));
+  const small = document.createElement("canvas");
+  small.width = sw;
+  small.height = sh;
+  const sctx = small.getContext("2d", { willReadFrequently: true });
+  if (!sctx) return null;
+  sctx.fillStyle = "#ffffff";
+  sctx.fillRect(0, 0, sw, sh);
+  sctx.drawImage(img, 0, 0, sw, sh);
+  const rgba = sctx.getImageData(0, 0, sw, sh).data;
+  const gray = new Uint8Array(sw * sh);
+  for (let i = 0; i < gray.length; i++) {
+    gray[i] = (rgba[i * 4] * 299 + rgba[i * 4 + 1] * 587 + rgba[i * 4 + 2] * 114) / 1000;
+  }
+  const cut = findColumnSplit(gray, sw, sh);
+  if (cut === null) return null;
+
+  const x = Math.round(W * cut);
+  const part = (sx: number, width: number) => {
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, width);
+    c.height = H;
+    const ctx = c.getContext("2d");
+    if (!ctx) return dataUrl;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, c.width, H);
+    ctx.drawImage(img, sx, 0, width, H, 0, 0, width, H);
+    return c.toDataURL("image/jpeg", 0.88);
+  };
+  const left = part(0, x);
+  const right = part(x, W - x);
+  return rtl ? [right, left] : [left, right];
 }
 
 /** Width / height of an image */

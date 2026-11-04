@@ -31,6 +31,53 @@ const SIDE_PROMPT =
   "Western digit where you can read it for sure, ? where you cannot (example: 2980?01?2345?7); an empty string " +
   "if fewer than 5 digits are readable.";
 
+// Customers sometimes send one picture with the front on top and the back below (or side by side)
+const SPLIT_PROMPT =
+  "Detect every separate side of a plastic ID card in this image. Usually there is exactly one card side, but " +
+  "some pictures combine two sides into one image: the front placed above the back, or side by side. " +
+  'Return ONLY a JSON array with one entry per card side: [{"box_2d": [ymin, xmin, ymax, xmax], "side": "front" | "back"}] ' +
+  "with the box in 0-1000 coordinates of this image. front = the side with the portrait photo.";
+
+type Box = [number, number, number, number];
+
+/**
+ * Where to cut a picture holding two card sides, or null for a normal single-side photo. The cut is the
+ * middle of the gap between the two boxes, so each half keeps its whole card even if a box is a bit tight.
+ */
+async function detectStackedSides(imageBase64: string) {
+  const answer = await geminiVisionJson(SPLIT_PROMPT, imageBase64, 300);
+  const boxes = (Array.isArray(answer) ? answer : [])
+    .map((e: { box_2d?: unknown; side?: unknown }) =>
+      Array.isArray(e?.box_2d) && e.box_2d.length === 4 && e.box_2d.every((v) => typeof v === "number")
+        ? { box: (e.box_2d as number[]).map((v) => Math.max(0, Math.min(1000, v))) as Box, side: e.side === "back" ? "back" : e.side === "front" ? "front" : "unknown" }
+        : null
+    )
+    .filter((b): b is { box: Box; side: "front" | "back" | "unknown" } => !!b)
+    // a stray tiny box (a logo, a sticker) is not a card
+    .filter((b) => (b.box[2] - b.box[0]) * (b.box[3] - b.box[1]) > 0.12 * 1_000_000);
+  if (boxes.length !== 2) return null;
+
+  const [a, b] = boxes;
+  const overlapY = Math.min(a.box[2], b.box[2]) - Math.max(a.box[0], b.box[0]);
+  const overlapX = Math.min(a.box[3], b.box[3]) - Math.max(a.box[1], b.box[1]);
+  const minH = Math.min(a.box[2] - a.box[0], b.box[2] - b.box[0]);
+  const minW = Math.min(a.box[3] - a.box[1], b.box[3] - b.box[1]);
+  // Stacked: little vertical overlap. Side by side: little horizontal overlap.
+  if (overlapY < minH * 0.15) {
+    const [top, bottom] = a.box[0] <= b.box[0] ? [a, b] : [b, a];
+    const cut = (Math.min(top.box[2], bottom.box[0]) + Math.max(top.box[2], bottom.box[0])) / 2 / 1000;
+    if (cut < 0.2 || cut > 0.8) return null;
+    return { direction: "vertical" as const, cut, sides: [top.side, bottom.side] };
+  }
+  if (overlapX < minW * 0.15) {
+    const [left, right] = a.box[1] <= b.box[1] ? [a, b] : [b, a];
+    const cut = (Math.min(left.box[3], right.box[1]) + Math.max(left.box[3], right.box[1])) / 2 / 1000;
+    if (cut < 0.2 || cut > 0.8) return null;
+    return { direction: "horizontal" as const, cut, sides: [left.side, right.side] };
+  }
+  return null;
+}
+
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 const EXTENDED_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 
@@ -108,7 +155,7 @@ const answerUsable = (s: { side: string }) => s.side !== "unknown";
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageBase64 } = await req.json();
+    const { imageBase64, action } = await req.json();
 
     // A phone photo is a few MB of base64; anything far bigger is not a card photo
     if (typeof imageBase64 !== "string" || imageBase64.length > 15_000_000) {
@@ -119,6 +166,11 @@ export async function POST(req: NextRequest) {
     }
     if (!getGeminiApiKey()) {
       return NextResponse.json({ success: false, error: "مفتاح GEMINI_API_KEY غير مهيأ في الخادم." });
+    }
+
+    if (action === "split") {
+      const split = await detectStackedSides(imageBase64);
+      return NextResponse.json({ success: true, split });
     }
 
     // Corners on the photo as taken, while the direction is checked; then side and number on the upright photo

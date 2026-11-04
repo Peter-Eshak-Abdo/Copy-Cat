@@ -23,6 +23,7 @@ import {
   FileText,
   Loader2,
   RefreshCw,
+  Scissors,
 } from "lucide-react";
 import { generateIdCardsDocx, PaperSize, DuplexAlignment } from "@/lib/docx/id-cards-docx";
 import { processImageOnCanvas, CropRect, QuadCorners, Point2D, detectCardCorners } from "@/lib/canvas-filters";
@@ -71,6 +72,47 @@ interface CardSide {
   quad?: QuadCorners;
   /** Side and national number the AI read, used to complete a card from a later upload */
   scan?: ScannedSide;
+}
+
+type StackedSplit = { direction: "vertical" | "horizontal"; cut: number; sides: string[] };
+
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => resolve(null);
+    el.src = src;
+  });
+}
+
+/** Cuts a picture holding two card sides into its two halves (top/bottom or left/right) */
+async function cutInTwo(src: string, split: StackedSplit): Promise<[string, string] | null> {
+  const img = await loadImage(src);
+  if (!img) return null;
+  const W = img.naturalWidth;
+  const H = img.naturalHeight;
+  const part = (sx: number, sy: number, sw: number, sh: number) => {
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(sw));
+    c.height = Math.max(1, Math.round(sh));
+    c.getContext("2d")?.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.92);
+  };
+  if (split.direction === "vertical") {
+    const y = Math.round(H * split.cut);
+    return [part(0, 0, W, y), part(0, y, W, H - y)];
+  }
+  const x = Math.round(W * split.cut);
+  return [part(0, 0, x, H), part(x, 0, W - x, H)];
+}
+
+/**
+ * Shape that could be two card sides in one picture: one card is ~1.59:1, so two stacked are ~0.79:1 and
+ * two side by side ~3.2:1. A normal landscape card photo never gets the extra AI check.
+ */
+function couldBeTwoSides(w: number, h: number): boolean {
+  const r = w / h;
+  return (r > 0.45 && r < 1.05) || (r > 2.3 && r < 4.5);
 }
 
 interface CardPair {
@@ -236,8 +278,12 @@ export default function IdCardsPage() {
   const [progress, setProgress] = useState<{ total: number; done: number } | null>(null);
 
   /** Straightens one photo: AI corners and direction, OpenCV / Sobel edges as fallback */
-  const processOneSide = async (file: File): Promise<{ side: CardSide; scan: ScannedSide }> => {
-    const originalSrc = await readAndOptimizeImage(file);
+  const processOneSide = async (
+    file: File,
+    preparedSrc?: string,
+    name?: string
+  ): Promise<{ side: CardSide; scan: ScannedSide }> => {
+    const originalSrc = preparedSrc ?? (await readAndOptimizeImage(file));
 
     // 1. AI corners first: edge detectors latch onto fingers, desk grain and backgrounds, while the
     // vision model finds the card itself and extends its edges under a thumb. The corners come back already
@@ -321,7 +367,7 @@ export default function IdCardsPage() {
       scan,
       side: {
         id: Math.random().toString(36).substring(2, 9),
-        name: file.name,
+        name: name ?? file.name,
         originalSrc,
         processedSrc,
         rotation: 0,
@@ -338,6 +384,105 @@ export default function IdCardsPage() {
         scan,
       },
     };
+  };
+
+  /**
+   * The two halves of a picture that holds both sides of one card ("front on top, back below").
+   * `split` comes from the AI, or is a plain cut in the middle when asked by hand.
+   */
+  const askStackedSplit = async (src: string): Promise<StackedSplit | null> => {
+    try {
+      const res = await fetch("/api/admin/card-align", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "split", imageBase64: src }),
+      });
+      const data = await res.json().catch(() => ({}));
+      return data?.split ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  const processHalves = async (file: File, src: string, split: StackedSplit) => {
+    const halves = await cutInTwo(src, split);
+    if (!halves) return null;
+    const base = file.name.replace(/\.[^.]+$/, "");
+    const [a, b] = await Promise.all([
+      processOneSide(file, halves[0], `${base} (1)`),
+      processOneSide(file, halves[1], `${base} (2)`),
+    ]);
+    return [a, b] as const;
+  };
+
+  /** Front and back from one picture become one card (the AI side answer decides which is which) */
+  const asPair = (a: { side: CardSide; scan: ScannedSide }, b: { side: CardSide; scan: ScannedSide }) => {
+    const [f, k] = a.scan.side === "back" || b.scan.side === "front" ? [b, a] : [a, b];
+    return { front: { ...f.side, sideType: "front" as const }, back: { ...k.side, sideType: "back" as const }, scan: f.scan.nationalId ? f.scan : k.scan };
+  };
+
+  type Processed =
+    | { kind: "single"; r: { side: CardSide; scan: ScannedSide } }
+    | { kind: "halves"; a: { side: CardSide; scan: ScannedSide }; b: { side: CardSide; scan: ScannedSide } };
+
+  /** One uploaded photo: a normal card side, or a picture with both sides that is cut in two first */
+  const processPhoto = async (file: File): Promise<Processed> => {
+    const src = await readAndOptimizeImage(file);
+    const img = await loadImage(src);
+    if (img && couldBeTwoSides(img.naturalWidth, img.naturalHeight)) {
+      const split = await askStackedSplit(src);
+      if (split) {
+        const halves = await processHalves(file, src, split);
+        if (halves) return { kind: "halves", a: halves[0], b: halves[1] };
+      }
+    }
+    return { kind: "single", r: await processOneSide(file, src) };
+  };
+
+  /** Cards that came complete from one picture */
+  const addReadyPairs = (ready: Array<ReturnType<typeof asPair>>) => {
+    if (ready.length === 0) return;
+    setPairs((prev) => [
+      ...prev,
+      ...ready.map((r, k) => {
+        const label = r.scan.nationalId || (r.scan.idTail ? `...${r.scan.idTail}` : "");
+        return {
+          pairId: Math.random().toString(36).substring(2, 9),
+          cardName: `بطاقة ${prev.length + k + 1}${label ? ` (${label})` : ""}`,
+          front: r.front,
+          back: r.back,
+        };
+      }),
+    ]);
+  };
+
+  /** By hand: a card that holds a picture with both sides gets cut in two (AI cut line, else the middle) */
+  const [splittingPairId, setSplittingPairId] = useState<string | null>(null);
+  const splitPairPhoto = async (pairId: string) => {
+    const pair = pairs.find((p) => p.pairId === pairId);
+    const side = pair?.front ?? pair?.back;
+    if (!pair || !side || splittingPairId) return;
+    setSplittingPairId(pairId);
+    try {
+      const img = await loadImage(side.originalSrc);
+      if (!img) throw new Error("image");
+      const fallback: StackedSplit = {
+        direction: img.naturalWidth / img.naturalHeight > 1.8 ? "horizontal" : "vertical",
+        cut: 0.5,
+        sides: [],
+      };
+      const split = (await askStackedSplit(side.originalSrc)) ?? fallback;
+      const file = new File([], side.name);
+      const halves = await processHalves(file, side.originalSrc, split);
+      if (!halves) throw new Error("cut");
+      const ready = asPair(halves[0], halves[1]);
+      setPairs((prev) => prev.map((p) => (p.pairId === pairId ? { ...p, front: ready.front, back: ready.back } : p)));
+      toast.success("اتقسمت", "الصورة اتقسمت لوش وضهر. لو اتعكسوا دوس «بدّل الوش والضهر».");
+    } catch {
+      toast.error("متقسمتش", "جرب تاني، أو قص كل وش لوحده.");
+    } finally {
+      setSplittingPairId(null);
+    }
   };
 
   /** Pairs a finished batch, and lets a lone side complete an earlier card that is missing it */
@@ -413,6 +558,7 @@ export default function IdCardsPage() {
     toast.info("استلمنا الصور", `${images.length} صورة، بنظبطهم دلوقتي...`);
     runningRef.current = true;
     const batch: Array<{ side: CardSide; scan: ScannedSide }> = [];
+    const ready: Array<ReturnType<typeof asPair>> = [];
     let failed = 0;
     try {
       // Two photos at a time (more only hits the AI's per-minute limit); results keep the upload order
@@ -420,17 +566,27 @@ export default function IdCardsPage() {
         const chunk = queueRef.current.splice(0, 2);
         const results = await Promise.all(
           chunk.map((f) =>
-            processOneSide(f).catch((err) => {
+            processPhoto(f).catch((err) => {
               console.error(`Error reading card image ${f.name}:`, err);
               return null;
             })
           )
         );
         for (const r of results) {
-          if (r) batch.push(r);
-          else failed++;
+          if (!r) failed++;
+          else if (r.kind === "single") batch.push(r.r);
+          // Two fronts (or two backs) in one picture are two different cards: they pair like separate photos
+          else if (r.a.scan.side !== "unknown" && r.a.scan.side === r.b.scan.side) batch.push(r.a, r.b);
+          else ready.push(asPair(r.a, r.b));
         }
         setProgress((p) => (p ? { ...p, done: p.done + chunk.length } : p));
+      }
+      addReadyPairs(ready);
+      if (ready.length > 0) {
+        toast.info(
+          "صورة فيها الوش والضهر",
+          `${ready.length} صورة كان فيها الوش والضهر مع بعض، قسمناها وكل وش بقى لوحده زي الباقي.`
+        );
       }
       if (batch.length > 0) addBatch(batch);
       if (failed > 0) toast.warning("في صور معرفناش نفتحها", `${failed} صورة باظت أو مش مدعومة.`);
@@ -1336,6 +1492,23 @@ export default function IdCardsPage() {
                       <ArrowUpDown className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">بدّل الوش والضهر</span>
                     </button>
+
+                    {/* One picture with both sides that was not split on upload */}
+                    {(!pair.front || !pair.back) && (
+                      <button
+                        onClick={() => splitPairPhoto(pair.pairId)}
+                        disabled={!!splittingPairId}
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:text-white hover:bg-violet-600 transition text-xs font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        title="لو الصورة فيها الوش وتحته الضهر: اقسمها نصين"
+                      >
+                        {splittingPairId === pair.pairId ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Scissors className="w-3.5 h-3.5" />
+                        )}
+                        <span className="hidden sm:inline">اقسم لوش وضهر</span>
+                      </button>
+                    )}
 
                     {/* Reorder Buttons */}
                     <button

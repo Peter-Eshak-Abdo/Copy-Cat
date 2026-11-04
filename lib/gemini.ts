@@ -25,7 +25,13 @@ export function getGeminiApiKey(): string | undefined {
  * detection prompts where thinking only adds latency (and on 2.5-flash ate the whole output budget).
  * Returns the parsed JSON, or null when every model failed.
  */
-export async function geminiVisionJson(prompt: string, imageBase64: string, maxOutputTokens = 600): Promise<unknown> {
+export async function geminiVisionJson(
+  prompt: string,
+  imageBase64: string,
+  maxOutputTokens = 600,
+  // A model that hangs (seen after a 503 on another model) must not hold the request for minutes
+  timeoutMs = 45_000
+): Promise<unknown> {
   const apiKey = getGeminiApiKey();
   if (!apiKey) return null;
 
@@ -50,6 +56,7 @@ export async function geminiVisionJson(prompt: string, imageBase64: string, maxO
               thinkingConfig: { thinkingBudget: 0 },
             },
           }),
+          signal: AbortSignal.timeout(timeoutMs),
         }
       );
       if (!resp.ok) {
