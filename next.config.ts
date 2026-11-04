@@ -49,6 +49,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  transpilePackages: ['jwks-rsa', 'firebase-admin'],
   serverExternalPackages: ["canvas"],
   turbopack: {
     resolveAlias: {
