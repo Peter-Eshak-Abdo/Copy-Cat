@@ -41,11 +41,16 @@ const STYLE_RULES = `Writing rules:
   use their official names (جامعة قناة السويس = Suez Canal University, كلية الآداب = Faculty of Arts). Company and
   brand names keep their brand spelling (Tuscanini, Jak Fashion).
 - Keep every fact exactly as given; never invent jobs, dates, grades, courses or skills. Fix obvious spelling
-  mistakes. The only thing you may write yourself is the objective: if none was given, write a short (1-2
-  sentences) professional objective suited to the person's study/work field.
-- Arabic: Modern Standard Arabic. Dates, years and durations in Arabic-Indic digits (٥ / ٣ / ٢٠٠٦، ٢٠٢٨، ٤ أشهر);
-  phone numbers, e-mail addresses, IDs and Latin terms (GIS, ICDL, Excel) exactly as written with Western digits.
-- English: Western digits; capitalise like a CV.
+  mistakes.
+- objective: the usual simple sentence of Egyptian CVs, tied to the person's field: that they seek to work in it,
+  gain experience and keep developing. One or two plain, natural, believable sentences; nothing grand, no
+  exaggeration and no buzzwords (no "رائدة", "مرموقة", "شغوف", "passionate", "dynamic", "reputable", "leading").
+  Good: "أسعى للعمل في مجال المحاسبة لاكتساب خبرة عملية وتطوير مهاراتي باستمرار." /
+  "Seeking a position in accounting to gain practical experience and keep developing my skills."
+  If the customer wrote an objective, keep its meaning in this same plain style; if not, write one like that.
+- Arabic CV: everything in Arabic, including ALL digits in Arabic-Indic form (٠١٢٠٠٦٩٩٨٢٣، ٥ / ٣ / ٢٠٠٦، ٤ أشهر).
+  Only e-mail addresses and Latin names of programs/certificates (ICDL, Excel, GIS) stay in Latin letters.
+- English CV: everything in English with Western digits; capitalise like a CV.
 - personal: label/value pairs, in this order when present: Date of Birth / تاريخ الميلاد, Place of Birth / محل الميلاد,
   Nationality / الجنسية, Religion / الديانة, Marital Status / الحالة الاجتماعية, Military Status / الموقف من التجنيد,
   Address / العنوان, Phone / التليفون, Email / البريد الإلكتروني. Use exactly those labels.

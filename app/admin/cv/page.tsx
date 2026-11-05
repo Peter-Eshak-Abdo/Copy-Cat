@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { saveAs } from "file-saver";
 import {
   ArrowLeftRight,
+  FileDown,
   Camera,
   Download,
   FileText,
@@ -15,13 +16,13 @@ import {
   RotateCcw,
   Sparkles,
   Trash2,
-  UserRound,
   X,
 } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 import { prepareOcrImage } from "@/lib/ocr-client";
-import { emptyCv, isEmptyCv, normalizeCv, type CvData, type CvLang, type CvPair } from "@/lib/cv";
+import { emptyCv, isEmptyCv, normalizeCv, type CvData, type CvLang, type CvPair, type CvTemplate } from "@/lib/cv";
 import { cvDocxBlob, cvFileName, type CvPhoto } from "@/lib/docx/cv-docx";
+import { CvSheet, ScaledSheet, printSheet } from "./cv-sheet";
 
 /**
  * "عمل CV": the customer's details (typed, or photos of a handwritten paper / an old CV) become the shop's
@@ -30,6 +31,11 @@ import { cvDocxBlob, cvFileName, type CvPhoto } from "@/lib/docx/cv-docx";
  */
 
 const DRAFT_KEY = "copycat_cv_draft_v1";
+const TEMPLATE_KEY = "copycat_cv_template_v1";
+const TEMPLATE_NAME: Record<CvTemplate, { label: string; hint: string }> = {
+  classic: { label: "العادي (ملوّن)", hint: "شكل المكتبة: الشريط الكحلي جنب" },
+  ats: { label: "ATS (أسود بسيط)", hint: "للشركات اللي بتقرا الـ CV بالكمبيوتر: عمود واحد وكله أسود، من غير صورة" },
+};
 const LANG_NAME: Record<CvLang, string> = { ar: "عربي", en: "English" };
 
 interface Draft {
@@ -67,6 +73,20 @@ export default function CvPage() {
   const [isDragOver, setIsDragOver] = useState(false);
   // Bumped when the AI replaces the text, so the editor boxes show the new values
   const [version, setVersion] = useState(0);
+  const [template, setTemplate] = useState<CvTemplate>("classic");
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- per-device preference, client only
+      if (localStorage.getItem(TEMPLATE_KEY) === "ats") setTemplate("ats");
+    } catch {}
+  }, []);
+  const chooseTemplate = (t: CvTemplate) => {
+    setTemplate(t);
+    try {
+      localStorage.setItem(TEMPLATE_KEY, t);
+    } catch {}
+  };
   const imageInput = useRef<HTMLInputElement>(null);
   const photoInput = useRef<HTMLInputElement>(null);
 
@@ -166,7 +186,7 @@ export default function CvPage() {
 
   const download = async (lang: CvLang) => {
     if (!draft) return;
-    const blob = await cvDocxBlob(draft[lang], lang, draft.photo ?? undefined);
+    const blob = await cvDocxBlob(draft[lang], lang, draft.photo ?? undefined, template);
     saveAs(blob, cvFileName(draft[lang], lang));
   };
 
@@ -361,6 +381,23 @@ export default function CvPage() {
             </section>
 
             <section className="xl:sticky xl:top-4 space-y-3">
+              <div className="flex rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="شكل الـ CV">
+                {(["classic", "ats"] as CvTemplate[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    role="radio"
+                    aria-checked={template === t}
+                    onClick={() => chooseTemplate(t)}
+                    title={TEMPLATE_NAME[t].hint}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-black cursor-pointer transition ${
+                      template === t ? "bg-white text-sky-800 shadow-sm" : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    {TEMPLATE_NAME[t].label}
+                  </button>
+                ))}
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
@@ -380,8 +417,24 @@ export default function CvPage() {
                 >
                   <ArrowLeftRight className="w-4 h-4" /> نزّل الاتنين
                 </button>
+                <button
+                  type="button"
+                  onClick={() => sheetRef.current && printSheet(sheetRef.current, cvFileName(cv, tab, "pdf").replace(/\.pdf$/, ""))}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-rose-300 text-rose-700 text-sm font-bold cursor-pointer"
+                  title="بيفتح شاشة الطباعة: اختار «Save as PDF» / «حفظ كـ PDF»"
+                >
+                  <FileDown className="w-4 h-4" /> PDF احتياطي
+                </button>
               </div>
-              <CvPreview cv={cv} lang={tab} photo={draft.photo} />
+              <div className="rounded-2xl border border-slate-200 bg-slate-100 p-3">
+                <ScaledSheet>
+                  <CvSheet ref={sheetRef} cv={cv} lang={tab} template={template} photo={draft.photo} />
+                </ScaledSheet>
+                <p className="text-center text-[11px] text-slate-500 mt-2">
+                  ده شكل الصفحة بالظبط، ولو البيانات كتير الخط والمسافات بيصغروا لوحدهم عشان يفضل صفحة واحدة.
+                  {template === "ats" && draft.photo ? " (الـ ATS من غير صورة.)" : ""}
+                </p>
+              </div>
             </section>
           </motion.div>
         )}
@@ -564,121 +617,6 @@ function CvEditor({ cv, lang, onChange }: { cv: CvData; lang: CvLang; onChange: 
           ))}
         </div>
       </details>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Live preview: the same layout as the Word file                      */
-/* ------------------------------------------------------------------ */
-
-function CvPreview({ cv, lang, photo }: { cv: CvData; lang: CvLang; photo: CvPhoto | null }) {
-  const rtl = lang === "ar";
-  const sep = rtl ? " : " : ": ";
-  const pair = (p: CvPair) => (p.label ? `${p.label}${sep}${p.value}` : p.value);
-  const font = rtl ? "'Times New Roman', serif" : "Calibri, 'Segoe UI', sans-serif";
-
-  const sideBlock = (title: string, items: string[], bullet: string) =>
-    items.length ? (
-      <div className="mb-[6%]">
-        <div className="mx-auto w-[88%] bg-[#1E7B7F] text-white text-center font-bold py-[1.5%] text-[1.15em]">{title}</div>
-        <ul className="mt-[4%] space-y-[3%]">
-          {items.map((t, i) => (
-            <li key={i} className="flex gap-[0.5em] font-bold leading-snug">
-              <span>{bullet}</span>
-              <span className="min-w-0 break-words">{t}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    ) : null;
-
-  const mainBlock = (title: string, icon: string, children: React.ReactNode, key?: number) => (
-    <div key={key} className="mb-[4%]">
-      <div className="w-[60%] bg-[#0F2236] text-white font-bold px-[2.5%] py-[1%] text-[1.05em]">
-        {icon} {title}
-      </div>
-      <div className="mt-[2.5%] text-[#111]">{children}</div>
-    </div>
-  );
-
-  const bulletList = (items: string[], bullet: string) => (
-    <ul className="space-y-[1.5%]">
-      {items.map((t, i) => (
-        <li key={i} className="flex gap-[0.5em] font-bold text-[1.1em]">
-          <span>{bullet}</span>
-          <span>{t}</span>
-        </li>
-      ))}
-    </ul>
-  );
-
-  const languages = sideBlock(cv.headings.languages, cv.languages.map(pair), "▪");
-  const skills = sideBlock(cv.headings.skills, cv.skills, "•");
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-100 p-3">
-      <div
-        dir={rtl ? "rtl" : "ltr"}
-        className="relative mx-auto w-full max-w-[560px] aspect-[210/297] bg-white shadow-lg overflow-hidden flex text-[clamp(6px,1.55vw,9.5px)] xl:text-[clamp(6px,0.7vw,9.5px)]"
-        style={{ fontFamily: font }}
-      >
-        <div className="w-[33.6%] shrink-0 bg-[#0F2236] text-white px-[2.2%] pt-[6%]">
-          {photo && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={photo.dataUrl} alt="" className="mx-auto mb-[6%] h-[13%] object-cover" style={{ aspectRatio: String(photo.aspect) }} />
-          )}
-          {sideBlock(cv.headings.personal, cv.personal.map(pair), "✓")}
-          {rtl ? (
-            <>
-              {languages}
-              {skills}
-            </>
-          ) : (
-            <>
-              {skills}
-              {languages}
-            </>
-          )}
-        </div>
-        <div className="flex-1 min-w-0 px-[3.2%] pt-[4%]">
-          <div className={`text-center font-bold text-[2.3em] leading-tight ${rtl ? "text-[#4472C4]" : "text-[#1F3A5F]"}`}>
-            {cv.name || <span className="opacity-30">{rtl ? "الاسم" : "Name"}</span>}
-          </div>
-          {cv.jobTitle && <div className="text-center font-bold text-slate-500 text-[1.1em]">{cv.jobTitle}</div>}
-          <div className="h-[3%]" />
-          {cv.objective && (
-            mainBlock(cv.headings.objective, "🎯", <p className="font-bold text-justify leading-relaxed">{cv.objective}</p>)
-          )}
-          {cv.education.length > 0 && (
-            mainBlock(
-              cv.headings.education,
-              "🎓",
-              cv.education.map((e, i) => (
-                <div key={i} className="mb-[2%]">
-                  {e.title && <div className="font-bold text-[1.2em]">❖ {e.title}</div>}
-                  {bulletList(e.details, "•")}
-                </div>
-              ))
-            )
-          )}
-          {cv.experience.length > 0 && (
-            mainBlock(cv.headings.experience, "💼", bulletList(cv.experience, rtl ? "✓" : "•"))
-          )}
-          {cv.courses.length > 0 && (
-            mainBlock(cv.headings.courses, "📜", bulletList(cv.courses, "•"))
-          )}
-          {cv.extra.map((s, i) => mainBlock(s.heading, "⭐", bulletList(s.items, "•"), i))}
-        </div>
-        {isEmptyCv(cv) && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="bg-white/90 rounded-xl px-4 py-2 text-sm font-bold text-slate-500 flex items-center gap-2" style={{ fontFamily: "inherit" }}>
-              <UserRound className="w-4 h-4" /> املا البيانات والشكل هيظهر هنا
-            </span>
-          </div>
-        )}
-      </div>
-      <p className="text-center text-[11px] text-slate-500 mt-2">معاينة تقريبية، ملف Word بنفس الترتيب والألوان</p>
     </div>
   );
 }
