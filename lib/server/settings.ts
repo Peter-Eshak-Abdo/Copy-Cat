@@ -7,9 +7,11 @@ import { revalidateTag } from "next/cache";
 import { cachedQuery } from "@/lib/server/cache";
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import { COL, getDb } from "@/lib/server/db";
+import { FAQ_KEY, isFaqList, type FaqItem } from "@/lib/faq";
 
 export const BANNER_KEY = "storefront.banner";
 const BANNER_TAG = "storefront-banner";
+const FAQ_TAG = "storefront-faq";
 
 export interface SettingRow {
   value: unknown;
@@ -38,9 +40,10 @@ export async function writeSetting(db: Firestore, key: string, value: unknown, b
   const ref = db.collection(COL.settings).doc(key);
   if (value === null) await ref.delete();
   else await ref.set({ key, value_json: JSON.stringify(value), updated_by: by, updated_at: Timestamp.now() });
-  if (key === BANNER_KEY) {
+  const tag = key === BANNER_KEY ? BANNER_TAG : key === FAQ_KEY ? FAQ_TAG : null;
+  if (tag) {
     try {
-      revalidateTag(BANNER_TAG, { expire: 0 });
+      revalidateTag(tag, { expire: 0 });
     } catch {}
   }
 }
@@ -55,4 +58,16 @@ export const getBannerText = cachedQuery(
   },
   "storefront-banner-v1",
   { tags: [BANNER_TAG], revalidate: 3600 }
+);
+
+/** The storefront's customer questions, cached until they change; null = never saved (use the defaults) */
+export const getFaqList = cachedQuery(
+  async (): Promise<FaqItem[] | null> => {
+    const db = getDb();
+    if (!db) throw new Error("db_not_configured");
+    const row = await readSetting(db, FAQ_KEY);
+    return isFaqList(row?.value) ? row.value : null;
+  },
+  "storefront-faq-v1",
+  { tags: [FAQ_TAG], revalidate: 3600 }
 );

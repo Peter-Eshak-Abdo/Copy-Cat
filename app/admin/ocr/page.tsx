@@ -7,6 +7,7 @@ import { generateOcrDocx, PageBorderKind, FIGURE_LINE, type OcrFigure } from "@/
 import { splitMath } from "@/lib/docx/latex-math";
 import { looksLikeGarbage } from "@/lib/degenerate-text";
 import { cropFigures, imageAspect, pdfToImages, prepareOcrImage, splitColumns, tesseractOcr, uprightPage } from "@/lib/ocr-client";
+import { AnimatePresence, motion } from "motion/react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import {
@@ -85,11 +86,88 @@ interface OcrPageItem {
   extractedText?: string;
 }
 
+/** What the drop zone shows: idle hint, "drop it here", "receiving N files", or "added N pages" */
+function DropFeedback({
+  isDragOver,
+  intake,
+  justAdded,
+  compact = false,
+}: {
+  isDragOver: boolean;
+  intake: number;
+  justAdded: number;
+  compact?: boolean;
+}) {
+  const mode = isDragOver ? "over" : intake > 0 ? "reading" : justAdded > 0 ? "added" : "idle";
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={mode}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.18 }}
+        className="flex flex-col items-center"
+      >
+        {mode === "over" ? (
+          <>
+            <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 0.7, repeat: Infinity }}>
+              <UploadCloud className="w-12 h-12 text-primary mx-auto mb-2" />
+            </motion.div>
+            <p className="text-sm font-black text-primary">سيبها هنا</p>
+          </>
+        ) : mode === "reading" ? (
+          <>
+            <div className="relative w-12 h-12 mb-2">
+              <motion.span
+                className="absolute inset-0 rounded-full border-4 border-emerald-200 border-t-emerald-500"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
+              />
+              <ImagePlus className="absolute inset-0 m-auto w-5 h-5 text-emerald-600" />
+            </div>
+            <p className="text-sm font-black text-emerald-800">
+              بنستلم {intake} {intake === 1 ? "ملف" : intake <= 10 ? "ملفات" : "ملف"}...
+            </p>
+          </>
+        ) : mode === "added" ? (
+          <>
+            <motion.div
+              initial={{ scale: 0, rotate: -40 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 420, damping: 16 }}
+              className="w-14 h-14 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-2 shadow-lg shadow-emerald-500/30"
+            >
+              <CheckCircle2 className="w-8 h-8" />
+            </motion.div>
+            <p className="text-sm font-black text-emerald-800">تمام، ضفنا {justAdded} {justAdded === 1 ? "صفحة" : "صفحات"}</p>
+          </>
+        ) : (
+          !compact && (
+            <>
+              <UploadCloud className="w-10 h-10 text-primary mx-auto mb-2" />
+              <p className="text-sm font-bold text-on-surface">اسحب صور الصفحات وسيبها هنا</p>
+              <p className="text-xs text-on-surface-variant mt-1">
+                أو دوس هنا واختار صورة أو أكتر من الجهاز. الصفحة المتصورة بالعرض أو بالمقلوب بتتعدل لوحدها.
+              </p>
+            </>
+          )
+        )}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 export default function MultiStageOcrPage() {
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [pages, setPages] = useState<OcrPageItem[]>([]);
+  // Drop-zone feedback: dragging over it, files being read, then a short "got them" tick
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [intake, setIntake] = useState(0);
+  const [justAdded, setJustAdded] = useState<{ count: number; ids: Set<string> } | null>(null);
+  const justAddedTimer = useRef<number | null>(null);
   const [activePageIndex, setActivePageIndex] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoomPreview, setZoomPreview] = useState(false);
@@ -320,6 +398,16 @@ export default function MultiStageOcrPage() {
 
   // Add files to pages list
   const addFilesToPages = async (fileList: File[]) => {
+    if (fileList.length === 0) return;
+    setIntake(fileList.length);
+    try {
+      await addFilesToPagesInner(fileList);
+    } finally {
+      setIntake(0);
+    }
+  };
+
+  const addFilesToPagesInner = async (fileList: File[]) => {
     const newItems: OcrPageItem[] = [];
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
@@ -371,6 +459,10 @@ export default function MultiStageOcrPage() {
       return updated;
     });
 
+    if (justAddedTimer.current !== null) window.clearTimeout(justAddedTimer.current);
+    setJustAdded({ count: newItems.length, ids: new Set(newItems.map((it) => it.id)) });
+    justAddedTimer.current = window.setTimeout(() => setJustAdded(null), 2200);
+
     toast.success(
       "الصفحات اتضافت",
       `ضفنا ${newItems.length} صورة. رتبهم بالأسهم لو محتاج، وبعدين دوس «ابدأ القراية».`
@@ -386,10 +478,18 @@ export default function MultiStageOcrPage() {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    if (!isDragOver) setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Moving over a child element isn't leaving the drop area
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+    setIsDragOver(false);
   };
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
+    setIsDragOver(false);
     if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
       await addFilesToPages(Array.from(e.dataTransfer.files));
     }
@@ -705,8 +805,27 @@ export default function MultiStageOcrPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
           {/* Left Column: Source Pages & Active Preview */}
           <div className="lg:col-span-5 flex flex-col gap-space-lg">
-            {/* Pages Strip & Reordering */}
-            <div className="flex flex-col rounded-xl bg-surface-container-low p-space-md shadow-lg border border-surface-container-high/40">
+            {/* Pages Strip & Reordering (the whole card takes dropped files) */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`relative flex flex-col rounded-xl bg-surface-container-low p-space-md shadow-lg border transition-colors ${
+                isDragOver && pages.length > 0 ? "border-primary ring-4 ring-primary/20" : "border-surface-container-high/40"
+              }`}
+            >
+              <AnimatePresence>
+                {pages.length > 0 && (isDragOver || intake > 0 || justAdded) && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-10 rounded-xl bg-white/85 backdrop-blur-sm flex flex-col items-center justify-center gap-2 pointer-events-none"
+                  >
+                    <DropFeedback isDragOver={isDragOver} intake={intake} justAdded={justAdded?.count ?? 0} compact />
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <div className="flex items-center justify-between pb-space-sm border-b border-surface-container-high/60 mb-space-sm">
                 <div className="flex items-center gap-space-xs">
                   <Layers className="text-primary w-5 h-5" />
@@ -727,10 +846,13 @@ export default function MultiStageOcrPage() {
               {pages.length > 0 ? (
                 <div className="flex flex-col gap-2 max-h-52 overflow-y-auto pr-1">
                   {pages.map((page, idx) => (
-                    <div
+                    <motion.div
                       key={page.id}
+                      initial={justAdded?.ids.has(page.id) ? { opacity: 0, x: -24 } : false}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.4, delay: Math.min(idx, 8) * 0.04 }}
                       onClick={() => setActivePageIndex(idx)}
-                      className={`flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
+                      className={`relative flex items-center justify-between p-2 rounded-xl border transition-[border-color,box-shadow] cursor-pointer ${
                         activePageIndex === idx
                           ? "bg-primary/10 border-primary shadow-sm"
                           : "bg-surface-container border-surface-container-high hover:border-outline"
@@ -798,20 +920,33 @@ export default function MultiStageOcrPage() {
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                    </div>
+                      {/* Green flash on pages that just came in */}
+                      {justAdded?.ids.has(page.id) && (
+                        <motion.span
+                          className="absolute inset-0 rounded-xl bg-emerald-400/30 ring-2 ring-emerald-400 pointer-events-none"
+                          initial={{ opacity: 1 }}
+                          animate={{ opacity: 0 }}
+                          transition={{ duration: 1.8, delay: 0.3 }}
+                        />
+                      )}
+                    </motion.div>
                   ))}
                 </div>
               ) : (
-                <div
+                <motion.div
                   onClick={handleUploadClick}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  className="p-6 text-center border-2 border-dashed border-primary/40 rounded-xl cursor-pointer hover:border-primary transition"
+                  animate={{ scale: isDragOver ? 1.02 : 1 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  className={`relative overflow-hidden p-6 text-center border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+                    isDragOver
+                      ? "border-primary bg-primary/10"
+                      : intake > 0
+                      ? "border-emerald-400 bg-emerald-50"
+                      : "border-primary/40 hover:border-primary"
+                  }`}
                 >
-                  <UploadCloud className="w-10 h-10 text-primary mx-auto mb-2" />
-                  <p className="text-sm font-bold text-on-surface">اسحب صور الصفحات وسيبها هنا</p>
-                  <p className="text-xs text-on-surface-variant mt-1">أو دوس هنا واختار صورة أو أكتر من الجهاز. الصفحة المتصورة بالعرض أو بالمقلوب بتتعدل لوحدها.</p>
-                </div>
+                  <DropFeedback isDragOver={isDragOver} intake={intake} justAdded={0} />
+                </motion.div>
               )}
             </div>
 

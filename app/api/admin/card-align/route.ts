@@ -5,10 +5,18 @@ import { turnQuad } from "@/lib/card-pairing";
 type Pt = { x: number; y: number };
 
 const CORNER_PROMPT =
-  "Point to the 4 corners of the plastic ID card in this image. If a finger covers a corner, point to where " +
+  "Point to the 4 corners of the card in this image (a plastic ID card, or any other card: a membership / " +
+  "syndicate card, a student or work card, a laminated paper card). Point to the card's OUTER edge, including " +
+  "its whole border, never inside the printed area. If a finger covers a corner, point to where " +
   "the card corner actually is (extend the straight card edges). The answer should follow the json format: " +
   '[{"point": [y, x], "label": "top_left"}, ...] with labels top_left, top_right, bottom_right, bottom_left ' +
   "(as seen in the image) and points normalized to 0-1000.";
+
+// When the corner points fail: a box is the most reliable thing the model returns
+const BOX_PROMPT =
+  "Detect the card in this image (an ID card, membership card, or any laminated card or small card-like " +
+  'document). Return ONLY JSON [{"box_2d": [ymin, xmin, ymax, xmax], "label": "card"}] with the box around the ' +
+  "card's whole outer edge, in 0-1000 coordinates.";
 
 // Separate call: mixing this into the pointing prompt degrades the corner points
 const ORIENT_PROMPT =
@@ -153,6 +161,74 @@ async function readCard(imageBase64: string, rotation: number | null) {
 
 const answerUsable = (s: { side: string }) => s.side !== "unknown";
 
+type QuadPts = Record<"tl" | "tr" | "br" | "bl", Pt>;
+
+/**
+ * The pointing answers sit a little inside the card edge (a back side lost its national number line to it),
+ * so the quad grows around its centre: a sliver of background is harmless, a cut-off line is not.
+ */
+function growQuad(q: QuadPts, factor: number): QuadPts {
+  const cx = (q.tl.x + q.tr.x + q.br.x + q.bl.x) / 4;
+  const cy = (q.tl.y + q.tr.y + q.br.y + q.bl.y) / 4;
+  const g = (p: Pt) => ({ x: cx + (p.x - cx) * factor, y: cy + (p.y - cy) * factor });
+  return { tl: g(q.tl), tr: g(q.tr), br: g(q.br), bl: g(q.bl) };
+}
+const GROW = 1.05;
+
+function quadArea(q: QuadPts): number {
+  return (
+    Math.abs(
+      q.tl.x * q.tr.y - q.tr.x * q.tl.y +
+        (q.tr.x * q.br.y - q.br.x * q.tr.y) +
+        (q.br.x * q.bl.y - q.bl.x * q.br.y) +
+        (q.bl.x * q.tl.y - q.tl.x * q.bl.y)
+    ) / 2
+  );
+}
+
+/** Card box from BOX_PROMPT as a quad, or null */
+async function detectCardBox(imageBase64: string): Promise<QuadPts | null> {
+  const answer = await geminiVisionJson(BOX_PROMPT, imageBase64, 200);
+  const entries = (Array.isArray(answer) ? answer : [answer]) as Array<{ box_2d?: unknown } | null>;
+  const first = entries.find(
+    (e) => Array.isArray(e?.box_2d) && e.box_2d.length === 4 && e.box_2d.every((v) => typeof v === "number")
+  );
+  if (!first) return null;
+  const [y0, x0, y1, x1] = (first.box_2d as number[]).map((v) => Math.max(0, Math.min(1, v / 1000)));
+  if (y1 - y0 < 0.05 || x1 - x0 < 0.05) return null;
+  return { tl: { x: x0, y: y0 }, tr: { x: x1, y: y0 }, br: { x: x1, y: y1 }, bl: { x: x0, y: y1 } };
+}
+
+/** Pixel size of the photo (the corner answers are 0-1 of each axis, so edge lengths need it) */
+async function imageSize(imageBase64: string): Promise<{ w: number; h: number } | null> {
+  try {
+    const sharp = (await import("sharp")).default;
+    const meta = await sharp(Buffer.from(imageBase64.replace(/^data:[^,]+,/, ""), "base64")).metadata();
+    return meta.width && meta.height ? { w: meta.width, h: meta.height } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A card is always wider than tall, so when it lies landscape in the photo only 0 / 180 can be right, and
+ * when it stands portrait only 90 / 270. A direction answer of the wrong kind (seen on a back side: the
+ * straightened card came out turned a quarter and squashed) is moved a quarter; readCard then checks
+ * upright and flips it 180 if needed.
+ */
+function fitRotationToCard(rotation: number | null, quad: QuadPts, size: { w: number; h: number } | null) {
+  if (rotation === null || !size) return rotation;
+  const len = (a: Pt, b: Pt) => Math.hypot((a.x - b.x) * size.w, (a.y - b.y) * size.h);
+  const across = (len(quad.tl, quad.tr) + len(quad.bl, quad.br)) / 2;
+  const down = (len(quad.tl, quad.bl) + len(quad.tr, quad.br)) / 2;
+  const ratio = across / Math.max(1, down);
+  // Too square to tell (strong perspective): trust the answer
+  if (ratio < 1.2 && ratio > 1 / 1.2) return rotation;
+  const cardIsLandscape = ratio >= 1.2;
+  const rotationKeepsLandscape = rotation % 180 === 0;
+  return cardIsLandscape === rotationKeepsLandscape ? rotation : (rotation + 90) % 360;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { imageBase64, action } = await req.json();
@@ -174,8 +250,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Corners on the photo as taken, while the direction is checked; then side and number on the upright photo
-    const [answer, rotation] = await Promise.all([geminiVisionJson(CORNER_PROMPT, imageBase64), detectRotation(imageBase64)]);
-    const { upright: _upright, ...sideInfo } = await readCard(imageBase64, rotation); // eslint-disable-line @typescript-eslint/no-unused-vars
+    const [answer, detectedRotation, size] = await Promise.all([
+      geminiVisionJson(CORNER_PROMPT, imageBase64),
+      detectRotation(imageBase64),
+      imageSize(imageBase64),
+    ]);
     const list = Array.isArray(answer) ? answer : [];
     const byLabel: Record<string, Pt> = {};
     for (const e of list as Array<{ point?: unknown; label?: unknown }>) {
@@ -191,27 +270,26 @@ export async function POST(req: NextRequest) {
     }
 
     const { top_left: tl, top_right: tr, bottom_right: br, bottom_left: bl } = byLabel;
-    if (!tl || !tr || !br || !bl) {
+    // Perspective makes real cards trapezoids, so the points are used as given (no parallelogram "repair")
+    let raw: QuadPts | null = tl && tr && br && bl ? { tl, tr, br, bl } : null;
+    // A tiny or missing answer (seen on a paper membership card): ask for the card's box instead
+    if (!raw || quadArea(raw) < 0.03) raw = await detectCardBox(imageBase64);
+
+    const rotation = raw ? fitRotationToCard(detectedRotation, raw, size) : detectedRotation;
+    const { upright: _upright, ...sideInfo } = await readCard(imageBase64, rotation); // eslint-disable-line @typescript-eslint/no-unused-vars
+    if (!raw) {
       // No usable answer: the client falls back to OpenCV edge detection
       return NextResponse.json({ success: false, error: "تعذر تحديد أركان البطاقة.", ...sideInfo });
     }
 
-    // Perspective makes real cards trapezoids, so the points are used as given (no parallelogram "repair")
-    const corners = turnQuad({ tl, tr, br, bl }, sideInfo.rotation ?? 0);
+    const corners = turnQuad(growQuad(raw, GROW), sideInfo.rotation ?? 0);
     const clamp = (p: Pt) => ({
       x: Math.round(Math.max(0, Math.min(1, p.x)) * 1000) / 1000,
       y: Math.round(Math.max(0, Math.min(1, p.y)) * 1000) / 1000,
     });
 
-    // Reject degenerate answers (card smaller than 8% of the photo)
-    const area =
-      Math.abs(
-        (corners.tl.x * corners.tr.y - corners.tr.x * corners.tl.y) +
-          (corners.tr.x * corners.br.y - corners.br.x * corners.tr.y) +
-          (corners.br.x * corners.bl.y - corners.bl.x * corners.br.y) +
-          (corners.bl.x * corners.tl.y - corners.tl.x * corners.bl.y)
-      ) / 2;
-    if (area < 0.08) {
+    // Reject degenerate answers (card smaller than 3% of the photo; a card shot from afar is still a card)
+    if (quadArea(corners) < 0.03) {
       return NextResponse.json({ success: false, error: "تعذر تحديد أركان البطاقة.", ...sideInfo });
     }
 

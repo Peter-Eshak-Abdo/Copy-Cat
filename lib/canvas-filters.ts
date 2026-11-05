@@ -41,6 +41,7 @@ export interface ProcessImageOptions {
   preserveColors?: boolean;     // 100% Color-safe HSL mode (Fix for requirement #4)
   crop?: CropRect;              // Axis-aligned crop box
   quad?: QuadCorners;           // 4-corner perspective quad
+  maxDim?: number;              // Longest side before processing (default 1400)
 }
 
 /**
@@ -681,6 +682,7 @@ export function processImageOnCanvas(
     preserveColors = true, // Default to true for authentic ID card & photo colors
     crop,
     quad,
+    maxDim = 1400,
   } = options;
 
   // 1. Initial draw or rotated draw
@@ -691,7 +693,6 @@ export function processImageOnCanvas(
     workingCanvas = document.createElement("canvas");
     let rawW = imgElement.naturalWidth || imgElement.width || 800;
     let rawH = imgElement.naturalHeight || imgElement.height || 600;
-    const maxDim = 1400;
     if (Math.max(rawW, rawH) > maxDim) {
       const scale = maxDim / Math.max(rawW, rawH);
       rawW = Math.round(rawW * scale);
@@ -730,42 +731,26 @@ export function processImageOnCanvas(
   // Contrast factor
   const contrastFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
   const bDelta = brightness - 100;
+  // Nothing to adjust per pixel (lets a plain invert stay an exact negative)
+  const neutral = bDelta === 0 && contrast === 100 && saturation === 100 && !grayscale && !thresholdMode;
 
   for (let i = 0; i < d.length; i += 4) {
     let r = d[i];
     let g = d[i + 1];
     let b = d[i + 2];
 
-    // 1. Invert colors (Screen & medical report inversion engine - Copy-Cat Paper Whiten & Ink Deepen)
+    // 1. Invert colors: a plain negative (black screen -> white paper, colours become their opposites),
+    // exactly like an image editor's "Invert". Brightness/contrast/sharpness below still apply on top.
     if (invert) {
       r = 255 - r;
       g = 255 - g;
       b = 255 - b;
-
-      // Inverted screen/analysis mode (converts rainbow terminal text like pink/cyan/yellow to crisp solid black ink)
-      // and eliminates monitor glow/glare to produce 100% clean white paper background
-      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-      let val = lum;
-
-      const whiteThreshold = Math.max(150, 180 - bDelta * 0.4);
-      const textThreshold = Math.max(80, 135 - bDelta * 0.2);
-
-      if (lum >= whiteThreshold) {
-        // Pure clean white paper background (eliminates screen glare & saves 80% ink)
-        val = 255;
-      } else if (lum <= textThreshold) {
-        // Deepen text strokes to solid rich dark black ink
-        val = Math.max(0, (lum - 15) * 0.4);
-      } else {
-        // Smooth anti-aliased edge transition between text and paper
-        const t = (lum - textThreshold) / (whiteThreshold - textThreshold);
-        val = Math.min(255, Math.max(0, 48 + t * 207));
+      if (neutral) {
+        d[i] = r;
+        d[i + 1] = g;
+        d[i + 2] = b;
+        continue;
       }
-
-      d[i] = Math.round(val);
-      d[i + 1] = Math.round(val);
-      d[i + 2] = Math.round(val);
-      continue;
     }
 
     // 2. High-clarity Document B&W Mode for Printing (Photocopy style with grayscale photo preservation)

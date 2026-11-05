@@ -21,6 +21,59 @@ export function getGeminiApiKey(): string | undefined {
 }
 
 /**
+ * JSON answer from a prompt plus any number of images (data URLs), through the same model chain. Unlike
+ * geminiVisionJson, thinking may be given a budget: writing (a CV, a translation) gets better with it.
+ * Returns the parsed JSON, or null when every model failed or no key is set.
+ */
+export async function geminiJson(
+  prompt: string,
+  images: string[] = [],
+  opts: { maxOutputTokens?: number; thinkingBudget?: number; timeoutMs?: number; temperature?: number } = {}
+): Promise<unknown> {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) return null;
+  const parts: object[] = [{ text: prompt }];
+  for (const img of images) {
+    const mime = img.match(/^data:(image\/[\w.+-]+);base64,/)?.[1] ?? "image/jpeg";
+    parts.push({ inlineData: { mimeType: mime, data: img.replace(/^data:[^,]+,/, "") } });
+  }
+  for (const model of VISION_MODELS) {
+    try {
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts }],
+            generationConfig: {
+              temperature: opts.temperature ?? 0.3,
+              maxOutputTokens: opts.maxOutputTokens ?? 8000,
+              responseMimeType: "application/json",
+              thinkingConfig: { thinkingBudget: opts.thinkingBudget ?? 0 },
+            },
+          }),
+          signal: AbortSignal.timeout(opts.timeoutMs ?? 90_000),
+        }
+      );
+      if (!resp.ok) {
+        console.warn(`Gemini ${model} failed with ${resp.status}, trying next model`);
+        continue;
+      }
+      const body = await resp.json();
+      const raw: string = (body.candidates?.[0]?.content?.parts ?? [])
+        .filter((p: { thought?: boolean }) => !p.thought)
+        .map((p: { text?: string }) => p.text ?? "")
+        .join("");
+      return JSON.parse(raw.replace(/```json/g, "").replace(/```/g, "").trim());
+    } catch (err) {
+      console.warn(`Gemini ${model} error, trying next model:`, err);
+    }
+  }
+  return null;
+}
+
+/**
  * Asks a vision model for a JSON answer about one image. Thinking is disabled: these are single-shot
  * detection prompts where thinking only adds latency (and on 2.5-flash ate the whole output budget).
  * Returns the parsed JSON, or null when every model failed.

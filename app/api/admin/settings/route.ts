@@ -14,6 +14,7 @@ const ALLOWED_KEYS = new Set([
   "calculator.addons",
   "shortcuts.list",
   "storefront.banner",
+  "storefront.faq",
   "dashboard.tools-order",
 ]);
 const MAX_VALUE_BYTES = 200 * 1024;

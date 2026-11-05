@@ -91,6 +91,25 @@ function idDistance(a: ScannedSide, b: ScannedSide): number {
 const MAX_MATCH = MAX_ID_DISTANCE + 0.5;
 
 /**
+ * Weaker than idDistance, only for sides uploaded next to each other: up to 4 differing digits (and under a
+ * third of the digits both read). Two strangers' numbers differ in far more positions even when born the
+ * same year in the same governorate (serial, gender and check digits).
+ */
+function looselySame(a: ScannedSide, b: ScannedSide): boolean {
+  const pa = patternOf(a);
+  const pb = patternOf(b);
+  if (!pa || !pb) return true;
+  let known = 0;
+  let conflicts = 0;
+  for (let i = 0; i < 14; i++) {
+    if (pa[i] === "?" || pb[i] === "?") continue;
+    known++;
+    if (pa[i] !== pb[i]) conflicts++;
+  }
+  return conflicts <= 4 && conflicts <= known * 0.34;
+}
+
+/**
  * Pairs scanned card sides into cards, in upload order:
  * 1. Fronts and backs carrying the same national number are paired, whatever order they were uploaded in.
  * 2. When one of the two numbers is unreadable, a back joins an unpaired front uploaded right before it
@@ -168,6 +187,28 @@ export function pairCardSides(sides: ScannedSide[]): SidePairing[] {
     backOf.set(nearest, b);
     usedBacks.add(b);
     guessed.add(nearest);
+  }
+
+  // 2c. A few misread digits (glare on a back's number) must not split a card: a back right next to an
+  // unpaired front still joins it when most digits both sides read agree. When the batch has exactly one
+  // unpaired front and one unpaired back, they join under the same rule wherever they were uploaded.
+  const leftFronts = () => fronts.filter((f) => !backOf.has(f));
+  const leftBacks = () => backs.filter((b) => !usedBacks.has(b));
+  for (const b of leftBacks()) {
+    const near = [b - 1, b + 1].find((f) => kind[f] === "front" && !backOf.has(f) && looselySame(sides[f], sides[b]));
+    if (near === undefined) continue;
+    backOf.set(near, b);
+    usedBacks.add(b);
+    guessed.add(near);
+  }
+  if (leftFronts().length === 1 && leftBacks().length === 1) {
+    const [f] = leftFronts();
+    const [b] = leftBacks();
+    if (looselySame(sides[f], sides[b])) {
+      backOf.set(f, b);
+      usedBacks.add(b);
+      guessed.add(f);
+    }
   }
 
   // 3. Every front is a card (back possibly empty); leftover backs become cards without a front
