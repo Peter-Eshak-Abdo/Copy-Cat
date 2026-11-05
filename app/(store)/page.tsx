@@ -53,8 +53,9 @@ import {
  */
 
 const MotionLink = motion.create(Link);
-/** Products shown on the home page; the rest are on /products */
+/** Products shown on the home page (fewer on phones); the rest are on /products */
 const FEATURED_COUNT = 20;
+const FEATURED_PHONE = 8;
 
 const FLOATING_DECOR = [
   { emoji: "✏️", className: "top-[6%] left-[8%] text-3xl", duration: 5.5, delay: 0 },
@@ -669,11 +670,14 @@ export default function StorefrontHome() {
                 منتجات مختارة <span className="text-blue-600">من كل قسم</span>
               </>
             }
-            subtitle={`دي ${featured.length} منتج بس من أكتر من ${listable.length} صنف. كل المنتجات بالبحث والأقسام في صفحة المنتجات.`}
+            subtitle={`شوية منتجات من أكتر من ${listable.length} صنف. كل المنتجات بالبحث والأقسام في صفحة المنتجات.`}
           />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
             {featured.map((item, idx) => (
-              <ProductCard key={item.id} item={item} index={idx} />
+              // Phones get the first 8 only
+              <div key={item.id} className={idx < FEATURED_PHONE ? "grid" : "hidden sm:grid"}>
+                <ProductCard item={item} index={idx} />
+              </div>
             ))}
           </div>
           <Reveal className="mt-8 text-center">
@@ -741,7 +745,7 @@ export default function StorefrontHome() {
         </section>
 
         {/* ============ FAQ ============ */}
-        <FaqSection />
+        <FaqSection limit={5} />
 
         {/* ============ Contact + WhatsApp CTA ============ */}
         <section id="contact" className="scroll-mt-20 max-w-7xl mx-auto w-full px-4 sm:px-6 py-14 sm:py-20">

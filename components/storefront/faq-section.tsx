@@ -1,26 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { Camera, HelpCircle, MessageCircle, Package, Plus, Printer, Search, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Camera, HelpCircle, MessageCircle, Package, Plus, Printer, ShoppingBag } from "lucide-react";
 import { DEFAULT_FAQ, isFaqList, type FaqItem } from "@/lib/faq";
-import { normalizeArabic } from "@/components/storefront/storefront-utils";
 import { Reveal, SectionHeading, WaLink } from "@/components/storefront/ui";
 
-const TOPIC_ICON: Record<string, typeof Printer> = {
+export const TOPIC_ICON: Record<string, typeof Printer> = {
   "الطباعة": Printer,
   "التصوير والصور": Camera,
   "الأدوات المكتبية": Package,
   "الطلب والاستلام": ShoppingBag,
 };
 
-/** Customer questions about printing, photos and stationery (edited from /admin/faq) */
-export function FaqSection() {
-  const [items, setItems] = useState<FaqItem[]>(DEFAULT_FAQ);
-  const [topic, setTopic] = useState("الكل");
-  const [open, setOpen] = useState<number | null>(0);
-  const [query, setQuery] = useState("");
-
+/** The FAQ list (edited from /admin/faq), starting from `initial` and refreshed from the server */
+export function useFaqItems(initial: FaqItem[] = DEFAULT_FAQ) {
+  const [items, setItems] = useState<FaqItem[]>(initial);
   useEffect(() => {
     fetch("/api/public/faq")
       .then((r) => (r.ok ? r.json() : null))
@@ -29,34 +25,30 @@ export function FaqSection() {
       })
       .catch(() => {});
   }, []);
+  return items;
+}
 
-  const topics = useMemo(() => ["الكل", ...Array.from(new Set(items.map((i) => i.topic)))], [items]);
-  const shown = useMemo(() => {
-    const words = normalizeArabic(query).split(" ").filter(Boolean);
-    return items
-      .map((it, i) => ({ it, i }))
-      .filter(({ it }) => topic === "الكل" || it.topic === topic)
-      .filter(({ it }) => {
-        if (!words.length) return true;
-        const hay = normalizeArabic(`${it.q} ${it.a}`);
-        return words.every((w) => hay.includes(w));
-      });
-  }, [items, topic, query]);
+/** One question from each topic in turn, so a short list still covers everything */
+function spread(items: FaqItem[], count: number): FaqItem[] {
+  const byTopic = new Map<string, FaqItem[]>();
+  for (const it of items) byTopic.set(it.topic, [...(byTopic.get(it.topic) ?? []), it]);
+  const queues = [...byTopic.values()];
+  const out: FaqItem[] = [];
+  for (let round = 0; out.length < count && queues.some((q) => q.length > round); round++) {
+    for (const q of queues) if (q[round] && out.length < count) out.push(q[round]);
+  }
+  return out;
+}
 
-  // Search engines show these answers right in the results
-  const jsonLd = useMemo(
-    () =>
-      JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        mainEntity: items.map((it) => ({ "@type": "Question", name: it.q, acceptedAnswer: { "@type": "Answer", text: it.a } })),
-      }).replace(/</g, "\\u003c"),
-    [items]
-  );
+/** Home page: a few customer questions; all of them are on /faq */
+export function FaqSection({ limit = 5 }: { limit?: number }) {
+  const items = useFaqItems();
+  const [open, setOpen] = useState<number | null>(0);
+  const shown = useMemo(() => spread(items, limit), [items, limit]);
+  const rest = items.length - shown.length;
 
   return (
-    <section id="faq" className="scroll-mt-20 max-w-5xl mx-auto w-full px-4 sm:px-6 py-14 sm:py-20">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
+    <section id="faq" className="scroll-mt-20 max-w-4xl mx-auto w-full px-4 sm:px-6 py-14 sm:py-20">
       <SectionHeading
         eyebrow="أسئلة شائعة"
         title={
@@ -64,70 +56,17 @@ export function FaqSection() {
             عندك سؤال؟ <span className="text-blue-600">غالباً إجابته هنا</span>
           </>
         }
-        subtitle="كل اللي الزباين بيسألوا عنه في الطباعة والتصوير والأدوات المكتبية."
+        subtitle="أكتر الأسئلة اللي الزباين بيسألوها، والباقي كله في صفحة الأسئلة."
       />
 
-      <Reveal>
-        <div className="flex flex-col sm:flex-row gap-3 mb-5">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setOpen(null);
-              }}
-              placeholder="دوّر في الأسئلة... (ألوان، صور، توصيل)"
-              className="w-full bg-white border border-slate-200 rounded-2xl pr-10 pl-3 py-3 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-            />
-          </div>
-        </div>
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1 mb-5">
-          {topics.map((t) => {
-            const Icon = TOPIC_ICON[t] ?? HelpCircle;
-            const active = topic === t;
-            return (
-              <button
-                key={t}
-                onClick={() => {
-                  setTopic(t);
-                  setOpen(null);
-                }}
-                className={`relative shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer ${
-                  active ? "text-white" : "text-slate-600 bg-white border border-slate-200 hover:border-blue-300"
-                }`}
-              >
-                {active && (
-                  <motion.span layoutId="faq-topic" className="absolute inset-0 rounded-xl bg-blue-600 shadow-md shadow-blue-600/30" transition={{ type: "spring", stiffness: 420, damping: 32 }} />
-                )}
-                <Icon className="relative w-4 h-4" />
-                <span className="relative">{t}</span>
-              </button>
-            );
-          })}
-        </div>
-      </Reveal>
-
       <div className="space-y-2.5">
-        <AnimatePresence mode="popLayout" initial={false}>
-          {shown.map(({ it, i }, k) => {
-            const isOpen = open === i;
-            const Icon = TOPIC_ICON[it.topic] ?? HelpCircle;
-            return (
-              <motion.div
-                key={`${it.q}-${i}`}
-                layout
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0, transition: { delay: Math.min(k, 8) * 0.03 } }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                className={`rounded-2xl border bg-white overflow-hidden transition-colors ${isOpen ? "border-blue-300 shadow-lg shadow-blue-900/5" : "border-slate-200 hover:border-blue-200"}`}
-              >
-                <button
-                  onClick={() => setOpen(isOpen ? null : i)}
-                  className="w-full flex items-center gap-3 p-4 text-right cursor-pointer"
-                  aria-expanded={isOpen}
-                >
+        {shown.map((it, i) => {
+          const isOpen = open === i;
+          const Icon = TOPIC_ICON[it.topic] ?? HelpCircle;
+          return (
+            <Reveal key={`${it.q}-${i}`} delay={i * 0.05}>
+              <div className={`rounded-2xl border bg-white overflow-hidden transition-colors ${isOpen ? "border-blue-300 shadow-lg shadow-blue-900/5" : "border-slate-200 hover:border-blue-200"}`}>
+                <button onClick={() => setOpen(isOpen ? null : i)} className="w-full flex items-center gap-3 p-4 text-right cursor-pointer" aria-expanded={isOpen}>
                   <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${isOpen ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-600"}`}>
                     <Icon className="w-4 h-4" />
                   </span>
@@ -148,16 +87,30 @@ export function FaqSection() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-        {shown.length === 0 && (
-          <p className="text-center text-sm text-slate-500 py-8">ملقيناش سؤال بالكلام ده، اسألنا على الواتساب على طول.</p>
-        )}
+              </div>
+            </Reveal>
+          );
+        })}
       </div>
 
-      <Reveal className="mt-6 text-center">
+      <Reveal className="mt-6">
+        <Link
+          href="/faq"
+          className="group relative flex flex-col sm:flex-row items-center justify-between gap-3 p-5 rounded-2xl bg-linear-to-l from-indigo-600 to-blue-600 text-white shadow-xl shadow-blue-900/20 overflow-hidden"
+        >
+          <span className="absolute inset-0 cc-shine" aria-hidden />
+          <span className="relative text-center sm:text-right">
+            <span className="block text-base sm:text-lg font-black">{rest > 0 ? `فيه ${rest} سؤال تاني في صفحة الأسئلة` : "كل الأسئلة في صفحة واحدة"}</span>
+            <span className="block text-xs sm:text-sm text-blue-100 mt-0.5">الطباعة، الصور، الأدوات، والطلب والاستلام، مع بحث في كل الأسئلة</span>
+          </span>
+          <span className="relative inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white text-blue-700 text-sm font-black shrink-0">
+            شوف كل الأسئلة
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          </span>
+        </Link>
+      </Reveal>
+
+      <Reveal className="mt-4 text-center">
         <WaLink
           text="مرحباً مكتبة كوبي كات، عندي سؤال: "
           className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow-lg shadow-emerald-600/20 transition"

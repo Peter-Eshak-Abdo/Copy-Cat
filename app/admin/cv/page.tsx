@@ -26,8 +26,9 @@ import { CvSheet, ScaledSheet, printSheet } from "./cv-sheet";
 
 /**
  * "عمل CV": the customer's details (typed, or photos of a handwritten paper / an old CV) become the shop's
- * usual CV layout in Arabic and English (lib/docx/cv-docx.ts). The AI writes both languages by meaning;
- * after editing one language, "ترجم" rewrites the other from it. The draft survives a reload.
+ * usual CV layout in Arabic, English or both (lib/docx/cv-docx.ts). Photos can also be the customer's certificates:
+ * the AI recognises them and adds the course (and its grade when printed). The second language is written by
+ * meaning; after editing one language, "ترجم" rewrites the other from it. The draft survives a reload.
  */
 
 const DRAFT_KEY = "copycat_cv_draft_v1";
@@ -37,11 +38,20 @@ const TEMPLATE_NAME: Record<CvTemplate, { label: string; hint: string }> = {
   ats: { label: "ATS (أسود بسيط)", hint: "للشركات اللي بتقرا الـ CV بالكمبيوتر: عمود واحد وكله أسود، من غير صورة" },
 };
 const LANG_NAME: Record<CvLang, string> = { ar: "عربي", en: "English" };
+/** Which languages this CV is made in */
+type Langs = CvLang | "both";
+const LANGS_CHOICE: [Langs, string][] = [
+  ["both", "عربي + إنجليزي"],
+  ["ar", "عربي بس"],
+  ["en", "إنجليزي بس"],
+];
+const MAX_IMAGES = 10;
 
 interface Draft {
   ar: CvData;
   en: CvData;
   photo: CvPhoto | null;
+  langs: Langs;
 }
 
 const readFile = (file: File) =>
@@ -68,6 +78,7 @@ export default function CvPage() {
   const [images, setImages] = useState<string[]>([]);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [tab, setTab] = useState<CvLang>("ar");
+  const [langsChoice, setLangsChoice] = useState<Langs>("both");
   const [stage, setStage] = useState<string | null>(null);
   const [translating, setTranslating] = useState<CvLang | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -95,8 +106,11 @@ export default function CvPage() {
     try {
       const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
       if (saved?.ar && saved?.en) {
+        const langs: Langs = saved.langs === "ar" || saved.langs === "en" ? saved.langs : "both";
         // eslint-disable-next-line react-hooks/set-state-in-effect -- restore once after hydration (localStorage is client-only)
-        setDraft({ ar: normalizeCv(saved.ar, "ar"), en: normalizeCv(saved.en, "en"), photo: saved.photo ?? null });
+        setDraft({ ar: normalizeCv(saved.ar, "ar"), en: normalizeCv(saved.en, "en"), photo: saved.photo ?? null, langs });
+        setLangsChoice(langs);
+        if (langs === "en") setTab("en");
       }
     } catch {}
   }, []);
@@ -116,14 +130,14 @@ export default function CvPage() {
     const imgs = files.filter((f) => f.type.startsWith("image/"));
     if (!imgs.length) return;
     const ready = await Promise.all(imgs.map(async (f) => prepareOcrImage(await readFile(f), 1800)));
-    setImages((prev) => [...prev, ...ready].slice(0, 6));
+    setImages((prev) => [...prev, ...ready].slice(0, MAX_IMAGES));
     toast.success("الصور وصلت", `${ready.length} صورة جاهزة للقراية.`);
   };
 
   const setPhoto = async (file: File) => {
     const src = await prepareOcrImage(await readFile(file), 700);
     const aspect = await imageAspect(src);
-    setDraft((d) => ({ ...(d ?? { ar: emptyCv("ar"), en: emptyCv("en") }), photo: { dataUrl: src, aspect } }));
+    setDraft((d) => ({ ...(d ?? { ar: emptyCv("ar"), en: emptyCv("en"), langs: langsChoice }), photo: { dataUrl: src, aspect } }));
   };
 
   const build = async () => {
@@ -131,23 +145,34 @@ export default function CvPage() {
       toast.error("مفيش بيانات", "اكتب بيانات الزبون أو ارفع صورة الورقة.");
       return;
     }
-    if (draft && !isEmptyCv(draft.ar) && !window.confirm("في CV مفتوح. نعمل واحد جديد مكانه؟")) return;
-    setStage(images.length ? "بنقرا الصور ونرتب البيانات" : "بنرتب البيانات");
-    const slow = window.setTimeout(() => setStage("بنكتب العربي والإنجليزي بالمعنى"), 6000);
+    if (draft && !(isEmptyCv(draft.ar) && isEmptyCv(draft.en)) && !window.confirm("في CV مفتوح. نعمل واحد جديد مكانه؟")) return;
+    const langs = langsChoice;
+    setStage(images.length ? "بنقرا الصور والشهادات ونرتب البيانات" : "بنرتب البيانات");
+    const slow = window.setTimeout(
+      () => setStage(langs === "both" ? "بنكتب العربي والإنجليزي بالمعنى" : `بنكتب الـ CV ${LANG_NAME[langs]}`),
+      6000
+    );
     try {
       const res = await fetch("/api/ai/cv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "build", text, images }),
+        body: JSON.stringify({ action: "build", text, images, langs }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
         toast.error("الـ CV مطلعش", data.error || "جرب تاني.");
         return;
       }
-      setDraft((d) => ({ ar: normalizeCv(data.ar, "ar"), en: normalizeCv(data.en, "en"), photo: d?.photo ?? null }));
+      setDraft((d) => ({ ar: normalizeCv(data.ar, "ar"), en: normalizeCv(data.en, "en"), photo: d?.photo ?? null, langs }));
+      setTab(langs === "en" ? "en" : "ar");
       setVersion((v) => v + 1);
-      toast.success("الـ CV جاهز", "راجع البيانات في الخانات، والشكل بيتحدث قدامك على طول.");
+      const certs: { course: string; grade: string }[] = Array.isArray(data.certificates) ? data.certificates : [];
+      toast.success(
+        "الـ CV جاهز",
+        certs.length
+          ? `لقينا ${certs.length} شهادة واتحطت في الكورسات: ${certs.map((c) => (c.grade ? `${c.course} (${c.grade})` : c.course)).join("، ")}. راجعها في الخانات.`
+          : "راجع البيانات في الخانات، والشكل بيتحدث قدامك على طول."
+      );
     } catch {
       toast.error("حصلت مشكلة", "اتأكد من النت وجرب تاني.");
     } finally {
@@ -173,7 +198,8 @@ export default function CvPage() {
         return;
       }
       // Keep the section names already chosen for that language
-      setDraft((d) => (d ? { ...d, [to]: { ...normalizeCv(data.cv, to), headings: d[to].headings } } : d));
+      // Keep the section names already chosen for that language; a one-language CV now has both
+      setDraft((d) => (d ? { ...d, [to]: { ...normalizeCv(data.cv, to), headings: d[to].headings }, langs: "both" } : d));
       setTab(to);
       setVersion((v) => v + 1);
       toast.success("اتترجم", `النسخة ${LANG_NAME[to]} اتكتبت من ${LANG_NAME[from]}.`);
@@ -191,9 +217,9 @@ export default function CvPage() {
   };
 
   const startBlank = () => {
-    setDraft({ ar: emptyCv("ar"), en: emptyCv("en"), photo: null });
+    setDraft({ ar: emptyCv("ar"), en: emptyCv("en"), photo: null, langs: langsChoice });
     setVersion((v) => v + 1);
-    setTab("ar");
+    setTab(langsChoice === "en" ? "en" : "ar");
   };
 
   const clearAll = () => {
@@ -204,6 +230,8 @@ export default function CvPage() {
   };
 
   const cv = draft?.[tab];
+  const shownLangs: CvLang[] = !draft || draft.langs === "both" ? ["ar", "en"] : [draft.langs];
+  const other: CvLang = tab === "ar" ? "en" : "ar";
   const update = (patch: Partial<CvData>) => setDraft((d) => (d ? { ...d, [tab]: { ...d[tab], ...patch } } : d));
 
   return (
@@ -237,7 +265,7 @@ export default function CvPage() {
           <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
             <FileText className="w-5 h-5 text-sky-700" /> بيانات الزبون
           </h2>
-          <span className="text-xs text-slate-500 font-medium">اكتبها بأي شكل، أو صوّر الورقة (حتى بخط الإيد) أو الـ CV القديم</span>
+          <span className="text-xs text-slate-500 font-medium">اكتبها بأي شكل، أو صوّر الورقة (حتى بخط الإيد) أو الـ CV القديم أو الشهادات</span>
         </div>
         <div className="grid lg:grid-cols-[1fr_280px] gap-3">
           <textarea
@@ -266,8 +294,9 @@ export default function CvPage() {
             {images.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center gap-1.5 py-4">
                 <ImagePlus className="w-8 h-8 text-sky-600" />
-                <span className="text-sm font-bold text-slate-800">صور الورقة</span>
-                <span className="text-[11px] text-slate-500">اسحبها هنا أو دوس. لحد 6 صور</span>
+                <span className="text-sm font-bold text-slate-800">صور الورقة أو الشهادات</span>
+                <span className="text-[11px] text-slate-500">اسحبها هنا أو دوس. لحد {MAX_IMAGES} صور</span>
+                <span className="text-[11px] text-sky-700 font-semibold">صورة الشهادة بتتقري لوحدها: اسم الكورس والتقدير لو مكتوب</span>
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-1.5">
@@ -288,7 +317,7 @@ export default function CvPage() {
                     </button>
                   </div>
                 ))}
-                {images.length < 6 && (
+                {images.length < MAX_IMAGES && (
                   <div className="aspect-[3/4] rounded-lg border border-dashed border-slate-300 flex items-center justify-center text-slate-400">
                     <Plus className="w-5 h-5" />
                   </div>
@@ -298,6 +327,22 @@ export default function CvPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="لغة الـ CV">
+            {LANGS_CHOICE.map(([l, label]) => (
+              <button
+                key={l}
+                type="button"
+                role="radio"
+                aria-checked={langsChoice === l}
+                onClick={() => setLangsChoice(l)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-black cursor-pointer transition ${
+                  langsChoice === l ? "bg-white text-sky-800 shadow-sm" : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             onClick={build}
@@ -305,7 +350,7 @@ export default function CvPage() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-700 hover:bg-sky-800 text-white text-sm font-black shadow-sm disabled:opacity-60 cursor-pointer"
           >
             {stage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {stage ? `${stage}...` : "اعمل الـ CV (عربي + إنجليزي)"}
+            {stage ? `${stage}...` : `اعمل الـ CV (${LANGS_CHOICE.find(([l]) => l === langsChoice)?.[1]})`}
           </button>
           {!draft && (
             <button
@@ -335,7 +380,7 @@ export default function CvPage() {
             <section className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex rounded-xl bg-slate-100 p-1">
-                  {(["ar", "en"] as CvLang[]).map((l) => (
+                  {shownLangs.map((l) => (
                     <button
                       key={l}
                       type="button"
@@ -354,10 +399,14 @@ export default function CvPage() {
                   onClick={() => translateFrom(tab)}
                   disabled={!!translating || isEmptyCv(cv)}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold disabled:opacity-50 cursor-pointer"
-                  title="بعد ما تعدّل في النسخة دي، اعمل النسخة التانية منها من جديد"
+                  title={draft.langs === "both" ? "بعد ما تعدّل في النسخة دي، اعمل النسخة التانية منها من جديد" : "يعمل نسخة باللغة التانية من النسخة دي"}
                 >
                   {translating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Languages className="w-3.5 h-3.5" />}
-                  {tab === "ar" ? "ترجم العربي ده للإنجليزي" : "ترجم الإنجليزي ده للعربي"}
+                  {draft.langs !== "both"
+                    ? `اعمل نسخة ${LANG_NAME[other]} كمان`
+                    : tab === "ar"
+                      ? "ترجم العربي ده للإنجليزي"
+                      : "ترجم الإنجليزي ده للعربي"}
                 </button>
                 <button
                   type="button"
@@ -406,6 +455,7 @@ export default function CvPage() {
                 >
                   <Download className="w-4 h-4" /> نزّل Word {LANG_NAME[tab]}
                 </button>
+                {draft.langs === "both" && (
                 <button
                   type="button"
                   onClick={async () => {
@@ -417,6 +467,7 @@ export default function CvPage() {
                 >
                   <ArrowLeftRight className="w-4 h-4" /> نزّل الاتنين
                 </button>
+                )}
                 <button
                   type="button"
                   onClick={() => sheetRef.current && printSheet(sheetRef.current, cvFileName(cv, tab, "pdf").replace(/\.pdf$/, ""))}

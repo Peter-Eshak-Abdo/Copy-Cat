@@ -11,7 +11,8 @@ export const maxDuration = 300;
  * CV in Arabic and English. The second language is written by meaning, the way an HR writer would phrase it,
  * not word for word (a literal Google Translate pass is exactly what the shop wanted to stop doing).
  *
- *   { action: "build", text?, images? }      -> { ar, en }
+ *   { action: "build", text?, images?, langs? } -> { ar, en, certificates }   (langs "ar" | "en" | "both"; the
+ *                                                language not asked for comes back empty)
  *   { action: "translate", from, cv }        -> { cv }   (the staff edited one language; redo the other)
  *
  * Gemini first (it reads the photos itself); without it the photos are transcribed by the OCR chain and a
@@ -63,14 +64,39 @@ const STYLE_RULES = `Writing rules:
 - jobTitle: only when the customer gave one or it is obvious from the job sought; otherwise "".
 - Empty sections are [] or "".`;
 
-const BUILD_PROMPT = `You prepare CVs at a print shop in Egypt. Below are a customer's details: typed notes and/or photos
-of a paper (often handwritten Arabic, sometimes an old CV). Read everything, then write the CV in BOTH Arabic and
-English. Both versions hold the same facts in the same order.
+const CERTIFICATE_RULES = `Certificates: some photos may be certificates rather than notes (training-course certificates,
+ICDL, language or computer course certificates, attendance certificates, graduation certificates / بيان نجاح /
+شهادة تخرج, Military Service certificates). Recognise each one from what it looks like and what it says, then:
+- Training / course certificate -> one "courses" line: the course name, then the issuing body, then the grade or
+  score ONLY when the certificate shows one (e.g. "ICDL – Egyptian Ministry of Communications – Grade: Excellent",
+  "دورة اللغة الإنجليزية – مركز ... – بتقدير جيد جداً"). Add the year or hours only when written on it.
+- Graduation certificate or academic transcript -> the "education" entry (degree, institution, year, grade).
+- Military service certificate -> the Military Status personal item (e.g. "Completed" / "أدى الخدمة").
+- Use only what is printed on the certificate; never guess a grade that is not there.
+Also list every certificate you recognised in "certificates": [{"course": the course or degree name in Arabic,
+"grade": the grade or score exactly as shown, or ""}] ([] when there were none).`;
 
-Return ONLY JSON: {"ar": CV, "en": CV} where CV is
+type Langs = "ar" | "en" | "both";
+
+const buildPrompt = (langs: Langs) => {
+  const which =
+    langs === "both"
+      ? `write the CV in BOTH Arabic and English. Both versions hold the same facts in the same order.
+
+Return ONLY JSON: {"ar": CV, "en": CV, "certificates": [...]}`
+      : `write the CV in ${langs === "ar" ? "Arabic" : "English"} ONLY (even when the notes are in the other language: then
+write it by meaning, as the rules below say).
+
+Return ONLY JSON: {"${langs}": CV, "certificates": [...]}`;
+  return `You prepare CVs at a print shop in Egypt. Below are a customer's details: typed notes and/or photos (a paper,
+often handwritten Arabic, an old CV, or the customer's certificates). Read everything, then ${which}
+where CV is
 ${SCHEMA}
 
-${STYLE_RULES}`;
+${STYLE_RULES}
+
+${CERTIFICATE_RULES}`;
+};
 
 const translatePrompt = (from: CvLang, cv: CvData) => {
   const to = from === "ar" ? "English" : "Arabic";
@@ -89,7 +115,8 @@ ${JSON.stringify(content, null, 1)}`;
 
 const TRANSCRIBE_PROMPT =
   "Transcribe all the text in this photo exactly as written (it is a customer's details for a CV, often " +
-  "handwritten Arabic). Keep line breaks. Plain text only, no comments.";
+  "handwritten Arabic, or one of the customer's certificates). If the photo is a certificate, start with the line " +
+  "[CERTIFICATE]. Keep line breaks. Plain text only, no comments.";
 
 /** OpenAI-style chat completion with a JSON answer (Groq), used when Gemini is not available */
 async function groqJson(prompt: string): Promise<unknown> {
@@ -140,6 +167,7 @@ export async function POST(req: NextRequest) {
     images?: unknown;
     from?: unknown;
     cv?: unknown;
+    langs?: unknown;
   }>(req, 25 * 1024 * 1024);
   if (!body) return bad("الطلب كبير أوي أو مش مفهوم.", 413);
 
@@ -156,19 +184,30 @@ export async function POST(req: NextRequest) {
     const text = typeof body.text === "string" ? body.text.slice(0, 20_000).trim() : "";
     const images = (Array.isArray(body.images) ? body.images : [])
       .filter((i): i is string => typeof i === "string" && i.startsWith("data:image/"))
-      .slice(0, 6);
+      .slice(0, 10);
+    const langs: Langs = body.langs === "ar" || body.langs === "en" ? body.langs : "both";
     if (!text && images.length === 0) return bad("اكتب البيانات أو ارفع صورتها.");
 
-    const prompt = `${BUILD_PROMPT}\n\n${text ? `Typed notes from the customer:\n${text}` : "(No typed notes: everything is in the photos.)"}`;
+    const prompt = `${buildPrompt(langs)}\n\n${text ? `Typed notes from the customer:\n${text}` : "(No typed notes: everything is in the photos.)"}`;
     const imageText = async () => {
       const parts = await Promise.all(images.map((img) => transcribeImage(TRANSCRIBE_PROMPT, img).catch(() => null)));
       return parts.map((p) => p?.text ?? "").join("\n\n");
     };
-    const answer = (await askModel(prompt, images, imageText)) as { ar?: unknown; en?: unknown } | null;
-    if (!answer || (!answer.ar && !answer.en)) {
+    const answer = (await askModel(prompt, images, imageText)) as { ar?: unknown; en?: unknown; certificates?: unknown } | null;
+    if (!answer || (langs === "both" ? !answer.ar && !answer.en : !answer[langs])) {
       return NextResponse.json({ success: false, error: "مقدرناش نقرا البيانات، جرب تاني أو اكتبها." });
     }
-    return NextResponse.json({ success: true, ar: normalizeCv(answer.ar, "ar"), en: normalizeCv(answer.en, "en") });
+    const certificates = (Array.isArray(answer.certificates) ? answer.certificates : [])
+      .map((c) => ({ course: String(c?.course ?? "").trim(), grade: String(c?.grade ?? "").trim() }))
+      .filter((c) => c.course)
+      .slice(0, 20);
+    return NextResponse.json({
+      success: true,
+      langs,
+      ar: normalizeCv(langs === "en" ? null : answer.ar, "ar"),
+      en: normalizeCv(langs === "ar" ? null : answer.en, "en"),
+      certificates,
+    });
   } catch (err) {
     console.error("CV route error:", err);
     return NextResponse.json({ success: false, error: "حصلت مشكلة، جرب تاني." }, { status: 500 });

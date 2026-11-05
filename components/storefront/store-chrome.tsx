@@ -14,7 +14,7 @@ const NAV: [string, string][] = [
   ["/#services", "خدماتنا"],
   ["/products", "المنتجات"],
   ["/#categories", "الأقسام"],
-  ["/#faq", "أسئلة شائعة"],
+  ["/faq", "أسئلة شائعة"],
   ["/#contact", "تواصل معنا"],
 ];
 
@@ -54,7 +54,7 @@ export function StoreHeader() {
 
           <nav className="hidden lg:flex items-center gap-1 text-sm font-bold text-slate-600">
             {NAV.map(([href, label]) => {
-              const active = href === "/products" && pathname.startsWith("/products");
+              const active = !href.includes("#") && pathname.startsWith(href);
               return (
                 <Link
                   key={href}
@@ -127,7 +127,7 @@ export function StoreFooter() {
               ["/#services", "الخدمات"],
               ["/products", "كل المنتجات"],
               ["/#how", "إزاي تطلب"],
-              ["/#faq", "أسئلة شائعة"],
+              ["/faq", "أسئلة شائعة"],
             ].map(([href, label]) => (
               <li key={href}>
                 <Link href={href} className="hover:text-white transition">
